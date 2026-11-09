@@ -42,6 +42,8 @@ export type ExpenseCapabilities = {
   canApprove: boolean;
   /** Viewer has signed at least one allocation and can still take it back. */
   canWithdrawAttest: boolean;
+  /** Which allocations those are, for the button on each row. */
+  withdrawableAllocationIds: string[];
   /**
    * The submitter may take the whole utlägg back out of the queue, to a draft.
    *
@@ -143,9 +145,12 @@ export function expenseCapabilities(
     expense.allocations.some((a) => a.canAttest && !a.approvedById);
   // Mirrors the server rule: your own signature, on a row you may still
   // attest, on an utlägg that hasn't been booked yet.
-  const canWithdrawAttest =
-    isAttestWithdrawable(expense.status) &&
-    expense.allocations.some((a) => a.canAttest && a.approvedById === viewer.id);
+  const withdrawableAllocationIds = isAttestWithdrawable(expense.status)
+    ? expense.allocations
+        .filter((a) => a.canAttest && a.approvedById === viewer.id)
+        .map((a) => a.id)
+    : [];
+  const canWithdrawAttest = withdrawableAllocationIds.length > 0;
   // Whoever may send it may take it back. An admin can do either on somebody's
   // behalf, exactly as they can submit for them.
   const canRecall = isRecallable(expense.status) && mayAct;
@@ -184,6 +189,7 @@ export function expenseCapabilities(
     submitBlocker: submittable && mayAct ? blocker : null,
     canApprove,
     canWithdrawAttest,
+    withdrawableAllocationIds,
     canRecall,
     canRequestChanges,
     canReturn,

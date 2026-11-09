@@ -75,7 +75,6 @@ users:
 | `pnpm typecheck` / `pnpm lint` | `tsc --noEmit` / ESLint |
 | `pnpm db:up` / `db:down` | Postgres and MinIO |
 | `pnpm app:up` / `app:down` / `app:logs` | The whole stack in Docker, app included |
-| `pnpm intakt:up` / `intakt:down` / `intakt:build` | The income service (see below) |
 | `pnpm db:generate` / `db:migrate` / `db:reset` / `db:seed` | Prisma client, migrations, seed |
 | `pnpm db:studio` | Browse the database |
 | `pnpm fortnox:sync` | Sync accounts, cost centres and the general ledger from Fortnox |
@@ -117,12 +116,9 @@ of failing.
 
 - **Fortnox** (`FORTNOX_*`): bookkeeping export and ledger sync. Connect the
   account from the Fortnox settings page.
-- **intakt** (`INTAKT_URL`, `INTAKT_TOKEN`): income reports from Zettle and
-  Swish. A separate Go service in its own repository:
-  ```bash
-  git clone git@github.com:Dsek-LTH/intakt.git intakt   # gitignored
-  pnpm intakt:up                                         # serves :8080
-  ```
+- **Zettle** (`ZETTLE_CLIENT_ID`, `ZETTLE_API_KEY`): card sales and fees for
+  Intäkter, fetched by the app itself. Swish needs nothing: it is read from the
+  bank's CSV export.
 - **Email** (`SMTP_*`, `MAIL_FROM`, `APP_URL`): without `SMTP_HOST`,
   notifications are written to the server log.
 - **Levfakturor by mail** (`GMAIL_*`): supplier invoices forwarded to a
@@ -148,7 +144,7 @@ pnpm app:down
 This runs the same image production runs, with the same production rules.
 There is no dev login inside the container, so you sign in through Authentik. A
 `migrate` service runs `prisma migrate deploy` before the app starts. Compose
-reads `.env` and overrides only `DATABASE_URL`, `S3_ENDPOINT` and `INTAKT_URL`.
+reads `.env` and overrides only `DATABASE_URL` and `S3_ENDPOINT`.
 If the app container keeps restarting, `pnpm app:logs` names the variable it
 is missing.
 

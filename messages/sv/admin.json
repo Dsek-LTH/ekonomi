@@ -206,7 +206,9 @@
       "defaultCostCenterHint": "Försäljningen bokförs på det här kostnadsstället.",
       "productHint": "En vara vars namn börjar på prefixet hör till enheten och bokförs på kontot bredvid. Med prefixet c hamnar till exempel c-Cola här.",
       "fallbackHint": "Varor som inte matchar någon enhet hamnar här.",
-      "noOwnCostCenters": "Enheten äger inga kostnadsställen än. Lägg till ett prefix ovan."
+      "noOwnCostCenters": "Enheten äger inga kostnadsställen än. Lägg till ett prefix ovan.",
+      "prefixCostCenter": "Kostnadsställe för {code}",
+      "prefixCostCenterDefault": "Verksamhetens"
     },
     "saveFailed": "Kunde inte spara.",
     "noOwnerGroups": "Ingen grupp ger rollen för den här enheten än. Koppla en grupp under Roller.",
@@ -359,10 +361,10 @@
     "done": "Klart",
     "stepsLeft": "{count, plural, one {# steg kvar} other {# steg kvar}}",
     "service": {
-      "title": "1. Anslutning",
-      "description": "Tjänsten som hämtar från Zettle och skapar intäktsräkningen.",
-      "connected": "Intäktstjänsten är ansluten.",
-      "missing": "Intäktstjänsten är inte ansluten. Den som driftar appen behöver sätta INTAKT_URL och INTAKT_TOKEN."
+      "title": "1. Zettle",
+      "description": "Kopplingen som hämtar försäljning och avgifter från Zettle. Swish läses från bankens fil och behöver ingen koppling.",
+      "connected": "Zettle är anslutet.",
+      "missing": "Zettle är inte anslutet. Den som driftar appen behöver sätta ZETTLE_CLIENT_ID och ZETTLE_API_KEY. Swish kan hämtas ändå."
     },
     "units": {
       "title": "2. Verksamheter och varor",

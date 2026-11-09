@@ -15,6 +15,7 @@ import {
 } from "@/lib/server/result-units";
 import { oreToSEK as ore } from "@/lib/domain/money";
 import { journeyKm } from "@/lib/mileage/claim";
+import { correctionOf } from "@/lib/domain/correction";
 import {
   canBookkeep,
   canAttestAllocation,
@@ -80,6 +81,15 @@ const summaryInclude = {
   // all for the rows that matter.
   deadlineWaivedBy: { select: { name: true } },
   allocations: {
+    // By cost-centre code, as the utläggsräkning prints them (lib/expense/
+    // document.ts). Without an order Postgres returns them as it finds them,
+    // and a row it has just updated tends to move, so attesting one cost
+    // centre reshuffled the table under the reader's pointer.
+    // Cast for the same reason as the receipts' order below.
+    orderBy: [
+      { costCenter: { code: "asc" } },
+      { id: "asc" },
+    ] as Prisma.ExpenseCostAllocationOrderByWithRelationInput[],
     include: { costCenter: true, approvedBy: true },
   },
   // Every receipt, in the order the submitter put them (see RECEIPT_ORDER),
@@ -254,7 +264,8 @@ export type ExpenseListScope =
   | { kind: "all" }
   /** Only the viewer's own. */
   | { kind: "mine" }
-  /** What the viewer may attest. See attest-scope.ts. */
+  /** The viewer's own result units' utlägg, not everything they may attest.
+   *  See attest-scope.ts. */
   | { kind: "attestable" };
 
 // The stage tabs (see app/(app)/expenses/scope.ts), as the database spells the
@@ -300,7 +311,7 @@ async function listScopeWhere(
     case "mine":
       return { submitterId: viewer.id };
     case "attestable":
-      return attestScopeWhere(viewer);
+      return attestScopeWhere(viewer, { ownUnits: true });
   }
 }
 
@@ -408,9 +419,14 @@ export async function getExpensePage(
  * are what is fetched. An exported utlägg from three years ago cannot be
  * waiting on anybody, and there is no reason to read it to find that out.
  *
- * The filter is deliberately wider than `queueActionFor`. It is a shortlist,
- * not a second copy of the rule. That function still decides, unchanged, and if
+ * The filter is otherwise wider than `queueActionFor`. It is a shortlist, not
+ * a second copy of the rule. That function still decides, unchanged, and if
  * the two ever disagree the worst case is a row fetched and then dropped.
+ *
+ * The one place it is narrower on purpose is attest: only the viewer's own
+ * result units' utlägg. The skattmästare may attest anyone's, but only their
+ * own units' are waiting on them, the same rule as the nav badge and the "Min
+ * resultatenhet" list the queue links to.
  */
 export async function getDashboardExpenses(
   viewer: Viewer,
@@ -430,7 +446,10 @@ export async function getDashboardExpenses(
   const candidates: Prisma.ExpenseWhereInput[] = [waitingOnSubmitter];
   if (hasAttestRole(viewer.capabilities)) {
     candidates.push({
-      AND: [await attestScopeWhere(viewer), { status: { in: ["PENDING_APPROVAL"] } }],
+      AND: [
+        await attestScopeWhere(viewer, { ownUnits: true }),
+        { status: { in: ["PENDING_APPROVAL"] } },
+      ],
     });
   }
   if (canBookkeep(viewer.capabilities)) {
@@ -512,6 +531,7 @@ export async function getExpense(id: string, viewer?: Viewer): Promise<Expense |
       action: ev.type,
       comment: ev.comment ?? undefined,
       recipients: ev.type === "REMINDER_SENT" ? reminderRecipients(ev.diff) : undefined,
+      correction: ev.type === "CORRECTED" ? (correctionOf(ev.diff) ?? undefined) : undefined,
       date: ev.createdAt.toISOString(),
     })),
   };

@@ -1,5 +1,6 @@
-// Who else has an utlägg's booking screen open. The timings, and the rule for
-// when somebody stops counting as being there.
+// Who else has an utlägg's booking screen open, or its review (the utlägg's own
+// page, where a konterat utlägg is granskat and bokfört). The timings, and the
+// rule for when somebody stops counting as being there.
 //
 // Presence is advisory. It puts a name on a screen and nothing else: no write
 // anywhere reads it, and no control is disabled by it. What stops two
@@ -40,7 +41,10 @@ export const HIDDEN_GRACE_MS = 60_000;
 /** How often the Bokföring list asks who is booking what. */
 export const LIST_POLL_MS = 15_000;
 
-/** Somebody who has an utlägg's booking screen open. */
+/** The screens presence is kept for: kontering, and granskning before bokföring. */
+export type PresenceScreen = "book" | "review";
+
+/** Somebody who has an utlägg's booking screen or review open. */
 export interface PresentUser {
   id: string;
   name: string;
@@ -50,6 +54,8 @@ export interface PresentUser {
 export interface LiveBookkeeping {
   /** Who else has each utlägg's booking screen open, by expense id. */
   booking: Record<string, PresentUser[]>;
+  /** Who else is reviewing each konterat utlägg, by expense id. */
+  reviewing: Record<string, PresentUser[]>;
   /** Which utlägg an export holds locked, by expense id. */
   exporting: Record<string, ExportLockView>;
 }

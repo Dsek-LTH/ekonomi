@@ -2,203 +2,173 @@ import { describe, expect, it } from "vitest";
 
 import { voucherBlocker } from "@/lib/domain/voucher";
 import {
-  buildFeeVoucherLines,
-  buildIncomeVoucherLines,
+  buildDayVoucherLines,
   incomeVoucherBlocker,
+  incomeVoucherCoversDay,
   incomeVoucherDescription,
   incomeVoucherKey,
   incomeVoucherSeries,
-  type IncomeVoucherInput,
+  type DayVoucherInput,
+  type DayVoucherInputLine,
 } from "./voucher";
-import type { IncomeAccountDistribution } from "./types";
 
 const names: Record<string, string> = {
   "3000": "Försäljning inom Sverige",
   "3011": "Öl",
-  "1931": "Swishkonto",
-  "1930": "Företagskonto",
+  "1580": "Zettle-fordran",
   "6570": "Bankkostnader",
 };
 
+const line = (account: string, costCenterId: string | null, total: number): DayVoucherInputLine => ({
+  account,
+  costCenterId,
+  total,
+});
+
 const input = (
-  distributions: IncomeAccountDistribution[],
-  overrides: Partial<IncomeVoucherInput> = {},
-): IncomeVoucherInput => ({
-  distributions,
-  total: distributions.reduce((s, d) => s + d.total, 0),
-  clearingAccount: "1931",
-  clearingAccountName: "Swishkonto",
-  costCenterId: "cc-cafe",
+  lines: DayVoucherInputLine[],
+  overrides: Partial<DayVoucherInput> = {},
+): DayVoucherInput => ({
+  lines,
+  total: lines.reduce((s, l) => s + l.total, 0),
+  clearingAccount: "1580",
   accountName: (a) => names[a] ?? "",
   ...overrides,
 });
 
-const dist = (account: string, total: number): IncomeAccountDistribution => ({
-  account,
-  description: names[account] ?? "",
-  total,
-});
-
 describe("incomeVoucherBlocker", () => {
-  it("passes a report whose distributions add up to its total", () => {
-    expect(incomeVoucherBlocker(input([dist("3000", 17500)]))).toBeNull();
+  it("passes a day whose lines add up to its total", () => {
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 17500)]))).toBeNull();
   });
 
-  it("refuses a report with nothing to book", () => {
+  it("refuses a day with nothing to book", () => {
     expect(incomeVoucherBlocker(input([]))).toBe("noDistributions");
-    // All-zero is the same thing: there is no voucher to write.
-    expect(incomeVoucherBlocker(input([dist("3000", 0)]))).toBe("noDistributions");
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 0)]))).toBe("noDistributions");
   });
 
-  it("refuses one whose distributions disagree with its total", () => {
-    // The case this exists for. Both numbers come from the service, computed
-    // separately; if they ever part company the voucher would be rejected by
-    // Fortnox at export rather than here.
-    expect(incomeVoucherBlocker(input([dist("3000", 17500)], { total: 17400 }))).toBe("unbalanced");
+  // The rule the per-line cost centre exists for: a row reaching Fortnox with
+  // no cost centre is takings no verksamhet's result will ever show.
+  it("refuses a line with no cost centre, revenue or fee alike", () => {
+    expect(incomeVoucherBlocker(input([line("3000", null, 100)]))).toBe("noCostCenter");
+    expect(
+      incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("6570", null, -30)])),
+    ).toBe("noCostCenter");
   });
 
-  it("refuses one with no cost centre chosen", () => {
-    expect(incomeVoucherBlocker(input([dist("3000", 17500)], { costCenterId: null }))).toBe(
-      "noCostCenter",
+  it("does not hold a zero line's missing cost centre against the day", () => {
+    expect(
+      incomeVoucherBlocker(input([line("3000", "cafe", 100), line("3011", null, 0)])),
+    ).toBeNull();
+  });
+
+  it("refuses a fee line with no fee account chosen", () => {
+    expect(
+      incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("", "fee", -30)])),
+    ).toBe("noAccount");
+  });
+
+  it("refuses a day whose stored total has drifted from its lines", () => {
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 17500)], { total: 17400 }))).toBe(
+      "unbalanced",
     );
   });
 
   it("refuses one with no clearing account configured", () => {
-    expect(incomeVoucherBlocker(input([dist("3000", 17500)], { clearingAccount: "  " }))).toBe(
-      "noClearingAccount",
-    );
+    expect(
+      incomeVoucherBlocker(input([line("3000", "cafe", 100)], { clearingAccount: " " })),
+    ).toBe("noClearingAccount");
   });
 });
 
-describe("buildIncomeVoucherLines", () => {
-  it("credits each revenue account and debits the clearing account", () => {
-    const lines = buildIncomeVoucherLines(input([dist("3011", 5000), dist("3000", 17500)]));
-
-    expect(lines).toHaveLength(3);
-    // Sorted by account, so the same shape of day always reads the same.
-    expect(lines.map((l) => l.account)).toEqual(["3000", "3011", "1931"]);
-
-    expect(lines[0]).toMatchObject({ credit: 17500, debit: 0, costCenterId: "cc-cafe" });
-    expect(lines[1]).toMatchObject({ credit: 5000, debit: 0, costCenterId: "cc-cafe" });
-    expect(lines[2]).toMatchObject({ account: "1931", debit: 22500, credit: 0 });
+describe("buildDayVoucherLines", () => {
+  it("is one row per account and cost centre, then the clearing account", () => {
+    const rows = buildDayVoucherLines(
+      input([
+        line("3000", "cafe", 1000),
+        line("3011", "pub", 4000),
+        line("3000", "cafe", 500),
+        line("3000", "sexet", 300),
+      ]),
+    );
+    expect(rows.map((r) => [r.account, r.costCenterId, r.debit, r.credit])).toEqual([
+      ["3000", "cafe", 0, 1500],
+      ["3000", "sexet", 0, 300],
+      ["3011", "pub", 0, 4000],
+      ["1580", null, 5800, 0],
+    ]);
+    expect(voucherBlocker(rows)).toBeNull();
   });
 
-  it("balances, by the same rule the expense booking screen is held to", () => {
-    const lines = buildIncomeVoucherLines(input([dist("3011", 5000), dist("3000", 17500)]));
-    // Not a re-implementation of the check. The actual shared one.
-    expect(voucherBlocker(lines)).toBeNull();
+  it("debits the fee account and pays out the net", () => {
+    const rows = buildDayVoucherLines(
+      input([line("3000", "cafe", 10000), line("6570", "fee", -175)]),
+    );
+    expect(rows.map((r) => [r.account, r.debit, r.credit])).toEqual([
+      ["3000", 0, 10000],
+      ["6570", 175, 0],
+      ["1580", 9825, 0],
+    ]);
+    expect(voucherBlocker(rows)).toBeNull();
+  });
+
+  it("books a net refund against an account as a debit, not a negative credit", () => {
+    const rows = buildDayVoucherLines(
+      input([line("3000", "cafe", 15000), line("3011", "pub", -5000)]),
+    );
+    expect(rows.find((r) => r.account === "3011")).toMatchObject({ debit: 5000, credit: 0 });
+    expect(rows.at(-1)).toMatchObject({ account: "1580", debit: 10000, credit: 0 });
+    expect(voucherBlocker(rows)).toBeNull();
+  });
+
+  it("credits the clearing account on a day that came to a net refund", () => {
+    const rows = buildDayVoucherLines(input([line("3000", "cafe", -2000)]));
+    expect(rows.at(-1)).toMatchObject({ account: "1580", debit: 0, credit: 2000 });
+    expect(voucherBlocker(rows)).toBeNull();
   });
 
   it("leaves the clearing row without a cost centre", () => {
-    // A clearing account is a bank balance, not a dimension of a budget. A cost
-    // centre here would make the committee's outcome count the takings twice.
-    const lines = buildIncomeVoucherLines(input([dist("3000", 17500)]));
-    expect(lines.at(-1)?.costCenterId).toBeNull();
+    const rows = buildDayVoucherLines(input([line("3000", "cafe", 100)]));
+    expect(rows.at(-1)?.costCenterId).toBeNull();
   });
 
-  it("drops zero-valued distributions", () => {
-    // A product sold and fully refunded the same day nets to zero against its
-    // account. A row for nothing is noise, and Fortnox rejects some outright.
-    const lines = buildIncomeVoucherLines(input([dist("3000", 17500), dist("3011", 0)]));
-    expect(lines.map((l) => l.account)).toEqual(["3000", "1931"]);
-    expect(voucherBlocker(lines)).toBeNull();
-  });
-
-  it("books a net refund as a debit rather than a negative credit", () => {
-    // More refunded than sold against 3011 on the day. A ledger has no negative
-    // credit; it has a debit.
-    const lines = buildIncomeVoucherLines(input([dist("3000", 17500), dist("3011", -2500)]));
-
-    const beer = lines.find((l) => l.account === "3011");
-    expect(beer).toMatchObject({ debit: 2500, credit: 0 });
-    expect(lines.every((l) => l.debit >= 0 && l.credit >= 0)).toBe(true);
-
-    // 17500 credited, 2500 debited. The bank gained 15000.
-    expect(lines.at(-1)).toMatchObject({ account: "1931", debit: 15000, credit: 0 });
-    expect(voucherBlocker(lines)).toBeNull();
-  });
-
-  it("books a wholly negative day the other way round and still balances", () => {
-    // A day of nothing but refunds: money left the clearing account.
-    const lines = buildIncomeVoucherLines(input([dist("3000", -4000)]));
-
-    expect(lines[0]).toMatchObject({ account: "3000", debit: 4000, credit: 0 });
-    expect(lines.at(-1)).toMatchObject({ account: "1931", debit: 0, credit: 4000 });
-    expect(voucherBlocker(lines)).toBeNull();
+  it("drops rows that came to nothing, and the clearing row on a day that nets to zero", () => {
+    expect(
+      buildDayVoucherLines(input([line("3000", "cafe", 100), line("3000", "cafe", -100)])),
+    ).toEqual([]);
+    const rows = buildDayVoucherLines(
+      input([line("3000", "cafe", 500), line("3011", "pub", -500)]),
+    );
+    expect(rows.map((r) => r.account)).toEqual(["3000", "3011"]);
+    expect(voucherBlocker(rows)).toBeNull();
   });
 
   it("carries the account name at booking time", () => {
-    // Denormalised for the same reason VerificationLine.accountName is: the
-    // chart of accounts may change, a booked document may not.
-    const lines = buildIncomeVoucherLines(input([dist("3011", 5000)]));
-    expect(lines[0].accountName).toBe("Öl");
-    expect(lines.at(-1)?.accountName).toBe("Swishkonto");
-  });
-});
-
-describe("buildFeeVoucherLines", () => {
-  it("debits the fee account and credits the clearing account", () => {
-    // Fees are a cost, so they run the opposite way to takings.
-    const lines = buildFeeVoucherLines({
-      report: { key: "avgift-2026-01-02", date: "2026-01-02", total: 4200, fees: [] },
-      feeAccount: "6570",
-      feeAccountName: "Bankkostnader",
-      clearingAccount: "1930",
-      clearingAccountName: "Företagskonto",
-      costCenterId: "cc-skatt",
-    });
-
-    expect(lines).toHaveLength(2);
-    expect(lines[0]).toMatchObject({
-      account: "6570",
-      debit: 4200,
-      credit: 0,
-      costCenterId: "cc-skatt",
-    });
-    expect(lines[1]).toMatchObject({
-      account: "1930",
-      debit: 0,
-      credit: 4200,
-      costCenterId: null,
-    });
-    expect(voucherBlocker(lines)).toBeNull();
-  });
-
-  it("books fees paid back as a credit to the fee account", () => {
-    // A refunded purchase takes its fee with it. No negative debit.
-    const lines = buildFeeVoucherLines({
-      report: { key: "avgift-2026-10-23", date: "2026-10-23", total: -345, fees: [] },
-      feeAccount: "6570",
-      feeAccountName: "Bankkostnader",
-      clearingAccount: "1580",
-      clearingAccountName: "Zettle",
-      costCenterId: "cc-skatt",
-    });
-
-    expect(lines[0]).toMatchObject({ account: "6570", debit: 0, credit: 345 });
-    expect(lines[1]).toMatchObject({ account: "1580", debit: 345, credit: 0 });
-    expect(voucherBlocker(lines)).toBeNull();
+    const [row] = buildDayVoucherLines(input([line("3011", "pub", 100)]));
+    expect(row.accountName).toBe("Öl");
   });
 });
 
 describe("incomeVoucherDescription", () => {
-  it("names the payment method and the committee, and no series", () => {
-    // No "IR ": every one of these is filed in the income series already, so
-    // the prefix spent characters saying what the series says. The key below is
-    // what keeps the ones written the old way recognisable.
-    expect(incomeVoucherDescription("SWISH", "Café")).toBe("Swish - Café");
-    expect(incomeVoucherDescription("ZETTLE", "Café")).toBe("Zettle - Café");
+  it("is the payment method, since the voucher is the whole day", () => {
+    expect(incomeVoucherDescription("SWISH")).toBe("Swish");
+    expect(incomeVoucherDescription("ZETTLE")).toBe("Zettle");
+  });
+});
+
+describe("incomeVoucherCoversDay", () => {
+  // Every wording ever written to Fortnox for some of a day's Zettle money.
+  it("recognises every generation of Zettle voucher", () => {
+    for (const text of ["Zettle", "Zettle - Café", "Zettleavgifter", "IR Zettle - Pub"]) {
+      expect(incomeVoucherCoversDay("ZETTLE", text), text).toBe(true);
+      expect(incomeVoucherCoversDay("SWISH", text), text).toBe(false);
+    }
   });
 
-  it("is the same text for every day of fees", () => {
-    // Fees belong to no committee, so the date is the only thing telling two
-    // days of them apart, which the key below is what expresses.
-    expect(incomeVoucherDescription("ZETTLE_FEE", null)).toBe("Zettleavgifter");
-    expect(incomeVoucherDescription("ZETTLE_FEE", "Café")).toBe("Zettleavgifter");
-  });
-
-  it("leaves no trailing separator for a committee with no description", () => {
-    expect(incomeVoucherDescription("SWISH", null)).toBe("Swish -");
+  it("recognises Swish ones, and not a word that merely starts the same", () => {
+    expect(incomeVoucherCoversDay("SWISH", "Swish")).toBe(true);
+    expect(incomeVoucherCoversDay("SWISH", "IR Swish - Café")).toBe(true);
+    expect(incomeVoucherCoversDay("SWISH", "Swishkonto avgift")).toBe(false);
+    expect(incomeVoucherCoversDay("ZETTLE", "Inköp kaffe")).toBe(false);
   });
 });
 

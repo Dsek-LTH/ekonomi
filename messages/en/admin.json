@@ -206,7 +206,9 @@
       "defaultCostCenterHint": "Sales are booked on this cost center.",
       "productHint": "Goods whose name starts with the prefix belong to the unit and are booked on the account beside it. With the prefix c, c-Cola lands here, for example.",
       "fallbackHint": "Goods that match no unit land here.",
-      "noOwnCostCenters": "The unit owns no cost centers yet. Add a prefix above."
+      "noOwnCostCenters": "The unit owns no cost centers yet. Add a prefix above.",
+      "prefixCostCenter": "Cost centre for {code}",
+      "prefixCostCenterDefault": "Committee default"
     },
     "saveFailed": "Could not save.",
     "noOwnerGroups": "No group grants the role for this unit yet. Link a group under Roles.",
@@ -359,10 +361,10 @@
     "done": "Done",
     "stepsLeft": "{count, plural, one {# step left} other {# steps left}}",
     "service": {
-      "title": "1. Connection",
-      "description": "The service that fetches from Zettle and renders the income statement.",
-      "connected": "The income service is connected.",
-      "missing": "The income service is not connected. Whoever runs the app needs to set INTAKT_URL and INTAKT_TOKEN."
+      "title": "1. Zettle",
+      "description": "The connection that fetches sales and fees from Zettle. Swish is read from the bank's file and needs no connection.",
+      "connected": "Zettle is connected.",
+      "missing": "Zettle is not connected. Whoever runs the app needs to set ZETTLE_CLIENT_ID and ZETTLE_API_KEY. Swish can be fetched anyway."
     },
     "units": {
       "title": "2. Committees and products",

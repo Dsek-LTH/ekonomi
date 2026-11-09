@@ -6,6 +6,7 @@
   "exportDone": "{id}: exported to Fortnox ({label})",
   "voucherLabel": "Voucher {label}",
   "bookingNowTitle": "Open for booking by {names}",
+  "reviewingNowTitle": "Being reviewed by {names}",
   "someone": "Someone",
   "exportingNow": "{name} is exporting this right now",
   "exportUncertain": "The export {name} started got no clear answer from Fortnox. It has to be checked in Fortnox before the expense can be exported again.",
@@ -41,6 +42,9 @@
       "inactiveAccount": "An account on the voucher is inactive in Fortnox.",
       "inactiveCostCenter": "A cost centre on the voucher is inactive.",
       "inactiveProject": "A project on the voucher is completed in Fortnox."
-    }
+    },
+    "othersReviewing": "{names} {count, plural, one {is} other {are}} also reviewing this expense right now.",
+    "confirmTitle": "Someone else is reviewing this expense",
+    "confirmMessage": "{names} also {count, plural, one {has} other {have}} this expense open for review. Post it anyway?"
   }
 }

@@ -98,6 +98,7 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
           code: p.code,
           account: p.account,
           accountName: accountName.get(p.account) ?? "",
+          costCenterId: p.costCenterId,
         })),
       },
     };

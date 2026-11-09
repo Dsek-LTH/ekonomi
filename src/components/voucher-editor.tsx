@@ -86,6 +86,33 @@ export const filledVoucherRows = (rows: VoucherEditorRow[]) =>
 const BLANK_ROWS = 3;
 
 /**
+ * A balance account (class 1 or 2: bank, moms, skulder). These take no cost
+ * centre from the voucher-wide picker, the same as Fortnox, because a cost
+ * centre says where a result was made and a balance account holds no result.
+ * A row can still be given one by hand in its own cell.
+ */
+const isBalanceAccount = (account: string) => /^[12]/.test(account.trim());
+
+/** A row the voucher-wide cost centre is for: written in, and not on a
+ *  balance account. One with no account yet counts, since most will be costs. */
+const takesSharedCostCenter = (r: VoucherEditorRow) =>
+  !isBlankVoucherRow(r) && !isBalanceAccount(r.account);
+
+/**
+ * The voucher-wide cost centre, read off the rows: what every row it is for
+ * shares, `null` when they disagree (one was changed by hand), and `undefined`
+ * while there is no such row to read it off. Not a value of its own, so it can
+ * never claim something the rows do not say, and a page that pre-fills its
+ * rows (an utlägg's attested shares) opens with it already showing.
+ */
+function sharedCostCenter(rows: VoucherEditorRow[]): string | null | undefined {
+  const sharing = rows.filter(takesSharedCostCenter);
+  if (sharing.length === 0) return undefined;
+  const first = sharing[0].costCenterCode;
+  return sharing.every((r) => r.costCenterCode === first) ? first : null;
+}
+
+/**
  * A row the bookkeeper may read but not touch: the payment side of an utlägg,
  * the clearing account of a day's takings. It is not part of `rows` at all, so
  * there is no state the UI could let anyone edit it through; the page assembles
@@ -255,6 +282,23 @@ export function VoucherEditor({
   // text where the bookkeeper can see it. See lib/domain/cost-center-tag.
   const isLocal = (code: string) =>
     costCenters.some((c) => c.code === code && c.source === "LOCAL");
+
+  /**
+   * A row's account changed. The cost centre follows the voucher's: a row
+   * with none of its own takes the shared one, and a row that becomes a
+   * balance account gives it back.
+   */
+  function patchAccount(r: VoucherEditorRow, account: string) {
+    const shared = sharedCostCenter(rows);
+    let costCenterCode = r.costCenterCode;
+    if (shared && !isBalanceAccount(account) && !costCenterCode) costCenterCode = shared;
+    else if (shared && isBalanceAccount(account) && costCenterCode === shared) costCenterCode = "";
+    patch(r.id, {
+      account,
+      costCenterCode,
+      description: retagRowText(r.description, r.costCenterCode, costCenterCode, isLocal),
+    });
+  }
 
   // Kronor still unaccounted for, from the totals the page has already summed,
   // the locked row included, which is what makes this the amount that would
@@ -631,7 +675,7 @@ export function VoucherEditor({
                       <Combobox
                         options={accountOptions}
                         value={r.account}
-                        onChange={(v) => patch(r.id, { account: v })}
+                        onChange={(v) => patchAccount(r, v)}
                         // Empty, not absent: left off, the picker falls back to
                         // its own "Välj…" and the column is full of them again.
                         placeholder=""
@@ -882,4 +926,65 @@ export function VoucherBlockerChip({ blocker }: { blocker: VoucherBlocker | null
 /** The blocker chip's shape, for a booking screen whose reasons are its own. */
 export function WarningChip({ children }: { children: React.ReactNode }) {
   return <span className={cn(chip, "bg-warning-soft text-warning")}>{children}</span>;
+}
+
+/**
+ * The voucher's own cost centre, as Fortnox has one in the voucher's head: one
+ * pick sets every row but the spare ones and those on a balance account, and
+ * each row's own cell still overrides it. The editor keeps it going after
+ * that, giving it to a row as the row gets its account.
+ *
+ * Its own component rather than part of the table, so a page sets it among its
+ * own head fields (the date, the text, the supplier) where it reads as a fact
+ * about the voucher rather than a second section of the grid. The label is the
+ * page's, from `book.allCostCenter`, in whatever field wrapper the page uses.
+ */
+export function VoucherCostCenterPicker({
+  rows,
+  onChange,
+  costCenters,
+}: {
+  rows: VoucherEditorRow[];
+  onChange: (rows: VoucherEditorRow[]) => void;
+  costCenters: CostCenter[];
+}) {
+  const t = useTranslations("book");
+  const tAlloc = useTranslations("allocation");
+  // Only for a voucher with no rows to read it off yet, so the field does not
+  // snap back to empty the moment something is picked.
+  const [picked, setPicked] = useState("");
+  const shared = sharedCostCenter(rows);
+  const isLocal = (code: string) =>
+    costCenters.some((c) => c.code === code && c.source === "LOCAL");
+
+  function pick(code: string) {
+    setPicked(code);
+    onChange(
+      rows.map((r) =>
+        !takesSharedCostCenter(r) || r.costCenterCode === code
+          ? r
+          : {
+              ...r,
+              costCenterCode: code,
+              description: retagRowText(r.description, r.costCenterCode, code, isLocal),
+            },
+      ),
+    );
+  }
+
+  return (
+    <Combobox
+      size="sm"
+      options={costCenters.map((c) => ({
+        value: c.code,
+        label: `${c.code} - ${c.name}`,
+      }))}
+      value={shared === undefined ? picked : (shared ?? "")}
+      onChange={pick}
+      placeholder={shared === null ? t("allCostCenterMixed") : ""}
+      searchPlaceholder={tAlloc("search")}
+      allowClear
+      aria-label={t("allCostCenter")}
+    />
+  );
 }

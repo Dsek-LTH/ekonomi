@@ -150,7 +150,7 @@ RUN --mount=type=bind,from=builder,source=/app,target=/b \
     cd /b; \
     mkdir -p /out/app/.next/static /out/app/public /out/app/src/lib/expense/cover \
              /out/app/src/lib/contract/rental /out/app/src/lib/server/fonts \
-             /out/app/src/lib/server/invoice-cover \
+             /out/app/src/lib/server/invoice-cover /out/app/src/lib/income/typst \
              /out/migrator/node_modules /out/migrator/scripts; \
     cp -a .next/standalone/. /out/app/; \
     cp -a .next/static/. /out/app/.next/static/; \
@@ -159,6 +159,7 @@ RUN --mount=type=bind,from=builder,source=/app,target=/b \
     cp -a src/lib/contract/rental/. /out/app/src/lib/contract/rental/; \
     cp -a src/lib/server/fonts/. /out/app/src/lib/server/fonts/; \
     cp -a src/lib/server/invoice-cover/. /out/app/src/lib/server/invoice-cover/; \
+    cp -a src/lib/income/typst/. /out/app/src/lib/income/typst/; \
     cp -a /migrator-deps/. /out/migrator/node_modules/; \
     cp -a prisma prisma.config.ts /out/migrator/; \
     cp -a scripts/load-env.ts /out/migrator/scripts/
@@ -188,12 +189,13 @@ ENV NODE_ENV=production \
 # that is what lib/server/typst.ts resolves against process.cwd(), which is also
 # the compile root; the section's mark they draw is already in public/.
 #
-# Four directories, and each is load-bearing:
+# Five directories, and each is load-bearing:
 #
 #   expense/cover         the utläggsräkning's template, and Inter
 #   contract/rental       the uthyrningsavtal's template
 #   server/fonts          Domitian and TeX Gyre Heros, the guild's own faces
 #   server/invoice-cover  the levfaktura's attest page template
+#   income/typst          the intäktsräkning's template
 #
 # The fonts are not optional dressing. Typst embeds no proportional sans at all
 # and neither of the guild's faces, so without them the utläggsräkning comes out

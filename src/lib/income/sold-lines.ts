@@ -135,3 +135,87 @@ export function soldSections<T extends SectionLine>(
     };
   });
 }
+
+/** A line as a day's sections read it: whose it is, and whether it was placed. */
+export interface DayLine extends SectionLine {
+  kind: "SALE" | "FEE";
+  resultUnitId: string | null;
+  unitName: string | null;
+  unmatched: boolean;
+}
+
+/**
+ * One block of a day's sold lines.
+ *
+ * `unmatched` holds every sale the routing could not place, whichever
+ * verksamhet it currently sits on, drawn first because it is what the review
+ * of a day is about. Then one block per verksamhet, by name, then the fees.
+ */
+export interface DaySection<T> {
+  key: string;
+  kind: "unmatched" | "unit" | "fees";
+  /** The verksamhet's name, on a unit block. */
+  title: string | null;
+  resultUnitId: string | null;
+  /** The block's sum. */
+  total: number;
+  /** Every line in the block, for what is done to all of them at once. */
+  lines: T[];
+  accounts: SoldSection<T>[];
+}
+
+const sumSek = (lines: readonly { total: number }[]) =>
+  oreToSEK(lines.reduce((s, l) => s + sekToOre(l.total), 0));
+
+export function daySections<T extends DayLine>(lines: readonly T[]): DaySection<T>[] {
+  const isUnmatched = (l: T) => l.kind === "SALE" && (l.unmatched || !l.resultUnitId);
+  const unmatched = lines.filter(isUnmatched);
+  const fees = lines.filter((l) => l.kind === "FEE");
+
+  const byUnit = new Map<string, T[]>();
+  for (const line of lines) {
+    if (line.kind !== "SALE" || isUnmatched(line)) continue;
+    const group = byUnit.get(line.resultUnitId!);
+    if (group) group.push(line);
+    else byUnit.set(line.resultUnitId!, [line]);
+  }
+
+  const sections: DaySection<T>[] = [];
+  if (unmatched.length > 0) {
+    sections.push({
+      key: "unmatched",
+      kind: "unmatched",
+      title: null,
+      resultUnitId: null,
+      total: sumSek(unmatched),
+      lines: unmatched,
+      accounts: soldSections(unmatched, true),
+    });
+  }
+  const units = [...byUnit.entries()].sort(([, a], [, b]) =>
+    (a[0].unitName ?? "").localeCompare(b[0].unitName ?? "", "sv"),
+  );
+  for (const [unitId, group] of units) {
+    sections.push({
+      key: `unit:${unitId}`,
+      kind: "unit",
+      title: group[0].unitName,
+      resultUnitId: unitId,
+      total: sumSek(group),
+      lines: group,
+      accounts: soldSections(group, false),
+    });
+  }
+  if (fees.length > 0) {
+    sections.push({
+      key: "fees",
+      kind: "fees",
+      title: null,
+      resultUnitId: null,
+      total: sumSek(fees),
+      lines: fees,
+      accounts: soldSections(fees, false),
+    });
+  }
+  return sections;
+}

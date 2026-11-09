@@ -96,6 +96,64 @@ beforeEach(() => {
   h.eventCreate.mockResolvedValue({});
 });
 
+describe("a voucher dated off the utlägg's own day", () => {
+  it("is refused without a reason, and writes nothing", async () => {
+    const res = await send(POST, body({ date: "2026-04-28" }));
+    expect(res.status).toBe(422);
+    await expect(res.json()).resolves.toMatchObject({ error: "expense.correctionReasonRequired" });
+    expect(h.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("corrects the utlägg to match, and records why", async () => {
+    const res = await send(
+      POST,
+      body({ date: "2026-04-28", correctionReason: "Kvittot visar 28 april" }),
+    );
+    expect(res.status).toBe(201);
+    expect(h.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ purchaseDate: new Date("2026-04-28") }),
+      }),
+    );
+    expect(h.eventCreate).toHaveBeenCalledWith({
+      data: {
+        expenseId: "e1",
+        type: "CORRECTED",
+        actorId: "u1",
+        comment: "Kvittot visar 28 april",
+        diff: { field: "purchaseDate", from: "2026-05-01", to: "2026-04-28" },
+      },
+    });
+  });
+
+  it("only fills in an utlägg that had no date, as nobody's mistake", async () => {
+    h.expense = { ...h.expense, purchaseDate: null };
+    const res = await send(POST, body({ date: "2026-04-28" }));
+    expect(res.status).toBe(201);
+    expect(h.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ purchaseDate: new Date("2026-04-28") }),
+      }),
+    );
+    expect(h.eventCreate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ type: "CORRECTED" }) }),
+    );
+  });
+
+  it("corrects on an amend too", async () => {
+    h.expense = {
+      ...h.expense,
+      status: "BOOKED",
+      verification: { date: new Date("2026-05-01"), description: "PU lu1234ge-s Kontor" },
+    };
+    const res = await send(PATCH, body({ date: "2026-04-28", correctionReason: "Fel dag" }));
+    expect(res.status).toBe(200);
+    expect(h.eventCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ type: "CORRECTED" }) }),
+    );
+  });
+});
+
 describe("POST /api/expenses/[id]/book", () => {
   it("books against the version the screen was showing, and hands back the new one", async () => {
     const res = await send(POST, body());

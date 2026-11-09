@@ -1,9 +1,7 @@
 // Everything the review view needs besides the days themselves.
 //
-// Two pages render that view (the queue a fetch produced, and one reopened day
-// on its own) and they have to hand it the same settings, the same pickers and
-// the same move targets. Working that out twice is how two screens end up
-// disagreeing about which cost centres exist.
+// Kept apart from the page so the settings, the pickers and the verksamheter a
+// sale can be given to are worked out in one place.
 import "server-only";
 
 import { getActiveAccounts } from "@/lib/data/accounts";
@@ -22,9 +20,9 @@ interface IncomeReviewContext {
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
-  /** Fortnox projects a voucher row may name. Draft days carry none yet. */
-  projects: ProjectRecord[];
   moveTargets: IncomeMoveTarget[];
+  /** Fortnox projects, which a hand-written kontering may name. */
+  projects: ProjectRecord[];
   /**
    * The verksamhet sales matching no prefix are routed to, as a result unit.
    * Its days hold whatever the routing could not place, which is what a
@@ -47,19 +45,21 @@ export async function loadReviewContext(
   const [settings, moveTargets] = await Promise.all([getIncomeSettings(), getIncomeMoveTargets()]);
 
   const [costCenters, accounts, projects] = await Promise.all([
-    getActiveCostCenters([
-      ...reports.flatMap((d) => (d.costCenterCode ? [d.costCenterCode] : [])),
-      // The defaults the booking screen pre-fills from count too: a committee
-      // whose default has since been retired would otherwise pre-fill a code
-      // the picker cannot show, which reads as no cost centre at all.
-      ...reports.flatMap((d) => (d.defaultCostCenterCode ? [d.defaultCostCenterCode] : [])),
-      ...(settings.zettleFeeCostCenterCode ? [settings.zettleFeeCostCenterCode] : []),
-    ]),
+    // Whatever the lines already point at counts too, retired or not: a line
+    // on a cost centre that has since been archived must still show its code,
+    // so the reviewer can see why the day will not book and give it another.
+    getActiveCostCenters(
+      reports.flatMap((d) => [
+        ...d.lines.flatMap((l) => (l.costCenterCode ? [l.costCenterCode] : [])),
+        ...(d.manual?.rows.flatMap((r) => (r.costCenterCode ? [r.costCenterCode] : [])) ?? []),
+      ]),
+    ),
     getActiveAccounts([
       settings.zettleClearingAccount,
       settings.swishClearingAccount,
       settings.zettleFeeAccount,
       ...reports.flatMap((d) => d.lines.map((l) => l.account)),
+      ...reports.flatMap((d) => d.manual?.rows.map((r) => r.account) ?? []),
     ]),
     getActiveProjects(),
   ]);

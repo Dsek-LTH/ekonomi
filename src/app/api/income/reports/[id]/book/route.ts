@@ -1,11 +1,11 @@
 // Book a day's takings: store the intäktsräkning, then write the verifikation.
 //
-// Two ways in, and the difference is only where the rows come from. With no
-// lines in the body the app derives them from the day's account distributions,
-// what "book all" sends, and what nearly every day needs. With lines, they are
-// the ones the bookkeeper edited on the booking screen, held to the same rules
-// as an utlägg's voucher plus one of its own: the debit side has to come to the
-// day's total, because the document beside it says so.
+// The voucher is derived from the day's lines: one row per account and cost
+// centre, then the clearing account (lib/income/voucher.ts). Or, when somebody
+// has written the kontering by hand, those rows, saved on the report with a
+// fingerprint of the lines they were written against
+// (lib/income/manual-voucher.ts). A hand-written kontering whose lines have
+// changed since is refused, so it can never outlive a correction unnoticed.
 //
 // Storing the document happens here, and only here. A draft is rendered on
 // demand and kept by nobody; the moment a day is booked, the PDF becomes the
@@ -19,15 +19,19 @@
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
-import { parseBody } from "@/lib/api/parse";
-import { BookIncomeReport } from "@/lib/api/schemas/income";
+import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { voucherBlocker } from "@/lib/domain/voucher";
 import { storeIncomeDocument } from "@/lib/income/document";
-import { toFeeReportDto, toReportDto } from "@/lib/income/report";
+import { isLegacyReport } from "@/lib/income/legacy";
 import {
-  buildFeeVoucherLines,
-  buildIncomeVoucherLines,
+  clearingRow,
+  manualVoucherBlocker,
+  voucherBasis,
+  type ManualVoucherRow,
+} from "@/lib/income/manual-voucher";
+import {
+  buildDayVoucherLines,
   incomeVoucherBlocker,
   incomeVoucherDescription,
   type IncomeVoucherLine,
@@ -36,22 +40,15 @@ import { loadUser } from "@/lib/server/current-user";
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
-export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   const g = await gate(canBookkeep, "auth.denied");
   if (!g.ok) return g.res;
 
-  const parsed = await parseBody(req, BookIncomeReport);
-  if (!parsed.ok) return parsed.res;
-  const edited = parsed.data.lines;
-
   const report = await prisma.incomeReport.findUnique({
     where: { id },
     include: {
-      // The unit, and the income settings that say what its voucher is called.
-      resultUnit: { include: { income: true } },
-      costCenter: true,
       lines: { orderBy: { sortOrder: "asc" } },
     },
   });
@@ -62,30 +59,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       values: { status: { key: `income.status.${report.status}` } },
     });
   }
+  // A reopened day from before the per-day voucher. Reopening one is refused
+  // (lib/income/lifecycle.ts), so this is a guard, not a path.
+  if (isLegacyReport(report) || report.source === "ZETTLE_FEE") {
+    return fail(409, "income.reopenLegacy");
+  }
+  // Some of this day's money is already booked here. The partial unique index
+  // would refuse a second verifikation anyway; this says it as a sentence.
+  if (report.duplicateOfId) return fail(409, "income.alreadyBookedHere");
 
   const settings = await loadBookkeepingSettings();
-  const accounts = await prisma.account.findMany({ select: { number: true, name: true } });
-  const accountName = new Map(accounts.map((a) => [a.number, a.name]));
-  const nameFor = (n: string) => accountName.get(n) ?? "";
-
-  const isFee = report.source === "ZETTLE_FEE";
-
-  // Where this day's revenue is booked. The report's own cost centre is the
-  // decision. The import copies the committee's default onto it and review may
-  // have changed it since, but a day fetched before the committee had a
-  // default carries none, and the answer is sitting in the settings. The
-  // booking screen pre-fills from the same three, in this order, so a day
-  // booked without anyone touching it gets exactly what it showed.
-  const costCenterId =
-    report.costCenterId ??
-    (isFee
-      ? settings.zettleFeeCostCenterId
-      : (report.resultUnit?.income?.defaultCostCenterId ?? null));
-
   const clearingAccount =
     report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount;
-  // Where the money landed is a choice made in the settings. Until it is made
-  // there is no voucher to write.
   if (!clearingAccount) {
     return fail(
       409,
@@ -97,93 +82,109 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // ── The voucher, decided before anything is stored or written ──
 
-  let lines: IncomeVoucherLine[];
-  if (edited.length > 0) {
-    // Edited on the booking screen. Cost centres arrive as codes, the way the
-    // utlägg voucher sends them, because a code is what the bookkeeper picked
-    // and what the ledger reads, so they are resolved to ids here, and an
-    // unknown one is refused rather than booked as no cost centre at all.
-    const codes = [...new Set(edited.map((l) => l.costCenterCode).filter(Boolean))] as string[];
-    const centres = await prisma.costCenter.findMany({ where: { code: { in: codes } } });
-    const idByCode = new Map(centres.map((c) => [c.code, c.id]));
-    const unknown = codes.find((c) => !idByCode.has(c));
-    if (unknown) return fail(422, "voucher.unknownCostCenter", { values: { code: unknown } });
-
-    // A project Fortnox does not have would get the whole voucher rejected at
-    // export, so it is refused here, where it can still be fixed. Closed
-    // projects still count, the same rule as the utlägg voucher.
-    const numbers = [...new Set(edited.map((l) => l.project).filter(Boolean))] as string[];
-    if (numbers.length > 0) {
-      const known = await prisma.project.findMany({
-        where: { number: { in: numbers } },
-        select: { number: true },
-      });
-      const have = new Set(known.map((p) => p.number));
-      const missing = numbers.find((n) => !have.has(n));
-      if (missing) return fail(422, "voucher.unknownProject", { values: { project: missing } });
-    }
-
-    lines = edited
-      .filter((l) => l.account || l.debit || l.credit)
-      .map((l, i) => ({
-        account: l.account,
-        accountName: l.accountName || nameFor(l.account),
-        costCenterId: l.costCenterCode ? (idByCode.get(l.costCenterCode) ?? null) : null,
-        project: l.project || null,
-        debit: l.debit,
-        credit: l.credit,
-        sortOrder: i,
-      }));
-
-    // The one rule an utlägg's voucher does not have. The intäktsräkning beside
-    // this table states the day's total; a voucher that books a different figure
-    // would be a verifikation and its own evidence disagreeing, which is the
-    // thing the whole review step exists to prevent. Compared on the debit side
-    // because the voucher balances by the time this runs, and against the
-    // magnitude because a day of net refunds runs the other way round.
-    const debit = lines.reduce((sum, l) => sum + l.debit, 0);
-    if (debit !== Math.abs(report.total)) {
-      return fail(422, "income.voucherTotalMismatch");
-    }
-  } else if (isFee) {
-    const feeAccount = settings.zettleFeeAccount;
-    if (!feeAccount) return fail(409, "settings.zettleFeeAccountUnset");
-    if (!costCenterId) return fail(422, "income.costCenterRequired");
-    lines = buildFeeVoucherLines({
-      report: toFeeReportDto(report),
-      feeAccount,
-      feeAccountName: nameFor(feeAccount),
-      clearingAccount,
-      clearingAccountName: nameFor(clearingAccount),
-      costCenterId,
-    });
-  } else {
-    const dto = toReportDto(report);
-    const blocker = incomeVoucherBlocker({
-      distributions: dto.accountDistributions,
-      total: report.total,
-      clearingAccount,
-      clearingAccountName: nameFor(clearingAccount),
-      costCenterId,
-      accountName: nameFor,
-    });
-    if (blocker) return fail(422, `income.${blocker}`);
-
-    lines = buildIncomeVoucherLines({
-      distributions: dto.accountDistributions,
-      total: report.total,
-      clearingAccount,
-      clearingAccountName: nameFor(clearingAccount),
-      costCenterId,
-      accountName: nameFor,
-    });
+  // A sale nobody has given a verksamhet. Only possible when the routing table
+  // changed under a fetch, but booking it would be takings that are nobody's.
+  if (report.lines.some((l) => l.kind === "SALE" && !l.resultUnitId && l.total !== 0)) {
+    return fail(422, "income.unplacedLines");
   }
 
-  // The same rule the expense booking screen is held to. Reaching this with an
-  // unbalanced voucher would mean a bug above, not bad input, but a voucher
-  // that does not balance must not reach the database either way.
+  const accounts = await prisma.account.findMany({ select: { number: true, name: true } });
+  const accountName = new Map(accounts.map((a) => [a.number, a.name]));
+  const input = {
+    lines: report.lines.map((l) => ({
+      account: l.account,
+      costCenterId: l.costCenterId,
+      total: l.total,
+    })),
+    total: report.total,
+    clearingAccount,
+    accountName: (n: string) => accountName.get(n) ?? "",
+  };
+
+  // A kontering written by hand is booked as written, provided the lines are
+  // still the ones it was written against. Otherwise the rows the lines give.
+  const manual = report.manualVoucher as ManualVoucherRow[] | null;
+  let lines: (IncomeVoucherLine & { project?: string | null; description?: string | null })[];
+  let centreIds: string[];
+
+  if (manual) {
+    if (report.manualVoucherBasis !== voucherBasis(input.lines, report.total)) {
+      return fail(409, "income.manualVoucherStale");
+    }
+    const manualBlocker = manualVoucherBlocker(
+      manual.map((r) => ({
+        account: r.account,
+        costCenter: r.costCenterId,
+        debit: r.debit,
+        credit: r.credit,
+      })),
+      report.total,
+    );
+    if (manualBlocker) return fail(422, `income.manual.${manualBlocker}`);
+
+    const clearing = clearingRow(report.total);
+    lines = [
+      ...manual.map((r, i) => ({
+        account: r.account,
+        accountName: r.accountName || (accountName.get(r.account) ?? ""),
+        costCenterId: r.costCenterId,
+        project: r.project,
+        description: r.description,
+        debit: r.debit,
+        credit: r.credit,
+        sortOrder: i,
+      })),
+      ...(clearing
+        ? [
+            {
+              account: clearingAccount,
+              accountName: accountName.get(clearingAccount) ?? "",
+              costCenterId: null,
+              ...clearing,
+              sortOrder: manual.length,
+            },
+          ]
+        : []),
+    ];
+    centreIds = manual.flatMap((r) => (r.costCenterId ? [r.costCenterId] : []));
+  } else {
+    const blocker = incomeVoucherBlocker(input);
+    if (blocker) {
+      // A fee line with no account is the fee setting left unchosen, which is
+      // fixed in the settings rather than on the day, so it says which setting.
+      if (blocker === "noAccount" && report.lines.some((l) => l.kind === "FEE" && !l.account)) {
+        return fail(409, "settings.zettleFeeAccountUnset");
+      }
+      return fail(422, `income.${blocker}`);
+    }
+    lines = buildDayVoucherLines(input);
+    centreIds = report.lines.flatMap((l) => (l.total !== 0 && l.costCenterId ? [l.costCenterId] : []));
+  }
+
+  // Every cost centre the voucher names has to still exist and be in use. An
+  // archived one would have the whole voucher refused by Fortnox at export,
+  // long after this said it was booked. Refused here instead, where it can
+  // still be changed.
+  const centres = await prisma.costCenter.findMany({
+    where: { id: { in: [...new Set(centreIds)] } },
+    select: { id: true, code: true, source: true, active: true },
+  });
+  if (centres.length !== new Set(centreIds).size) return fail(422, "income.unknownCostCenter");
+  const archived = centres.find((c) => !c.active);
+  if (archived) return fail(422, "income.inactiveCostCenter", { values: { code: archived.code } });
+
   const imbalance = voucherBlocker(lines);
   if (imbalance) return fail(422, `voucher.${imbalance}`);
+
+  // A local cost centre never reaches Fortnox as one, so its code goes into
+  // the row text, the same as on an utlägg's voucher (lib/domain/cost-center-tag).
+  // Written now rather than only at export, so the verifikation reads here
+  // exactly as it will over there.
+  const centreById = new Map(centres.map((c) => [c.id, c]));
+  const rowText = (costCenterId: string | null, text?: string | null) => {
+    const cc = costCenterId ? centreById.get(costCenterId) : undefined;
+    return cc && cc.source !== "FORTNOX" ? withCostCenterTag(text ?? "", cc.code) : text || null;
+  };
 
   // ── The document ──
 
@@ -201,8 +202,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     switch (document.reason) {
       case "reportNotFound":
         return fail(404, "income.reportNotFound");
-      case "serviceUnavailable":
-        return fail(503, "income.serviceUnavailable");
+      case "legacyReport":
+        return fail(409, "income.reopenLegacy");
       case "renderFailed":
         return fail(502, "income.renderFailed", { values: { detail: document.detail } });
       case "storeFailed":
@@ -212,35 +213,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   // ── Book ──
 
-  // The unit's income text, or its plain name if its income settings have since
-  // been removed, a booked day must still say whose takings it was.
-  const description = incomeVoucherDescription(
-    report.source,
-    report.resultUnit?.income?.description ?? report.resultUnit?.name ?? null,
-  );
-
-  // What the day ends up recorded as booking against.
-  //
-  // Written back rather than left as it was, for two reasons. A voucher edited
-  // on the way past, the ordinary way to correct a reopened day, used to
-  // change the verifikation and nothing else, so the queue, the booked list and
-  // the next reopen all went on showing the cost centre the day *had*, while
-  // the ledger held the one it was actually booked with. And a day that fell
-  // back to its verksamhet's default (see `costCenterId` above) carried none of
-  // its own, which made it depend on a setting that may be changed afterwards.
-  //
-  // Only when the voucher agrees with itself: rows deliberately split across
-  // several cost centres have no single answer, and inventing one would be
-  // worse than leaving the field as it stands.
-  const used = [...new Set(lines.flatMap((l) => (l.costCenterId ? [l.costCenterId] : [])))];
-  const booked = used.length === 1 ? used[0] : null;
-
   await prisma.$transaction(async (tx) => {
     await tx.verification.create({
       data: {
         incomeReportId: report.id,
         date: report.date,
-        description,
+        description: incomeVoucherDescription(report.source),
         createdById: g.actor.id,
         lines: {
           create: lines.map((l) => ({
@@ -248,6 +226,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             accountName: l.accountName,
             costCenterId: l.costCenterId,
             project: l.project ?? null,
+            description: rowText(l.costCenterId, l.description),
             debit: l.debit,
             credit: l.credit,
             sortOrder: l.sortOrder,
@@ -255,16 +234,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         },
       },
     });
-    // The document keys are already on the row. ensureIncomeDocument wrote
-    // them when it rendered, or found them there.
     await tx.incomeReport.update({
       where: { id: report.id },
-      data: {
-        status: "BOOKED",
-        reviewedById: g.actor.id,
-        reviewedAt: new Date(),
-        ...(booked && { costCenterId: booked }),
-      },
+      data: { status: "BOOKED", reviewedById: g.actor.id, reviewedAt: new Date() },
     });
   });
 

@@ -23,8 +23,10 @@ const h = vi.hoisted(() => ({
   status: "BOOKED" as string,
   documentKey: "doc/1" as string | null,
   incomeVoucherSeries: null as string | null,
-  /** What Fortnox already has for the day, keyed as `incomeVoucherKey` does. */
-  existing: new Map<string, string>(),
+  /** Whether the report is in the shape booked before the per-day voucher. */
+  legacy: false,
+  /** Vouchers Fortnox already has: date, description, label. */
+  existing: [] as { date: string; description: string; label: string }[],
   calls: [] as string[],
   createVoucher: vi.fn(),
   uploadInboxFile: vi.fn(),
@@ -49,13 +51,15 @@ vi.mock("@/lib/server/db", () => ({
     incomeReport: {
       findUnique: async () => ({
         id: "r1",
+        source: "ZETTLE",
+        resultUnitId: h.legacy ? "kallaren" : null,
         status: h.status,
         documentKey: h.documentKey,
         documentFilename: "intaktsrakning.pdf",
         verification: {
           id: "v1",
           date: new Date("2026-03-01"),
-          description: "Källaren 2026-03-01",
+          description: h.legacy ? "Zettle - Källaren" : "Zettle",
           lines: [
             {
               account: "3001",
@@ -106,13 +110,25 @@ vi.mock("@/lib/fortnox", () => ({
   FortnoxError,
 }));
 
-vi.mock("@/lib/income/duplicate", () => ({
-  fortnoxIncomeVouchers: async () => {
-    h.calls.push("fortnoxIncomeVouchers");
-    return { byKey: h.existing };
-  },
-  incomeVoucherKey: (date: string, description: string) => `${date}|${description}`,
-}));
+// The real matching rules (lib/income/voucher.ts) over a fake list, so what
+// is pinned here is which rule the route picks for which kind of report.
+vi.mock("@/lib/income/duplicate", async () => {
+  const { incomeVoucherCoversDay, incomeVoucherKey } = await import("@/lib/income/voucher");
+  return {
+    fortnoxIncomeVouchers: async () => {
+      h.calls.push("fortnoxIncomeVouchers");
+      return {
+        forDay: (date: string, source: "ZETTLE" | "SWISH") =>
+          h.existing.find((v) => v.date === date && incomeVoucherCoversDay(source, v.description))
+            ?.label ?? null,
+        exact: (date: string, description: string) =>
+          h.existing.find(
+            (v) => incomeVoucherKey(v.date, v.description) === incomeVoucherKey(date, description),
+          )?.label ?? null,
+      };
+    },
+  };
+});
 
 vi.mock("@/lib/server/storage", () => ({
   getObjectBuffer: async () => ({ bytes: new Uint8Array([1, 2, 3]) }),
@@ -132,7 +148,8 @@ beforeEach(() => {
   h.status = "BOOKED";
   h.documentKey = "doc/1";
   h.incomeVoucherSeries = null;
-  h.existing = new Map();
+  h.legacy = false;
+  h.existing = [];
   h.uploadInboxFile.mockResolvedValue("file-1");
   h.createVoucher.mockResolvedValue({ series: "B", number: 7, year: 10 });
   h.connectFile.mockResolvedValue(undefined);
@@ -188,13 +205,41 @@ describe("POST /api/income/reports/[id]/export", () => {
   });
 
   it("refuses a day Fortnox already has, and writes nothing", async () => {
-    h.existing = new Map([["2026-03-01|Källaren 2026-03-01", "B-3"]]);
+    h.existing = [{ date: "2026-03-01", description: "Zettle", label: "B-3" }];
     const res = await exportIt();
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toMatchObject({ error: "income.alreadyInFortnox" });
     // Nothing uploaded, nothing created, nothing flipped.
     expect(h.calls).toEqual(["fortnoxIncomeVouchers"]);
     expect(h.reportUpdate).not.toHaveBeenCalled();
+  });
+
+  // A whole day carries every verksamhet's money, so an old per-verksamhet
+  // voucher or a day of fees on that date means some of it is already over
+  // there. Exporting the day would count that money twice.
+  it("refuses a whole day when Fortnox has any older voucher for some of it", async () => {
+    for (const description of ["Zettle - Källaren", "IR Zettle - Pub", "Zettleavgifter"]) {
+      h.existing = [{ date: "2026-03-01", description, label: "B-3" }];
+      expect((await exportIt()).status, description).toBe(409);
+    }
+  });
+
+  it("does not take another method's voucher, or another day's, for this one", async () => {
+    h.existing = [
+      { date: "2026-03-01", description: "Swish - Källaren", label: "B-1" },
+      { date: "2026-03-02", description: "Zettle", label: "B-2" },
+    ];
+    expect((await exportIt()).status).toBe(200);
+  });
+
+  // An old per-verksamhet day is still exported on its own text: a sibling
+  // verksamhet's voucher on the same date is other money, not this.
+  it("matches an old per-verksamhet day on its own text only", async () => {
+    h.legacy = true;
+    h.existing = [{ date: "2026-03-01", description: "Zettle - Pub", label: "B-4" }];
+    expect((await exportIt()).status).toBe(200);
+    h.existing = [{ date: "2026-03-01", description: "IR Zettle - Källaren", label: "B-5" }];
+    expect((await exportIt()).status).toBe(409);
   });
 
   it("records the voucher and flips the report", async () => {

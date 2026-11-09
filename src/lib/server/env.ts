@@ -67,13 +67,10 @@ const REQUIRED = {
 // them where it needs them), and FORTNOX_TOKEN_KEY encrypts the stored tokens,
 // falling back to AUTH_SECRET (lib/server/secrets.ts).
 //
-// INTAKT_URL and INTAKT_TOKEN switch on the income import: the intakt service
-// that reads Zettle and Swish and renders the intäktsräkningar. Without them
-// the income pages report the service unavailable, the same way the
-// bookkeeping pages do without Fortnox. The Zettle credentials are the
-// service's own and are never read here: it is the one that talks to Zettle.
-// They are all listed in .env.example, which is where someone setting the app
-// up will look.
+// ZETTLE_CLIENT_ID and ZETTLE_API_KEY switch on the Zettle half of Intäkter
+// (lib/income/zettle-client.ts). Without them a Zettle fetch says Zettle is not
+// connected; Swish exports are read either way. They are listed in
+// .env.example, which is where someone setting the app up will look.
 //
 // SMTP_HOST switches email on (lib/server/mail.ts), through the section's
 // relay. Without it, mail is written to the log instead. With it, MAIL_FROM

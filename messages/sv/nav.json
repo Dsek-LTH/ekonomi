@@ -51,5 +51,8 @@
   "fiscalYear": "Räkenskapsår",
   "fiscalYearNotHere": "Räkenskapsåret gäller inte den här sidan.",
   "accountMenu": "Konto",
-  "salesSettings": "Försäljning"
+  "salesSettings": "Försäljning",
+  "groupIncome": "Intäkter",
+  "incomeZettle": "Zettle",
+  "incomeSwish": "Swish"
 }

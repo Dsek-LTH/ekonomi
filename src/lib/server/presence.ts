@@ -1,4 +1,4 @@
-// Who has an utlägg's booking screen open, kept in Postgres.
+// Who has an utlägg's booking screen or review open, kept in Postgres.
 //
 // In Postgres rather than in memory because the app may run as more than one
 // pod, and a bookkeeper on one pod has to see a colleague on another.
@@ -17,27 +17,38 @@ import "server-only";
 
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
-import { PRESENCE_TTL_MS, type PresentUser } from "@/lib/domain/presence";
+import { PRESENCE_TTL_MS, type PresenceScreen, type PresentUser } from "@/lib/domain/presence";
 
 const NOW = Prisma.sql`(now() AT TIME ZONE 'UTC')`;
 // Constants, not input, so they can be spliced into the SQL as literals.
 const TTL = Prisma.raw(`interval '${PRESENCE_TTL_MS / 1000} seconds'`);
 const PRUNE_AFTER = Prisma.raw(`interval '10 minutes'`);
 
+const SCREEN: Record<PresenceScreen, Prisma.Sql> = {
+  book: Prisma.sql`'BOOK'::"PresenceScreen"`,
+  review: Prisma.sql`'REVIEW'::"PresenceScreen"`,
+};
+
 /**
- * Record that `userId` is on the booking screen of `expenseId`, or, when they
- * have gone idle, that they no longer are.
+ * Record that `userId` is on `screen` of `expenseId`, or, when they have gone
+ * idle, that they no longer are.
  *
  * The expense must exist. The caller has just read it.
  */
-export async function heartbeat(expenseId: string, userId: string, active: boolean) {
+export async function heartbeat(
+  expenseId: string,
+  userId: string,
+  screen: PresenceScreen,
+  active: boolean,
+) {
   if (active) {
     await prisma.$executeRaw`
-      INSERT INTO "ExpensePresence" ("expenseId", "userId", "lastSeenAt")
-      VALUES (${expenseId}, ${userId}, ${NOW})
-      ON CONFLICT ("expenseId", "userId") DO UPDATE SET "lastSeenAt" = EXCLUDED."lastSeenAt"`;
+      INSERT INTO "ExpensePresence" ("expenseId", "userId", "screen", "lastSeenAt")
+      VALUES (${expenseId}, ${userId}, ${SCREEN[screen]}, ${NOW})
+      ON CONFLICT ("expenseId", "userId", "screen")
+      DO UPDATE SET "lastSeenAt" = EXCLUDED."lastSeenAt"`;
   } else {
-    await leave(expenseId, userId);
+    await leave(expenseId, userId, screen);
   }
   // Housekeeping, piggybacked on a request that happens every few seconds
   // anyway. Indexed, and almost always deletes nothing.
@@ -45,40 +56,52 @@ export async function heartbeat(expenseId: string, userId: string, active: boole
     DELETE FROM "ExpensePresence" WHERE "lastSeenAt" < ${NOW} - ${PRUNE_AFTER}`;
 }
 
-/** Leave the booking screen of `expenseId`. Nothing to do when not on it. */
-export async function leave(expenseId: string, userId: string) {
+/** Leave `screen` of `expenseId`. Nothing to do when not on it. */
+export async function leave(expenseId: string, userId: string, screen: PresenceScreen) {
   await prisma.$executeRaw`
-    DELETE FROM "ExpensePresence" WHERE "expenseId" = ${expenseId} AND "userId" = ${userId}`;
+    DELETE FROM "ExpensePresence"
+    WHERE "expenseId" = ${expenseId} AND "userId" = ${userId} AND "screen" = ${SCREEN[screen]}`;
 }
 
-/** Everybody but `selfId` on the booking screen of `expenseId`. */
-export function othersOn(expenseId: string, selfId: string): Promise<PresentUser[]> {
+/** Everybody but `selfId` on `screen` of `expenseId`. */
+export function othersOn(
+  expenseId: string,
+  selfId: string,
+  screen: PresenceScreen,
+): Promise<PresentUser[]> {
   return prisma.$queryRaw<PresentUser[]>`
     SELECT u."id", u."name"
     FROM "ExpensePresence" p JOIN "User" u ON u."id" = p."userId"
     WHERE p."expenseId" = ${expenseId}
+      AND p."screen" = ${SCREEN[screen]}
       AND p."userId" <> ${selfId}
       AND p."lastSeenAt" > ${NOW} - ${TTL}
     ORDER BY u."name"`;
 }
 
 /**
- * Every utlägg somebody other than `selfId` is booking right now, with who.
+ * Every utlägg somebody other than `selfId` is booking or reviewing right now,
+ * with who, one map per screen.
  *
  * All of them rather than a page's worth: a handful of bookkeepers can only
  * have a handful of screens open, so this is a few rows, and the list does not
  * have to send the ids it is showing.
  */
-export async function activeBookings(selfId: string): Promise<Record<string, PresentUser[]>> {
-  const rows = await prisma.$queryRaw<(PresentUser & { expenseId: string })[]>`
-    SELECT p."expenseId", u."id", u."name"
+export async function activePresence(
+  selfId: string,
+): Promise<Record<PresenceScreen, Record<string, PresentUser[]>>> {
+  const rows = await prisma.$queryRaw<
+    (PresentUser & { expenseId: string; screen: "BOOK" | "REVIEW" })[]
+  >`
+    SELECT p."expenseId", p."screen", u."id", u."name"
     FROM "ExpensePresence" p JOIN "User" u ON u."id" = p."userId"
     WHERE p."userId" <> ${selfId}
       AND p."lastSeenAt" > ${NOW} - ${TTL}
     ORDER BY u."name"`;
-  const byExpense: Record<string, PresentUser[]> = {};
-  for (const { expenseId, id, name } of rows) {
+  const out: Record<PresenceScreen, Record<string, PresentUser[]>> = { book: {}, review: {} };
+  for (const { expenseId, screen, id, name } of rows) {
+    const byExpense = screen === "REVIEW" ? out.review : out.book;
     (byExpense[expenseId] ??= []).push({ id, name });
   }
-  return byExpense;
+  return out;
 }

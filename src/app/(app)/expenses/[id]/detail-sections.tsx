@@ -13,7 +13,7 @@
 // belong together.
 import { useTranslations } from "next-intl";
 import { namedStops } from "@/lib/mileage/claim";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { PaymentTag } from "@/components/ui/payment-tag";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Amount } from "@/components/ui/amount";
@@ -195,16 +195,82 @@ function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> })
   );
 }
 
-/** The cost distribution, as AllocationTable draws one. */
-export function AllocationSection({ allocations }: { allocations: Expense["allocations"] }) {
+/** What each row of the distribution can do, for the viewer. */
+export type AllocationRowActions = {
+  /** The utlägg is waiting for attest, so unsigned rows may be signed. */
+  canAttest: boolean;
+  /** The viewer's own signatures they may still take back. */
+  withdrawable: string[];
+  onAttest: (id: string) => void;
+  onWithdraw: (id: string, costCenter: string) => void;
+  /** The row whose button was pressed, while it is under way. */
+  pending: string | null;
+  busy: boolean;
+};
+
+/**
+ * The cost distribution, as AllocationTable draws one.
+ *
+ * With `rowActions`, a row the viewer could sign carries its own "Attestera",
+ * and a row they signed its own "Dra tillbaka". That is for the skattmästare,
+ * who may attest any row but should usually sign only the units they answer
+ * for and leave the rest to whoever does. Given only when there is more than
+ * one row: with one, the header's buttons are the same act.
+ */
+export function AllocationSection({
+  allocations,
+  rowActions: r,
+}: {
+  allocations: Expense["allocations"];
+  rowActions: AllocationRowActions | null;
+}) {
   const t = useTranslations("expenses.detail");
+  const name = (a: Expense["allocations"][number]) => `${a.costCenterCode} - ${a.costCenterName}`;
+
+  // Laid out like the bank row's "Ta bort": what the row says on the left,
+  // the button that acts on it at the end.
+  const withButton = (
+    a: Expense["allocations"][number],
+    status: React.ReactNode,
+    label: string,
+    onClick: () => void,
+  ) => (
+    <span className="flex items-center justify-between gap-3">
+      <span className="min-w-0 truncate">{status}</span>
+      <Button
+        variant="secondary"
+        size="sm"
+        loading={r?.pending === a.id}
+        disabled={r?.busy}
+        onClick={onClick}
+        className="shrink-0"
+      >
+        {label}
+        <span className="sr-only">{` ${name(a)}`}</span>
+      </Button>
+    </span>
+  );
+
   return (
     <AllocationTable
       caption={t("distribution")}
       lines={allocations.map((a) => ({
         ...a,
         attest: a.approvedById ? (
-          <AttestedBy name={a.approvedByName} />
+          r?.withdrawable.includes(a.id) ? (
+            withButton(a, <AttestedBy name={a.approvedByName} />, t("withdrawRow"), () =>
+              r.onWithdraw(a.id, name(a)),
+            )
+          ) : (
+            <AttestedBy name={a.approvedByName} />
+          )
+        ) : r?.canAttest && a.canAttest ? (
+          withButton(
+            a,
+            <span className="font-medium text-purple">{t("yoursToAttest")}</span>,
+            t("approve"),
+            () => r.onAttest(a.id),
+          )
         ) : (
           <span className="text-muted">{a.resultUnit ?? t("awaitingApproval")}</span>
         ),
@@ -333,6 +399,7 @@ const EVENT_TONE: Record<string, string> = {
   COST_CENTER_APPROVED: "text-blue",
   APPROVED: "text-blue",
   CHANGES_REQUESTED: "text-danger",
+  CORRECTED: "text-warning",
 };
 
 export function TimelineSection({ revisions }: { revisions: Expense["revisions"] }) {
@@ -378,6 +445,14 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
               {r.recipients && r.recipients.length > 0 && (
                 <span className="mt-0.5 block text-muted">
                   {t("reminderTo", { names: r.recipients.join(", ") })}
+                </span>
+              )}
+              {r.correction && (
+                <span className="mt-0.5 block text-muted">
+                  {t(`corrected.${r.correction.field}`, {
+                    from: r.correction.from ?? "-",
+                    to: r.correction.to ?? "-",
+                  })}
                 </span>
               )}
               {comment(r) && <span className="mt-0.5 block text-muted">{comment(r)}</span>}

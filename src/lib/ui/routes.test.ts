@@ -15,7 +15,7 @@ describe("owningRoute", () => {
     "/income",
     "/stock",
     "/stock/events",
-    "/stock/log",
+    "/stock/history",
     "/faq",
   ];
   const owner = (path: string) => owningRoute(path, sections);
@@ -36,7 +36,7 @@ describe("owningRoute", () => {
     // The bug this replaced: the sidebar lit Produkter *and* Tillfällen here,
     // because /stock is a prefix of /stock/events.
     expect(owner("/stock/events")).toBe("/stock/events");
-    expect(owner("/stock/log")).toBe("/stock/log");
+    expect(owner("/stock/history")).toBe("/stock/history");
   });
 
   it("keeps a nested section's own pages", () => {

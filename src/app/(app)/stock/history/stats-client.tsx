@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { PageShell } from "@/components/page-shell";
-import { HISTORY_PATH, historyHref, type HistoryView } from "../history/views";
+import { HISTORY_PATH, historyHref, type HistoryView } from "./views";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { DateInput, FieldGroup } from "@/components/ui/field";
 import { MultiCombobox } from "@/components/ui/combobox";

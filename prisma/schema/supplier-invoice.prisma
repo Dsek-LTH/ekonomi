@@ -116,9 +116,10 @@ model SupplierInvoice {
   invoiceDate   DateTime? @db.Date
   dueDate       DateTime? @db.Date
   amount        Int? // öre
-  /// Öresutjämning, öre, signed: what the invoice's lines came to less the
-  /// amount to pay, rounded away. Booked on its own account at the export
-  /// (bookedShares in lib/domain/supplier-invoice.ts). Under a krona.
+  /// Öresutjämning, öre, signed: the amount to pay less what the invoice's
+  /// lines came to. Given by the unit with its fördelning, whose shares add up
+  /// to the amount less this (costTotal in lib/domain/supplier-invoice.ts).
+  /// Booked on its own account at the export. Under a krona.
   rounding      Int?
   currency      String    @default("SEK")
   ocr           String?
@@ -242,10 +243,10 @@ model SupplierInvoiceAllocation {
 /// Replaced whole each time the kontering is saved, and dropped when the unit
 /// fördelar the invoice again, since they were made from a split that is gone.
 model SupplierInvoiceLine {
-  id        String          @id @default(cuid())
-  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
-  position  Int
+  id             String          @id @default(cuid())
+  invoice        SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId      String
+  position       Int
   /// BAS account number, "5410". Plain, like VerificationLine.account.
   account        String
   /// The cost centre's code, as Fortnox knows it. Null for none.
@@ -255,8 +256,8 @@ model SupplierInvoiceLine {
   /// Fortnox's TransactionInformation for the row.
   description    String?
   /// Öre. One side or the other, never both.
-  debit          Int     @default(0)
-  credit         Int     @default(0)
+  debit          Int             @default(0)
+  credit         Int             @default(0)
 
   @@index([invoiceId])
 }

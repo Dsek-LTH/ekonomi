@@ -8,13 +8,12 @@
 // is harmless. The fragile half goes first.
 //
 // The voucher is written with the bookkeeper's OWN Fortnox login rather than
-// the service account, so Fortnox stamps it with their name. This is the whole
-// reason booking lives in the app and not in the intakt service, which has no
-// idea who is signed in.
+// the service account, so Fortnox stamps it with their name.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
-import { canBookkeep } from "@/lib/domain/permissions";
+import { canBookkeep, canReviewOwnBooking } from "@/lib/domain/permissions";
+import { reviewBlocker } from "@/lib/domain/review";
 import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
 import {
   attachBestEffort,
@@ -23,7 +22,8 @@ import {
   voucherRows,
   VOUCHER_INCLUDE,
 } from "@/lib/fortnox/export";
-import { fortnoxIncomeVouchers, incomeVoucherKey } from "@/lib/income/duplicate";
+import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
+import { isLegacyReport } from "@/lib/income/legacy";
 import { incomeVoucherSeries } from "@/lib/income/voucher";
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
@@ -50,6 +50,18 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const verification = report.verification;
   if (!verification) return fail(409, "income.noVoucherToExport");
 
+  // Granskning is a second pair of eyes, as on an utlägg (lib/domain/review.ts):
+  // whoever konterade the day, or wrote its kontering by hand, does not bokföra
+  // it, unless their role is exempt.
+  const own = reviewBlocker({
+    exempt: canReviewOwnBooking(g.actor.capabilities),
+    viewerId: g.actor.id,
+    bookedBy: [report.reviewedById, verification.createdById, report.manualVoucherById].filter(
+      (x): x is string => Boolean(x),
+    ),
+  });
+  if (own) return fail(409, "income.ownBooking");
+
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
 
@@ -60,15 +72,20 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const series = incomeVoucherSeries(settings, conn.voucherSeries);
   if (!series) return fail(409, "settings.voucherSeriesUnset");
 
-  // The last gate before anything is written over there. Import already refuses
-  // to bring in a day Fortnox has a voucher for, but that check ran against the
-  // range as it was then. This one runs against the day as it is now, with
-  // whatever has been exported since, including by someone else in the last
-  // minute. Before the file upload deliberately: a refusal here leaves nothing
-  // behind at all.
+  // The last gate before anything is written over there. Import already flags
+  // a day Fortnox has a voucher for, but that check ran against the range as
+  // it was then. This one runs against the day as it is now, with whatever has
+  // been exported since, including by someone else in the last minute. Before
+  // the file upload deliberately: a refusal here leaves nothing behind at all.
+  //
+  // A whole day is refused if any voucher in Fortnox already books some of
+  // that day's money in this source. A day booked before the per-day voucher
+  // is one verksamhet's, so only a voucher with its own text is the same one.
   const voucherDate = isoDay(verification.date);
   const existing = await fortnoxIncomeVouchers(voucherDate, voucherDate);
-  const duplicate = existing.byKey.get(incomeVoucherKey(voucherDate, verification.description));
+  const duplicate = isLegacyReport(report)
+    ? existing.exact(voucherDate, verification.description)
+    : existing.forDay(voucherDate, report.source);
   if (duplicate) {
     return fail(409, "income.alreadyInFortnox", { values: { voucher: duplicate } });
   }

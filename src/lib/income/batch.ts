@@ -1,4 +1,4 @@
-// Storing what the intakt service returned.
+// Storing a fetch: what Zettle or a Swish export said was sold, routed into days.
 //
 // This is where pending.yaml used to be. The old flow wrote a manifest file
 // that the treasurer edited by hand, filling in cost centres, deleting lines
@@ -9,11 +9,9 @@ import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
-import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import type { IncomeSource } from "@/lib/domain/types";
-import { incomeVoucherKey, type FortnoxIncomeVouchers } from "./duplicate";
-import type { IncomeFeeReportDto, IncomeReportDto } from "./types";
-import { incomeVoucherDescription } from "./voucher";
+import type { FortnoxIncomeVouchers } from "./duplicate";
+import type { IncomeDayDto } from "./types";
 import { isoDay } from "@/lib/domain/date";
 
 interface CreateBatchResult {
@@ -22,36 +20,29 @@ interface CreateBatchResult {
   /** The reports that were stored. */
   reportIds: string[];
   /**
-   * Unbooked reports the fetch cleared out before storing what it brought back.
+   * Unbooked reports of this source the fetch cleared out before storing what
+   * it brought back.
    *
-   * A fetch is a fresh start: what is waiting to be booked is exactly what came
-   * back from it, and nothing else. Re-fetching after correcting a product
-   * prefix is the case that matters. The wrongly routed reports have to go,
-   * including days the corrected routing no longer produces at all, which any
-   * day-by-day replacement would have left behind.
-   *
-   * Only unbooked ones. A booked day is the section's record of money it took
-   * in; nothing about fetching may touch it.
+   * A fetch is a fresh start for its source: what is waiting to be booked is
+   * exactly what came back from it. Re-fetching after correcting a product
+   * prefix is the case that matters, since the wrongly routed days have to go.
+   * Only this source's, so fetching Swish leaves the Zettle days someone is
+   * halfway through alone, and only unbooked ones. A booked day is the
+   * section's record of money it took in; nothing about fetching may touch it.
    */
   superseded: number;
-  /**
-   * Days imported with a warning because this database has already booked them.
-   * Not an error. Re-fetching a period that is partly done is ordinary, and
-   * worth saying out loud, because they are the rows that cannot be booked.
-   */
+  /** Days imported with a warning because this database has already booked them. */
   alreadyBooked: string[];
   /**
-   * Days imported with a warning: Fortnox already holds a voucher for that
-   * verksamhet on that day, an export from an older install, or from the CLI
-   * this replaced. They come in like any other and are flagged, because the
-   * section may genuinely have two and that is the reviewer's call, not the
-   * importer's.
+   * Days imported with a warning: Fortnox already holds a voucher for some of
+   * that day's money in this source, from an older install, the CLI this
+   * replaced, or a per-verksamhet voucher from before the per-day one.
    */
   alreadyInFortnox: string[];
 }
 
-interface CommonInput {
-  source: IncomeSource;
+interface BatchInput {
+  source: Extract<IncomeSource, "ZETTLE" | "SWISH">;
   from: string;
   to: string;
   filename?: string | null;
@@ -59,167 +50,114 @@ interface CommonInput {
 }
 
 /**
- * The batch row a fetch writes its reports under, after clearing the unbooked
- * reports from earlier fetches that this one replaces. Both kinds of fetch
- * start the same way; only what they then write differs.
- */
-async function openBatch(tx: Prisma.TransactionClient, input: CommonInput, stale: string[]) {
-  const created = await tx.incomeBatch.create({
-    data: {
-      source: input.source,
-      fromDate: new Date(`${input.from}T00:00:00.000Z`),
-      toDate: new Date(`${input.to}T00:00:00.000Z`),
-      filename: input.filename ?? null,
-      createdById: input.createdById,
-    },
-  });
-  if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
-  return created;
-}
-
-/**
- * The voucher Fortnox already holds for this verksamhet on this day, if any.
+ * What a fetch has to reckon with for its source: the days already booked
+ * here, and the drafts it sweeps aside.
  *
- * Null whenever the check did not run, and deliberately so: the caller is told
- * separately that it did not (see the routes), and a report flagged on the
- * strength of a check that never happened would be a warning nobody could act
- * on.
- */
-function existingFortnoxVoucher(
-  existing: FortnoxIncomeVouchers | undefined,
-  date: Date,
-  description: string,
-): string | null {
-  if (!existing?.checked) return null;
-  return existing.byKey.get(incomeVoucherKey(isoDay(date), description)) ?? null;
-}
-
-/**
- * What a fetch has to reckon with: what is already booked, and what it sweeps
- * aside.
- *
- * `booked`: days already booked or exported for this source, keyed by unit and
- * day, mapped to the report that holds them. The fetch brings these days back
- * anyway and points each one at its predecessor: a day missing from the queue
- * cannot be told apart from a day the fetch never covered, and that ambiguity
- * is worse than a row you have to look at. Booking one is refused, by the
- * screen, and by a partial unique index over booked reports underneath it.
- *
- * `unbookedIds`: every report waiting to be booked, from any source and any
- * period. All of them go: the working set is the last fetch and nothing else.
+ * `booked`: day to a booked report holding some of that day's money. Any
+ * report counts, including an old per-verksamhet one or an old day of Zettle
+ * fees: booking the whole day again would count that money twice. The day is
+ * still imported, pointing at it, because a day missing from the queue cannot
+ * be told apart from a day the fetch never covered. Booking it is refused.
  */
 async function existingReports(
-  source: IncomeSource,
+  source: BatchInput["source"],
 ): Promise<{ booked: Map<string, string>; unbookedIds: string[] }> {
+  const sources: IncomeSource[] = source === "ZETTLE" ? ["ZETTLE", "ZETTLE_FEE"] : [source];
   const rows = await prisma.incomeReport.findMany({
-    select: { id: true, source: true, resultUnitId: true, date: true, status: true },
+    where: { source: { in: sources } },
+    select: { id: true, source: true, date: true, status: true },
+    orderBy: { createdAt: "asc" },
   });
 
   const booked = new Map<string, string>();
   const unbookedIds: string[] = [];
   for (const row of rows) {
-    if (row.status === "DRAFT") unbookedIds.push(row.id);
-    else if (row.source === source) booked.set(dayKey(row.resultUnitId, row.date), row.id);
+    if (row.status === "DRAFT") {
+      if (row.source === source) unbookedIds.push(row.id);
+    } else if (!booked.has(isoDay(row.date))) {
+      booked.set(isoDay(row.date), row.id);
+    }
   }
   return { booked, unbookedIds };
 }
 
-const dayKey = (resultUnitId: string | null, date: Date) => `${resultUnitId ?? ""}|${isoDay(date)}`;
-
 /**
- * Store a fetch of sales reports as a batch of drafts.
+ * Store a fetch as one draft report per day.
  *
- * Verksamheter are resolved by income key. A report naming one the app does not
- * have is dropped rather than imported unit-less: the service was sent this
- * app's routing table, so it can only name a key that was in it, and a mismatch
- * means the two have drifted in a way that wants looking at rather than
- * papering over.
+ * Each line carries its verksamhet, resolved from the income key routing put
+ * on it, and its cost centre, which routing already resolved from the prefix
+ * or the verksamhet. A line naming a key the app does not have would mean the
+ * routing table changed under the fetch. It is kept with no verksamhet and
+ * marked unmatched rather than dropped, since dropping it would lose money
+ * from the day's total, and the day cannot be booked until someone places it.
  */
-export async function createSalesBatch(
-  input: CommonInput,
-  reports: readonly IncomeReportDto[],
+export async function createDayBatch(
+  input: BatchInput,
+  days: readonly IncomeDayDto[],
   /** What Fortnox already has for this range, when it could be asked. */
   existing?: FortnoxIncomeVouchers,
 ): Promise<CreateBatchResult> {
-  // Keyed by the income key, resolved to the RESULT UNIT the report belongs to
-  // A report records whose takings these were, and that outlives any decision
-  // to stop selling (see the schema note on IncomeReport.resultUnitId).
-  const units = await prisma.resultUnitIncome.findMany({
-    // The description is what the voucher is called, and therefore how a day
-    // is recognised in Fortnox. See incomeVoucherDescription.
-    select: { key: true, description: true, defaultCostCenterId: true, resultUnitId: true },
-  });
-  const idByKey = new Map(units.map((u) => [u.key, u.resultUnitId]));
-  const descriptionByKey = new Map(units.map((u) => [u.key, u.description]));
-  // Pre-filled here, then editable in review. The field the manifest existed
-  // to let someone type. A verksamhet with no default leaves it blank, and
-  // booking falls back to it rather than refusing.
-  const defaultCostCentreByKey = new Map(units.map((u) => [u.key, u.defaultCostCenterId]));
-
-  const accounts = await prisma.account.findMany({ select: { number: true, name: true } });
+  const [units, accounts] = await Promise.all([
+    prisma.resultUnitIncome.findMany({ select: { key: true, resultUnitId: true } }),
+    prisma.account.findMany({ select: { number: true, name: true } }),
+  ]);
+  const unitByKey = new Map(units.map((u) => [u.key, u.resultUnitId]));
   const accountName = new Map(accounts.map((a) => [a.number, a.name]));
 
-  const usable = reports.filter((r) => idByKey.has(r.committee));
-
-  const resolved = usable.map((r) => ({
-    report: r,
-    resultUnitId: idByKey.get(r.committee)!,
-    date: new Date(`${r.date}T00:00:00.000Z`),
-  }));
-
   const already = await existingReports(input.source);
+  const inFortnox = (date: string) =>
+    existing?.checked ? (existing.forDay(date, input.source) ?? null) : null;
 
-  const bookedHere = ({ resultUnitId, date }: (typeof resolved)[number]) =>
-    already.booked.get(dayKey(resultUnitId, date)) ?? null;
-  const inFortnox = ({ report, date }: (typeof resolved)[number]) =>
-    existingFortnoxVoucher(
-      existing,
-      date,
-      incomeVoucherDescription(input.source, descriptionByKey.get(report.committee) ?? null),
-    );
-
-  // Everything the fetch returned, without exception. What is already booked
-  // here, or already in Fortnox, is imported carrying a pointer to it. See
-  // `existingReports`.
-  const fresh = resolved;
-  const alreadyBooked = resolved.filter(bookedHere).map(({ report }) => report.key);
-  const alreadyInFortnox = resolved.filter(inFortnox).map(({ report }) => report.key);
-
-  // Everything that was waiting before this fetch. See `superseded`.
+  const alreadyBooked = days.filter((d) => already.booked.has(d.date)).map((d) => d.date);
+  const alreadyInFortnox = days.filter((d) => inFortnox(d.date)).map((d) => d.date);
   const stale = already.unbookedIds;
 
   // One transaction: a half-written batch is worse than none, because the part
   // that landed looks like a complete import of a narrower range.
-  const batch = await prisma.$transaction(async (tx) => {
+  const batch = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.incomeBatch.create({
+      data: {
+        source: input.source,
+        fromDate: new Date(`${input.from}T00:00:00.000Z`),
+        toDate: new Date(`${input.to}T00:00:00.000Z`),
+        filename: input.filename ?? null,
+        createdById: input.createdById,
+      },
+    });
     // Inside the transaction, and before the new ones: if this import fails
     // half way, what it was clearing is still there.
-    const created = await openBatch(tx, input, stale);
+    if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
 
     const reportIds: string[] = [];
-    for (const { report, resultUnitId, date } of fresh) {
+    for (const day of days) {
       const row = await tx.incomeReport.create({
         select: { id: true },
         data: {
           batchId: created.id,
           source: input.source,
-          resultUnitId,
-          date,
-          total: report.total,
-          costCenterId: defaultCostCentreByKey.get(report.committee) ?? null,
-          duplicateOfId: bookedHere({ report, resultUnitId, date }),
-          existingVoucher: inFortnox({ report, resultUnitId, date }),
+          date: new Date(`${day.date}T00:00:00.000Z`),
+          total: day.total,
+          duplicateOfId: already.booked.get(day.date) ?? null,
+          existingVoucher: inFortnox(day.date),
           lines: {
-            create: report.products.map((p, i) => ({
-              name: p.name,
-              variant: p.variant ?? null,
-              account: p.account,
-              accountName: accountName.get(p.account) ?? "",
-              quantity: p.quantity,
-              unitPrice: p.unitPrice,
-              discount: p.effectiveDiscount,
-              total: p.total,
-              sortOrder: i,
-            })),
+            create: day.lines.map((l, i) => {
+              const resultUnitId = l.unitKey ? (unitByKey.get(l.unitKey) ?? null) : null;
+              return {
+                kind: l.kind,
+                resultUnitId,
+                costCenterId: l.costCenterId,
+                unmatched: l.unmatched || (l.kind === "SALE" && !resultUnitId),
+                name: l.name,
+                variant: l.variant ?? null,
+                account: l.account,
+                accountName: accountName.get(l.account) ?? "",
+                quantity: l.quantity,
+                unitPrice: l.unitPrice,
+                discount: l.effectiveDiscount,
+                total: l.total,
+                sortOrder: i,
+              };
+            }),
           },
         },
       });
@@ -231,92 +169,7 @@ export async function createSalesBatch(
 
   return {
     batchId: batch.batch.id,
-    created: fresh.length,
-    reportIds: batch.reportIds,
-    superseded: stale.length,
-    alreadyBooked,
-    alreadyInFortnox,
-  };
-}
-
-/**
- * The same for Zettle's fees, which are not attributable to a committee. One
- * report per day, and the cost centre comes from BookkeepingSettings rather
- * than from a committee that does not exist.
- */
-export async function createFeeBatch(
-  input: CommonInput,
-  reports: readonly IncomeFeeReportDto[],
-  existing?: FortnoxIncomeVouchers,
-): Promise<CreateBatchResult> {
-  const settings = await loadBookkeepingSettings();
-  const costCenterId = settings.zettleFeeCostCenterId;
-  const feeAccount = settings.zettleFeeAccount;
-  // Only for the name on the lines. An unchosen fee account leaves it blank,
-  // and booking the day is what refuses, naming the setting.
-  const account = feeAccount
-    ? await prisma.account.findUnique({ where: { number: feeAccount } })
-    : null;
-
-  const resolved = reports.map((r) => ({ report: r, date: new Date(`${r.date}T00:00:00.000Z`) }));
-
-  const already = await existingReports(input.source);
-
-  // Every day of fees carries the same text, so the date is what tells two
-  // apart, which is exactly what the key is.
-  const feeDescription = incomeVoucherDescription(input.source, null);
-  const bookedHere = (date: Date) => already.booked.get(dayKey(null, date)) ?? null;
-  const inFortnox = (date: Date) => existingFortnoxVoucher(existing, date, feeDescription);
-
-  const fresh = resolved;
-  const alreadyBooked = resolved
-    .filter(({ date }) => bookedHere(date))
-    .map(({ report }) => report.key);
-  const alreadyInFortnox = resolved
-    .filter(({ date }) => inFortnox(date))
-    .map(({ report }) => report.key);
-  const stale = already.unbookedIds;
-
-  const batch = await prisma.$transaction(async (tx) => {
-    // Replaced, not duplicated. See createSalesBatch.
-    const created = await openBatch(tx, input, stale);
-
-    const reportIds: string[] = [];
-    for (const { report, date } of fresh) {
-      const row = await tx.incomeReport.create({
-        select: { id: true },
-        data: {
-          batchId: created.id,
-          source: input.source,
-          resultUnitId: null,
-          costCenterId,
-          date,
-          total: report.total,
-          duplicateOfId: bookedHere(date),
-          existingVoucher: inFortnox(date),
-          lines: {
-            create: report.fees.map((f, i) => ({
-              name: f.name,
-              account: f.account,
-              accountName: account?.name ?? "",
-              quantity: f.quantity,
-              unitPrice: f.unitPrice,
-              discount: 0,
-              total: f.total,
-              sortOrder: i,
-            })),
-          },
-        },
-      });
-      reportIds.push(row.id);
-    }
-
-    return { batch: created, reportIds };
-  });
-
-  return {
-    batchId: batch.batch.id,
-    created: fresh.length,
+    created: days.length,
     reportIds: batch.reportIds,
     superseded: stale.length,
     alreadyBooked,

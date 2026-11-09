@@ -1,244 +1,270 @@
 import { describe, expect, it } from "vitest";
 
-import { makeVoucherRow } from "@/components/voucher-editor";
-import { costCentreFor, defaultRows, voucherFor } from "./voucher-draft";
-import type { IncomeReportRow } from "@/lib/data/income";
+import { dayVoucher, lineFindings } from "./voucher-draft";
+import type { IncomeLineRow, IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
-import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
+import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 
-// What decides whether a day of takings is written to the ledger. It lived at
-// line 305 of a sixteen-hundred-line component and had no tests at all, which
-// is a strange place to keep the arithmetic that posts the section's income.
+// What decides whether a day of takings is written to the ledger, and what the
+// screen says it will be written as. The same rows and the same refusals as
+// the booking route, which is the whole point of it.
 
 const settings = {
   zettleClearingAccount: "1580",
   swishClearingAccount: "1585",
   zettleFeeAccount: "6570",
-  zettleFeeCostCenterCode: "SEX01",
 } as IncomeSettingsRow;
 
 const accounts = [
   { number: "1580", name: "Zettle-fordran" },
   { number: "1585", name: "Swish-fordran" },
-  { number: "3010", name: "Försäljning" },
-  { number: "3020", name: "Försäljning mat" },
+  { number: "3000", name: "Försäljning" },
+  { number: "3011", name: "Öl" },
   { number: "6570", name: "Bankkostnader" },
 ] as AccountRecord[];
 
-const costCenters = [{ code: "SEX01" }, { code: "KM01" }] as CostCenter[];
+const costCenters = [
+  { code: "CAFE02", active: true, source: "FORTNOX" },
+  { code: "SEX03", active: true, source: "LOCAL" },
+  { code: "OLD01", active: false, source: "FORTNOX" },
+  { code: "SKT02", active: true, source: "FORTNOX" },
+] as CostCenter[];
 
-const projects = [{ number: "12", name: "Nollning", active: true }] as ProjectRecord[];
+const line = (over: Partial<IncomeLineRow> = {}): IncomeLineRow => ({
+  id: "l1",
+  kind: "SALE",
+  resultUnitId: "cafe",
+  unitName: "Caféutskottet",
+  name: "Kaffe",
+  variant: null,
+  account: "3000",
+  accountName: "Försäljning",
+  costCenterId: "cc-cafe",
+  costCenterCode: "CAFE02",
+  quantity: 1,
+  unitPrice: 100,
+  discount: 0,
+  total: 100,
+  unmatched: false,
+  ...over,
+});
 
-const label = { source: "Swish", clearingHint: "hint", clearingLocked: "locked" };
-
-const report = (over: Partial<IncomeReportRow> = {}) =>
+const report = (lines: IncomeLineRow[], over: Partial<IncomeReportRow> = {}) =>
   ({
     id: "r1",
-    source: "SWISH",
-    date: "2026-08-11",
-    total: 1250,
-    costCenterCode: "SEX01",
-    defaultCostCenterCode: null,
+    source: "ZETTLE",
+    date: "2026-11-07",
+    total: lines.reduce((s, l) => s + l.total, 0),
     duplicateOf: null,
     existingVoucher: null,
-    lines: [{ account: "3010", total: 1250 }],
+    lines,
     ...over,
   }) as IncomeReportRow;
 
-const draft = (r: IncomeReportRow, rows = defaultRows(r, settings)) =>
-  voucherFor({ report: r, rows, settings, accounts, costCenters, projects, label });
+const voucher = (r: IncomeReportRow) => dayVoucher({ report: r, settings, accounts, costCenters });
 
-describe("costCentreFor", () => {
-  it("prefers the day's own cost centre", () => {
-    expect(costCentreFor(report({ costCenterCode: "KM01" }), settings)).toBe("KM01");
-  });
-
-  it("falls back to the committee's default", () => {
-    // A day fetched before the committee had one would otherwise open blank and
-    // refuse to book, with the answer sitting in the settings all along.
-    const r = report({ costCenterCode: null, defaultCostCenterCode: "KM01" });
-    expect(costCentreFor(r, settings)).toBe("KM01");
-  });
-
-  it("sends Zettle's own fees to the fee cost centre", () => {
-    // A fee is nobody's committee, so it cannot inherit one.
-    const r = report({ source: "ZETTLE_FEE", costCenterCode: null });
-    expect(costCentreFor(r, settings)).toBe("SEX01");
-  });
-});
-
-describe("defaultRows", () => {
-  it("gives one row per revenue account, summed", () => {
-    const r = report({
-      total: 1500,
-      lines: [
-        { account: "3010", total: 1000 },
-        { account: "3020", total: 300 },
-        { account: "3010", total: 200 },
-      ],
-    } as Partial<IncomeReportRow>);
-    const rows = defaultRows(r, settings);
-    expect(rows.map((x) => [x.account, x.credit])).toEqual([
-      ["3010", "1200.00"],
-      ["3020", "300.00"],
+describe("dayVoucher", () => {
+  it("is one row per account and cost centre, fees debited, the net on clearing", () => {
+    const v = voucher(
+      report([
+        line({ total: 100 }),
+        line({ id: "l2", total: 50 }),
+        line({
+          id: "l3",
+          resultUnitId: "sexet",
+          account: "3011",
+          costCenterCode: "SEX03",
+          total: 400,
+        }),
+        line({
+          id: "l4",
+          kind: "FEE",
+          resultUnitId: null,
+          account: "6570",
+          costCenterCode: "SKT02",
+          total: -7.5,
+        }),
+      ]),
+    );
+    expect(v.rows.map((r) => [r.account, r.costCenterCode, r.debit, r.credit])).toEqual([
+      ["3000", "CAFE02", 0, 150],
+      ["3011", "SEX03", 0, 400],
+      ["6570", "SKT02", 7.5, 0],
+      ["1580", null, 542.5, 0],
     ]);
-  });
-
-  it("books a net refund as a debit, not a negative credit", () => {
-    // A ledger can represent the row the other way round; it cannot represent a
-    // negative credit.
-    const r = report({
-      total: -80,
-      lines: [{ account: "3010", total: -80 }],
-    } as Partial<IncomeReportRow>);
-    const [row] = defaultRows(r, settings);
-    expect(row.debit).toBe("80.00");
-    expect(row.credit).toBe("");
-  });
-
-  it("drops accounts that came to nothing", () => {
-    const r = report({
-      lines: [
-        { account: "3010", total: 1250 },
-        { account: "3020", total: 0 },
-      ],
-    } as Partial<IncomeReportRow>);
-    expect(defaultRows(r, settings).map((x) => x.account)).toEqual(["3010"]);
-  });
-});
-
-describe("voucherFor", () => {
-  it("debits the clearing account for a day that took money", () => {
-    const v = draft(report());
-    expect(v.clearing).toBe("1585");
-    expect(v.locked.debit).toBe(1250);
-    expect(v.locked.credit).toBe(0);
-    expect(v.balanced).toBe(true);
+    expect(v.totalDebit).toBe(550);
+    expect(v.totalCredit).toBe(550);
     expect(v.canBook).toBe(true);
   });
 
-  it("credits it for a fee, which is money leaving", () => {
-    const r = report({
-      source: "ZETTLE_FEE",
-      total: 42,
-      lines: [],
-    } as Partial<IncomeReportRow>);
-    const v = draft(r);
-    expect(v.clearing).toBe("1580");
-    expect(v.locked.credit).toBe(42);
-    expect(v.locked.debit).toBe(0);
-    expect(v.balanced).toBe(true);
+  it("uses the Swish clearing account for a Swish day", () => {
+    expect(voucher(report([line()], { source: "SWISH" })).rows.at(-1)?.account).toBe("1585");
   });
 
-  it("debits it for fees Zettle paid back, and credits the fee account", () => {
-    // A refunded purchase takes its fee with it, so a fee day can be negative.
-    const r = report({
-      source: "ZETTLE_FEE",
-      total: -3.45,
-      lines: [],
-    } as Partial<IncomeReportRow>);
-    const [row] = defaultRows(r, settings);
-    expect(row).toMatchObject({ account: "6570", debit: "", credit: "3.45" });
-    const v = draft(r);
-    expect(v.locked.debit).toBe(3.45);
-    expect(v.locked.credit).toBe(0);
-    expect(v.balanced).toBe(true);
-    expect(v.canBook).toBe(true);
-  });
-
-  it("credits it for a day that came to a net refund", () => {
-    const r = report({
-      total: -80,
-      lines: [{ account: "3010", total: -80 }],
-    } as Partial<IncomeReportRow>);
-    const v = draft(r);
-    expect(v.locked.credit).toBe(80);
-    expect(v.balanced).toBe(true);
-  });
-
-  it("puts no cost centre on the clearing line", () => {
-    // A clearing account is a bank balance, not a dimension of anybody's
-    // budget: a cost centre here would make the committee's outcome count the
-    // money twice.
-    expect(draft(report()).lines[0].costCenterCode).toBeNull();
-  });
-
-  it("refuses to book a voucher that does not balance", () => {
-    const rows = defaultRows(report(), settings);
-    rows[0].credit = "1000.00"; // the day took 1250
-    const v = draft(report(), rows);
-    expect(v.balanced).toBe(false);
+  // The bug the per-line cost centre was built to end: a day whose revenue
+  // rows had no cost centre could be booked once it counted as edited, and
+  // reached Fortnox with none.
+  it("refuses to book a line with no cost centre", () => {
+    const v = voucher(report([line({ costCenterId: null, costCenterCode: null })]));
+    expect(v.blocker).toBe("noCostCenter");
     expect(v.canBook).toBe(false);
-    expect(v.difference).toBeCloseTo(250, 2);
+  });
+
+  it("refuses a fee line with no cost centre too", () => {
+    const v = voucher(
+      report([
+        line(),
+        line({
+          id: "f",
+          kind: "FEE",
+          resultUnitId: null,
+          account: "6570",
+          costCenterCode: null,
+          total: -1,
+        }),
+      ]),
+    );
+    expect(v.blocker).toBe("noCostCenter");
+  });
+
+  it("refuses an archived cost centre, which Fortnox would reject at export", () => {
+    expect(voucher(report([line({ costCenterCode: "OLD01" })])).blocker).toBe("inactiveCostCenter");
+  });
+
+  it("books a local cost centre: it travels as text, not as a refusal", () => {
+    expect(voucher(report([line({ costCenterCode: "SEX03" })])).canBook).toBe(true);
+  });
+
+  it("refuses a sale nobody has given a verksamhet", () => {
+    expect(voucher(report([line({ resultUnitId: null, unmatched: true })])).blocker).toBe(
+      "unplacedLines",
+    );
+  });
+
+  it("books a reserv sale that has a verksamhet: unmatched is a finding, not a blocker", () => {
+    expect(voucher(report([line({ unmatched: true })])).canBook).toBe(true);
+  });
+
+  it("names the fee setting when the fee account is unchosen", () => {
+    const v = voucher(
+      report([
+        line(),
+        line({
+          id: "f",
+          kind: "FEE",
+          resultUnitId: null,
+          account: "",
+          costCenterCode: "SKT02",
+          total: -1,
+        }),
+      ]),
+    );
+    expect(v.blocker).toBe("noFeeAccount");
+  });
+
+  it("refuses a day already booked here", () => {
+    expect(
+      voucher(report([line()], { duplicateOf: { id: "x", voucherLabel: null } })).blocker,
+    ).toBe("alreadyBooked");
+  });
+
+  it("refuses when the clearing account is unset or missing from the chart", () => {
+    const r = report([line()]);
+    expect(
+      dayVoucher({
+        report: r,
+        settings: { ...settings, zettleClearingAccount: null },
+        accounts,
+        costCenters,
+      }).blocker,
+    ).toBe("noClearingAccount");
+    expect(
+      dayVoucher({
+        report: r,
+        settings: { ...settings, zettleClearingAccount: "1999" },
+        accounts,
+        costCenters,
+      }).blocker,
+    ).toBe("unknownClearingAccount");
   });
 
   it("refuses an account that is not in the chart", () => {
-    // Otherwise it is found by Fortnox, at export, on a voucher this app has
-    // already called booked.
-    const rows = defaultRows(report(), settings);
-    rows[0].account = "9999";
-    expect(draft(report(), rows).canBook).toBe(false);
+    expect(voucher(report([line({ account: "3999" })])).blocker).toBe("unknownAccount");
   });
 
-  it("refuses a cost centre that is not in the chart", () => {
-    const rows = defaultRows(report(), settings);
-    rows[0].costCenterCode = "NOPE";
-    expect(draft(report(), rows).canBook).toBe(false);
-  });
-
-  it("carries a known project onto its line", () => {
-    const rows = defaultRows(report(), settings);
-    rows[0].project = "12";
-    const v = draft(report(), rows);
-    expect(v.lines[1].project).toBe("12");
-    expect(v.lines[0].project).toBeNull(); // the clearing row never has one
+  it("ignores a line that came to nothing, cost centre or not", () => {
+    const v = voucher(report([line(), line({ id: "z", costCenterCode: null, total: 0 })]));
     expect(v.canBook).toBe(true);
+  });
+});
+
+describe("dayVoucher with a hand-written kontering", () => {
+  const manualRow = (
+    over: Partial<NonNullable<IncomeReportRow["manual"]>["rows"][number]> = {},
+  ) => ({
+    account: "3000",
+    accountName: "Försäljning",
+    costCenterCode: "CAFE02",
+    project: null,
+    description: "Kaffe till styrelsen",
+    debit: 0,
+    credit: 100,
+    ...over,
+  });
+  const withManual = (manual: Partial<NonNullable<IncomeReportRow["manual"]>>) =>
+    report([line()], {
+      manual: { rows: [manualRow()], stale: false, byName: "Anna", at: null, ...manual },
+    });
+
+  it("shows the hand-written rows, then the clearing row at the day's total", () => {
+    const v = voucher(withManual({}));
+    expect(v.rows.map((r) => [r.account, r.costCenterCode, r.debit, r.credit])).toEqual([
+      ["3000", "CAFE02", 0, 100],
+      ["1580", null, 100, 0],
+    ]);
+    expect(v.canBook).toBe(true);
+  });
+
+  // The rule the server holds it to: a kontering written before the lines
+  // changed is never booked as if nothing had happened.
+  it("refuses to book a kontering written before the lines changed", () => {
+    expect(voucher(withManual({ stale: true })).blocker).toBe("manualStale");
+  });
+
+  it("refuses one that no longer balances against the day's total", () => {
+    expect(voucher(withManual({ rows: [manualRow({ credit: 90 })] })).blocker).toBe(
+      "manualInvalid",
+    );
+  });
+
+  it("refuses a result row with no cost centre, or an archived one", () => {
+    expect(voucher(withManual({ rows: [manualRow({ costCenterCode: null })] })).blocker).toBe(
+      "manualInvalid",
+    );
+    expect(voucher(withManual({ rows: [manualRow({ costCenterCode: "OLD01" })] })).blocker).toBe(
+      "inactiveCostCenter",
+    );
   });
 
   it("refuses a project Fortnox does not have", () => {
-    const rows = defaultRows(report(), settings);
-    rows[0].project = "99";
-    expect(draft(report(), rows).canBook).toBe(false);
+    expect(voucher(withManual({ rows: [manualRow({ project: "99" })] })).blocker).toBe(
+      "unknownProject",
+    );
   });
+});
 
-  it("says so when the clearing account itself is missing from the chart", () => {
-    const v = voucherFor({
-      report: report(),
-      rows: defaultRows(report(), settings),
-      settings: { ...settings, swishClearingAccount: "1599" } as IncomeSettingsRow,
-      accounts,
+describe("lineFindings", () => {
+  it("counts what still needs a person, and names the cost centres worth a word", () => {
+    const f = lineFindings(
+      report([
+        line({ unmatched: true }),
+        line({ id: "2", resultUnitId: null, unmatched: true }),
+        line({ id: "3", costCenterCode: null }),
+        line({ id: "4", costCenterCode: "OLD01" }),
+        line({ id: "5", costCenterCode: "SEX03" }),
+      ]),
       costCenters,
-      projects,
-      label,
-    });
-    expect(v.clearingKnown).toBe(false);
-    expect(v.canBook).toBe(false);
-  });
-
-  it("refuses a day this database has already booked", () => {
-    // A second verifikation is refused by the database anyway; the button
-    // should not offer it.
-    const v = draft(report({ duplicateOf: { id: "r0", voucherLabel: "A5" } }));
-    expect(v.balanced).toBe(true);
-    expect(v.canBook).toBe(false);
-  });
-
-  it("ignores the editor's spare empty rows", () => {
-    // Sent as they are, every day would be blocked on three rows with no
-    // account. A row counts as spare only when every field of it is empty:
-    // a leftover cost centre is enough to make it a row somebody meant.
-    const rows = defaultRows(report(), settings);
-    const v = draft(report(), [...rows, makeVoucherRow({})]);
-    expect(v.lines).toHaveLength(2); // the clearing row and the one real row
-    expect(v.canBook).toBe(true);
-  });
-
-  it("does not treat a half-typed row as spare", () => {
-    // The stricter half of the same rule: a row carrying only a cost centre is
-    // an account somebody has not picked yet, and blocks the voucher rather
-    // than being quietly dropped from it.
-    const rows = defaultRows(report(), settings);
-    const v = draft(report(), [...rows, makeVoucherRow({ costCenterCode: "SEX01" })]);
-    expect(v.canBook).toBe(false);
+    );
+    expect(f).toEqual({ unplaced: 2, noCostCenter: 1, inactive: ["OLD01"], local: ["SEX03"] });
   });
 });

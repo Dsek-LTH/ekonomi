@@ -9,20 +9,17 @@
     "expense": "Expense",
     "editExpense": "Edit expense",
     "bookExpense": "Book expense",
-    "cardPurchases": "Card purchases",
     "budget": "Budget",
     "budgetSheet": "Budget",
     "budgetCompare": "Compare budgets",
     "ledger": "Outcome & reports",
     "bank": "Bank transactions",
     "income": "Income",
-    "incomeReview": "Review income",
     "invoices": "Supplier invoices",
     "invoiceInbox": "Inbox",
     "invoiceDocument": "Inbox",
     "invoice": "Supplier invoice",
     "allocateInvoice": "Allocate invoice",
-    "attestInvoice": "Approve invoice",
     "bookInvoice": "Book invoice",
     "closing": "Year-end closing",
     "closingAccounts": "Year-end closing - Accounts",
@@ -43,8 +40,6 @@
     "stockEvents": "Occasions",
     "stockEvent": "Occasion",
     "stockHistory": "Stock history",
-    "stockLog": "Stock log",
-    "stockStats": "Stock statistics",
     "stocktake": "Stocktake",
     "faq": "FAQ",
     "profile": "My profile",
@@ -59,6 +54,7 @@
     "resultUnits": "Result units",
     "roles": "Roles & permissions",
     "stockSettings": "Stock settings",
-    "users": "Users"
+    "users": "Users",
+    "incomeDay": "Day of income"
   }
 }

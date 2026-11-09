@@ -28,7 +28,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { HISTORY_PATH, historyHref, type HistoryView } from "../history/views";
+import { HISTORY_PATH, historyHref, type HistoryView } from "./views";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";

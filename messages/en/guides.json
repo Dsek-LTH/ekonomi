@@ -165,15 +165,15 @@
   "income": {
     "intro": {
       "title": "Income",
-      "body": "The section's sales, one report per day. Reports are fetched, reviewed and booked, then sent to Fortnox."
+      "body": "The section's sales, one day per row. Zettle and Swish have a page each. Open a day to kontera it."
     },
     "actions": {
-      "title": "Fetch, review, export",
-      "body": "Fetch a period reads in new days. Review and book goes through them one at a time. Export all sends the booked ones to Fortnox."
+      "title": "Fetch",
+      "body": "Fetch from Zettle brings in new days. On Swish you upload the bank's file. Days that need nobody can be konterade all at once."
     },
     "stages": {
-      "title": "The steps",
-      "body": "To book is days nobody has reviewed yet. To export is booked but not sent. Exported is in Fortnox."
+      "title": "Stages",
+      "body": "Att kontera is days nobody has konterat yet. Att bokföra is konterade days somebody else reviews and books in Fortnox. Bokförda are in Fortnox."
     }
   },
   "budget": {

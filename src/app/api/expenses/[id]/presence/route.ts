@@ -1,4 +1,6 @@
-// The booking screen's heartbeat (PUT) and goodbye (DELETE). [id] = expense id.
+// The booking screen's or the review's heartbeat (PUT) and goodbye (DELETE).
+// [id] = expense id. The goodbye names its screen with ?screen=review, and
+// means the booking screen without it.
 //
 // The heartbeat says "I am still here", or, once its user has gone idle, "I am
 // not", and is answered with who else is here and the utlägg's current version.
@@ -17,7 +19,8 @@ import type { PresenceAnswer } from "@/lib/domain/presence";
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   // The same gate as the booking screen itself: only somebody who could book
-  // it has any business announcing that they are.
+  // it has any business announcing that they are. Bokföring after the review
+  // is the same authority, so it holds for the review too.
   const g = await gate(canBookkeep, "auth.bookkeeperBook");
   if (!g.ok) return g.res;
 
@@ -42,8 +45,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   });
   if (!expense) return fail(404, "expense.notFound");
 
-  await heartbeat(id, g.actor.id, parsed.data.active);
-  const others = await othersOn(id, g.actor.id);
+  const { active, screen } = parsed.data;
+  await heartbeat(id, g.actor.id, screen, active);
+  const others = await othersOn(id, g.actor.id, screen);
 
   const answer: PresenceAnswer = {
     others,
@@ -59,11 +63,12 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 // name leaves a colleague's screen at once rather than when the TTL runs out.
 // Not gated on canBookkeep: anybody may take themselves off a screen, and a
 // bookkeeper who just lost the role should not be left on it for 30 seconds.
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
   if (!g.ok) return g.res;
 
-  await leave(id, g.actor.id);
+  const screen = new URL(req.url).searchParams.get("screen") === "review" ? "review" : "book";
+  await leave(id, g.actor.id, screen);
   return new Response(null, { status: 204 });
 }

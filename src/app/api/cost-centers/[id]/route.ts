@@ -60,12 +60,20 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   // Anything already booked against it has to keep resolving, so a cost centre
   // in use is retired rather than deleted, the same end state as a Fortnox one
   // that gets deactivated.
-  const [allocations, lines, budgets] = await Promise.all([
+  // Income's references count too. They are all SetNull, so deleting a cost
+  // centre a verksamhet, a prefix, the fee setting or a waiting day still
+  // names would leave them with none, and the next voucher without one.
+  const counts = await Promise.all([
     prisma.expenseCostAllocation.count({ where: { costCenterId: cc.id } }),
     prisma.verificationLine.count({ where: { costCenterId: cc.id } }),
     prisma.budgetCostCenter.count({ where: { costCenterId: cc.id } }),
+    prisma.resultUnitIncome.count({ where: { defaultCostCenterId: cc.id } }),
+    prisma.incomeProductPrefix.count({ where: { costCenterId: cc.id } }),
+    prisma.incomeLine.count({ where: { costCenterId: cc.id } }),
+    prisma.incomeReport.count({ where: { costCenterId: cc.id } }),
+    prisma.bookkeepingSettings.count({ where: { zettleFeeCostCenterId: cc.id } }),
   ]);
-  const used = allocations + lines + budgets;
+  const used = counts.reduce((a, b) => a + b, 0);
   if (used > 0) {
     if (!cc.active) {
       return fail(409, "costCenter.inUse", { values: { code: cc.code, count: used } });

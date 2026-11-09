@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, CreateIncomePrefix);
   if (!parsed.ok) return parsed.res;
-  const { code, incomeId, account } = parsed.data;
+  const { code, incomeId, account, costCenterId } = parsed.data;
 
   const existing = await prisma.incomeProductPrefix.findUnique({ where: { code } });
   if (existing) return fail(409, "income.prefixExists", { values: { code } });
@@ -22,7 +22,14 @@ export async function POST(req: Request) {
   const income = await prisma.resultUnitIncome.findUnique({ where: { id: incomeId } });
   if (!income) return fail(422, "income.committeeNotFound");
 
-  const prefix = await prisma.incomeProductPrefix.create({ data: { code, incomeId, account } });
+  if (costCenterId) {
+    const cc = await prisma.costCenter.findUnique({ where: { id: costCenterId } });
+    if (!cc) return fail(422, "income.unknownCostCenter");
+  }
+
+  const prefix = await prisma.incomeProductPrefix.create({
+    data: { code, incomeId, account, costCenterId: costCenterId ?? null },
+  });
 
   return NextResponse.json({ id: prefix.id }, { status: 201 });
 }

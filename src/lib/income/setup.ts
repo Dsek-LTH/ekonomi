@@ -9,7 +9,7 @@
 import "server-only";
 
 import { incomeRoutingProblems, type IncomeConfigBlocker } from "@/lib/income/config";
-import { intaktConfigured } from "@/lib/income/client";
+import { zettleConfigured } from "@/lib/income/zettle-client";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
 /** Each a message key under `income.setup.steps`. */
@@ -25,8 +25,8 @@ export interface IncomeSetupStep {
   section: IncomeSetupSection;
   /** Refused by a fetch. The rest only stop booking, so fetching can go ahead. */
   blocksFetch: boolean;
-  /** Done in the app, so there is somewhere to send the reader. The service is
-   *  set in the server's environment, and only said. */
+  /** Done in the app, so there is somewhere to send the reader. Zettle's
+   *  credentials are set in the server's environment, and only said. */
   inApp: boolean;
 }
 
@@ -38,9 +38,10 @@ export async function incomeSetupSteps(): Promise<IncomeSetupStep[]> {
   ]);
   const steps: IncomeSetupStep[] = [];
 
-  // The service that reaches Zettle and renders the intäktsräkning.
-  if (!intaktConfigured())
-    steps.push({ key: "service", section: "service", blocksFetch: true, inApp: false });
+  // Zettle's credentials. Only a Zettle fetch needs them, and a Swish export
+  // is read without, so this is said but does not stand in the way of a fetch.
+  if (!zettleConfigured())
+    steps.push({ key: "service", section: "service", blocksFetch: false, inApp: false });
 
   for (const p of routing) {
     steps.push({ key: p.blocker, section: "units", blocksFetch: true, inApp: true });

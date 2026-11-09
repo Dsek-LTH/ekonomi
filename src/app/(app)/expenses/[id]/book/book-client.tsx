@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
   BalanceChip,
   filledVoucherRows,
   VoucherBlockerChip,
+  VoucherCostCenterPicker,
   VoucherEditor,
   type VoucherEditorRow,
 } from "@/components/voucher-editor";
@@ -30,7 +32,7 @@ import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { isRevenueAccount, voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { voucherTextPrefix } from "@/lib/domain/review";
 import { expenseLabel } from "@/lib/domain/reference";
-import { DateInput, Field } from "@/components/ui/field";
+import { DateInput, Field, Input } from "@/components/ui/field";
 import { uid } from "@/lib/ui/utils";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
@@ -195,6 +197,9 @@ export default function BookExpenseClient({
   const [date, setDate] = useState(
     () => expense?.verification?.date.slice(0, 10) || expense?.purchaseDate || isoDay(new Date()),
   );
+  // Why the date differs from the utlägg's, when it does. Saving then corrects
+  // the utlägg to match, so the two never disagree. See lib/domain/correction.ts.
+  const [correctionReason, setCorrectionReason] = useState("");
   const [textSuffix, setTextSuffix] = useState(() => {
     const full = expense?.verification?.description ?? expense?.title ?? "";
     // Vouchers booked before the prefix became the StiL id still carry the name
@@ -329,9 +334,13 @@ export default function BookExpenseClient({
   // amend may leave the date it already had.
   const dateOutsideYear =
     date !== expense?.verification?.date.slice(0, 10) && outsideFiscalYear(fiscalYear, date);
+  // A voucher on another day than the utlägg says is a correction of the
+  // utlägg. An utlägg with no date simply takes the voucher's.
+  const correcting = Boolean(expense.purchaseDate) && date !== expense.purchaseDate;
   const canSubmit =
     !blocker &&
     !dateOutsideYear &&
+    (!correcting || correctionReason.trim() !== "") &&
     allValidAccounts &&
     allValidCostCenters &&
     allValidProjects &&
@@ -367,6 +376,7 @@ export default function BookExpenseClient({
         date,
         description: voucherText,
         lines: voucherLines,
+        ...(correcting && { correctionReason: correctionReason.trim() }),
       },
       error: t("saveFailed"),
     });
@@ -390,7 +400,16 @@ export default function BookExpenseClient({
 
   return (
     <PageShell
-      title={mode === "edit" ? t("editTitle", { id: label }) : t("createTitle", { id: label })}
+      title={t.rich(mode === "edit" ? "editTitle" : "createTitle", {
+        id: () => (
+          <Link
+            href={`/expenses/${expense.id}`}
+            className="text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+          >
+            {label}
+          </Link>
+        ),
+      })}
       back={returnHref}
       width="wide"
     >
@@ -418,7 +437,9 @@ export default function BookExpenseClient({
             <OthersBookingNotice others={presence.others} />
           )}
           <Card>
-            <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
+            {/* The voucher's head, as Fortnox lays it out: date, text and the
+                cost centre every row takes unless it says otherwise. */}
+            <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)] lg:grid-cols-[180px_minmax(0,1fr)_240px]">
               <Field
                 label={t("voucherDate")}
                 requirement="required"
@@ -470,7 +491,24 @@ export default function BookExpenseClient({
                   />
                 </div>
               </Field>
+              <Field label={t("allCostCenter")} requirement="optional">
+                <VoucherCostCenterPicker rows={rows} onChange={setRows} costCenters={costCenters} />
+              </Field>
             </CardBody>
+            {/* Asked only once the date has moved off the utlägg's. It is the
+                sentence the submitter and the attesters are mailed. */}
+            {correcting && (
+              <CardBody className="border-t border-border">
+                <Field label={t("correction.reason")} requirement="required">
+                  <Input
+                    size="sm"
+                    value={correctionReason}
+                    onChange={(e) => setCorrectionReason(e.target.value)}
+                    placeholder={t("correction.placeholder")}
+                  />
+                </Field>
+              </CardBody>
+            )}
           </Card>
 
           <Card>

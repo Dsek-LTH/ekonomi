@@ -161,7 +161,7 @@ async function runChecks(
           const remaining = await prisma.incomeReport.count({
             where: { date: during, status: { not: "EXPORTED" } },
           });
-          results.set(key, { remaining, href: "/income" });
+          results.set(key, { remaining, href: "/income/zettle?tab=all" });
           break;
         }
         case "STOCKTAKE_AT_YEAR_END": {

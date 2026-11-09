@@ -40,9 +40,13 @@ export function useExpenseMutations(expenseId: string) {
   const url = (path = "") => `/api/expenses/${expenseId}${path}`;
 
   // Returns whether it went through, so the caller can clear its own form state.
-  async function transition(act: TransitionAction, comment?: string): Promise<boolean> {
+  async function transition(
+    act: TransitionAction,
+    comment?: string,
+    allocationIds?: string[],
+  ): Promise<boolean> {
     const data = await action.mutate(url("/transition"), {
-      body: { action: act, comment },
+      body: { action: act, comment, allocationIds },
       // One confirmation per transition, under `expenses.mutations.transition`.
       success: t(`transition.${act}`),
     });
@@ -68,14 +72,18 @@ export function useExpenseMutations(expenseId: string) {
   }
 
   // Confirmed, because on a fully approved expense it visibly knocks the status
-  // back to "awaiting approval" for everyone else too.
-  async function withdrawAttest() {
+  // back to "awaiting approval" for everyone else too. With `row`, only that
+  // cost centre's signature, and the dialog names it.
+  async function withdrawAttest(row?: { id: string; costCenter: string }): Promise<boolean> {
     const ok = await confirm({
       title: t("withdraw.title"),
-      message: t("withdraw.message"),
+      message: row
+        ? t("withdraw.messageRow", { costCenter: row.costCenter })
+        : t("withdraw.message"),
       confirmLabel: t("withdraw.confirm"),
     });
-    if (ok) await transition("withdraw_attest");
+    if (!ok) return false;
+    return transition("withdraw_attest", undefined, row ? [row.id] : undefined);
   }
 
   /**

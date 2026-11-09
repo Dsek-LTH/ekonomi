@@ -1,4 +1,5 @@
-// Routing: which verksamhet a sale is, and which account it is credited to.
+// Routing: which verksamhet a sale is, which account it is credited to, and
+// which cost centre it books against.
 //
 // The one place this is decided. intakt used to do it, from a copy of the
 // routing table sent with every request, while this app corrected its mistakes
@@ -17,19 +18,29 @@
 // prefixes are tried first, where intakt's order was Go's map order, so which
 // of two overlapping prefixes won could change from one run to the next.
 import type {
-  IncomeAccountDistribution,
-  IncomeFeeReportDto,
-  IncomeProduct,
-  IncomeReportDto,
+  IncomeDayDto,
+  IncomeDayLine,
   SwishPayment,
   ZettleFee,
   ZettleSaleLine,
 } from "./types";
 
-/** Where a sale is booked: a verksamhet by its income key, and an account. */
+/**
+ * Where a sale is booked: a verksamhet by its income key, an account, and a
+ * cost centre. The cost centre is already resolved when the table is built
+ * (lib/income/config.ts): the prefix's own if it has one, else the
+ * verksamhet's default, else none.
+ */
 export interface Route {
   key: string;
   account: string;
+  costCenterId: string | null;
+}
+
+/** Where Zettle's fees book. Nobody's sales, so not a route. */
+export interface FeeRoute {
+  account: string;
+  costCenterId: string | null;
 }
 
 export interface RoutingTable {
@@ -39,8 +50,6 @@ export interface RoutingTable {
   fallback: Route;
   /** Swish amount in öre to a message to route as, for an unlabelled payment. */
   swishAmountGuesses: ReadonlyMap<number, string>;
-  /** Account number to its name in the chart, for the distributions. */
-  accountNames: ReadonlyMap<string, string>;
 }
 
 // Between the prefix and the product: any run of hyphens, en or em dashes and
@@ -60,15 +69,25 @@ function prefixPattern(table: RoutingTable): RegExp | null {
 
 /** Where `text` routes by its prefix, and the name without it, or null. */
 function byPrefix(table: RoutingTable, pattern: RegExp | null, text: string) {
-  const m = pattern?.exec(text.trim());
+  const m = pattern?.exec((text ?? "").trim());
   if (!m) return null;
   const route = table.prefixes.get(m[1].toLowerCase());
   return route ? { route, name: m[2].trim() } : null;
 }
 
+/**
+ * What a product rung up with no name at all is called. A custom amount typed
+ * into the till comes through that way, and a blank row in the review table
+ * and on the intäktsräkning would read as a rendering fault.
+ */
+export const UNNAMED_PRODUCT = "Vara utan namn";
+
 /** A Zettle product: by its prefix, or to the reserv under its full name. */
 function routeProduct(table: RoutingTable, pattern: RegExp | null, name: string) {
-  return byPrefix(table, pattern, name) ?? { route: table.fallback, name: name.trim() };
+  const placed = byPrefix(table, pattern, name);
+  return placed
+    ? { ...placed, unmatched: false }
+    : { route: table.fallback, name: (name ?? "").trim() || UNNAMED_PRODUCT, unmatched: true };
 }
 
 /**
@@ -77,143 +96,146 @@ function routeProduct(table: RoutingTable, pattern: RegExp | null, name: string)
  */
 function routePayment(table: RoutingTable, pattern: RegExp | null, p: SwishPayment) {
   const direct = byPrefix(table, pattern, p.message);
-  if (direct) return direct;
+  if (direct) return { ...direct, unmatched: false };
   const guess = table.swishAmountGuesses.get(p.amount);
   const guessed = guess ? byPrefix(table, pattern, guess) : null;
-  return guessed ?? { route: table.fallback, name: p.message.trim() };
+  return guessed
+    ? { ...guessed, unmatched: false }
+    : { route: table.fallback, name: (p.message ?? "").trim(), unmatched: true };
 }
 
-/** Reports being built, by "<key>-<date>". */
-class Reports {
-  private byKey = new Map<string, IncomeReportDto>();
+/** Days being built, by date. */
+class Days {
+  private byDate = new Map<string, IncomeDayDto>();
 
-  constructor(private readonly accountNames: ReadonlyMap<string, string>) {}
-
-  add(route: Route, date: string, line: IncomeProduct) {
-    const key = `${route.key}-${date}`;
-    let report = this.byKey.get(key);
-    if (!report) {
-      report = {
-        key,
-        committee: route.key,
-        date,
-        products: [],
-        total: 0,
-        accountDistributions: [],
-      };
-      this.byKey.set(key, report);
+  add(date: string, line: IncomeDayLine) {
+    let day = this.byDate.get(date);
+    if (!day) {
+      day = { date, lines: [], total: 0 };
+      this.byDate.set(date, day);
     }
 
-    // The same product at the same price on the same account is one line, its
-    // quantity summed: a day of colas is "Cola, 40", not forty rows.
-    const same = report.products.find(
-      (p) =>
-        p.name === line.name &&
-        (p.variant ?? "") === (line.variant ?? "") &&
-        p.account === line.account &&
-        p.unitPrice === line.unitPrice &&
-        Boolean(p.isDiscount) === Boolean(line.isDiscount),
+    // The same product at the same price, for the same verksamhet, on the same
+    // account and cost centre, is one line with its quantity summed: a day of
+    // colas is "Cola, 40", not forty rows. Anything that would put two of them
+    // on different voucher rows keeps them apart.
+    const same = day.lines.find(
+      (l) =>
+        l.kind === line.kind &&
+        l.unitKey === line.unitKey &&
+        l.name === line.name &&
+        (l.variant ?? "") === (line.variant ?? "") &&
+        l.account === line.account &&
+        l.costCenterId === line.costCenterId &&
+        l.unitPrice === line.unitPrice &&
+        l.unmatched === line.unmatched,
     );
     if (same) {
       same.quantity += line.quantity;
       same.effectiveDiscount += line.effectiveDiscount;
       same.total += line.total;
     } else {
-      report.products.push({ ...line });
+      day.lines.push({ ...line });
     }
-    report.total += line.total;
-    addDistribution(report.accountDistributions, line.account, line.total, this.accountNames);
+    day.total += line.total;
   }
 
-  /** Sorted by key, so the same fetch always comes back in the same order. */
-  list(): IncomeReportDto[] {
-    return [...this.byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+  /** Oldest first, so the same fetch always comes back in the same order. */
+  list(): IncomeDayDto[] {
+    return [...this.byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   }
 }
 
-function addDistribution(
-  distributions: IncomeAccountDistribution[],
-  account: string,
-  amount: number,
-  names: ReadonlyMap<string, string>,
-) {
-  const existing = distributions.find((d) => d.account === account);
-  if (existing) existing.total += amount;
-  else distributions.push({ account, description: names.get(account) ?? "", total: amount });
-}
+const saleLine = (
+  route: Route,
+  name: string,
+  unmatched: boolean,
+  rest: Pick<
+    IncomeDayLine,
+    "variant" | "quantity" | "unitPrice" | "effectiveDiscount" | "total"
+  >,
+): IncomeDayLine => ({
+  kind: "SALE",
+  unitKey: route.key,
+  name,
+  ...(rest.variant ? { variant: rest.variant } : {}),
+  account: route.account,
+  costCenterId: route.costCenterId,
+  quantity: rest.quantity,
+  unitPrice: rest.unitPrice,
+  effectiveDiscount: rest.effectiveDiscount,
+  total: rest.total,
+  unmatched,
+});
 
-/** Zettle's lines as one report per verksamhet and day. */
+/**
+ * A Zettle range as one report per day: every verksamhet's sales, and the
+ * day's fees.
+ *
+ * The fees are lines of the same day because they leave the same account the
+ * sales land in. Zettle pays out takings net of its fees, so a day whose
+ * voucher carries both moves the clearing account by what Zettle actually
+ * sends. Equal fees are one line with a count. A fee line's total is negative,
+ * since it takes money out of the clearing account. A fee Zettle paid back
+ * (a refunded purchase takes its fee with it) is positive.
+ */
 export function routeZettleSales(
   table: RoutingTable,
-  lines: readonly ZettleSaleLine[],
-): IncomeReportDto[] {
+  sales: readonly ZettleSaleLine[],
+  fees: readonly ZettleFee[],
+  fee: FeeRoute,
+): IncomeDayDto[] {
   const pattern = prefixPattern(table);
-  const reports = new Reports(table.accountNames);
-  for (const line of lines) {
-    const { route, name } = routeProduct(table, pattern, line.name);
-    reports.add(route, line.date, {
-      name,
-      ...(line.variant ? { variant: line.variant } : {}),
-      account: route.account,
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
-      effectiveDiscount: line.discount,
-      total: line.total,
+  const days = new Days();
+  for (const line of sales) {
+    const { route, name, unmatched } = routeProduct(table, pattern, line.name);
+    days.add(
+      line.date,
+      saleLine(route, name, unmatched, {
+        variant: line.variant,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        effectiveDiscount: line.discount,
+        total: line.total,
+      }),
+    );
+  }
+  for (const f of fees) {
+    if (f.amount === 0) continue;
+    days.add(f.date, {
+      kind: "FEE",
+      unitKey: null,
+      name: "Zettleavgift",
+      account: fee.account,
+      costCenterId: fee.costCenterId,
+      quantity: 1,
+      unitPrice: -f.amount,
+      effectiveDiscount: 0,
+      total: -f.amount,
+      unmatched: false,
     });
   }
-  return reports.list();
+  return days.list();
 }
 
-/** A Swish export's payments as one report per verksamhet and day. */
+/** A Swish export's payments as one report per day. */
 export function routeSwishPayments(
   table: RoutingTable,
   payments: readonly SwishPayment[],
-): IncomeReportDto[] {
+): IncomeDayDto[] {
   const pattern = prefixPattern(table);
-  const reports = new Reports(table.accountNames);
+  const days = new Days();
   for (const p of payments) {
-    const { route, name } = routePayment(table, pattern, p);
-    reports.add(route, p.date, {
-      name,
-      account: route.account,
-      quantity: 1,
-      unitPrice: p.amount,
-      effectiveDiscount: 0,
-      total: p.amount,
-    });
-  }
-  return reports.list();
-}
-
-/**
- * Zettle's fees as one report per day, on the fee account.
- *
- * Not routed: a fee belongs to whoever runs the terminal, not to a verksamhet.
- * Fees of the same size are one line with a count, as intakt drew them.
- */
-export function groupZettleFees(fees: readonly ZettleFee[], account: string): IncomeFeeReportDto[] {
-  const byDate = new Map<string, IncomeFeeReportDto>();
-  for (const fee of fees) {
-    if (fee.amount === 0) continue;
-    let report = byDate.get(fee.date);
-    if (!report) {
-      report = { key: fee.date, date: fee.date, fees: [], total: 0 };
-      byDate.set(fee.date, report);
-    }
-    const same = report.fees.find((f) => f.unitPrice === fee.amount);
-    if (same) {
-      same.quantity += 1;
-      same.total += fee.amount;
-    } else {
-      report.fees.push({
-        name: "Zettle fee",
-        account,
+    const { route, name, unmatched } = routePayment(table, pattern, p);
+    days.add(
+      p.date,
+      saleLine(route, name, unmatched, {
         quantity: 1,
-        unitPrice: fee.amount,
-        total: fee.amount,
-      });
-    }
-    report.total += fee.amount;
+        unitPrice: p.amount,
+        effectiveDiscount: 0,
+        total: p.amount,
+      }),
+    );
   }
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return days.list();
 }

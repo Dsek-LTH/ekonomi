@@ -33,6 +33,8 @@ import { Notice } from "@/components/ui/notice";
 import { expenseLabel } from "@/lib/domain/reference";
 import type { ReviewWarning } from "@/lib/domain/review";
 import { useLiveBookkeeping } from "../use-live-bookkeeping";
+import { useBookingPresence } from "./book/use-booking-presence";
+import { useConfirm } from "@/components/confirm-dialog";
 import { PersonName } from "@/components/ui/avatar";
 
 /** What bokföring this utlägg has to know, for whoever may do it. Worked out
@@ -102,6 +104,22 @@ function ExpenseDetail({
   const tReceipt = useTranslations("receipt");
   const mutations = useExpenseMutations(expense.id);
   const [reminding, setReminding] = useState(false);
+  // How many rows the viewer could sign now. With more than one, the header's
+  // button says it signs them all.
+  const attestable =
+    expense.status === "PENDING_APPROVAL"
+      ? expense.allocations.filter((a) => a.canAttest && !a.approvedById).length
+      : 0;
+  // Attest and its withdrawal on each row, wherever there is more than one
+  // cost centre to tell apart. With one, the header's buttons are the same act.
+  const perRow = expense.allocations.length > 1;
+  // Which row's button was pressed, so the spinner lands on that one.
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  async function onRow(id: string, act: () => Promise<unknown>) {
+    setRowBusy(id);
+    await act();
+    setRowBusy(null);
+  }
   const documents = expenseDocuments(
     expense,
     `${tReceipt("alt")} - ${expense.title}`,
@@ -114,6 +132,18 @@ function ExpenseDetail({
   // without an answer: either way not one to send again from here. Asked only
   // where it could be sent.
   const live = useLiveBookkeeping(can.canExport);
+  const { list } = useFormat();
+  const confirm = useConfirm();
+  // Who else granskar this konterat utlägg right now. Announced only by
+  // somebody who could bokföra it from here, so not by whoever konterade it.
+  // Advisory, like the booking screen's: the export lock is what stops a
+  // second export. No version to compare against, since nothing is typed here.
+  const reviewers = useBookingPresence(
+    can.canExport && !review?.ownBooking ? expense.id : null,
+    null,
+    "review",
+  ).others;
+  const reviewerNames = list(reviewers.map((r) => r.name));
   const lock = live.exporting[expense.id];
   const lockedBy = lock?.by?.name ?? tBookkeeping("someone");
   // Why it cannot be bokförd by this reader, besides Fortnox (which the
@@ -168,6 +198,15 @@ function ExpenseDetail({
 
       <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
+      {reviewers.length > 0 && (
+        <Notice>
+          {tBookkeeping("review.othersReviewing", {
+            names: reviewerNames,
+            count: reviewers.length,
+          })}
+        </Notice>
+      )}
+
       {/* What is worth a second look on the voucher before it goes. None of it
           stops the bokföring: each is something a person may have meant. */}
       {review && review.warnings.length > 0 && (
@@ -193,11 +232,28 @@ function ExpenseDetail({
               fortnox={fortnox}
               exportBlock={exportBlock}
               onExport={async () => {
+                // Somebody else is looking it over too. Not a lock, but the
+                // one bokföring it first should know they are doing so.
+                if (
+                  reviewers.length > 0 &&
+                  !(await confirm({
+                    title: tBookkeeping("review.confirmTitle"),
+                    message: tBookkeeping("review.confirmMessage", {
+                      names: reviewerNames,
+                      count: reviewers.length,
+                    }),
+                    confirmLabel: t("review"),
+                  }))
+                ) {
+                  return;
+                }
                 if (!(await mutations.exportToFortnox(expenseLabel(expense)))) live.refresh();
               }}
               busy={mutations.busy}
               onTransition={mutations.transition}
-              onWithdrawAttest={mutations.withdrawAttest}
+              onApprove={() => mutations.transition("approve")}
+              approveAll={attestable > 1 ? attestable : null}
+              onWithdrawAttest={() => mutations.withdrawAttest()}
               // How many rows are already signed, so the confirmation can say
               // what taking it back actually costs somebody else.
               onRecall={() =>
@@ -229,7 +285,23 @@ function ExpenseDetail({
           />
         )}
 
-        <AllocationSection allocations={expense.allocations} />
+        <AllocationSection
+          allocations={expense.allocations}
+          rowActions={
+            perRow
+              ? {
+                  canAttest: expense.status === "PENDING_APPROVAL",
+                  withdrawable: can.withdrawableAllocationIds,
+                  onAttest: (id) =>
+                    onRow(id, () => mutations.transition("approve", undefined, [id])),
+                  onWithdraw: (id, costCenter) =>
+                    onRow(id, () => mutations.withdrawAttest({ id, costCenter })),
+                  pending: rowBusy,
+                  busy: mutations.busy,
+                }
+              : null
+          }
+        />
 
         {expense.verification && (
           <VerificationSection

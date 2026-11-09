@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LIST_POLL_MS, type LiveBookkeeping } from "@/lib/domain/presence";
 
-const NOTHING: LiveBookkeeping = { booking: {}, exporting: {} };
+const NOTHING: LiveBookkeeping = { booking: {}, reviewing: {}, exporting: {} };
 
 /**
- * What is happening to which utlägg right now: who else is booking one, and
- * which are locked by an export. Kept fresh while the list is on screen, and
+ * What is happening to which utlägg right now: who else is booking or
+ * reviewing one, and which are locked by an export. Kept fresh while the list is on screen, and
  * asked again the moment it comes back into view. A hidden list asks nothing,
  * since nobody is reading it.
  *

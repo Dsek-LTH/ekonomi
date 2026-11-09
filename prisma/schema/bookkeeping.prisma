@@ -23,15 +23,15 @@ model BookkeepingSettings {
   // debiting the account the money actually landed in, which depends on how it
   // was paid. These are the app's own settings, not intakt's. The service
   // returns what was sold and never decides which account it clears through.
-  zettleClearingAccount String?
-  swishClearingAccount  String?
+  zettleClearingAccount  String?
+  swishClearingAccount   String?
   // Zettle's own transaction fees are a cost, not income: debited here and
   // credited against the Zettle clearing account above.
-  zettleFeeAccount      String?
+  zettleFeeAccount       String?
   // Cost centre the fee vouchers carry. Fees are not attributable to a
   // committee the way sales are. They belong to whoever runs the terminal.
-  zettleFeeCostCenter   CostCenter? @relation("ZettleFeeCostCenter", fields: [zettleFeeCostCenterId], references: [id], onDelete: SetNull)
-  zettleFeeCostCenterId String?
+  zettleFeeCostCenter    CostCenter?       @relation("ZettleFeeCostCenter", fields: [zettleFeeCostCenterId], references: [id], onDelete: SetNull)
+  zettleFeeCostCenterId  String?
   // Which verifikationsserie a day's takings are filed under in Fortnox.
   //
   // Null means "the same one everything else uses", FortnoxConnection's
@@ -40,7 +40,7 @@ model BookkeepingSettings {
   // interleaved with, and it is also the series the duplicate check reads: a
   // day is recognised over there by its series, its date and its voucher text
   // (lib/income/duplicate.ts), so the two must be decided in one place.
-  incomeVoucherSeries   String?
+  incomeVoucherSeries    String?
   // Where a sale that matches no product prefix goes: whose takings it counts
   // as, and which revenue account it is credited to. One answer for the whole
   // section, so it is a setting of its own rather than a flag on one of the

@@ -14,7 +14,7 @@ import { EmptyNote } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { IconChevronRight } from "@/components/ui/icons";
-import { StarRating } from "@/components/member-score";
+import { ScoreNumber } from "@/components/member-score";
 import { cn } from "@/lib/ui/utils";
 import type { QueueAction } from "@/lib/domain/queue";
 import type { UnitInvoice, UpcomingItem, WaitingOwn } from "@/lib/data/dashboard";
@@ -126,7 +126,7 @@ export function DashboardClient({
   budget,
   fresh,
   invoices,
-  stars,
+  score,
 }: {
   firstName: string;
   /** Everything of the viewer's that is late, named in Din tur or not. */
@@ -144,7 +144,7 @@ export function DashboardClient({
   /** The latest in the viewer's own result units. Empty for most. */
   invoices: UnitInvoice[];
   /** The viewer's own redovisningsbetyg. */
-  stars: number | null;
+  score: number | null;
 }) {
   const t = useTranslations("dashboard");
   const side = [
@@ -180,7 +180,7 @@ export function DashboardClient({
           turn={turn}
           lateCount={lateCount}
           waiting={waiting}
-          stars={stars}
+          score={score}
           budget={budget}
           calendar={calendar}
         />
@@ -201,7 +201,7 @@ export function DashboardClient({
               <FirstRun />
             ) : (
               <>
-                <TurnCard rows={turn} stars={stars} />
+                <TurnCard rows={turn} score={score} />
                 <WaitingCard rows={waiting} />
               </>
             )}
@@ -225,14 +225,14 @@ function Tiles({
   turn,
   lateCount,
   waiting,
-  stars,
+  score,
   budget,
   calendar,
 }: {
   turn: TurnRow[];
   lateCount: number;
   waiting: WaitingOwn[];
-  stars: number | null;
+  score: number | null;
   budget: BudgetFlags | null;
   calendar: UpcomingItem[];
 }) {
@@ -262,7 +262,7 @@ function Tiles({
       <StatTile
         href="/profile"
         label={t("score")}
-        value={<StarRating value={stars} />}
+        value={<ScoreNumber value={score} />}
         note={t("scoreNote")}
       />
       {budget ? (
@@ -322,7 +322,7 @@ function StatTile({
 
 // Everything that is the viewer's move, in one list. Late things first, each
 // saying how late, then what is due soon, then the counts.
-function TurnCard({ rows, stars }: { rows: TurnRow[]; stars: number | null }) {
+function TurnCard({ rows, score }: { rows: TurnRow[]; score: number | null }) {
   const t = useTranslations("dashboard.turn");
   const tScore = useTranslations("score");
   const when = useRelativeDays();
@@ -333,10 +333,10 @@ function TurnCard({ rows, stars }: { rows: TurnRow[]; stars: number | null }) {
       <CardHeader
         title={t("title")}
         action={
-          // The member's own stars, where they look every day. Doing what is
-          // in this card is what raises them. The breakdown is on the profile.
+          // The member's own score, where they look every day. Doing what is
+          // in this card is what raises it. The breakdown is on the profile.
           <Link href="/profile" title={tScore("ownTitle")} className="inline-flex">
-            <StarRating value={stars} />
+            <ScoreNumber value={score} />
           </Link>
         }
       />

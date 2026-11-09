@@ -16,7 +16,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
-import { MemberScorePanel, StarRating } from "@/components/member-score";
+import { MemberScorePanel, ScoreNumber } from "@/components/member-score";
 import { UserAvatar } from "@/components/ui/avatar";
 import { IconUpload } from "@/components/ui/icons";
 import { NotificationSettings } from "./notification-settings";
@@ -140,7 +140,7 @@ export function ProfileClient({
 
           <NotificationSettings email={email} initial={notifications} />
 
-          {/* The hero's stars link here. */}
+          {/* The hero's score links here. */}
           <Card id="betyg" className="scroll-mt-20">
             <CardHeader title={tScore("title")} subtitle={tScore("ownSubtitle")} />
             <CardBody>
@@ -333,7 +333,7 @@ function ProfileHero({
             className="flex flex-col items-center gap-1 rounded-control px-2 py-1 transition-colors hover:bg-hover sm:items-end"
           >
             <span className="text-xs text-muted">{tScore("title")}</span>
-            <StarRating value={score.stars} />
+            <ScoreNumber value={score.score} />
           </a>
           <Button
             variant="dangerOutline"

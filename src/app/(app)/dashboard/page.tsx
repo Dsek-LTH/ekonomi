@@ -185,7 +185,7 @@ export default async function DashboardPage() {
       budget={budget}
       fresh={mine.length === 0 && invoices.length === 0}
       invoices={invoices}
-      stars={score.stars}
+      score={score.score}
     />
   );
 }

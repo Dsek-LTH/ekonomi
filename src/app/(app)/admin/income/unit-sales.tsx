@@ -58,8 +58,12 @@ export function UnitSales({
   // else. The one already chosen stays offered if it no longer matches (a
   // prefix removed since), so the picker shows it rather than going blank.
   const ownCodes = new Set(unit.costCenters.map((c) => c.code));
+  const chosen = new Set([
+    income?.defaultCostCenterId,
+    ...(income?.prefixes.map((p) => p.costCenterId) ?? []),
+  ]);
   const ccOptions = costCenters
-    .filter((c) => ownCodes.has(c.code) || c.id === income?.defaultCostCenterId)
+    .filter((c) => ownCodes.has(c.code) || chosen.has(c.id))
     .map((c) => ({ value: c.id, label: `${c.code} - ${c.name}`, short: c.code }));
 
   async function enableIncome() {
@@ -112,6 +116,15 @@ export function UnitSales({
       error: t("saveFailed"),
     });
     if (ok) setProductDraft(null);
+  }
+
+  async function setPrefixCostCenter(id: string, costCenterId: string) {
+    await mutate(`/api/income/prefixes/${id}`, {
+      key: `product-${id}`,
+      method: "PATCH",
+      body: { costCenterId: costCenterId || null },
+      error: t("saveFailed"),
+    });
   }
 
   async function removeProductPrefix(id: string) {
@@ -211,6 +224,20 @@ export function UnitSales({
                       Fortnox will reject, but only at export, so it is worth
                       saying here. */}
                   {!p.accountName && <Tag tone="warning">{tIncome("unknownAccount")}</Tag>}
+                  {/* Where this prefix's sales book, when it is not the
+                      verksamhet's default: a pub prefix to the pub's cost
+                      centre. Copied onto each sold line at import. */}
+                  <span className="w-36 shrink-0">
+                    <Combobox
+                      size="sm"
+                      options={ccOptions}
+                      value={p.costCenterId ?? ""}
+                      onChange={(v) => v !== (p.costCenterId ?? "") && setPrefixCostCenter(p.id, v)}
+                      allowClear
+                      placeholder={tIncome("prefixCostCenterDefault")}
+                      aria-label={tIncome("prefixCostCenter", { code: p.code })}
+                    />
+                  </span>
                   <IconButton
                     tone="danger"
                     size="xs"

@@ -1,15 +1,10 @@
 {
   "title": "Redovisningsbetyg",
-  "ownSubtitle": "Hur snabbt du redovisar dina köp, det senaste året.",
-  "outOf": "{value} av 5",
-  "starsLabel": "{value} av 5 stjärnor",
+  "ownSubtitle": "Hur väl du sköter din del: att redovisa dina köp, och att attestera det som väntar på dig. Det senaste året.",
+  "outOf": "av 100",
   "new": "Ny",
-  "newDescription": "Inga stjärnor än. Betyget visas när minst {min} köp räknas.",
-  "basedOn": "Utifrån {count} köp det senaste året.",
-  "withinWeek": "Inom en vecka",
-  "withinWeekValue": "{count} av {of}",
-  "firstTime": "Godkända direkt",
-  "firstTimeValue": "{clean} av {of}",
+  "newDescription": "Inget betyg än. Det visas när någon del har minst {min} saker att gå på.",
+  "basedOn": "{count, plural, one {Utifrån # delbetyg det senaste året.} other {Medel av # delbetyg det senaste året.}}",
   "waitingTitle": "Väntar på att skickas in",
   "waitingOwn": "Betyget stiger när de här skickas in.",
   "waitingOther": "Köp som inte är redovisade ännu.",
@@ -17,20 +12,41 @@
   "tookDays": "{days, plural, =0 {Samma dag} one {# dag} other {# dagar}}",
   "kind": {
     "draft": "Utkast",
-    "cardPurchase": "Kortköp"
+    "cardPurchase": "Kortköp",
+    "expense": "Utlägg",
+    "invoice": "Leverantörsfaktura"
   },
   "send": "Skicka in",
   "redovisa": "Redovisa",
   "slowestTitle": "Långsammast först",
   "nothingCounted": "Inget köp räknas ännu.",
   "howTitle": "Så räknas betyget",
-  "how": "Varje köp får stjärnor efter hur många dagar det tog att skicka in: inom 7 dagar 5, inom 14 dagar 4, inom 30 dagar 3, inom 60 dagar 2, senare 1. Köp som inte är inskickade räknas efter hur länge de har väntat, efter den första veckan. För ett kortköp börjar räkningen när bankraden finns i appen, eftersom det inte går att skicka in förut. Det senaste halvåret väger dubbelt, och en liten del av betyget är hur många som godkändes utan att skickas tillbaka. Betyget påverkar ingenting, det är bara till för dig.",
+  "how": "Betyget är medlet av upp till fyra delbetyg, vart och ett från 0 till 100. Skickar in i tid: varje köp får poäng efter hur många dagar det tog att skicka in, 100 inom en vecka och sedan nedåt till 0 efter fyra månader. Köp som inte är inskickade räknas efter hur länge de har väntat, efter den första veckan, och för ett kortköp börjar räkningen när bankraden finns i appen. Godkända direkt: hur stor del av dina utlägg som gick igenom utan att skickas tillbaka eller få datumet rättat vid konteringen. Rätt attesterat: hur stor del av dina attester som skattmästeriet inte behövde skicka tillbaka eller rätta datumet på. Attesterar i tid: 100 inom tre dagar från att något hamnade hos dig och sedan nedåt till 0 efter två månader, både utlägg och leverantörsfakturor, och det som väntar på dig räknas också. Ett delbetyg räknas först när det har minst tre saker att gå på, så den som inte attesterar får betyg bara på det den skickar in. Det senaste halvåret väger dubbelt. Betyget påverkar ingenting, det är bara till för dig.",
   "list": {
     "search": "Sök medlem",
     "empty": "Ingen har redovisat något det senaste året.",
     "noMatch": "Ingen medlem matchar.",
     "waitingSummary": "{count, plural, one {# köp väntar} other {# köp väntar}}, äldsta {days} dagar",
-    "upToDate": "Inget väntar"
+    "upToDate": "Inget väntar",
+    "attestSummary": "{count, plural, one {# attest väntar} other {# attester väntar}}"
   },
-  "ownTitle": "Ditt redovisningsbetyg"
+  "ownTitle": "Ditt redovisningsbetyg",
+  "scoreLabel": "{value} av 100",
+  "parts": {
+    "promptness": "Skickar in i tid",
+    "firstTime": "Godkända direkt",
+    "attestAccuracy": "Rätt attesterat",
+    "attestSpeed": "Attesterar i tid",
+    "promptnessDetail": "{count, plural, one {# köp} other {# köp}}",
+    "attestSpeedDetail": "{count, plural, one {# attest} other {# attester}}",
+    "ofDetail": "{count} av {of}",
+    "notEnough": "Räknas från {min}"
+  },
+  "attestWaitingTitle": "Väntar på din attest",
+  "attestWaitingOwn": "Betyget stiger när de här är attesterade.",
+  "attestWaitingOther": "Det som väntar på attest av medlemmen.",
+  "returnedTitle": "Skickade tillbaka eller rättade efter attest",
+  "returnedLead": "Attesterade, men skattmästeriet hittade något som behövde rättas.",
+  "attestedOn": "attesterad {date}",
+  "slowestAttestsTitle": "Långsammaste attesterna"
 }

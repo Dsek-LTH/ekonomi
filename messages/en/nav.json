@@ -51,5 +51,8 @@
   "fiscalYear": "Financial year",
   "fiscalYearNotHere": "The financial year does not apply to this page.",
   "accountMenu": "Account",
-  "salesSettings": "Sales"
+  "salesSettings": "Sales",
+  "groupIncome": "Income",
+  "incomeZettle": "Zettle",
+  "incomeSwish": "Swish"
 }

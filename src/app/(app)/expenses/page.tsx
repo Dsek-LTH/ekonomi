@@ -13,6 +13,7 @@ import { ExpensesClient } from "./expenses-client";
 import { expenseDefaultTab, type ExpenseScope } from "./scope";
 import { fiscalYearWhere, getFiscalYear } from "@/lib/server/fiscal-year";
 import { titled } from "@/lib/server/page-title";
+import { ownedResultUnits } from "@/lib/server/result-units";
 
 export const generateMetadata = titled("expenses");
 
@@ -37,14 +38,16 @@ export default async function ExpensesPage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
+  const { names: ownedUnits } = await ownedResultUnits(user);
 
   // In the order the track draws them, narrowest first.
   const scopes: ExpenseScope[] = [
     "mine",
-    // What the reader may attest: their result units' utlägg, or anyone's
-    // for an admin. Not a unit filter but the attest authority itself, so
-    // your own and the units you do not answer for stay out of it.
-    ...(hasAttestRole(user.capabilities) ? (["unit"] as const) : []),
+    // The utlägg of the result units the reader answers for, never their own.
+    // Only the units they own, even for the skattmästare, who may attest
+    // anyone's: everyone's is what "Alla" is for. So it is offered only to
+    // somebody who owns a unit, since for anybody else it is always empty.
+    ...(hasAttestRole(user.capabilities) && ownedUnits.length > 0 ? (["unit"] as const) : []),
     ...(canViewBookkeeping(user.capabilities) ? (["all"] as const) : []),
   ];
   // The one asked for, if it is theirs. Otherwise the scope the reader's work

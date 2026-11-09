@@ -1,7 +1,5 @@
 {
-  "costCentreFailed": "The cost centre could not be changed.",
   "title": "Income",
-  "reviewTitle": "Review and book",
   "description": "Fetch sales from Zettle and Swish. Look them over and book them.",
   "source": {
     "SWISH": "Swish",
@@ -9,9 +7,9 @@
     "ZETTLE_FEE": "Zettle fees"
   },
   "status": {
-    "DRAFT": "To book",
-    "BOOKED": "Booked",
-    "EXPORTED": "Exported"
+    "DRAFT": "To kontera",
+    "BOOKED": "Konterad",
+    "EXPORTED": "Booked"
   },
   "fetch": {
     "source": "Source",
@@ -21,7 +19,9 @@
     "to": "To",
     "submit": "Fetch",
     "chooseFile": "Choose Swish file",
-    "notReady": "The setup is not ready for fetching yet. See the steps on the page."
+    "notReady": "The setup is not ready for fetching yet. See the steps on the page.",
+    "titleZettle": "Fetch from Zettle",
+    "titleSwish": "Upload Swish file"
   },
   "fetchDone": "Fetch complete",
   "fetchFailed": "The fetch failed",
@@ -56,14 +56,15 @@
     "reports": "Reports",
     "imported": "Fetched",
     "date": "Date",
-    "committee": "Committee",
     "costCenter": "Cost centre",
     "total": "Total",
     "status": "Status",
     "fees": "Zettle fees",
     "chooseCostCenter": "Choose a cost centre",
     "voucher": "Voucher",
-    "reviewedBy": "Reviewed by"
+    "reviewedBy": "Reviewed by",
+    "needs": "Needs you",
+    "units": "Committees"
   },
   "lines": {
     "product": "Item",
@@ -71,32 +72,39 @@
     "quantity": "Qty",
     "total": "Amount",
     "accountFor": "Account for {product}",
-    "accountFailed": "The account could not be changed.",
     "unitPriceKr": "Unit price (kr)",
     "discountKr": "Discount (kr)",
     "totalKr": "Amount (kr)",
-    "changeAccount": "Change account",
     "unknownPrefix": "A prefix no committee has, {count, plural, one {# product} other {# products}}",
-    "movePrefix": "Move all {prefix} ({count})",
-    "selectPrefix": "Select every product with the prefix {prefix}"
+    "movePrefix": "Give all {prefix} to a committee ({count})",
+    "selectPrefix": "Select every product with the prefix {prefix}",
+    "costCenter": "Cost centre",
+    "costCenterFor": "Cost centre for {product}",
+    "setCostCenter": "Set cost centre…",
+    "noAccount": "No account",
+    "noCostCenter": "Missing",
+    "saveFailed": "Could not save the change.",
+    "unmatchedSection": "Unmatched items",
+    "unmatchedHint": "Matched no prefix. Give them the right committee.",
+    "feesSection": "Zettle fees",
+    "mixedCostCenters": "Mixed",
+    "sectionCostCenter": "Cost centre for all of {unit} this day",
+    "selectBlock": "Select every item for {unit}",
+    "groupAccount": "Change the account for every item on {account}",
+    "setAccount": "Change account…"
   },
   "move": {
-    "title": "Move sales",
+    "title": "Give to committee",
     "subtitle": "{count, plural, one {# item} other {# items}} from {from}",
-    "action": "Move…",
-    "unitField": "Committee",
-    "mergeTitle": "Merge into {unit}'s report?",
-    "mergeBody": "{unit} already has a report for {date}. {count, plural, one {# item moves} other {# items move}} into it and the two days become one. You cannot split them again.",
-    "mergeConfirm": "Move",
-    "dragHint": "Drag onto another committee's report for the same day",
+    "action": "Give to committee…",
     "picked": "{count, plural, one {# selected} other {# selected}}",
     "clear": "Clear",
     "selectAll": "Select every item",
     "selectLine": "Select {product}",
-    "destination": "To committee",
-    "destinationHint": "The items join that committee's report for the same day. If it has none, one is created.",
+    "destination": "Committee",
+    "destinationHint": "The items stay on the same day and book to the committee's cost centre.",
     "destinationPlaceholder": "Pick a committee…",
-    "destinationRequired": "Pick where the items are moving to",
+    "destinationRequired": "Choose whose sales the items are",
     "setAll": "Set all to:",
     "setAllTo": "Set every row to account {account}",
     "noAccounts": "This committee has no product prefixes. Pick an account for each row.",
@@ -104,38 +112,12 @@
     "accountFor": "Account for {product}",
     "wasAccount": "Currently books to {account}",
     "unknownAccountName": "unknown account",
-    "stillOnOldAccount": "{count, plural, one {# row is} other {# rows are}} still on the account they had in the fallback report. Is that right?",
-    "movingTotal": "Moving:",
+    "stillOnOldAccount": "{count, plural, one {# line stays} other {# lines stay}} on the same account as before. Is that right?",
+    "movingTotal": "Total:",
     "cancel": "Cancel",
-    "confirm": "Move {count, plural, one {# item} other {# items}}",
+    "confirm": "Give {count, plural, one {# item} other {# items}}",
     "done": "{count, plural, one {# item moved} other {# items moved}}",
     "failed": "The items could not be moved."
-  },
-  "newReport": {
-    "action": "New report",
-    "actionFor": "New report for {date}",
-    "title": "New report",
-    "subtitle": "{date} - {source}. An empty report to move sales onto.",
-    "unit": "Committee",
-    "unitHint": "Whose takings the report becomes.",
-    "unitPlaceholder": "Pick a committee…",
-    "unitRequired": "Pick whose takings the report becomes",
-    "alreadyExists": "That committee already has a report for the day, so that one opens instead. Two reports for one day could not both be booked.",
-    "footerHint": "The report is created empty.",
-    "cancel": "Cancel",
-    "confirm": "Create report",
-    "open": "Open the report",
-    "done": "The report was created.",
-    "opened": "That committee already had a report for the day. It is open now.",
-    "failed": "The report could not be created.",
-    "emptyTitle": "Empty report",
-    "emptyBody": "This report holds no sales yet. Drag items onto it from another report for the same day, or select them there and choose Move. Wrong committee: delete this report and make another.",
-    "delete": "Delete the report",
-    "deleteTitle": "Delete the report?",
-    "deleteBody": "{unit} {date} holds no sales. The report will be removed.",
-    "deleteConfirm": "Delete",
-    "deleteDone": "The report was deleted.",
-    "deleteFailed": "The report could not be deleted."
   },
   "undo": {
     "unexport": "Undo export",
@@ -149,29 +131,33 @@
     "reopenConfirm": "Open",
     "delete": "Delete",
     "deleteTitle": "Delete {date}?",
-    "deleteBody": "{unit}'s report, its sold items and its voucher are removed. You cannot undo that. Fetching the same period again does bring the day back.",
+    "deleteBody": "{unit} is removed, with its sold items and its voucher.",
     "deleteConfirm": "Delete",
     "deleteDone": "The report was deleted.",
-    "failed": "That did not work."
+    "failed": "That did not work.",
+    "reopenDone": "The kontering is undone. The day waits to be konterad again."
   },
   "actions": {
     "book": "Book",
     "more": "More",
     "export": "Export",
-    "viewDocument": "View report",
-    "hideDocument": "Hide income statement",
-    "bookAndNext": "Approve and book"
+    "kontera": "Kontera",
+    "review": "Review and book"
   },
   "searchPlaceholder": "Search source, file or period…",
   "tab": {
-    "review": "To book",
-    "booked": "To export",
-    "exported": "Exported",
+    "book": "To kontera",
+    "export": "To book",
+    "done": "Booked",
     "all": "All"
   },
   "list": {
-    "reviewStart": "Review and book ({count})",
-    "empty": "No income yet."
+    "empty": "No income yet.",
+    "bookedBy": "Konterad by {name}",
+    "ownBooking": "by you",
+    "ownBookingHint": "You konterade this day yourself, so somebody else needs to review and book it.",
+    "manualStale": "The kontering needs saving again",
+    "ready": "Ready"
   },
   "batches": {
     "title": "Fetches",
@@ -180,30 +166,33 @@
   "review": {
     "viewLabel": "View",
     "lines": "Items sold",
-    "noCostCenter": "No cost centre",
-    "edited": "Edited",
-    "modeReview": "Review",
-    "modeTable": "Reports",
     "open": "Review",
     "alreadyBooked": "{count} days in the period are already booked and cannot be booked again.",
     "inFortnox": "In Fortnox ({voucher})",
-    "inFortnoxWarning": "Fortnox already holds a voucher for this day and verksamhet ({voucher}). Only book this if they really are two separate reports.",
+    "inFortnoxWarning": "Fortnox already has a voucher for some of this day's money ({voucher}). Booking the whole day again would count it twice.",
     "alreadyBookedShort": "Already booked",
-    "alreadyBookedWarning": "This day is already booked here and cannot be booked again. Voucher:",
+    "alreadyBookedWarning": "Some of this day is already booked here, so the day cannot be booked again. Voucher:",
     "progress": "{reviewed} of {total} reviewed",
-    "approvedAs": "Approved as {name}",
-    "approveShortcut": "Approve and book (⌘ or Ctrl + Enter). j and k change day.",
     "findings": {
       "none": "Nothing out of the ordinary. Compare the products sold with the income statement and approve.",
-      "fallback": "Products without a recognised prefix ended up here. Check that every line belongs here, and move the ones that belong to another committee.",
-      "noCostCentre": "The cost centre is missing. Choose it above before approving.",
-      "edited": "The voucher has been changed by hand. Check the rows before approving."
-    }
+      "unplaced": "{count, plural, one {# item} other {# items}} matched no prefix and went to the fallback. Give them the right committee, or leave them if they belong there.",
+      "noCostCenter": "{count, plural, one {# line has} other {# lines have}} no cost centre. Choose one on the line before approving.",
+      "inactive": "Cost centre {codes} is archived in Fortnox and would stop the export. Choose another on those lines.",
+      "local": "{codes} are local cost centres. They reach Fortnox as text on the row, not as a cost centre."
+    },
+    "unplacedShort": "{count, plural, one {# unmatched} other {# unmatched}}",
+    "noCostCenterShort": "{count, plural, one {# without cost centre} other {# without cost centre}}",
+    "konteradAs": "Konteras by {name}"
   },
   "book": {
+    "unknownClearingAccount": "The clearing account {account} is not in the chart of accounts. Fix it under Settings → Income before booking.",
+    "voucherTitle": "Voucher",
+    "voucherDerived": "One row per account and cost centre. Change the lines above to change the voucher.",
+    "debit": "Debit",
+    "credit": "Credit",
+    "sum": "Total",
     "clearingHint": "The clearing account follows from how the day was paid and cannot be changed here.",
-    "clearingLocked": "Locked row",
-    "unknownClearingAccount": "The clearing account {account} is not in the chart of accounts. Fix it under Settings → Income before booking."
+    "clearingLocked": "Locked row"
   },
   "exportAll": {
     "action": "Export all ({count})",
@@ -216,7 +205,7 @@
     "titleFetch": "Before you can fetch income",
     "titleBook": "You can fetch income, but before you can book it",
     "steps": {
-      "service": "Connect the income service. Whoever runs the app needs to set INTAKT_URL and INTAKT_TOKEN.",
+      "service": "Connect Zettle. Whoever runs the app needs to set ZETTLE_CLIENT_ID and ZETTLE_API_KEY. Swish can be fetched without it.",
       "noCommittees": "Turn on sales for at least one result unit, so there is a committee to book the income to.",
       "noPrefixes": "Add product prefixes to the committee. A product whose name starts with the prefix is booked to its account, so c picks up c-Cola, for example.",
       "noFallback": "Choose the fallback for unknown products: which committee and which account products without a prefix are booked to.",
@@ -227,9 +216,62 @@
     "askAdmin": "The steps are done under Settings → Sales, which only people with access to settings can reach. Ask someone who has it.",
     "openSettings": "Open Settings → Sales",
     "goTo": {
-      "service": "See Connection",
+      "service": "See Zettle",
       "units": "Go to Committees and products",
       "booking": "Go to Booking"
     }
+  },
+  "blocker": {
+    "alreadyBooked": "Already booked here.",
+    "noClearingAccount": "No clearing account is chosen. Choose it under Settings → Sales.",
+    "unknownClearingAccount": "Clearing account {account} is not in the chart of accounts.",
+    "unplacedLines": "An item has no committee.",
+    "noFeeAccount": "No account for Zettle's fees is chosen. Choose it under Settings → Sales.",
+    "noAccount": "A line has no account.",
+    "unknownAccount": "A line has an account that is not in the chart.",
+    "noCostCenter": "A line has no cost centre.",
+    "inactiveCostCenter": "A line has an archived cost centre.",
+    "noDistributions": "The day has nothing to book.",
+    "unbalanced": "The day's total does not match its lines.",
+    "manualStale": "The kontering was written before the lines changed. Save it again or reset it.",
+    "manualInvalid": "The hand-written kontering cannot be booked.",
+    "unknownProject": "A row has a project Fortnox does not have."
+  },
+  "manual": {
+    "edit": "Edit kontering",
+    "editing": "Write the kontering by hand. The clearing row follows the day's total and cannot be changed.",
+    "by": "Written by hand by {name}, {date}.",
+    "reset": "Reset",
+    "stale": "The lines have changed since the kontering was written by hand. Save it again or reset it before booking.",
+    "text": "Text",
+    "cancel": "Cancel",
+    "save": "Save kontering",
+    "saveFailed": "Could not save the kontering.",
+    "saved": "Kontering saved.",
+    "resetDone": "The kontering follows the lines again.",
+    "blocker": {
+      "noRows": "Add at least one row.",
+      "accountRequired": "A row has no account.",
+      "amountRequired": "A row has no amount.",
+      "negativeAmounts": "Amounts cannot be negative. Use the other side instead.",
+      "costCenterRequired": "Rows on result accounts (3000 to 8999) need a cost centre.",
+      "unbalanced": "Debit and credit do not balance."
+    }
+  },
+  "page": {
+    "zettle": "Zettle",
+    "swish": "Swish"
+  },
+  "bulk": {
+    "book": "Kontera {count, plural, one {# ready day} other {# ready days}}",
+    "export": "Review and book {count, plural, one {# day} other {# days}}",
+    "bookDone": "{count} of {total} days konterade.",
+    "exportDone": "{count} of {total} days booked in Fortnox."
+  },
+  "day": {
+    "legacy": "Booked per committee, before the per-day voucher",
+    "total": "To account for",
+    "text": "Voucher text",
+    "bookedBy": "Konterad by"
   }
 }

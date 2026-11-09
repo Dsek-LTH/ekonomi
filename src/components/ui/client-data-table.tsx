@@ -94,6 +94,40 @@ function buildRowFilter<T>(
     (tabPred?.(row) ?? true);
 }
 
+/**
+ * The rows the table shows, in the order it shows them, across every page:
+ * the tab, the search, the dates and the dropdowns applied, then the sort. For
+ * a page that has to know what is next in the table, the same answer the table
+ * itself gives rather than a guess from the whole list.
+ */
+export function visibleRows<T>({
+  columns,
+  rows,
+  controls,
+  tabs,
+  filter,
+}: {
+  columns: Column<T>[];
+  rows: T[];
+  controls: ClientControls;
+  tabs?: ClientTabFilter<T>;
+  filter?: ClientSelectFilters<T>;
+}): T[] {
+  const cols = columns.filter((c) => !c.hidden);
+  const activeTab = tabs?.find((o) => o.value === controls.tab) ?? tabs?.[0];
+  const filtered = rows.filter(buildRowFilter(cols, controls, activeTab, filter));
+  const col = controls.sortKey ? cols.find((c) => c.key === controls.sortKey) : undefined;
+  if (!col?.sortable || !col.value) return filtered;
+  const dir = controls.sortDir === "asc" ? 1 : -1;
+  const get = col.value;
+  return filtered.sort((a, b) => {
+    const av = get(a);
+    const bv = get(b);
+    if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
+    return dir * collator.compare(String(av), String(bv));
+  });
+}
+
 export function ClientDataTable<T>({
   columns,
   rows,
@@ -137,25 +171,15 @@ export function ClientDataTable<T>({
   empty?: string;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
-  const activeTab = tabs?.find((o) => o.value === controls.tab) ?? tabs?.[0];
 
   const { query, dateFrom, dateTo, picks, sortKey, sortDir } = controls;
-  const data = useMemo(() => {
-    const filtered = rows.filter(buildRowFilter(cols, controls, activeTab, filter));
-    const col = sortKey ? cols.find((c) => c.key === sortKey) : undefined;
-    if (!col?.sortable || !col.value) return filtered;
-    const dir = sortDir === "asc" ? 1 : -1;
-    const get = col.value;
-    return filtered.sort((a, b) => {
-      const av = get(a);
-      const bv = get(b);
-      if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
-      return dir * collator.compare(String(av), String(bv));
-    });
+  const data = useMemo(
+    () => visibleRows({ columns: cols, rows, controls, tabs, filter }),
     // `controls` is recreated every render; the fields the filter reads are
     // listed individually so the work only repeats when one of them changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, cols, activeTab, filter, query, dateFrom, dateTo, picks, sortKey, sortDir]);
+    [rows, cols, tabs, filter, controls.tab, query, dateFrom, dateTo, picks, sortKey, sortDir],
+  );
 
   // What DataTable is handed: the page, the count behind it, and tabs stripped
   // of the predicates it has no use for.

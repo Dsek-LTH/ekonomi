@@ -32,21 +32,22 @@ export const ROUNDING_ACCOUNT = 3740;
 export const MAX_ROUNDING = 99;
 
 /**
- * The cost rows as booked, in öre, when the invoice carries an öresutjämning.
+ * What the cost rows come to, öre: the amount to pay less the öresutjämning.
  *
- * The split is attested against the amount to pay, which is what the rows
- * add up to. The rounding is the difference between that and what the
- * invoice's lines came to, booked on its own account: `rounding` öre debited
- * there (credited when negative). So the cost booked is the amount to pay
- * less the rounding, and the difference is taken on the largest share, where
- * an öre or two is least of it. The first of equals, so it is the same row
- * every time.
+ * The rounding is `rounding` öre, signed: the amount to pay less what the
+ * invoice's lines came to. It is booked on its own account (debited, or
+ * credited when negative), so the cost centres carry the lines as printed.
+ * That is what a split is made of and what it must add up to, since a unit
+ * splitting an invoice copies its lines and the öre rounded away belong to
+ * none of them.
  */
-export function bookedShares(shares: readonly number[], rounding: number): number[] {
-  if (!rounding || shares.length === 0) return [...shares];
-  const largest = shares.reduce((best, s, i) => (s > shares[best] ? i : best), 0);
-  return shares.map((s, i) => (i === largest ? s - rounding : s));
+export function costTotal(amount: number, rounding: number | null | undefined): number {
+  return amount - (rounding ?? 0);
 }
+
+/** Whether an öresutjämning is one: whole öre, under a krona either way. */
+export const isValidRounding = (ore: number): boolean =>
+  Number.isInteger(ore) && Math.abs(ore) <= MAX_ROUNDING;
 
 /**
  * How each status reads, in the colours an utlägg's do (STATUS_TONE): neutral
@@ -98,13 +99,15 @@ export interface AttestRow {
  * One row needs no amount: it is the whole invoice, whatever that comes to.
  * Two or more name their shares, every one of them, and when the invoice's
  * total is already known (read from the PDF, or typed by the treasurer) the
- * shares must come to it. When it is not known yet, the kontering checks the
- * same thing once it is.
+ * shares must come to it, less the öresutjämning (costTotal). When it is not
+ * known yet, the kontering checks the same thing once it is.
  */
 export function attestBlocker(f: {
   documentCount: number;
   rows: readonly AttestRow[];
   invoiceAmount: number | null;
+  /** Öresutjämning, öre, signed. */
+  rounding?: number | null;
 }): string | null {
   if (f.documentCount === 0) return "supplierInvoice.noDocument";
   if (f.rows.length === 0) return "supplierInvoice.noAllocations";
@@ -113,7 +116,7 @@ export function attestBlocker(f: {
     return "supplierInvoice.splitNeedsAmounts";
   }
   const sum = f.rows.reduce((s, r) => s + (r.amount ?? 0), 0);
-  if (f.invoiceAmount != null && sum !== f.invoiceAmount) {
+  if (f.invoiceAmount != null && sum !== costTotal(f.invoiceAmount, f.rounding)) {
     return "supplierInvoice.allocationSumMismatch";
   }
   return null;
@@ -165,8 +168,9 @@ export interface ExportFacts {
  * Why the treasurer cannot kontera it yet, or null when they can, asked again
  * when it is sent. What Fortnox needs to make a supplier invoice it can pay:
  * whose it is, which invoice, when it is due, how much, and a kontering that
- * books exactly that much. A split's shares must come to the total too: they
- * are what the units signed for, and only the unit can change them.
+ * books exactly that much. A split's shares must come to the total less the
+ * öresutjämning too: they are what the units signed for, and only the unit
+ * can change them.
  */
 export function exportBlocker(f: ExportFacts): string | null {
   if (!f.fortnoxSupplierNumber) return "supplierInvoice.noSupplier";
@@ -177,7 +181,7 @@ export function exportBlocker(f: ExportFacts): string | null {
   if (f.ocr && !isValidOcr(f.ocr)) return "supplierInvoice.badOcr";
   if (f.shares.length > 1) {
     const sum = f.shares.reduce<number>((s, a) => s + (a ?? 0), 0);
-    if (sum !== f.amount) return "supplierInvoice.allocationSumMismatch";
+    if (sum !== costTotal(f.amount, f.rounding)) return "supplierInvoice.allocationSumMismatch";
   }
   if (f.lines.length === 0) return "supplierInvoice.noLines";
   if (f.lines.some((l) => !l.account.trim())) return "supplierInvoice.lineNoAccount";

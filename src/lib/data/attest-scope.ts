@@ -37,9 +37,10 @@ import type { Viewer } from "./expense-scope";
  * rather than one that matches everything. An empty `OR` would be the second.
  *
  * `ownUnits` leaves out the skattmästare's blanket clause, for the counts of
- * what waits on the viewer (lib/data/nav-counts.ts). The skattmästare may
- * attest anyone's, but only their own result units' are theirs to do, and a
- * count of the whole section's never goes away.
+ * what waits on the viewer (lib/data/nav-counts.ts) and for the "Min
+ * resultatenhet" list. The skattmästare may attest anyone's, but only their own
+ * result units' are theirs to do, and a count of the whole section's never
+ * goes away. Everyone's is the "Alla" list.
  */
 export async function attestScopeWhere(
   viewer: Viewer,

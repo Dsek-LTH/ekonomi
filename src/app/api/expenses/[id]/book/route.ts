@@ -13,6 +13,11 @@
 // finds the row moved on once it gets it, and is a 409. It used to reach the
 // unique index on Verification.expenseId and come back as a 500, and a second
 // amend used to simply win.
+//
+// The voucher's date is the utlägg's date. A bokförare who books it on another
+// day is saying the utlägg's date was wrong, so the utlägg is corrected to
+// match, with a reason. See lib/domain/correction.ts for why, and for what
+// that costs the submitter and the attesters.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
@@ -27,6 +32,9 @@ import { CLEARED } from "@/lib/server/export-claim";
 import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { BookVoucher } from "@/lib/api/schemas/expense";
+import { isFutureDate, isoDay } from "@/lib/domain/date";
+import type { CorrectionDiff } from "@/lib/domain/correction";
+import { valueForStorage } from "@/lib/mileage/store";
 
 interface NormLine {
   account: string;
@@ -241,6 +249,68 @@ function voucherMeta(body: BookVoucher, fallback: { date: Date; description: str
   };
 }
 
+type ForBooking = Extract<Awaited<ReturnType<typeof loadForBooking>>, { ok: true }>["expense"];
+
+/**
+ * What the voucher's date does to the utlägg's own.
+ *
+ * The same day: nothing. An utlägg with no date at all (older rows can be
+ * without one): it takes the voucher's, which is filling a gap rather than
+ * correcting anybody. Any other day is a correction, and needs a reason, which
+ * the utlägg's history shows beside it.
+ *
+ * Held to what the edit form holds a purchase date to: not in the future. On a
+ * milersättning the date also picks the schablon, so a correction across a
+ * change of rate would change the amount the attesters signed for. That one
+ * has to go back to the submitter instead.
+ */
+async function dateCorrection(
+  expense: ForBooking,
+  date: Date,
+  reason: string | undefined,
+): Promise<
+  | { ok: false; res: NextResponse }
+  | { ok: true; setDate: boolean; correction: CorrectionDiff | null }
+> {
+  const from = expense.purchaseDate ? isoDay(expense.purchaseDate) : null;
+  const to = isoDay(date);
+  if (from === to) return { ok: true, setDate: false, correction: null };
+  if (from === null) return { ok: true, setDate: true, correction: null };
+
+  if (!reason) return { ok: false, res: fail(422, "expense.correctionReasonRequired") };
+  if (isFutureDate(to)) return { ok: false, res: fail(422, "expense.futureDate") };
+  if (expense.paymentType === "MILEAGE") {
+    const valued = await valueForStorage({
+      date: to,
+      odometerStart: expense.odometerStart == null ? null : Number(expense.odometerStart),
+      odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
+    });
+    if (valued.orePerKm !== expense.mileageOrePerKm) {
+      return { ok: false, res: fail(422, "expense.correctionChangesMileageRate") };
+    }
+  }
+  return { ok: true, setDate: true, correction: { field: "purchaseDate", from, to } };
+}
+
+/** Write the CORRECTED event, with the reason, for the utlägg's history. */
+async function recordDateCorrection(
+  tx: Prisma.TransactionClient,
+  expense: ForBooking,
+  actor: { id: string },
+  correction: CorrectionDiff,
+  reason: string,
+) {
+  await tx.expenseEvent.create({
+    data: {
+      expenseId: expense.id,
+      type: "CORRECTED",
+      actorId: actor.id,
+      comment: reason,
+      diff: { ...correction },
+    },
+  });
+}
+
 // A verification for this utlägg already exists. The conditional update above
 // is what normally answers a second booking, so this is the backstop for a row
 // that reached BOOKED some other way: the same answer, a 409, rather than the
@@ -292,6 +362,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // A new voucher, so in the year picked in the header. See lib/api/fiscal-year.ts.
   const offYear = await denyOutsideFiscalYear(date);
   if (offYear) return offYear;
+  const dated = await dateCorrection(expense, date, body.correctionReason);
+  if (!dated.ok) return dated.res;
 
   const expected = new Date(body.expectedUpdatedAt);
   const done = await commit(() =>
@@ -301,9 +373,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         where: { id: expense.id, status: "APPROVED", updatedAt: expected },
         // The version moves on explicitly. A screen still open on the old one
         // learns from it that this utlägg was booked.
-        data: { status: "BOOKED", updatedAt: new Date() },
+        data: {
+          status: "BOOKED",
+          updatedAt: new Date(),
+          ...(dated.setDate && { purchaseDate: date }),
+        },
       });
       applied(flipped);
+      if (dated.correction) {
+        await recordDateCorrection(tx, expense, actor, dated.correction, body.correctionReason!);
+      }
       await tx.verification
         .create({
           data: {
@@ -370,6 +449,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const offYear = await denyOutsideFiscalYear(date);
     if (offYear) return offYear;
   }
+  const dated = await dateCorrection(expense, date, body.correctionReason);
+  if (!dated.ok) return dated.res;
 
   const expected = new Date(body.expectedUpdatedAt);
   const done = await commit(() =>
@@ -385,9 +466,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       // is only slow rather than gone, finds it gone and sends nothing.
       const bumped = await tx.expense.updateMany({
         where: { id: expense.id, status: "BOOKED", updatedAt: expected },
-        data: { updatedAt: new Date(), ...CLEARED },
+        data: {
+          updatedAt: new Date(),
+          ...CLEARED,
+          ...(dated.setDate && { purchaseDate: date }),
+        },
       });
       applied(bumped);
+      if (dated.correction) {
+        await recordDateCorrection(tx, expense, actor, dated.correction, body.correctionReason!);
+      }
       // Replace all lines in place (verification stays, only its rows change).
       await tx.verification.update({
         where: { expenseId: expense.id },

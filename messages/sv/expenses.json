@@ -73,7 +73,8 @@
     "RECALLED": "Drog tillbaka inlämningen",
     "DEADLINE_WAIVED": "Beviljade dispens från fristen",
     "DEADLINE_WAIVER_REVOKED": "Tog tillbaka dispensen",
-    "REMINDER_SENT": "Skickade påminnelse"
+    "REMINDER_SENT": "Skickade påminnelse",
+    "CORRECTED": "Rättade utlägget"
   },
   "detail": {
     "missingTitle": "Utlägget hittades inte",
@@ -103,6 +104,9 @@
     "fortnoxNotSignedIn": "Du är inte inloggad mot Fortnox. Logga in via din profil, så går det att bokföra.",
     "submit": "Skicka in för attest",
     "approve": "Attestera",
+    "approveAll": "Attestera alla ({count})",
+    "withdrawRow": "Dra tillbaka",
+    "yoursToAttest": "Väntar på din attest",
     "withdrawAttest": "Dra tillbaka min attest",
     "requestChanges": "Begär ändring",
     "reopen": "Återöppna för ändring",
@@ -144,7 +148,10 @@
     "deadlineWaiverPending": "Utlägget är äldre än redovisningsfristen. Bevilja dispens om det ska tas emot ändå, annars går det inte att skicka in.",
     "remind": "Skicka påminnelse",
     "reminderTo": "Till {names}",
-    "review": "Granska och bokför"
+    "review": "Granska och bokför",
+    "corrected": {
+      "purchaseDate": "Kvittodatum: {from} till {to}"
+    }
   },
   "mutations": {
     "transition": {
@@ -161,6 +168,7 @@
     "withdraw": {
       "title": "Dra tillbaka din attest?",
       "message": "Dina attesterade kostnadsställen blir oattesterade igen och utlägget går tillbaka till att vänta på attest.",
+      "messageRow": "Attesten för {costCenter} tas bort. Utlägget väntar på attest tills kostnadsstället är attesterat igen.",
       "confirm": "Dra tillbaka"
     },
     "export": {
@@ -214,7 +222,6 @@
     "documents": "Dokument",
     "removeDocumentFailed": "Kunde inte ta bort dokumentet",
     "matchTitle": "Vilket kortköp var det?",
-    "reviewTitle": "Granska och skicka in",
     "match": "Matchning",
     "paymentType": "Betalsätt",
     "payoutMissing": "Lägg till konto i Min profil",

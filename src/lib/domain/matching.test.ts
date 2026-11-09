@@ -166,11 +166,10 @@ describe("matchCandidates", () => {
     expect(find(matchCandidates(taken, 250, "mine"), "mine").selectable).toBe(true);
   });
 
-  it("reports a wrong amount even on a row somebody else has claimed", () => {
-    // Both are true, and only one is worth saying. "Redan redovisad" about a
-    // row that would not have fitted anyway sends the reader after the wrong
-    // thing entirely.
-    expect(find(matchCandidates([txn("t", -300, "e2")], 250), "t").blocked).toBe("amount");
+  it("reports a claimed row as taken whatever its amount", () => {
+    // A matched row is settled. Its distance from this claim is not news.
+    expect(find(matchCandidates([txn("t", -300, "e2")], 250), "t").blocked).toBe("taken");
+    expect(find(matchCandidates([txn("t", 300, "e2")], 250), "t").blocked).toBe("taken");
   });
 
   it("settles nothing while there is no amount to settle", () => {

@@ -1,61 +1,55 @@
 "use client";
 
-// A redovisningsbetyg on screen: the stars, and the breakdown that says why.
+// A redovisningsbetyg on screen: the number, and the breakdown that says why.
 // The same panel on /profile, for the member's own, and on the profile's
 // Medlemmar tab for the treasury. See lib/domain/member-score.ts for what the
-// stars measure.
+// number measures.
 //
-// The breakdown is not optional decoration. Stars nobody can explain read as a
-// verdict; stars with "these two waited a month" under them read as something
-// to do.
+// The breakdown is not optional decoration. A number nobody can explain reads
+// as a verdict; a number with "these two waited a month" under it reads as
+// something to do.
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
-import { MIN_COUNTED, type MemberScore, type ScoreItem } from "@/lib/domain/member-score";
+import {
+  MIN_COUNTED,
+  SUB_SCORES,
+  type MemberScore,
+  type ScoreItem,
+  type SubScoreKey,
+} from "@/lib/domain/member-score";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 
-const STAR_PATH =
-  "M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9L12 2.8z";
-
-function Star({ fill, className, ink }: { fill: number; className: string; ink: string }) {
-  return (
-    <span className={cn("relative inline-block shrink-0", className)}>
-      <svg viewBox="0 0 24 24" className="absolute inset-0 size-full text-border" aria-hidden>
-        <path d={STAR_PATH} fill="currentColor" />
-      </svg>
-      {/* The filled part, cut to the fraction this star holds: a half star is
-          the left half of one. */}
-      <span
-        className="absolute inset-y-0 left-0 overflow-hidden"
-        style={{ width: `${fill * 100}%` }}
-      >
-        <svg viewBox="0 0 24 24" className={cn(ink, className)} aria-hidden>
-          <path d={STAR_PATH} fill="currentColor" />
-        </svg>
-      </span>
-    </span>
-  );
+/**
+ * The colour a score is drawn in: red at 0, amber at 50, green at 100, mixed
+ * from the theme's own tokens so it follows light and dark.
+ */
+function scoreColor(value: number): string {
+  const v = Math.min(100, Math.max(0, value));
+  return v < 50
+    ? `color-mix(in oklch, var(--color-warning) ${v * 2}%, var(--color-danger))`
+    : `color-mix(in oklch, var(--color-success) ${(v - 50) * 2}%, var(--color-warning))`;
 }
 
 /**
- * Five stars, or "Ny" while there is nothing to go on yet.
+ * A score from 0 to 100, or "Ny" while there is nothing to go on yet.
  *
- * `quiet` for a list of members, where the stars sit beside every name: smaller
- * and in grey rather than gold, so a page of them reads as a column of figures
- * and not as a row of prizes. The gold is for the member's own.
+ * The figure is filled with a short gradient along the scale, ending at its
+ * own colour, so a high score glows green and a low one red. `quiet` for a
+ * list of members, where it sits beside every name: smaller, so a page of
+ * them reads as a column of figures and not as a row of prizes.
  */
-export function StarRating({
+export function ScoreNumber({
   value,
   size = "sm",
   quiet = false,
 }: {
   value: number | null;
-  size?: "sm" | "lg";
+  size?: "sm" | "md" | "lg";
   quiet?: boolean;
 }) {
   const t = useTranslations("score");
-  const locale = useLocale();
   if (value === null) {
     return (
       <span className="inline-flex h-5 items-center rounded-control bg-surface px-1.5 text-xs font-medium text-muted">
@@ -63,48 +57,57 @@ export function StarRating({
       </span>
     );
   }
-  const star = size === "lg" ? "size-7" : quiet ? "size-3" : "size-4";
-  const ink = quiet ? "text-muted" : "text-warning";
+  const text =
+    size === "lg" ? "text-4xl" : size === "md" ? "text-2xl" : quiet ? "text-sm" : "text-base";
   return (
     <span
       role="img"
-      aria-label={t("starsLabel", { value: value.toLocaleString(locale) })}
-      className="inline-flex items-center gap-0.5"
+      aria-label={t("scoreLabel", { value })}
+      className={cn("inline-block font-bold leading-none tabular-nums", text)}
+      style={{
+        backgroundImage: `linear-gradient(135deg, ${scoreColor(value - 20)}, ${scoreColor(value)})`,
+        WebkitBackgroundClip: "text",
+        backgroundClip: "text",
+        color: "transparent",
+      }}
     >
-      {[0, 1, 2, 3, 4].map((i) => (
-        <Star key={i} fill={Math.min(1, Math.max(0, value - i))} className={star} ink={ink} />
-      ))}
+      {value}
     </span>
   );
 }
 
-/** Sent within the grace week, of everything sent. */
-const withinWeek = (s: MemberScore) => {
-  const sent = s.items.filter((i) => i.kind === "submitted");
-  return { count: sent.filter((i) => i.stars === 5).length, of: sent.length };
-};
+/** What each sub-score shows under its number: the count behind it. */
+function partDetail(t: ReturnType<typeof useTranslations>, key: SubScoreKey, s: MemberScore) {
+  switch (key) {
+    case "promptness":
+      return t("parts.promptnessDetail", { count: s.parts.promptness.counted });
+    case "firstTime":
+      return t("parts.ofDetail", { count: s.firstTime.clean, of: s.firstTime.of });
+    case "attestAccuracy":
+      return t("parts.ofDetail", { count: s.accuracy.correct, of: s.accuracy.of });
+    case "attestSpeed":
+      return t("parts.attestSpeedDetail", { count: s.parts.attestSpeed.counted });
+  }
+}
 
 /**
  * The whole of one member's score. `own` when it is the reader's, which is
- * what decides whether what waits gets a button to go and send it.
+ * what decides whether what waits gets a button to go and do it.
  */
 export function MemberScorePanel({ score, own }: { score: MemberScore; own: boolean }) {
   const t = useTranslations("score");
-  const locale = useLocale();
   const { date } = useFormat();
-  const week = withinWeek(score);
+  const scored = SUB_SCORES.filter((k) => score.parts[k].value !== null).length;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <StarRating value={score.stars} size="lg" />
+        <ScoreNumber value={score.score} size="lg" />
         <div>
-          {score.stars !== null ? (
+          {score.score !== null ? (
             <>
-              <p className="text-base font-semibold tabular-nums">
-                {t("outOf", { value: score.stars.toLocaleString(locale) })}
-              </p>
-              <p className="text-sm text-muted">{t("basedOn", { count: score.counted })}</p>
+              <p className="text-base font-semibold tabular-nums">{t("outOf")}</p>
+              <p className="text-sm text-muted">{t("basedOn", { count: scored })}</p>
             </>
           ) : (
             <p className="text-sm text-muted">{t("newDescription", { min: MIN_COUNTED })}</p>
@@ -112,41 +115,67 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-4">
-        <div>
-          <dt className="text-xs text-muted">{t("withinWeek")}</dt>
-          <dd className="text-sm font-medium tabular-nums">{t("withinWeekValue", week)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted">{t("firstTime")}</dt>
-          <dd className="text-sm font-medium tabular-nums">
-            {t("firstTimeValue", score.firstTime)}
-          </dd>
-        </div>
+      <dl className="grid grid-cols-2 gap-3">
+        {SUB_SCORES.map((k) => (
+          <div key={k} className="rounded-panel border border-border px-3 py-2.5">
+            <dt className="text-xs text-muted">{t(`parts.${k}`)}</dt>
+            <dd className="mt-1 flex items-baseline gap-2">
+              <ScoreNumber value={score.parts[k].value} size="md" />
+            </dd>
+            <dd className="mt-1 text-xs text-muted tabular-nums">
+              {score.parts[k].value === null
+                ? t("parts.notEnough", { min: MIN_COUNTED })
+                : partDetail(t, k, score)}
+            </dd>
+          </div>
+        ))}
       </dl>
 
       {score.waiting.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold">{t("waitingTitle")}</h3>
           <p className="mt-0.5 text-sm text-muted">{own ? t("waitingOwn") : t("waitingOther")}</p>
+          <ItemList
+            items={score.waiting}
+            action={
+              own
+                ? (i) => (
+                    <ButtonLink size="sm" variant="secondary" href={waitingHref(i)}>
+                      {i.kind === "draft" ? t("send") : t("redovisa")}
+                    </ButtonLink>
+                  )
+                : undefined
+            }
+          />
+        </section>
+      )}
+
+      {score.attestWaiting.length > 0 && (
+        <section>
+          <h3 className="text-sm font-semibold">{t("attestWaitingTitle")}</h3>
+          <p className="mt-0.5 text-sm text-muted">
+            {own ? t("attestWaitingOwn") : t("attestWaitingOther")}
+          </p>
+          <ItemList items={score.attestWaiting} />
+        </section>
+      )}
+
+      {score.returnedAttests.length > 0 && (
+        <section>
+          <h3 className="text-sm font-semibold">{t("returnedTitle")}</h3>
+          <p className="mt-0.5 text-sm text-muted">{t("returnedLead")}</p>
           <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
-            {score.waiting.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {i.title || t(`kind.${waitingKind(i)}`)}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {t(`kind.${waitingKind(i)}`)} - {date(i.startedOn)} -{" "}
-                    {t("waitedDays", { days: i.days })}
-                  </p>
-                </div>
-                <StarRating value={i.stars} />
-                {own && (
-                  <ButtonLink size="sm" variant="secondary" href={waitingHref(i)}>
-                    {i.kind === "draft" ? t("send") : t("redovisa")}
-                  </ButtonLink>
-                )}
+            {score.returnedAttests.slice(0, 10).map((a) => (
+              <li key={`${a.record}-${a.id}-${a.signedOn}`} className="px-3 py-2.5">
+                <Link
+                  href={recordHref(a.record, a.id)}
+                  className="block truncate text-sm font-medium hover:underline"
+                >
+                  {a.title || t(`kind.${a.record}`)}
+                </Link>
+                <p className="text-xs text-muted">
+                  {t(`kind.${a.record}`)} - {t("attestedOn", { date: date(a.signedOn!) })}
+                </p>
               </li>
             ))}
           </ul>
@@ -158,33 +187,16 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
         {score.items.length === 0 ? (
           <p className="mt-1 text-sm text-muted">{t("nothingCounted")}</p>
         ) : (
-          <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
-            {score.items.slice(0, 10).map((i) => (
-              <li key={`${i.kind}-${i.id}`} className="flex items-center gap-3 px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  {i.kind === "cardPurchase" ? (
-                    <p className="truncate text-sm font-medium">{i.title}</p>
-                  ) : (
-                    <Link
-                      href={`/expenses/${i.id}`}
-                      className="block truncate text-sm font-medium hover:underline"
-                    >
-                      {i.title}
-                    </Link>
-                  )}
-                  <p className="text-xs text-muted">
-                    {date(i.startedOn)} -{" "}
-                    {i.kind === "submitted"
-                      ? t("tookDays", { days: i.days })
-                      : t("waitedDays", { days: i.days })}
-                  </p>
-                </div>
-                <StarRating value={i.stars} />
-              </li>
-            ))}
-          </ul>
+          <ItemList items={score.items.slice(0, 10)} />
         )}
       </section>
+
+      {score.attests.length > 0 && (
+        <section>
+          <h3 className="text-sm font-semibold">{t("slowestAttestsTitle")}</h3>
+          <ItemList items={score.attests.slice(0, 10)} />
+        </section>
+      )}
 
       <section>
         <h3 className="text-sm font-semibold">{t("howTitle")}</h3>
@@ -194,7 +206,56 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
   );
 }
 
-const waitingKind = (i: ScoreItem) => (i.kind === "cardPurchase" ? "cardPurchase" : "draft");
+/** A timed breakdown: what it was, when it started, how long, its points. */
+function ItemList({
+  items,
+  action,
+}: {
+  items: ScoreItem[];
+  action?: (i: ScoreItem) => React.ReactNode;
+}) {
+  const t = useTranslations("score");
+  const { date } = useFormat();
+  return (
+    <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
+      {items.map((i) => {
+        const kind = t(`kind.${kindKey(i)}`);
+        const done = i.kind === "submitted" || i.kind === "attested";
+        return (
+          <li
+            key={`${i.kind}-${i.id}-${i.startedOn}`}
+            className="flex items-center gap-3 px-3 py-2.5"
+          >
+            <div className="min-w-0 flex-1">
+              {i.kind === "cardPurchase" ? (
+                <p className="truncate text-sm font-medium">{i.title || kind}</p>
+              ) : (
+                <Link
+                  href={recordHref(i.record ?? "expense", i.id)}
+                  className="block truncate text-sm font-medium hover:underline"
+                >
+                  {i.title || kind}
+                </Link>
+              )}
+              <p className="text-xs text-muted">
+                {kind} - {date(i.startedOn)} -{" "}
+                {done ? t("tookDays", { days: i.days }) : t("waitedDays", { days: i.days })}
+              </p>
+            </div>
+            <ScoreNumber value={i.points} quiet />
+            {action?.(i)}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+const kindKey = (i: ScoreItem) =>
+  i.kind === "cardPurchase" || i.kind === "draft" ? i.kind : (i.record ?? "expense");
+
+const recordHref = (record: "expense" | "invoice", id: string) =>
+  record === "invoice" ? `/invoices/${id}` : `/expenses/${id}`;
 
 /** Where to go to send it: the draft's own form, or a new utlägg on the card
  *  purchase, the way Bankhändelser's Redovisa opens one. */

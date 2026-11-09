@@ -101,7 +101,9 @@
     "exportUnrecorded": "Voucher {label} was created in Fortnox but could not be saved here. The expense is locked. Mark it as exported with {label}.",
     "noExportResolveAccess": "Only someone who may undo exports can resolve an unclear export.",
     "nothingToResolve": "This expense has no unclear export to resolve.",
-    "reviewOwnBooking": "You booked this expense yourself. Someone else needs to review and post it."
+    "reviewOwnBooking": "You booked this expense yourself. Someone else needs to review and post it.",
+    "correctionReasonRequired": "The date differs from the expense's. Say why, and the expense is corrected.",
+    "correctionChangesMileageRate": "The new date has a different mileage rate per kilometre, so the amount would change. Send the expense back instead."
   },
   "receipt": {
     "notFound": "The receipt was not found",
@@ -234,9 +236,8 @@
     "unknownProject": "Project {project} does not exist"
   },
   "income": {
-    "serviceUnavailable": "The income service is unavailable.",
-    "zettleUnavailable": "Zettle is not configured in the income service.",
-    "fetchFailed": "Could not fetch: {detail}",
+    "zettleUnavailable": "Zettle is not connected. Whoever runs the app needs to set ZETTLE_CLIENT_ID and ZETTLE_API_KEY.",
+    "fetchFailed": "Could not fetch from Zettle: {detail}",
     "csvRejected": "The file could not be read: {detail}",
     "renderFailed": "Could not render the report: {detail}",
     "storeFailed": "Could not store the rendered report.",
@@ -257,20 +258,14 @@
     "editOnlyBeforeBooking": "The report is {status} and can no longer be changed.",
     "exportOnlyBooked": "Only booked reports can be exported (this one is {status}).",
     "noVoucherToExport": "The report has no voucher to export.",
-    "costCenterRequired": "Choose a cost centre first.",
-    "noCostCenter": "Choose a cost centre first.",
+    "noCostCenter": "A line has no cost centre. Choose one on the line.",
     "noDistributions": "The report has nothing to book.",
-    "unbalanced": "The report's total does not match its account distribution.",
+    "unbalanced": "The day's total does not match its lines.",
     "noClearingAccount": "No clearing account is set for this source.",
     "unknownCostCenter": "That cost centre does not exist.",
     "costCenterOutsideUnit": "Cost centre {code} does not belong to {name}.",
-    "moveFeeReport": "Zettle's fees belong to no committee and cannot be moved.",
-    "moveSameUnit": "The items are already on that committee.",
     "noLines": "No items are selected.",
     "unknownLine": "One of the items is no longer on this report. Reload the page and try again.",
-    "moveUnitNoIncome": "That committee does not take money in. Give it income settings first.",
-    "moveDestinationBooked": "That committee's report for the day is already booked. The items cannot be moved there.",
-    "noBatch": "There is no fetch to attach the report to. Fetch some sales first.",
     "unknownAccount": "Account {account} is not in the chart of accounts.",
     "documentMissing": "The rendered report is missing from storage.",
     "storageUnavailable": "Storage is unavailable.",
@@ -286,10 +281,26 @@
     "prefixNotFound": "That prefix does not exist.",
     "fallbackNotFound": "That amount rule does not exist.",
     "alreadyInFortnox": "Fortnox already holds a voucher for this day ({voucher}). Nothing was exported.",
-    "voucherTotalMismatch": "The voucher does not book the day's total. The debit side has to match the income statement.",
     "unitNotFound": "That result unit does not exist.",
     "unitHasIncome": "{name} already has income settings.",
-    "keyFromName": "The name \"{name}\" gives no usable key. It needs letters or digits."
+    "keyFromName": "The name \"{name}\" gives no usable key. It needs letters or digits.",
+    "unplacedLines": "An item on the day has no committee. Give it one before booking.",
+    "inactiveCostCenter": "Cost centre {code} is archived. Choose another on the line.",
+    "alreadyBookedHere": "Some of this day is already booked here.",
+    "reopenLegacy": "This day was booked per committee, before the per-day voucher, and cannot be reopened. Delete it and fetch the day again.",
+    "unitNoIncome": "That committee does not take money in. Give it income settings first.",
+    "feeHasNoUnit": "Zettle's fees belong to no committee.",
+    "noAccount": "A line has no account.",
+    "manualVoucherStale": "The lines have changed since the kontering was written by hand. Save it again or reset it.",
+    "manual": {
+      "noRows": "Add at least one row.",
+      "accountRequired": "A row has no account.",
+      "amountRequired": "A row has no amount.",
+      "negativeAmounts": "Amounts cannot be negative. Use the other side instead.",
+      "costCenterRequired": "Rows on result accounts (3000 to 8999) need a cost centre.",
+      "unbalanced": "Debit and credit do not balance."
+    },
+    "ownBooking": "You konterade this day yourself, so somebody else needs to review and book it."
   },
   "stock": {
     "calibrationNoVolume": "The container's volume has to be more than nothing.",
@@ -400,7 +411,7 @@
     "lineNoAccount": "Every booking row needs an account.",
     "lineNoAmount": "Every booking row needs an amount, as debit or credit.",
     "unbalanced": "The booking does not add up to the invoice amount.",
-    "allocationSumMismatch": "The allocation does not add up to the invoice amount.",
+    "allocationSumMismatch": "The allocation does not add up to the invoice amount less the rounding.",
     "splitNeedsAmounts": "Give how much goes to each cost centre.",
     "noInvoiceNumber": "Fill in the invoice number.",
     "badOcr": "The OCR number does not check out. Make sure it is typed correctly, or leave the field empty.",
@@ -412,7 +423,8 @@
     "exportUncertain": "Fortnox did not answer for certain. Check in Fortnox whether the supplier invoice was made before trying again.",
     "nothingToRelease": "There is no uncertain export to settle.",
     "documentOnInvoice": "The document is already on an invoice.",
-    "documentNotAssigned": "The document has not been sent to a result unit yet."
+    "documentNotAssigned": "The document has not been sent to a result unit yet.",
+    "badRounding": "The rounding may be at most 0.99 kr either way."
   },
   "settings": {
     "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",

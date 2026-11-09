@@ -7,8 +7,8 @@
   "notBookableTitle": "Kan inte konteras",
   "notBookableDescription": "Bara attesterade utlägg kan konteras.",
   "toExpense": "Till utlägget",
-  "createTitle": "Kontera {id}",
-  "editTitle": "Ändra verifikation - {id}",
+  "createTitle": "Kontera <id></id>",
+  "editTitle": "Ändra verifikation - <id></id>",
   "saveFailed": "Det gick inte att spara verifikationen",
   "voucherDate": "Verifikationsdatum",
   "voucherText": "Verifikationstext",
@@ -18,6 +18,8 @@
   "colAccount": "Konto",
   "colAccountName": "Benämning",
   "colCostCenter": "Kostnadsställe",
+  "allCostCenter": "Kostnadsställe",
+  "allCostCenterMixed": "Flera",
   "colDescription": "Beskrivning",
   "colDebit": "Debet",
   "colCredit": "Kredit",
@@ -52,5 +54,9 @@
   "colProject": "Projekt",
   "projectSearch": "Sök projekt…",
   "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox innan du konterar.",
-  "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Fortnox innan du konterar."
+  "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Fortnox innan du konterar.",
+  "correction": {
+    "reason": "Varför är datumet fel?",
+    "placeholder": "Till exempel: kvittot visar 14 oktober"
+  }
 }

@@ -31,9 +31,12 @@ Rules:
 - All of it is in the URL, so a link or Back lands on the same view. A list cut
   in the browser keeps its tab there too (`useUrlTab`).
 - A count, on a rail row or a table tab, always means "waiting on you".
-- One-at-a-time work surfaces (`/income/review`) are entered from a list's
-  primary button. They are never tabs. Utlägg has none: an utlägg is bokfört
-  from its own page, `/expenses/[id]`, opened row by row from Att bokföra.
+- There are no one-at-a-time work surfaces. An item is worked on its own
+  page, opened row by row from its list, and every action there goes back to
+  the list: an utlägg from `/expenses/[id]`, a levfaktura from
+  `/invoices/[id]`, a day of income from `/income/zettle/[id]` or
+  `/income/swish/[id]`. What is the same for many items at once (konterar
+  every day that needs nobody) is a button on the list's toolbar.
 - A route that moves is not kept as a redirect. The old path simply goes.
 
 ## The tree
@@ -64,10 +67,17 @@ Leverantörsfakturor
     /invoices/[id]/allocate   Fördela (the unit's split and attest)
     /invoices/[id]/book       Kontera, which only saves. Skicka till Fortnox is on the record.
 
+Intäkter
+  Zettle  /income/zettle
+  Swish   /income/swish
+    tabs: Att kontera | Att bokföra | Bokförda | Alla
+      default: Att kontera for whoever books, Alla for a reader
+    toolbar: Hämta från Zettle / Ladda upp Swish-fil, Kontera N klara dagar,
+             Granska och bokför N dagar
+    /income/zettle/[id], /income/swish/[id]   the day: Kontera, then
+             Granska och bokför by somebody else (the two-person rule)
+
 Bokföring
-  Intäkter  /income
-    tabs: Att bokföra | Att exportera | Exporterade | Alla
-    /income/review  (Granska och bokför)
   Bokslut  /closing
     page tabs: Checklista | Verifikationer | Konton
     /closing/template
@@ -109,17 +119,16 @@ partly attested splits come out right.
 
 - The stock list's "per datum" picker still stands in the band where the scope
   switch goes. It is a filter on time, so it belongs with the räkenskapsår below.
-- Intäkter says "Att bokföra" for a day to book here, where Utlägg says "Att
-  kontera" for the same step.
 
 ## The redovisningsbetyg
 
-A member's stars for how promptly they redovisa (lib/domain/member-score.ts).
+A member's score from 0 to 100 for how well they do their part, as buyer and
+as attester (lib/domain/member-score.ts).
 It is a property of a person, not a kind of thing, so it has no page in the
 nav. A member sees their own on Översikt and in full on the profile. The
 holders of MEMBER_SCORE_VIEW also get a Medlemmar tab in the profile overlay
 (`/profile/members`, every member's score with search), a "Släpar efter" card
-on Översikt naming whoever has purchases waiting, and the submitter's stars
+on Översikt naming whoever has purchases waiting, and the submitter's score
 beside their name on an utlägg. Every one of those opens the same breakdown.
 It reads a rolling year, not the räkenskapsår.
 
@@ -135,7 +144,7 @@ that cares asks for it there.
   picking 2025 is asking to see 2025. Utlägg by purchase date (the Granska
   queue too), Bankhändelser by transaction date ("Utan kort" too, which is only
   a tab while the year has one), Fakturor by the invoice's date or, without
-  one, when it arrived, Intäkter by the day of the takings.
+  one, when it arrived, Intäkter (Zettle and Swish) by the day of the takings.
 - The Inkorg is not narrowed. Its documents have no date until somebody reads
   one off them, and one uploaded while another year is picked must still be
   there to triage. The picker stays live on it all the same, since an invoice

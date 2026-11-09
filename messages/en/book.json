@@ -7,8 +7,8 @@
   "notBookableTitle": "Cannot be booked",
   "notBookableDescription": "Only approved expenses can be booked.",
   "toExpense": "To the expense",
-  "createTitle": "Book {id}",
-  "editTitle": "Amend voucher - {id}",
+  "createTitle": "Book <id></id>",
+  "editTitle": "Amend voucher - <id></id>",
   "saveFailed": "The voucher could not be saved",
   "voucherDate": "Voucher date",
   "voucherText": "Voucher text",
@@ -18,6 +18,8 @@
   "colAccount": "Account",
   "colAccountName": "Name",
   "colCostCenter": "Cost center",
+  "allCostCenter": "Cost center",
+  "allCostCenterMixed": "Mixed",
   "colDescription": "Description",
   "colDebit": "Debit",
   "colCredit": "Credit",
@@ -52,5 +54,9 @@
   "colProject": "Project",
   "projectSearch": "Search projects…",
   "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox before booking.",
-  "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox before booking."
+  "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox before booking.",
+  "correction": {
+    "reason": "Why is the date wrong?",
+    "placeholder": "For example: the receipt says 14 October"
+  }
 }

@@ -232,6 +232,17 @@ export default function ReceiptViewerImpl({
   // document between here and there, and each would otherwise claim to be
   // the current one on the way; the one jumped to is the answer.
   const jumpQuiet = useRef(0);
+  // Whether a rotation has the current document held. A quarter turn changes
+  // the document's height, the stack reflows under a viewer that has not
+  // moved, and the observer then named whichever neighbour now filled more of
+  // it. The selection jumped and the second press of rotate turned the wrong
+  // document. So a rotation holds the document it turned until the reader
+  // moves the view themselves (a press, a wheel, a jump), and only then does
+  // the observer get to say again.
+  const rotateHold = useRef(false);
+  const release = () => {
+    rotateHold.current = false;
+  };
   const [width, setWidth] = useState(0);
   // What the page is currently magnified by. Settled, not live. See the
   // handler on TransformWrapper.
@@ -268,6 +279,9 @@ export default function ReceiptViewerImpl({
   // every Page in it, at the exact moment a finger landed to start a drag,
   // which is the moment a drag can least afford one.
   const startDrag = (e: React.PointerEvent) => {
+    // Before the rotate button's own click, which sets the hold again, so a
+    // press on the button keeps it and a press anywhere else lets it go.
+    release();
     if (e.pointerType === "touch") return;
     // A press on the PDF's text selects it rather than panning (see
     // TEXT_SELECTOR), so the hand stays open.
@@ -292,6 +306,16 @@ export default function ReceiptViewerImpl({
   // being replaced, and inherited by everything inside it. The toolbar's
   // buttons state their own `pointer` in globals.css and are unaffected.
   const cursor = dragging ? "cursor-grabbing" : "cursor-grab";
+
+  // A scroll lets the rotation's hold go. Listened for natively and in the
+  // capture phase: the pan/zoom library stops every wheel event at its own
+  // wrapper, so a React `onWheel` up here never heard one.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", release, { capture: true, passive: true });
+    return () => el.removeEventListener("wheel", release, { capture: true });
+  }, [fullscreen]);
 
   // Track the container width so PDF pages render to fit (then zoom from there).
   // ResizeObserver fires once on observe, so it supplies the initial width too.
@@ -370,7 +394,7 @@ export default function ReceiptViewerImpl({
           visible.set(i, e.isIntersecting ? e.intersectionRect.height : 0);
         }
         // Still counted during a jump, so the answer is current when it ends.
-        if (Date.now() < jumpQuiet.current) return;
+        if (Date.now() < jumpQuiet.current || rotateHold.current) return;
         let best = -1;
         let most = 0;
         for (const [i, h] of visible) {
@@ -409,6 +433,7 @@ export default function ReceiptViewerImpl({
     const lowest = Math.min(0, wrapper.clientHeight - content.offsetHeight * state.scale);
     const y = Math.min(0, Math.max(lowest, state.positionY - offset));
     jumpQuiet.current = Date.now() + JUMP_MS + 100;
+    rotateHold.current = false;
     inView.current = i;
     reportCurrent.current(i);
     ctl.setTransform(state.positionX, y, state.scale, JUMP_MS, "easeOut");
@@ -424,6 +449,7 @@ export default function ReceiptViewerImpl({
   const rotate = () => {
     const d = documents[Math.min(inView.current, documents.length - 1)];
     if (!d) return;
+    rotateHold.current = true;
     setTurns((prev) => ({ ...prev, [d.src]: ((prev[d.src] ?? 0) + 90) % 360 }));
   };
 

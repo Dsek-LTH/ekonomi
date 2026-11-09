@@ -1,74 +1,55 @@
-// The income pipeline's shapes: what the intakt service sends and is sent, and
-// the reports the app routes those sales into.
+// The income pipeline's shapes: what the intakt service sends, and the days
+// the app routes those sales into.
 //
 // The wire half are hand-written counterparts to Go structs in another
-// repository (report.SaleLine, report.Fee, report.SwishPayment and
-// report.Document), so nothing but care keeps them in step. The service rejects
+// repository (report.SaleLine, report.Fee and report.SwishPayment), so
+// nothing but care keeps them in step. The service rejects
 // unknown fields, so a name misspelled here fails loudly on the first request
 // rather than silently dropping a value.
 //
 // Every amount is öre, matching both the service and the database. Nothing here
 // is kronor.
 
-/** One product line of a routed report. */
-export interface IncomeProduct {
+/**
+ * One sold line of a day, as routing leaves it: whose it was, where it books,
+ * and what it adds to the clearing account. Amounts in öre.
+ */
+export interface IncomeDayLine {
+  /** A sale, or one of Zettle's fees for the day. */
+  kind: "SALE" | "FEE";
+  /** The verksamhet's income key. Null on a fee, which is nobody's. */
+  unitKey: string | null;
+  /** The product as rung up, prefix stripped. */
   name: string;
   variant?: string;
-  /** BAS revenue account this line routed to, e.g. "3011". */
+  /** BAS account: revenue for a sale, the fee account for a fee. */
   account: string;
+  /** Where it books. Null when neither the prefix nor the verksamhet names one. */
+  costCenterId: string | null;
   quantity: number;
   unitPrice: number;
-  /** This line's share of any purchase-level discount, already prorated. */
   effectiveDiscount: number;
-  /** quantity*unitPrice - effectiveDiscount. */
+  /** quantity * unitPrice - discount. Negative for a refund or a fee. */
   total: number;
-  isDiscount?: boolean;
+  /** Matched no prefix and went to the reserv. */
+  unmatched: boolean;
 }
 
-/**
- * A report's totals per account. These become the credit rows of the
- * verifikation, which is why they must sum to the report total. See
- * lib/income/voucher.ts, which checks exactly that before booking.
- */
+/** One source's day, as routing leaves it. */
+export interface IncomeDayDto {
+  /** ISO date, the Swedish day it was sold. */
+  date: string;
+  lines: IncomeDayLine[];
+  /** The lines' sum: what the day moves the clearing account by. */
+  total: number;
+}
+
+/** A revenue or fee account and what the lines on it come to. */
 export interface IncomeAccountDistribution {
   account: string;
   description: string;
   total: number;
 }
-
-/**
- * One verksamhet's takings for one day: one PDF, one voucher. Built by the
- * app's own routing (./routing.ts) from the raw lines below.
- */
-export interface IncomeReportDto {
-  /** "<committee>-<date>", the key the service files it under. */
-  key: string;
-  /** The committee key, matching IncomeCommittee.key. */
-  committee: string;
-  /** YYYY-MM-DD. */
-  date: string;
-  products: IncomeProduct[];
-  total: number;
-  accountDistributions: IncomeAccountDistribution[];
-}
-
-/** One of Zettle's own transaction fees, which are a cost rather than income. */
-interface IncomeFeeEntry {
-  name: string;
-  account: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
-
-export interface IncomeFeeReportDto {
-  key: string;
-  date: string;
-  fees: IncomeFeeEntry[];
-  total: number;
-}
-
-// ── What the service sends ─────────────────────────────────────────
 
 /** One product line of one Zettle purchase, as rung up. See report.SaleLine. */
 export interface ZettleSaleLine {
@@ -98,27 +79,3 @@ export interface SwishPayment {
   message: string;
   amount: number;
 }
-
-// ── What the service is sent ───────────────────────────────────────
-
-/**
- * Everything a rendered intäktsräkning shows, handed over whole. See
- * report.Document. Names rather than keys, so the service renders without
- * knowing anything about the section.
- */
-export interface IncomeDocument {
-  kind: "income" | "fee";
-  paymentType: IncomePaymentType;
-  /** Whose takings, as the page names them. */
-  unit: string;
-  /** The verifikationstext. */
-  description: string;
-  date: string;
-  attestation: { name: string; stilId: string };
-  lines: IncomeProduct[];
-  distributions: IncomeAccountDistribution[];
-  total: number;
-}
-
-/** What appears under the heading of a rendered report. */
-export type IncomePaymentType = "Zettle" | "Swish";

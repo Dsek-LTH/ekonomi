@@ -41,7 +41,8 @@
     "bankgiro": "Bankgiro",
     "plusgiro": "Plusgiro",
     "description": "What is the invoice for?",
-    "yourReference": "Your reference"
+    "yourReference": "Your reference",
+    "rounding": "Rounding"
   },
   "detail": {
     "save": "Save",
@@ -146,7 +147,10 @@
   },
   "inkorg": {
     "title": "Inbox",
-    "upload": "Add documents",
+    "dropLead": "Drag invoices here",
+    "pickLead": "Add invoices",
+    "pick": "Choose files",
+    "addSeparate": "Add as a new document in the inbox",
     "mailIn": "Invoices can also be mailed to {address} from a dsek.se address.",
     "uploaded": "{name} is in the inbox",
     "emptyTitle": "The inbox is empty",
@@ -207,7 +211,7 @@
     "payableHint": "Accounts payable is credited with the whole invoice amount, so that row is not changed here.",
     "ourRef": "Our reference",
     "rounding": "Rounding",
-    "roundingHint": "The rounding is booked on its own account, and the largest row takes the difference.",
+    "roundingHint": "The rounding is booked on its own account. The cost rows are the invoice's lines as printed.",
     "roundingInvalid": "The rounding can be at most 0.99 kr either way.",
     "save": "Save booking",
     "giroAtSend": "You will confirm the number again when the invoice is sent to Fortnox."
@@ -242,6 +246,7 @@
   "allocate": {
     "fromScan": "Read from the invoice. Check that it is right.",
     "descriptionHint": "What the invoice is called in lists and for other units asked to attest.",
-    "descriptionPlaceholder": "For example trailer hire for the introduction week"
+    "descriptionPlaceholder": "For example trailer hire for the introduction week",
+    "roundingHint": "If the invoice rounds off. The rows add up to the amount less the rounding."
   }
 }

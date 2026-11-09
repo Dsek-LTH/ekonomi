@@ -1,7 +1,7 @@
 "use client";
 
 // Every member's redovisningsbetyg, the lowest first, since those are the ones
-// to talk to. A list rather than a table: a face, a name, the stars and what
+// to talk to. A list rather than a table: a face, a name, the score and what
 // waits is all a row needs. A row opens the same
 // breakdown the member sees on their own profile.
 import { useState } from "react";
@@ -12,14 +12,14 @@ import { Card, CardBody } from "@/components/ui/card";
 import { EmptyNote } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
 import { IconChevronRight } from "@/components/ui/icons";
-import { MemberScorePanel, StarRating } from "@/components/member-score";
+import { MemberScorePanel, ScoreNumber } from "@/components/member-score";
 import { UserAvatar } from "@/components/ui/avatar";
 import type { MemberScoreRow } from "@/lib/data/member-score";
 
-/** Lowest first, and "Ny" after everyone with stars: nothing to go on is not
+/** Lowest first, and "Ny" after everyone with a score: nothing to go on is not
  *  a low score. Then whoever has the most waiting. */
 const byConcern = (a: MemberScoreRow, b: MemberScoreRow) =>
-  (a.score.stars ?? 6) - (b.score.stars ?? 6) ||
+  (a.score.score ?? 101) - (b.score.score ?? 101) ||
   b.score.waiting.length - a.score.waiting.length ||
   a.name.localeCompare(b.name, "sv");
 
@@ -84,7 +84,7 @@ export function MembersClient({
                       <WaitingSummary row={r} />
                     </span>
                   </span>
-                  <StarRating value={r.score.stars} quiet />
+                  <ScoreNumber value={r.score.score} quiet />
                   <IconChevronRight className="size-4 shrink-0 text-muted" />
                 </Link>
               </li>
@@ -96,10 +96,13 @@ export function MembersClient({
   );
 }
 
-/** "2 köp väntar, äldsta 44 dagar", or that nothing does. */
+/** "2 köp väntar, äldsta 44 dagar, 1 attest väntar", or that nothing does. */
 function WaitingSummary({ row }: { row: Pick<MemberScoreRow, "score"> }) {
   const t = useTranslations("score.list");
-  const { waiting } = row.score;
-  if (waiting.length === 0) return <>{t("upToDate")}</>;
-  return <>{t("waitingSummary", { count: waiting.length, days: waiting[0].days })}</>;
+  const { waiting, attestWaiting } = row.score;
+  const parts = [
+    waiting.length > 0 && t("waitingSummary", { count: waiting.length, days: waiting[0].days }),
+    attestWaiting.length > 0 && t("attestSummary", { count: attestWaiting.length }),
+  ].filter(Boolean);
+  return <>{parts.length ? parts.join(", ") : t("upToDate")}</>;
 }

@@ -77,7 +77,7 @@ export type IncomeSource = Schema.IncomeSource;
 
 // A report's life: fetched, then booked, and finally pushed to Fortnox. A day
 // you decide not to book has no state of its own. It stays a draft until the
-// next fetch clears the working set (see createSalesBatch).
+// next fetch of its source clears the working set (see createDayBatch).
 export type IncomeReportStatus = Schema.IncomeReportStatus;
 
 export type ExpenseStatus = Schema.ExpenseStatus;
@@ -179,8 +179,17 @@ export interface ResultUnitIncome {
   defaultCostCenterId: string | null;
   defaultCostCenterCode: string | null;
   active: boolean;
-  /** Product-name prefixes: "s1 - Öl" → account 3011. */
-  prefixes: { id: string; code: string; account: string; accountName: string }[];
+  /**
+   * Product-name prefixes: "s1 - Öl" → account 3011, and the prefix's own cost
+   * centre when it is not the verksamhet's default.
+   */
+  prefixes: {
+    id: string;
+    code: string;
+    account: string;
+    accountName: string;
+    costCenterId: string | null;
+  }[];
 }
 
 export interface CostAllocation {
@@ -206,6 +215,8 @@ interface RevisionEntry {
   comment?: string;
   /** Who a REMINDER_SENT went to, by name as they were then. */
   recipients?: string[];
+  /** What a CORRECTED changed. See lib/domain/correction.ts. */
+  correction?: import("./correction").CorrectionDiff;
   date: string; // ISO
 }
 

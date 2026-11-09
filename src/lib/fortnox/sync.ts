@@ -142,16 +142,27 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     select: {
       id: true,
       _count: {
-        select: { allocations: true, verificationLines: true, budgetCostCenters: true },
+        select: {
+          allocations: true,
+          verificationLines: true,
+          budgetCostCenters: true,
+          // Income refers to cost centres too, and every one of these is
+          // SetNull: deleting the row would quietly leave a verksamhet, a
+          // prefix, the fee setting or a waiting day's lines with none, and
+          // the next voucher would reach Fortnox without one.
+          incomeUnits: true,
+          incomePrefixes: true,
+          incomeLines: true,
+          incomeReports: true,
+          zettleFeeSettings: true,
+        },
       },
     },
   });
   const unreferencedIds = gone
     .filter(
       (c) =>
-        c._count.allocations === 0 &&
-        c._count.verificationLines === 0 &&
-        c._count.budgetCostCenters === 0,
+        Object.values(c._count).every((n) => n === 0),
     )
     .map((c) => c.id);
 

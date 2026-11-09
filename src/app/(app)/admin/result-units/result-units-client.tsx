@@ -42,13 +42,10 @@ type Mutate = ReturnType<typeof useMutation>["mutate"];
 export function ResultUnitsClient({
   resultUnits,
   unassigned,
-  incomeEnabled,
 }: {
   resultUnits: ResultUnit[];
   /** Cost centres no unit's prefix matches. */
   unassigned: ResultUnitCostCenter[];
-  /** False when the app runs without the intakt service. See intaktConfigured. */
-  incomeEnabled: boolean;
 }) {
   const t = useTranslations("admin.resultUnits");
   const tCommon = useTranslations("common");
@@ -150,7 +147,6 @@ export function ResultUnitsClient({
     {
       key: "sales",
       header: t("colSales"),
-      hidden: !incomeEnabled,
       value: (u) => (u.income ? 1 : 0),
       sortable: true,
       mobile: "trailing",
@@ -231,7 +227,6 @@ export function ResultUnitsClient({
           // Keyed, so every draft inside starts over when another unit opens.
           key={open.id}
           unit={open}
-          incomeEnabled={incomeEnabled}
           pending={pending}
           mutate={mutate}
           onClose={() => setOpenId(null)}
@@ -260,13 +255,11 @@ export function ResultUnitsClient({
  */
 function UnitDialog({
   unit,
-  incomeEnabled,
   pending,
   mutate,
   onClose,
 }: {
   unit: ResultUnit;
-  incomeEnabled: boolean;
   pending: string | null;
   mutate: Mutate;
   onClose: () => void;
@@ -502,24 +495,20 @@ function UnitDialog({
 
         {/* ── Whether it sells ──
             Said here, set under Inställningar → Försäljning, where every
-            unit's sales sit beside the accounts they are booked against. Only
-            when the income module is configured: the result-unit screen must
-            not depend on income existing. */}
-        {incomeEnabled && (
-          <Section title={t("sectionSales")} hint={t("sectionSalesHint")}>
-            <p className="text-sm">
-              {unit.income
-                ? t("salesOnSummary", { count: unit.income.prefixes.length })
-                : t("salesOffSummary")}{" "}
-              <Link
-                href="/admin/income#units"
-                className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-              >
-                {t("editInSales")}
-              </Link>
-            </p>
-          </Section>
-        )}
+            unit's sales sit beside the accounts they are booked against. */}
+        <Section title={t("sectionSales")} hint={t("sectionSalesHint")}>
+          <p className="text-sm">
+            {unit.income
+              ? t("salesOnSummary", { count: unit.income.prefixes.length })
+              : t("salesOffSummary")}{" "}
+            <Link
+              href="/admin/income#units"
+              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+            >
+              {t("editInSales")}
+            </Link>
+          </p>
+        </Section>
       </ModalBody>
     </Modal>
   );

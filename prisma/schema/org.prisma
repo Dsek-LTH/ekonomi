@@ -41,6 +41,8 @@ model CostCenter {
 
   incomeUnits       ResultUnitIncome[]    @relation("IncomeDefaultCostCenter")
   incomeReports     IncomeReport[]
+  incomePrefixes    IncomeProductPrefix[] @relation("IncomePrefixCostCenter")
+  incomeLines       IncomeLine[]          @relation("IncomeLineCostCenter")
   zettleFeeSettings BookkeepingSettings[] @relation("ZettleFeeCostCenter")
 
   createdAt DateTime @default(now())
@@ -101,13 +103,14 @@ model ResultUnit {
   // Optional, and read by nothing outside the income module.
   income        ResultUnitIncome?
   incomeReports IncomeReport[]
+  incomeLines   IncomeLine[]
 
   // Section cards spent from on this unit's behalf. The unit's resultatansvarig
   // reads their purchases on /bank, see Card.resultUnit.
   cards Card[]
 
   // Levfakturor given to this unit to kontera. See SupplierInvoice.resultUnit.
-  supplierInvoices SupplierInvoice[]
+  supplierInvoices         SupplierInvoice[]
   // Levfaktura documents in this unit's Inkorg, waiting for its fördelning.
   supplierInvoiceDocuments SupplierInvoiceDocument[]
 

@@ -13,8 +13,9 @@
 // Clicking a row opens its PDF in the document panel beside the page, with
 // what to do with it in a bar along the panel's foot. Beside the document
 // being read, and out of the table, which stays as it was so the next row is
-// always where it was. Nothing is open when the page loads: the panel comes
-// when somebody asks to look at something.
+// always where it was. Nothing is open when the page loads. For triage the
+// panel stands anyway, empty, as the place to drop new documents (as on an
+// utlägg). For anyone else it comes when they ask to look at something.
 //
 // Deleting is the table's, a row action: it is the answer for a document that
 // is not worth opening at all (a reminder, a newsletter), and the bar is for
@@ -27,8 +28,12 @@ import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/status-pill";
 import { Combobox } from "@/components/ui/combobox";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconTrash, IconUpload } from "@/components/ui/icons";
-import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
+import { IconTrash } from "@/components/ui/icons";
+import {
+  ClientDataTable,
+  visibleRows,
+  type ClientTabFilter,
+} from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import {
   ReceiptPanelFooter,
@@ -84,7 +89,7 @@ export function InkorgClient({
   const t = useTranslations("invoices.inkorg");
   const router = useProgressRouter();
   const reveal = useRevealReceiptPanel();
-  const upload = useUpload();
+  const upload = useUpload(selected?.id ?? null);
   const remover = useMutation();
   const confirm = useConfirm();
   const { dateTime } = useFormat();
@@ -121,10 +126,13 @@ export function InkorgClient({
 
   // The next one once this one is dealt with: the one after it, or before it
   // when it was the last, so working down the table never needs a click to
-  // open the next.
+  // open the next. Next as the table shows it, on the tab that is open, and
+  // nothing from a tab that is not. One opened from outside what the table
+  // shows (a search typed since) has no next, and closes.
   const advance = (id: string) => {
-    const i = rows.findIndex((d) => d.id === id);
-    const next = rows[i + 1] ?? rows[i - 1];
+    const shown = visibleRows({ columns, rows, controls, tabs });
+    const i = shown.findIndex((d) => d.id === id);
+    const next = i === -1 ? undefined : (shown[i + 1] ?? shown[i - 1]);
     router.push(next ? `${HOME}?doc=${next.id}` : HOME, { scroll: false });
   };
 
@@ -255,6 +263,20 @@ export function InkorgClient({
               ]
             : []
         }
+        // Triage puts documents in here too, so its panel stands even with
+        // nothing open, as the place to drop them, as on an utlägg. With one
+        // open, a file dropped on it is still a document of its own, not an
+        // addition to the open one, and the panel says so.
+        onFile={triage ? (f) => void upload.send(f) : undefined}
+        uploading={upload.busy}
+        multiple
+        uploadCopy={{
+          lead: t("dropLead"),
+          leadShort: t("pickLead"),
+          fileTypes: health?.address ? t("mailIn", { address: health.address }) : undefined,
+          action: t("pick"),
+          addLabel: t("addSeparate"),
+        }}
       />
       {selected && (
         <ReceiptPanelFooter>
@@ -275,9 +297,6 @@ export function InkorgClient({
           rows={rows}
           controls={controls}
           tabs={tabs}
-          action={
-            triage ? <UploadButton upload={upload} address={health?.address ?? null} /> : undefined
-          }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
           // The open row's link closes it again; any other opens that one.
@@ -304,60 +323,41 @@ export function InkorgClient({
 
 // ── Putting documents in ──────────────────────────────────────────
 
-function useUpload() {
+/**
+ * Sends each file in as a document of its own. With nothing open, the first
+ * to land is opened, so a file dropped on the empty panel is the one the
+ * panel then shows, ready to be given to a unit.
+ */
+function useUpload(selectedId: string | null) {
   const t = useTranslations("invoices.inkorg");
   const notify = useNotify();
+  const router = useProgressRouter();
   const m = useMutation();
   const [count, setCount] = useState(0);
+  // Read when an upload lands, not when it started, so a second file in the
+  // same drop does not open over the first.
+  const open = useRef(selectedId);
+  useEffect(() => {
+    open.current = selectedId;
+  }, [selectedId]);
   async function send(file: File) {
     setCount((c) => c + 1);
     const form = new FormData();
     form.append("file", file);
-    const ok = await m.mutate("/api/supplier-invoice-documents", {
+    const created = await m.mutate<{ id: string }>("/api/supplier-invoice-documents", {
       body: form,
       key: file.name,
+      refresh: false,
     });
     setCount((c) => c - 1);
-    if (ok) notify.success(t("uploaded", { name: file.name }));
+    if (!created) return;
+    notify.success(t("uploaded", { name: file.name }));
+    if (open.current === null) {
+      open.current = created.id;
+      router.push(`${HOME}?doc=${created.id}`, { scroll: false });
+    } else router.refresh();
   }
   return { send, busy: count > 0 };
-}
-
-function UploadButton({
-  upload,
-  address,
-}: {
-  upload: ReturnType<typeof useUpload>;
-  address: string | null;
-}) {
-  const t = useTranslations("invoices.inkorg");
-  const picker = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      {address && <span className="text-xs text-muted">{t("mailIn", { address })}</span>}
-      <input
-        ref={picker}
-        type="file"
-        multiple
-        accept="application/pdf,image/*"
-        className="hidden"
-        onChange={(e) => {
-          const files = [...(e.target.files ?? [])];
-          e.target.value = "";
-          for (const f of files) void upload.send(f);
-        }}
-      />
-      <Button
-        size="sm"
-        variant="primary"
-        loading={upload.busy}
-        onClick={() => picker.current?.click()}
-      >
-        <IconUpload className="size-4" />
-        {t("upload")}
-      </Button>
-    </>
-  );
 }
 
 // ── The bar at the panel's foot ───────────────────────────────────
@@ -432,7 +432,9 @@ function DocumentBar({
           {d.note}
         </p>
       )}
-      {/* One row, whatever the panel's width: the buttons keep their size and
+      {/* The buttons are md, the button register level with an sm field (32px,
+          44px on a phone), so they stand as tall as the fields beside them.
+          One row, whatever the panel's width: the buttons keep their size and
           the fields give way. The date only down to a whole date, which is
           as small as DateInput goes, and the unit's name the rest. */}
       {(d.can.canAssign || d.can.canAllocate || d.can.canDecline) && (
@@ -459,7 +461,7 @@ function DocumentBar({
                 />
               </div>
               <Button
-                size="sm"
+                size="md"
                 variant={d.can.canAllocate ? "secondary" : "primary"}
                 disabled={!unit || !changed || !dueReady || busy}
                 loading={assigner.busy}
@@ -474,7 +476,7 @@ function DocumentBar({
             <div className="ml-auto flex shrink-0 items-center gap-2">
               {d.can.canDecline && (
                 <Button
-                  size="sm"
+                  size="md"
                   variant="ghost"
                   disabled={busy}
                   loading={decliner.busy}
@@ -486,7 +488,7 @@ function DocumentBar({
               )}
               {d.can.canAllocate && (
                 <ButtonLink
-                  size="sm"
+                  size="md"
                   href={`/invoices/inbox/${d.id}`}
                   className="whitespace-nowrap"
                 >

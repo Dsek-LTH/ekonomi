@@ -5,8 +5,8 @@ import { getStockStats } from "@/lib/data/stock-stats";
 import { today } from "@/lib/domain/date";
 import { CATEGORIES } from "@/lib/domain/categories";
 import type { DrinkCategory, StockEntryKind } from "@/lib/domain/types";
-import StockLogClient from "../log/log-client";
-import StockStatsClient from "../stats/stats-client";
+import StockLogClient from "./log-client";
+import StockStatsClient from "./stats-client";
 import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("stockHistory");

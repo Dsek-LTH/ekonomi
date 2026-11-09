@@ -176,17 +176,33 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // Intäkter, one page per way the money came in. Two pages rather than one
+    // list with a filter: Zettle is fetched over its API and a Swish export is
+    // uploaded as a file, each books against its own clearing account, and
+    // each page's primary button is that source's own way in.
+    label: "groupIncome",
+    icon: IconIncome,
+    items: [
+      {
+        href: "/income/zettle",
+        label: "incomeZettle",
+        icon: IconCard,
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+      {
+        href: "/income/swish",
+        label: "incomeSwish",
+        icon: IconIncome,
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+    ],
+  },
+  {
     label: "groupBookkeeping",
     icon: IconBook,
     items: [
       // No Utlägg row: booking them is the Utlägg list on Alla, where stage is
-      // a tab. What is left here has no list of its own anywhere else.
-      {
-        href: "/income",
-        label: "income",
-        icon: IconIncome,
-        visible: (u) => canViewBookkeeping(u.capabilities),
-      },
+      // a tab. Intäkter has a group of its own above.
       {
         href: "/closing",
         label: "closing",

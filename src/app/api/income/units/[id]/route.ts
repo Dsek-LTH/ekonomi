@@ -79,12 +79,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     where: { id },
     include: {
       _count: { select: { prefixes: true } },
-      resultUnit: { select: { _count: { select: { incomeReports: true } } } },
+      resultUnit: { select: { _count: { select: { incomeReports: true, incomeLines: true } } } },
     },
   });
   if (!income) return fail(404, "income.committeeNotFound");
 
-  if (income.resultUnit._count.incomeReports > 0) {
+  const counts = income.resultUnit._count;
+  if (counts.incomeReports + counts.incomeLines > 0) {
     await prisma.resultUnitIncome.update({ where: { id }, data: { active: false } });
     return NextResponse.json({ retired: true });
   }

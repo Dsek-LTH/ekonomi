@@ -24,11 +24,14 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort } from "@/lib/server/storage";
 import type { IncomeReportStatus } from "@/lib/domain/types";
+import { isLegacyReport } from "./legacy";
 
 export type LifecycleFailure =
   | { reason: "reportNotFound" }
   | { reason: "unexportOnlyExported"; status: IncomeReportStatus }
   | { reason: "reopenOnlyBooked"; status: IncomeReportStatus }
+  /** Booked before the per-day voucher. See lib/income/legacy.ts. */
+  | { reason: "reopenLegacy" }
   /** Delete refuses while Fortnox still has the voucher. Unexport first. */
   | { reason: "deleteExportedFirst" };
 
@@ -85,9 +88,12 @@ export async function unexportIncomeReport(id: string): Promise<LifecycleResult>
 export async function reopenIncomeReport(id: string): Promise<LifecycleResult> {
   const report = await prisma.incomeReport.findUnique({
     where: { id },
-    select: { id: true, status: true, documentKey: true },
+    select: { id: true, status: true, documentKey: true, source: true, resultUnitId: true },
   });
   if (!report) return { ok: false, reason: "reportNotFound" };
+  // A day in the old shape would come back as a draft the booking screen can
+  // no longer book. Deleting it and fetching the day again is the way out.
+  if (isLegacyReport(report)) return { ok: false, reason: "reopenLegacy" };
   // EXPORTED is deliberately not reopenable: unexport it first, so forgetting
   // the Fortnox voucher is its own decision.
   if (report.status !== "BOOKED") {

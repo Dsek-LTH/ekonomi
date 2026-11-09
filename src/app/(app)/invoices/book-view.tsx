@@ -20,6 +20,7 @@ import { DateInput, Field, Input } from "@/components/ui/field";
 import { IconCheck, IconChevronRight } from "@/components/ui/icons";
 import {
   BalanceChip,
+  VoucherCostCenterPicker,
   VoucherEditor,
   WarningChip,
   filledVoucherRows,
@@ -36,7 +37,7 @@ import {
   MAX_ROUNDING,
   PAYABLE_ACCOUNT,
   ROUNDING_ACCOUNT,
-  bookedShares,
+  costTotal,
   exportBlocker,
 } from "@/lib/domain/supplier-invoice";
 import { giroMismatch, matchSupplier } from "@/lib/domain/payment-ref";
@@ -62,8 +63,9 @@ const toOre = (sek: number | null) => (sek == null ? null : sekToOre(sek));
 /**
  * The lines the table opens on: the kontering as saved, or for one not made
  * yet, a line per attested share on its cost centre, on the account the same
- * supplier was booked on last, with the öresutjämning taken off the largest
- * (bookedShares) so the voucher balances from the start.
+ * supplier was booked on last. A split's shares already leave the
+ * öresutjämning out (costTotal), and the one row of an unsplit invoice is
+ * the amount without it, so the voucher balances from the start.
  */
 function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
   if (invoice.lines.length > 0) {
@@ -78,8 +80,14 @@ function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
     }));
   }
   const single = invoice.allocations.length === 1;
-  const shares = invoice.allocations.map((a) => toOre(single ? invoice.amount : a.amount) ?? 0);
-  const booked = bookedShares(shares, toOre(invoice.rounding) ?? 0);
+  const amount = toOre(invoice.amount);
+  const booked = invoice.allocations.map((a) =>
+    single
+      ? amount == null
+        ? 0
+        : costTotal(amount, toOre(invoice.rounding))
+      : (toOre(a.amount) ?? 0),
+  );
   return invoice.allocations.map((a, i) => ({
     id: a.id,
     account: invoice.suggestedAccounts[a.id] ?? "",
@@ -215,6 +223,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   const tAction = useTranslations("invoices.action");
   const tFields = useTranslations("invoices.field");
   const tBook = useTranslations("invoices.book");
+  const tVoucher = useTranslations("book");
   const tErr = useTranslations("errors");
   const notify = useNotify();
   const save = useMutation();
@@ -398,6 +407,11 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
                 value={sekToInput(invoice.amount)}
                 onSave={(v) => commit("amount", v)}
               />
+            </BookField>
+            {/* The voucher's cost centre, in the head as Fortnox has it: every
+                row of the kontering below takes it unless it says otherwise. */}
+            <BookField label={tVoucher("allCostCenter")} className="col-span-2">
+              <VoucherCostCenterPicker rows={rows} onChange={setRows} costCenters={costCenters} />
             </BookField>
           </div>
 

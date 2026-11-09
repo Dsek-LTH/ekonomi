@@ -48,7 +48,9 @@ export function SidebarPanel({
   className,
   cardClassName,
   at = "lg",
+  always = false,
   bar,
+  barAside,
   sheetLabel,
 }: {
   children: React.ReactNode;
@@ -65,9 +67,21 @@ export function SidebarPanel({
   bar?: React.ReactNode;
   /** What the dialog is announced and headed as. Required alongside `bar`. */
   sheetLabel?: string;
+  /**
+   * The bar at every width, never the column. For a screen whose detail needs
+   * the width more than the list needs to be in view: the income review,
+   * where the list is a queue gone through one day at a time and the column
+   * squeezed the day's lines beside the document panel.
+   */
+  always?: boolean;
+  /**
+   * Beside the bar, inside the same card: controls that act on the selection
+   * without opening the list, such as stepping to the next row.
+   */
+  barAside?: React.ReactNode;
 }) {
   const band = BANDS[at];
-  const collapsed = useMediaQuery(band.below);
+  const collapsed = useMediaQuery(band.below) || always;
   const [open, setOpen] = useState(false);
 
   if (bar && collapsed) {
@@ -85,17 +99,20 @@ export function SidebarPanel({
             (body, globals.css), so the arcs go on showing exactly what they
             show when nothing is scrolling. */}
         <div className="sticky top-app-bar z-10 bg-canvas">
-          <Card className="overflow-hidden">
+          <Card className="flex items-stretch overflow-hidden">
             <button
               type="button"
               onClick={() => setOpen(true)}
               aria-haspopup="dialog"
-              className="flex min-h-12 w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors active:bg-surface"
+              className="flex min-h-12 min-w-0 flex-1 items-center gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-hover active:bg-surface"
             >
               <IconList aria-hidden className="size-4 shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate">{bar}</span>
               <IconChevronDown aria-hidden className="size-4 shrink-0 text-muted" />
             </button>
+            {barAside && (
+              <div className="flex shrink-0 items-center border-l border-border">{barAside}</div>
+            )}
           </Card>
         </div>
 

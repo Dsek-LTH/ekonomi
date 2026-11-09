@@ -101,7 +101,9 @@
     "exportUnrecorded": "Verifikationen {label} skapades i Fortnox men kunde inte sparas här. Utlägget är låst. Markera det som bokfört med {label}.",
     "noExportResolveAccess": "Bara den som får ångra bokföringar kan reda ut en oklar bokföring.",
     "nothingToResolve": "Utlägget har ingen oklar bokföring att reda ut.",
-    "reviewOwnBooking": "Du har konterat utlägget själv. Någon annan behöver granska och bokföra det."
+    "reviewOwnBooking": "Du har konterat utlägget själv. Någon annan behöver granska och bokföra det.",
+    "correctionReasonRequired": "Datumet skiljer sig från utläggets. Skriv varför, så rättas utlägget.",
+    "correctionChangesMileageRate": "Det nya datumet har en annan milersättning per kilometer, så beloppet skulle ändras. Skicka tillbaka utlägget i stället."
   },
   "receipt": {
     "notFound": "Kvittot hittades inte",
@@ -234,9 +236,8 @@
     "unknownProject": "Projektet {project} finns inte"
   },
   "income": {
-    "serviceUnavailable": "Intäktstjänsten är inte tillgänglig.",
-    "zettleUnavailable": "Zettle är inte konfigurerat i intäktstjänsten.",
-    "fetchFailed": "Kunde inte hämta: {detail}",
+    "zettleUnavailable": "Zettle är inte anslutet. Den som driftar appen behöver sätta ZETTLE_CLIENT_ID och ZETTLE_API_KEY.",
+    "fetchFailed": "Kunde inte hämta från Zettle: {detail}",
     "csvRejected": "Filen kunde inte läsas: {detail}",
     "renderFailed": "Kunde inte rendera intäktsräkningen: {detail}",
     "storeFailed": "Kunde inte spara intäktsräkningen.",
@@ -257,20 +258,14 @@
     "editOnlyBeforeBooking": "Rapporten är {status} och kan inte längre ändras.",
     "exportOnlyBooked": "Bara bokförda rapporter kan exporteras (den här är {status}).",
     "noVoucherToExport": "Rapporten har ingen verifikation att exportera.",
-    "costCenterRequired": "Välj ett kostnadsställe först.",
-    "noCostCenter": "Välj ett kostnadsställe först.",
+    "noCostCenter": "Någon rad saknar kostnadsställe. Välj ett på raden.",
     "noDistributions": "Rapporten innehåller inget att bokföra.",
-    "unbalanced": "Rapportens summa stämmer inte med kontofördelningen.",
+    "unbalanced": "Dagens summa stämmer inte med raderna.",
     "noClearingAccount": "Inget likvidkonto är inställt för den här källan.",
     "unknownCostCenter": "Kostnadsstället finns inte.",
     "costCenterOutsideUnit": "Kostnadsstället {code} hör inte till {name}.",
-    "moveFeeReport": "Zettles avgifter tillhör ingen verksamhet och kan inte flyttas.",
-    "moveSameUnit": "Varorna ligger redan på den verksamheten.",
     "noLines": "Inga varor är valda.",
     "unknownLine": "Någon av varorna finns inte längre på rapporten. Ladda om sidan och försök igen.",
-    "moveUnitNoIncome": "Verksamheten tar inte emot intäkter. Ge den intäktsinställningar först.",
-    "moveDestinationBooked": "Verksamhetens rapport för den dagen är redan bokförd. Varorna kan inte flyttas dit.",
-    "noBatch": "Ingen hämtning finns att koppla rapporten till. Hämta försäljning först.",
     "unknownAccount": "Kontot {account} finns inte i kontoplanen.",
     "documentMissing": "Intäktsräkningen saknas i lagringen.",
     "storageUnavailable": "Lagringen är inte tillgänglig.",
@@ -286,10 +281,26 @@
     "prefixNotFound": "Prefixet finns inte.",
     "fallbackNotFound": "Beloppsregeln finns inte.",
     "alreadyInFortnox": "Det finns redan en verifikation i Fortnox för den här dagen ({voucher}). Ingenting exporterades.",
-    "voucherTotalMismatch": "Verifikationen bokför inte dagens summa. Debet måste motsvara intäktsräkningens belopp.",
     "unitNotFound": "Resultatenheten finns inte.",
     "unitHasIncome": "{name} har redan intäktsinställningar.",
-    "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel. Det behöver bokstäver eller siffror."
+    "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel. Det behöver bokstäver eller siffror.",
+    "unplacedLines": "Någon vara på dagen saknar verksamhet. Ge den en innan du bokför.",
+    "inactiveCostCenter": "Kostnadsstället {code} är arkiverat. Välj ett annat på raden.",
+    "alreadyBookedHere": "En del av den här dagen är redan bokförd här.",
+    "reopenLegacy": "Dagen bokfördes per verksamhet, före den nya dagsverifikationen, och kan inte öppnas igen. Ta bort den och hämta dagen på nytt.",
+    "unitNoIncome": "Verksamheten tar inte emot intäkter. Ge den intäktsinställningar först.",
+    "feeHasNoUnit": "Zettles avgifter tillhör ingen verksamhet.",
+    "noAccount": "Någon rad saknar konto.",
+    "manualVoucherStale": "Raderna har ändrats sedan konteringen gjordes för hand. Spara den igen eller återställ den.",
+    "manual": {
+      "noRows": "Lägg till minst en rad.",
+      "accountRequired": "Någon rad saknar konto.",
+      "amountRequired": "Någon rad saknar belopp.",
+      "negativeAmounts": "Belopp kan inte vara negativa. Byt sida i stället.",
+      "costCenterRequired": "Rader på resultatkonton (3000 till 8999) behöver ett kostnadsställe.",
+      "unbalanced": "Debet och kredit går inte jämnt ut."
+    },
+    "ownBooking": "Du har konterat dagen själv, så någon annan behöver granska och bokföra den."
   },
   "stock": {
     "calibrationNoVolume": "Behållarens volym måste vara större än noll.",
@@ -400,7 +411,7 @@
     "lineNoAccount": "Varje konteringsrad behöver ett konto.",
     "lineNoAmount": "Varje konteringsrad behöver ett belopp, i debet eller kredit.",
     "unbalanced": "Konteringen går inte jämnt ut med fakturans belopp.",
-    "allocationSumMismatch": "Fördelningen går inte jämnt ut med fakturans belopp.",
+    "allocationSumMismatch": "Fördelningen går inte jämnt ut med fakturans belopp minus öresutjämningen.",
     "splitNeedsAmounts": "Ange hur mycket som ska till varje kostnadsställe.",
     "noInvoiceNumber": "Fyll i fakturanummer.",
     "badOcr": "OCR-numret stämmer inte. Kontrollera att det är rätt skrivet, eller lämna fältet tomt.",
@@ -412,7 +423,8 @@
     "exportUncertain": "Fortnox svarade inte säkert. Kontrollera i Fortnox om leverantörsfakturan skapades innan du försöker igen.",
     "nothingToRelease": "Det finns ingen osäker export att reda ut.",
     "documentOnInvoice": "Dokumentet ligger redan på en faktura.",
-    "documentNotAssigned": "Dokumentet har inte skickats till någon resultatenhet än."
+    "documentNotAssigned": "Dokumentet har inte skickats till någon resultatenhet än.",
+    "badRounding": "Öresutjämningen får vara högst 0,99 kr åt något håll."
   },
   "settings": {
     "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",

@@ -18,20 +18,21 @@
 // is the split those two attempts were circling: render whenever anyone looks,
 // store when it starts to matter.
 //
-// Rendering on demand is safe because what the document shows (the day, the
-// verksamhet, the product lines) is settled when the report is stored, so the
-// same report renders to the same document every time. It is built here in
-// full and sent whole: the service knows nothing about the section. The one field review
-// can change, the cost centre, appears nowhere on the page; it decides where the
-// money is booked, not what the document says.
+// Rendering on demand is safe because the document is a function of the
+// report's lines: the same lines render to the same page. Review can change a
+// line's verksamhet, account or cost centre, and the page follows, since its
+// sections and its distribution table are built from exactly those. The
+// document's address carries the report's `updatedAt` for that reason (see
+// documentUrl in the review screen). Rendered in-process with typst
+// (lib/income/render.ts).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { incomeDocumentKey, putObject } from "@/lib/server/storage";
 
-import { IntaktError, IntaktNotConfiguredError, renderDocument } from "./client";
-import { distributionsFor } from "./report";
-import type { IncomeDocument } from "./types";
+import { buildIncomeDocumentData } from "./document-data";
+import { isLegacyReport } from "./legacy";
+import { renderIncomePdf } from "./render";
 import { isoDay } from "@/lib/domain/date";
 
 /**
@@ -40,7 +41,8 @@ import { isoDay } from "@/lib/domain/date";
  */
 export type DocumentFailure =
   | { reason: "reportNotFound" }
-  | { reason: "serviceUnavailable" }
+  /** Booked before the per-day voucher, and stored then. See lib/income/legacy.ts. */
+  | { reason: "legacyReport" }
   | { reason: "renderFailed"; detail: string }
   | { reason: "storeFailed" };
 
@@ -49,9 +51,6 @@ export type StoredDocument = { ok: true; key: string; filename: string };
 
 export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
-
-/** What a day of Zettle's fees is called on its page. */
-const FEE_TITLE = "Zettleavgifter";
 
 /** Who a rendered report is attested by. */
 interface DocumentAttestation {
@@ -80,63 +79,51 @@ export async function renderIncomeDocument(
   const report = await prisma.incomeReport.findUnique({
     where: { id: reportId },
     include: {
-      resultUnit: {
-        select: {
-          name: true,
-          income: { select: { key: true, properName: true, description: true } },
+      lines: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          costCenter: { select: { code: true, name: true } },
+          resultUnit: { select: { name: true, income: { select: { properName: true } } } },
         },
       },
-      costCenter: { select: { name: true } },
-      lines: { orderBy: { sortOrder: "asc" } },
     },
   });
   if (!report) return { ok: false, reason: "reportNotFound" };
+  // An old report's document was stored when it was booked and is read from
+  // storage. This page cannot draw one, and has no business redrawing it.
+  if (isLegacyReport(report) || report.source === "ZETTLE_FEE") {
+    return { ok: false, reason: "legacyReport" };
+  }
 
-  const isFee = report.source === "ZETTLE_FEE";
-  const dateStr = isoDay(report.date);
-  const filename = isFee
-    ? `avgift-${dateStr}.pdf`
-    : `${report.resultUnit?.income?.key ?? "intakt"}-${dateStr}.pdf`;
+  const date = isoDay(report.date);
+  const paymentType = report.source === "SWISH" ? "swish" : "zettle";
+  const filename = `${paymentType}-${date}.pdf`;
 
-  // The verksamhet as its documents name it: the override where it has one,
-  // otherwise the unit's own name. Fees belong to no verksamhet, so their page
-  // names the cost centre they are booked on.
-  const income = report.resultUnit?.income;
-  const unit = isFee
-    ? (report.costCenter?.name ?? FEE_TITLE)
-    : (income?.properName ?? report.resultUnit?.name ?? "");
-  const document: IncomeDocument = {
-    kind: isFee ? "fee" : "income",
-    paymentType: report.source === "SWISH" ? "Swish" : "Zettle",
-    unit,
-    description: isFee ? FEE_TITLE : income?.description || unit,
-    date: dateStr,
-    attestation: { name: attestation.name, stilId: attestation.studentId },
+  const data = buildIncomeDocumentData({
+    source: report.source,
+    date,
+    created: isoDay(new Date()),
+    attestation: { name: attestation.name, studentId: attestation.studentId },
     lines: report.lines.map((l) => ({
+      kind: l.kind,
+      unitName: l.resultUnit ? (l.resultUnit.income?.properName ?? l.resultUnit.name) : null,
       name: l.name,
-      // Omitted rather than sent as null: the service's field is
-      // `variant,omitempty`.
-      ...(l.variant ? { variant: l.variant } : {}),
+      variant: l.variant,
       account: l.account,
+      accountName: l.accountName,
+      costCenter: l.costCenter,
       quantity: l.quantity,
       unitPrice: l.unitPrice,
-      effectiveDiscount: l.discount,
+      discount: l.discount,
       total: l.total,
     })),
-    distributions: distributionsFor(report.lines),
-    total: report.total,
-  };
+  });
 
   try {
-    const bytes = await renderDocument(document);
-    return { ok: true, bytes, filename };
+    return { ok: true, bytes: await renderIncomePdf(data), filename };
   } catch (e) {
-    if (e instanceof IntaktNotConfiguredError) return { ok: false, reason: "serviceUnavailable" };
-    if (e instanceof IntaktError) {
-      console.error(`[intakt] rendering report ${reportId} failed`, e);
-      return { ok: false, reason: "renderFailed", detail: e.message };
-    }
-    throw e;
+    console.error(`[income] rendering report ${reportId} failed`, e);
+    return { ok: false, reason: "renderFailed", detail: e instanceof Error ? e.message : String(e) };
   }
 }
 

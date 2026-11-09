@@ -125,6 +125,11 @@ export const TransitionExpense = z.object({
     "revoke_deadline_waiver",
   ]),
   comment: Trimmed.default(""),
+  // "approve" and "withdraw_attest": which of the caller's rows to sign, or to
+  // take the signature off. Left out, it is every row the caller may. An admin who is also resultatansvarig for
+  // one of the units can sign their own unit's row and leave the rest to the
+  // people who answer for them.
+  allocationIds: z.array(Id).min(1).optional(),
 });
 export type TransitionExpense = z.infer<typeof TransitionExpense>;
 
@@ -163,16 +168,21 @@ export const BookVoucher = z.object({
   lines: z.array(VoucherLineInput).default([]),
   date: IsoDate.optional(),
   description: Trimmed.optional(),
+  // Why the date differs from the utlägg's own. Required exactly when it does,
+  // since the utlägg is then corrected to match. See lib/domain/correction.ts.
+  correctionReason: Trimmed.optional(),
 });
 export type BookVoucher = z.infer<typeof BookVoucher>;
 
 /**
- * PUT /api/expenses/[id]/presence: the booking screen's heartbeat. `active` is
- * false once its user has gone idle, which takes them off the screen for
- * everybody else while still answering whether the utlägg has moved on.
+ * PUT /api/expenses/[id]/presence: the booking screen's or the review's
+ * heartbeat. `active` is false once its user has gone idle, which takes them
+ * off the screen for everybody else while still answering whether the utlägg
+ * has moved on. `screen` defaults to the booking screen.
  */
 export const PresenceHeartbeat = z.object({
   active: z.boolean(),
+  screen: z.enum(["book", "review"]).default("book"),
 });
 export type PresenceHeartbeat = z.infer<typeof PresenceHeartbeat>;
 

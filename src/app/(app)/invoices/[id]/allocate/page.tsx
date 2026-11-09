@@ -38,6 +38,7 @@ export default async function InvoiceAllocatePage({ params }: { params: Promise<
   // description the subject of the mail it was forwarded in.
   const defaults = {
     amount: invoice.amount ?? (scanned.amount == null ? null : scanned.amount / 100),
+    rounding: invoice.rounding,
     dueDate: invoice.dueDate || scanned.dueDate || "",
     description: invoice.description ?? cleanSubject(invoice.mail?.subject) ?? "",
   };

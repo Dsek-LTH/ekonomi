@@ -240,6 +240,7 @@ describe("attest, as the fördelning", () => {
       data: {
         status: "APPROVED",
         amount: 125000,
+        rounding: null,
         dueDate: new Date("2026-11-30T00:00:00.000Z"),
         description: "Släp",
         prefilled: [],
@@ -306,6 +307,7 @@ describe("attest, as the fördelning", () => {
       data: {
         status: "APPROVED",
         amount: 125000,
+        rounding: null,
         dueDate: new Date("2026-11-30T00:00:00.000Z"),
         invoiceNumber: "20417",
         // What the unit typed is theirs; what was only read stays marked.

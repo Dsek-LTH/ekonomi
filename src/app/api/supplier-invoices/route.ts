@@ -28,7 +28,7 @@ import { CreateSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import { loadInboxDocumentFor } from "@/lib/api/supplier-invoice-access";
 import { claimInvoiceReference, withReferenceRetry } from "@/lib/server/expense-reference";
 
-// POST /api/supplier-invoices: { documentId, rows, amount, dueDate, description?, comment? }
+// POST /api/supplier-invoices: { documentId, rows, amount, rounding?, dueDate, description?, comment? }
 export async function POST(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, CreateSupplierInvoice);
   if (!parsed.ok) return parsed.res;
-  const { documentId, rows, amount, dueDate, description, comment } = parsed.data;
+  const { documentId, rows, amount, rounding, dueDate, description, comment } = parsed.data;
 
   const access = await loadInboxDocumentFor(actor, documentId);
   if (!access.ok) return access.res;
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
   const planning = await planAllocation({
     rows,
     total: amount,
+    rounding: rounding ?? null,
     documentCount: 1,
     viewer,
     actorId: actor.id,
@@ -63,7 +64,12 @@ export async function POST(req: Request) {
   // check. Read before the transaction, since storage and the PDF reader are
   // slow; the page that sent this has read it already, so it is usually kept.
   const reading = await readDocumentScan(doc.id);
-  const typed = { amount, dueDate: isoToDate(dueDate), description: description ?? null };
+  const typed = {
+    amount,
+    rounding: rounding || null,
+    dueDate: isoToDate(dueDate),
+    description: description ?? null,
+  };
   const filled = prefillData(typed, reading.fields, reading.supplier);
   const prefilled = ((filled.prefilled as string[] | undefined) ?? []).filter(
     (f) => f !== "amount" && f !== "dueDate",

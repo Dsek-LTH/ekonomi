@@ -1,8 +1,8 @@
 // The rentals list, as the uthyrningsansvarig reads it.
 //
 // A second list over the same Contract rows the archive reads, not a second
-// table. That is how this app already works: /expenses, /approvals and
-// /card-purchases are three purpose-built lists over one set of utlägg, because
+// table. That is how this app already works: /expenses and /approvals are
+// purpose-built lists over one set of utlägg, because
 // what a list is *for* decides its columns and its order, and neither of those
 // is a property of the row.
 //

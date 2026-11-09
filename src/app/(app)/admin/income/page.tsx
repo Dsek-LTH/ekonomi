@@ -6,7 +6,7 @@ import { getActiveCostCenters } from "@/lib/data/cost-centers";
 import { getIncomeConfig } from "@/lib/data/income-config";
 import { getResultUnits } from "@/lib/data/result-units";
 import { canAccessSettings } from "@/lib/domain/permissions";
-import { intaktConfigured } from "@/lib/income/client";
+import { zettleConfigured } from "@/lib/income/zettle-client";
 import { incomeSetupSteps } from "@/lib/income/setup";
 import { requirePage } from "@/lib/server/current-user";
 
@@ -51,7 +51,7 @@ export default async function AdminIncomePage() {
         costCenters={costCenters}
         accounts={accounts}
         setup={setup}
-        serviceConfigured={intaktConfigured()}
+        serviceConfigured={zettleConfigured()}
       />
     </PageShell>
   );

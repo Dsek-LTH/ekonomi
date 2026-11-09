@@ -1,52 +1,58 @@
-// The voucher a day of takings would be posted as, and whether it may be.
+// The voucher a day of takings will be posted as, and whether it may be.
 //
-// Lifted out of review-client.tsx, where it sat at line 305 of sixteen hundred
-// inside the component that draws the screen. It is the piece of that file that
-// decides whether money is written to the ledger: `canBook` is what the button
-// reads and what the request is checked against, so a mistake in it is a
-// voucher the section posts or a day it cannot close. That is not a thing to
-// keep somewhere it can only be read by scrolling past six hundred lines of
-// markup, and it is not a thing to leave untested.
+// Derived from the day's lines by the same function the booking route uses
+// (buildDayVoucherLines in lib/income/voucher.ts), so what the screen shows is
+// the voucher the server writes, row for row. Or, when somebody has written the
+// kontering by hand, those rows, which are saved on the server with a
+// fingerprint of the lines (lib/income/manual-voucher.ts). Nothing here holds
+// an edited voucher of its own, which is what used to go wrong: an edit kept in
+// the browser outlived the correction it was made before, and was booked.
 //
-// Pure over plain data. Wording arrives already translated, because a module
-// that decides what balances has no business knowing what language anybody
-// reads, and because that is what lets the whole of it be tested without a
-// React tree.
-import {
-  filledVoucherRows,
-  makeVoucherRow,
-  type VoucherEditorRow,
-  type VoucherLockedRow,
-} from "@/components/voucher-editor";
-import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
-import { voucherBalance, voucherBlocker, type VoucherBlocker } from "@/lib/domain/voucher";
-import type { IncomeReportRow } from "@/lib/data/income";
+// Pure over plain data, so it is tested without a React tree.
+import { oreToSEK, sekToOre } from "@/lib/domain/money";
+import type { IncomeLineRow, IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
+import { clearingRow, manualVoucherBlocker } from "@/lib/income/manual-voucher";
+import { buildDayVoucherLines, incomeVoucherBlocker } from "@/lib/income/voucher";
 
-/** One line of the voucher as it goes to the booking route, in öre. */
-export interface VoucherLine {
+/** One row of the voucher as the screen shows it. Kronor. */
+export interface VoucherPreviewRow {
   account: string;
   accountName: string;
-  description?: string;
   costCenterCode: string | null;
-  /** Fortnox project number, or null. */
-  project: string | null;
+  project?: string | null;
+  description?: string | null;
   debit: number;
   credit: number;
 }
 
-export interface VoucherDraft {
-  locked: VoucherLockedRow;
-  rows: VoucherEditorRow[];
-  lines: VoucherLine[];
+/**
+ * Why a day cannot be booked yet, the first reason that applies. Each is a
+ * message key under `income.blocker`, worded as what to do about it.
+ */
+export type DayBlocker =
+  | "alreadyBooked"
+  | "manualStale"
+  | "manualInvalid"
+  | "unknownProject"
+  | "noClearingAccount"
+  | "unknownClearingAccount"
+  | "unplacedLines"
+  | "noFeeAccount"
+  | "noAccount"
+  | "unknownAccount"
+  | "noCostCenter"
+  | "inactiveCostCenter"
+  | "noDistributions"
+  | "unbalanced";
+
+export interface DayVoucher {
+  rows: VoucherPreviewRow[];
+  clearing: string;
   totalDebit: number;
   totalCredit: number;
-  difference: number;
-  balanced: boolean;
-  blocker: VoucherBlocker | null;
-  clearing: string;
-  clearingKnown: boolean;
+  blocker: DayBlocker | null;
   /** Whether the button may be live: the server applies the same rules. */
   canBook: boolean;
 }
@@ -58,221 +64,217 @@ const nameOf = (accounts: AccountRecord[], number: string) =>
 /**
  * Is this day one the section may already have booked?
  *
- * Either because this database has the verifikation, or because Fortnox holds
- * one for the same source, verksamhet and day. Both are shown rather than
- * hidden, since a day missing from the queue cannot be told apart from a day
- * the fetch never covered, and both colour the row.
+ * Either because this database has a verifikation holding some of its money,
+ * or because Fortnox holds one for the same source and day. Both are shown
+ * rather than hidden, since a day missing from the queue cannot be told apart
+ * from a day the fetch never covered.
  */
 export const isDuplicate = (r: IncomeReportRow) => Boolean(r.duplicateOf || r.existingVoucher);
 
 /**
- * Where to read a day's intäktsräkning.
- *
- * Stamped with when the report last changed, which makes a corrected day a
- * different address. A draft's PDF is rendered on the way past and the browser
- * is told it may keep it for five minutes: right for stepping back to a day
- * you just looked at, wrong the moment lines are moved on or off it, when the
- * cached copy is a picture of takings that have gone elsewhere.
+ * Where to read a day's intäktsräkning, stamped with when the report last
+ * changed so a corrected day is a different address and the browser does not
+ * show the copy it was allowed to keep for five minutes.
  */
 export const documentUrl = (report: IncomeReportRow) =>
   `/api/income/reports/${report.id}/document?v=${encodeURIComponent(report.updatedAt)}`;
 
 /** Where the money landed, which is a property of how it was paid. */
-// Empty when the setting is not chosen yet: the row shows no account, the
-// voucher is blocked on it, and the booking route names the missing setting.
 const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
   (report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount) ??
   "";
 
-/**
- * Which cost centre this day's rows start on.
- *
- * The report's own, if it has one. The import copies the committee's default
- * onto it, and review may have changed it since. Failing that the default
- * itself, because a day fetched before the committee had one would otherwise
- * open with the field blank and refuse to book, with the answer sitting in the
- * settings all along. Fees have no committee, so theirs comes from the setting
- * that decides where Zettle's fees land.
- *
- * The booking route falls back the same way, in the same order, so a day booked
- * without anyone touching it gets exactly what this shows.
- */
-export function costCentreFor(report: IncomeReportRow, settings: IncomeSettingsRow): string {
-  if (report.costCenterCode) return report.costCenterCode;
-  if (report.source === "ZETTLE_FEE") return settings.zettleFeeCostCenterCode ?? "";
-  return report.defaultCostCenterCode ?? "";
+/** Lines that move money. A line that came to nothing books nothing. */
+const moving = (lines: readonly IncomeLineRow[]) => lines.filter((l) => l.total !== 0);
+
+/** What on the day still needs a person, counted, for the findings and the list. */
+export interface LineFindings {
+  /** Matched no prefix, or has no verksamhet. */
+  unplaced: number;
+  /** No cost centre at all. */
+  noCostCenter: number;
+  /** On a cost centre that has been archived, by code. */
+  inactive: string[];
+  /** On a local cost centre, which reaches Fortnox only as text, by code. */
+  local: string[];
 }
 
-/**
- * The voucher this day would get if nobody touched it: one row per revenue
- * account, the day's cost centre on each.
- *
- * The same rows lib/income/voucher.ts builds on the server, which is what makes
- * the editor a starting point rather than a second opinion. Book without
- * editing and the two agree exactly. Zero-valued accounts are dropped for the
- * same reason they are there: a row for nothing is noise in the ledger.
- */
-export function defaultRows(
-  report: IncomeReportRow,
-  settings: IncomeSettingsRow,
-): VoucherEditorRow[] {
-  const costCenterCode = costCentreFor(report, settings);
-
-  if (report.source === "ZETTLE_FEE") {
-    // A fee is a cost: the fee account is debited and the clearing account,
-    // the locked row, is credited. A day that came to a net negative fee is
-    // Zettle paying fees back (a refunded purchase takes its fee with it), so
-    // it runs the other way round and the fee account is credited.
-    const refund = report.total < 0;
-    const amount = Math.abs(report.total).toFixed(2);
-    return [
-      makeVoucherRow({
-        account: settings.zettleFeeAccount ?? "",
-        costCenterCode,
-        debit: refund ? "" : amount,
-        credit: refund ? amount : "",
-      }),
-    ];
-  }
-
-  // One row per revenue account the day's products routed to, summed. The
-  // accounts are already on the lines, put there by the prefix routing at
-  // import, so nothing here has to guess at one.
-  const byAccount = new Map<string, number>();
-  for (const line of report.lines) {
-    byAccount.set(line.account, (byAccount.get(line.account) ?? 0) + line.total);
-  }
-  return [...byAccount.entries()]
-    .filter(([, total]) => Math.abs(total) >= 0.005)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([account, total]) =>
-      makeVoucherRow({
-        account,
-        costCenterCode,
-        // A negative total is a net refund against that account, which is a
-        // debit, booked as the row the other way round rather than as a
-        // negative credit, which is what a ledger can actually represent.
-        credit: total > 0 ? total.toFixed(2) : "",
-        debit: total < 0 ? (-total).toFixed(2) : "",
-      }),
-    );
+export function lineFindings(report: IncomeReportRow, costCenters: CostCenter[]): LineFindings {
+  const lines = moving(report.lines);
+  const byCode = new Map(costCenters.map((c) => [c.code, c]));
+  const codes = (pick: (c: CostCenter) => boolean) =>
+    [
+      ...new Set(
+        lines.flatMap((l) => {
+          const cc = l.costCenterCode ? byCode.get(l.costCenterCode) : undefined;
+          return cc && pick(cc) ? [cc.code] : [];
+        }),
+      ),
+    ].sort();
+  return {
+    unplaced: lines.filter((l) => l.kind === "SALE" && (l.unmatched || !l.resultUnitId)).length,
+    noCostCenter: lines.filter((l) => !l.costCenterCode).length,
+    inactive: codes((c) => !c.active),
+    local: codes((c) => c.source !== "FORTNOX"),
+  };
 }
 
-/**
- * The voucher exactly as it will be posted: the locked clearing row, then the
- * edited ones. Both the button's enabled state and the request read this, so
- * the button can only be live for a voucher the server will accept.
- */
-export function voucherFor({
+export function dayVoucher({
   report,
-  rows,
   settings,
   accounts,
   costCenters,
-  projects,
-  label,
+  projects = [],
 }: {
   report: IncomeReportRow;
-  /** The rows as they currently stand, edited, or `defaultRows`. */
-  rows: VoucherEditorRow[];
   settings: IncomeSettingsRow;
   accounts: AccountRecord[];
   costCenters: CostCenter[];
-  projects: ProjectRecord[];
-  /** Already in the reader's language: this module does not translate. */
-  label: { source: string; clearingHint: string; clearingLocked: string };
-}): VoucherDraft {
+  /** Fortnox projects, which a hand-written row may name. */
+  projects?: ProjectRecord[];
+}): DayVoucher {
   const clearing = clearingAccountFor(report, settings);
-  // Where the money went, from the day's point of view. Takings land in the
-  // clearing account (a debit); fees leave it, as does a day that came to a
-  // net refund. Fees paid back are the one kind of fee day that lands in it.
-  const incoming = report.source === "ZETTLE_FEE" ? report.total < 0 : report.total >= 0;
-  const magnitude = Math.abs(report.total);
-
-  const locked: VoucherLockedRow = {
-    account: clearing,
-    accountName: nameOf(accounts, clearing),
-    description: label.source,
-    debit: incoming ? magnitude : 0,
-    credit: incoming ? 0 : magnitude,
-    hint: label.clearingHint,
-    label: label.clearingLocked,
+  // The code stands in for the id: it is what the screen has, and one code is
+  // one cost centre, so the rows group the same way the server's do.
+  const input = {
+    lines: report.lines.map((l) => ({
+      account: l.account,
+      costCenterId: l.costCenterCode,
+      total: sekToOre(l.total),
+    })),
+    total: sekToOre(report.total),
+    clearingAccount: clearing,
+    accountName: (n: string) => nameOf(accounts, n),
   };
 
-  const lines = [
-    {
-      account: clearing,
-      accountName: nameOf(accounts, clearing),
-      // Deliberately none. A clearing account is a bank balance, not a
-      // dimension of anybody's budget. A cost centre here would make every
-      // committee's outcome count the money twice.
-      costCenterCode: null as string | null,
-      project: null as string | null,
-      debit: sekToOre(locked.debit),
-      credit: sekToOre(locked.credit),
-    },
-    // The editor's spare rows are not lines of the voucher. See
-    // filledVoucherRows. Sent as they are, every day would be blocked on
-    // three rows with no account.
-    ...filledVoucherRows(rows).map((r) => ({
-      account: r.account.trim(),
-      accountName: nameOf(accounts, r.account),
-      description: r.description || undefined,
-      costCenterCode: r.costCenterCode || null,
-      project: r.project?.trim() || null,
-      debit: parseOre(r.debit),
-      credit: parseOre(r.credit),
-    })),
+  if (report.manual) return manualVoucher(report, clearing, accounts, costCenters, projects);
+
+  const built = buildDayVoucherLines(input);
+  const rows = built.map((r) => ({
+    account: r.account,
+    accountName: r.accountName,
+    costCenterCode: r.costCenterId,
+    debit: oreToSEK(r.debit),
+    credit: oreToSEK(r.credit),
+  }));
+
+  const blocker = blockerFor(report, input, clearing, accounts, costCenters);
+  return {
+    rows,
+    clearing,
+    totalDebit: oreToSEK(built.reduce((s, r) => s + r.debit, 0)),
+    totalCredit: oreToSEK(built.reduce((s, r) => s + r.credit, 0)),
+    blocker,
+    canBook: blocker === null,
+  };
+}
+
+/**
+ * A kontering written by hand: its rows, then the clearing row, which is the
+ * day's total and nobody's choice. Held to the same rules the booking route
+ * holds it to.
+ */
+function manualVoucher(
+  report: IncomeReportRow,
+  clearing: string,
+  accounts: AccountRecord[],
+  costCenters: CostCenter[],
+  projects: ProjectRecord[],
+): DayVoucher {
+  const manual = report.manual!;
+  const total = sekToOre(report.total);
+  const side = clearingRow(total);
+  const rows: VoucherPreviewRow[] = [
+    ...manual.rows,
+    ...(side
+      ? [
+          {
+            account: clearing,
+            accountName: nameOf(accounts, clearing),
+            costCenterCode: null,
+            debit: oreToSEK(side.debit),
+            credit: oreToSEK(side.credit),
+          },
+        ]
+      : []),
   ];
 
-  // Summed in öre and converted for display. The difference used to be taken
-  // between two kronor floats and then compared to 0, which is the comparison
-  // lib/domain/voucher.ts exists to keep out of the screens.
-  const balance = voucherBalance(lines);
-  const totalDebit = oreToSEK(balance.debit);
-  const totalCredit = oreToSEK(balance.credit);
-  // Two questions. `balanced` is whether the sides meet; `blocker` is whether
-  // it may be written at all, which is stricter. An unpicked account blocks a
-  // voucher that adds up perfectly well, and the chip should not call that a
-  // difference. The same rule the route applies, on the same rows, in the same
-  // unit, so the screen and the server cannot disagree.
-  const blocker = voucherBlocker(lines);
-  const knownAccounts = filledVoucherRows(rows).every((r) =>
-    accounts.some((a) => a.number === r.account.trim()),
-  );
-  const knownCostCenters = filledVoucherRows(rows).every(
-    (r) => !r.costCenterCode.trim() || costCenters.some((c) => c.code === r.costCenterCode.trim()),
-  );
-  // Fortnox rejects the whole voucher at export for a project it does not have.
-  const knownProjects = filledVoucherRows(rows).every(
-    (r) => !r.project?.trim() || projects.some((p) => p.number === r.project!.trim()),
-  );
-  // The locked row is nobody's choice here, but it is still an account that
-  // has to exist: a clearing account missing from the chart is a settings
-  // mistake that would otherwise be found by Fortnox, at export, on a voucher
-  // this app had already called booked.
-  const clearingKnown = accounts.some((a) => a.number === clearing);
-
+  const blocker = manualBlockerFor(report, total, clearing, accounts, costCenters, projects);
   return {
-    locked,
     rows,
-    lines,
-    totalDebit,
-    totalCredit,
-    difference: oreToSEK(balance.difference),
-    balanced: balance.balanced,
-    blocker,
     clearing,
-    clearingKnown,
-    canBook:
-      !blocker &&
-      knownAccounts &&
-      knownCostCenters &&
-      knownProjects &&
-      clearingKnown &&
-      rows.length > 0 &&
-      // Already booked here: the verifikation exists, and a second is refused
-      // by the database. A voucher merely in Fortnox is only a warning.
-      !report.duplicateOf,
+    totalDebit: oreToSEK(rows.reduce((s, r) => s + sekToOre(r.debit), 0)),
+    totalCredit: oreToSEK(rows.reduce((s, r) => s + sekToOre(r.credit), 0)),
+    blocker,
+    canBook: blocker === null,
   };
+}
+
+/** What stops a hand-written kontering being booked, as the route checks it. */
+function manualBlockerFor(
+  report: IncomeReportRow,
+  total: number,
+  clearing: string,
+  accounts: AccountRecord[],
+  costCenters: CostCenter[],
+  projects: ProjectRecord[],
+): DayBlocker | null {
+  const manual = report.manual!;
+  if (report.duplicateOf) return "alreadyBooked";
+  if (manual.stale) return "manualStale";
+  if (!clearing) return "noClearingAccount";
+  if (!accounts.some((a) => a.number === clearing)) return "unknownClearingAccount";
+  if (report.lines.some((l) => l.kind === "SALE" && !l.resultUnitId && l.total !== 0)) {
+    return "unplacedLines";
+  }
+  if (manual.rows.some((r) => !accounts.some((a) => a.number === r.account))) {
+    return "unknownAccount";
+  }
+  const byCode = new Map(costCenters.map((c) => [c.code, c]));
+  if (manual.rows.some((r) => r.costCenterCode && byCode.get(r.costCenterCode)?.active === false)) {
+    return "inactiveCostCenter";
+  }
+  if (manual.rows.some((r) => r.project && !projects.some((p) => p.number === r.project))) {
+    return "unknownProject";
+  }
+  const invalid = manualVoucherBlocker(
+    manual.rows.map((r) => ({
+      account: r.account,
+      costCenter: r.costCenterCode,
+      debit: sekToOre(r.debit),
+      credit: sekToOre(r.credit),
+    })),
+    total,
+  );
+  return invalid ? "manualInvalid" : null;
+}
+
+/** The same checks as the booking route, in the same order. */
+function blockerFor(
+  report: IncomeReportRow,
+  input: Parameters<typeof incomeVoucherBlocker>[0],
+  clearing: string,
+  accounts: AccountRecord[],
+  costCenters: CostCenter[],
+): DayBlocker | null {
+  if (report.duplicateOf) return "alreadyBooked";
+  if (!clearing) return "noClearingAccount";
+  if (!accounts.some((a) => a.number === clearing)) return "unknownClearingAccount";
+
+  const lines = moving(report.lines);
+  if (lines.some((l) => l.kind === "SALE" && !l.resultUnitId)) return "unplacedLines";
+
+  const blocker = incomeVoucherBlocker(input);
+  if (blocker === "noAccount") {
+    return lines.some((l) => l.kind === "FEE" && !l.account) ? "noFeeAccount" : "noAccount";
+  }
+  if (blocker === "noClearingAccount") return "noClearingAccount";
+  if (blocker) return blocker;
+
+  if (lines.some((l) => !accounts.some((a) => a.number === l.account))) return "unknownAccount";
+  const byCode = new Map(costCenters.map((c) => [c.code, c]));
+  if (lines.some((l) => l.costCenterCode && byCode.get(l.costCenterCode)?.active === false)) {
+    return "inactiveCostCenter";
+  }
+  return null;
 }

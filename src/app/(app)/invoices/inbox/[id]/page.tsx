@@ -57,6 +57,7 @@ export default async function DocumentAllocatePage({
       reach={attestReachOf(viewer)}
       defaults={{
         amount: scanned.amount == null ? null : scanned.amount / 100,
+        rounding: null,
         // What triage entered when sending it, failing that the PDF.
         dueDate: doc.dueDate || scanned.dueDate || "",
         description: cleanSubject(doc.subject) ?? "",

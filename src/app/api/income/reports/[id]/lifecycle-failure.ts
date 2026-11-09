@@ -16,6 +16,8 @@ export function lifecycleFailure(failure: LifecycleFailure) {
       return fail(409, "income.reopenOnlyBooked", {
         values: { status: { key: `income.status.${failure.status}` } },
       });
+    case "reopenLegacy":
+      return fail(409, "income.reopenLegacy");
     case "deleteExportedFirst":
       return fail(409, "income.deleteExportedFirst");
   }

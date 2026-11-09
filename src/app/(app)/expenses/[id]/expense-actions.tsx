@@ -74,6 +74,8 @@ export function ExpenseActions({
   onExport,
   busy,
   onTransition,
+  onApprove,
+  approveAll,
   onWithdrawAttest,
   onRecall,
   onRevokeDeadlineWaiver,
@@ -91,7 +93,11 @@ export function ExpenseActions({
   /** Bokföring: the voucher sent to Fortnox from here. */
   onExport: () => void;
   busy: boolean;
-  onTransition: (action: "submit" | "approve" | Explained, comment?: string) => Promise<boolean>;
+  onTransition: (action: "submit" | Explained, comment?: string) => Promise<boolean>;
+  /** Signs every row the viewer may attest. */
+  onApprove: () => void;
+  /** How many rows that is, when there is more than one. Null otherwise. */
+  approveAll: number | null;
   onWithdrawAttest: () => void;
   onRecall: () => void;
   onRevokeDeadlineWaiver: () => void;
@@ -166,9 +172,11 @@ export function ExpenseActions({
       },
       can.canApprove && {
         key: "approve",
-        label: t("approve"),
+        // "Attestera alla (2)" beside the rows' own buttons, so it is clear
+        // this one signs every row and not just one of them.
+        label: approveAll ? t("approveAll", { count: approveAll }) : t("approve"),
         icon: <IconCheck className="size-4" />,
-        onClick: () => onTransition("approve"),
+        onClick: onApprove,
       },
       can.canRequestChanges && {
         key: "request_changes",

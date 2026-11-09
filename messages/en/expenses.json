@@ -73,7 +73,8 @@
     "RECALLED": "Withdrew the submission",
     "DEADLINE_WAIVED": "Granted a waiver from the deadline",
     "DEADLINE_WAIVER_REVOKED": "Took the waiver back",
-    "REMINDER_SENT": "Sent a reminder"
+    "REMINDER_SENT": "Sent a reminder",
+    "CORRECTED": "Corrected the expense"
   },
   "detail": {
     "missingTitle": "Expense not found",
@@ -103,6 +104,9 @@
     "fortnoxNotSignedIn": "You are not signed in to Fortnox. Sign in from your profile and you can export.",
     "submit": "Submit for approval",
     "approve": "Approve",
+    "approveAll": "Approve all ({count})",
+    "withdrawRow": "Withdraw",
+    "yoursToAttest": "Waiting for your approval",
     "withdrawAttest": "Withdraw my approval",
     "requestChanges": "Request changes",
     "reopen": "Reopen for changes",
@@ -144,7 +148,10 @@
     "deadlineWaiverPending": "The expense is past the filing deadline. Grant a waiver if it is to be accepted anyway, otherwise it cannot be submitted.",
     "remind": "Send reminder",
     "reminderTo": "To {names}",
-    "review": "Review and post"
+    "review": "Review and post",
+    "corrected": {
+      "purchaseDate": "Receipt date: {from} to {to}"
+    }
   },
   "mutations": {
     "transition": {
@@ -161,6 +168,7 @@
     "withdraw": {
       "title": "Withdraw your approval?",
       "message": "The cost centers you approved become unapproved again and the expense goes back to awaiting approval.",
+      "messageRow": "Your approval of {costCenter} is removed. The expense awaits approval until that cost center is approved again.",
       "confirm": "Withdraw"
     },
     "export": {
@@ -214,7 +222,6 @@
     "documents": "Documents",
     "removeDocumentFailed": "Could not remove the document",
     "matchTitle": "Which card purchase was it?",
-    "reviewTitle": "Review and submit",
     "match": "Match",
     "paymentType": "Payment type",
     "payoutMissing": "Add an account under My profile",

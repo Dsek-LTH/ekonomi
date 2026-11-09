@@ -19,6 +19,8 @@ interface IncomePrefixRow {
   account: string;
   /** The account's name from the chart, or "" when it is not in it. */
   accountName: string;
+  /** Its own cost centre, or null for the verksamhet's default. */
+  costCenterId: string | null;
 }
 
 /**
@@ -144,9 +146,13 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
     // IncomeSettingsRow.connectionVoucherSeries.
     prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
     prisma.swishAmountFallback.findMany({ orderBy: { amount: "asc" } }),
-    // Which units have reports against them. One grouped query rather than a
-    // count per unit. The screen only needs "any".
-    prisma.incomeReport.groupBy({ by: ["resultUnitId"], _count: { _all: true } }),
+    // Which units have takings against them: an old per-verksamhet report, or
+    // a sold line on a per-day one. Grouped queries rather than a count per
+    // unit. The screen only needs "any".
+    Promise.all([
+      prisma.incomeReport.groupBy({ by: ["resultUnitId"], _count: { _all: true } }),
+      prisma.incomeLine.groupBy({ by: ["resultUnitId"], _count: { _all: true } }),
+    ]).then(([reports, lines]) => [...reports, ...lines]),
   ]);
 
   const accountName = new Map(accounts.map((a) => [a.number, a.name]));
@@ -172,6 +178,7 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
           incomeId: p.incomeId,
           account: p.account,
           accountName: accountName.get(p.account) ?? "",
+          costCenterId: p.costCenterId,
         })),
       },
     })),

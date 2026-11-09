@@ -123,23 +123,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // /stock/tags was renamed to /stock/events, along with the model behind it.
-  // The word had drifted three ways: "tag" in the schema and the URL, "event"
-  // in the nav key and a filename, "occasion" in the prose and the headings,
-  // and this is the one of the three that a browser had bookmarked.
-  //
-  // 307 rather than 308: these pages are behind a login, so there is no search
-  // engine to inform, and a permanent redirect is cached by the browser
-  // forever, which is a long time to live with if the path is ever wanted
-  // again. Two rules rather than one wildcard so that the list page itself is
-  // covered beyond doubt. Query strings are carried across either way, which
-  // is what a shared link to a filtered list needs.
-  async redirects() {
-    return [
-      { source: "/stock/tags", destination: "/stock/events", permanent: false },
-      { source: "/stock/tags/:path*", destination: "/stock/events/:path*", permanent: false },
-    ];
-  },
 }
 
 export default withNextIntl(nextConfig);

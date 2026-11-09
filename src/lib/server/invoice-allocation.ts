@@ -46,6 +46,8 @@ export async function planAllocation(f: {
   rows: readonly KonteringRow[];
   /** The amount it is split against, öre. */
   total: number;
+  /** Öresutjämning, öre, signed: the split adds up to the total without it. */
+  rounding: number | null;
   documentCount: number;
   viewer: InvoiceViewerCtx;
   actorId: string;
@@ -56,6 +58,7 @@ export async function planAllocation(f: {
     documentCount: f.documentCount,
     rows: rows.map((r) => ({ amount: rows.length === 1 ? null : (r.amount ?? null) })),
     invoiceAmount: f.total,
+    rounding: f.rounding,
   });
   if (blocker) return { ok: false, res: fail(422, blocker) };
 

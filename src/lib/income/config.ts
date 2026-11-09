@@ -8,7 +8,7 @@ import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
-import type { Route, RoutingTable } from "./routing";
+import type { FeeRoute, Route, RoutingTable } from "./routing";
 
 /**
  * Why a table could not be built. Each is a message key under
@@ -56,9 +56,27 @@ async function loadFallback(): Promise<Route | null> {
   if (!settings.incomeFallbackIncomeId || !settings.incomeFallbackAccount) return null;
   const income = await prisma.resultUnitIncome.findUnique({
     where: { id: settings.incomeFallbackIncomeId },
-    select: { key: true, active: true },
+    select: { key: true, active: true, defaultCostCenterId: true },
   });
-  return income?.active ? { key: income.key, account: settings.incomeFallbackAccount } : null;
+  return income?.active
+    ? {
+        key: income.key,
+        account: settings.incomeFallbackAccount,
+        costCenterId: income.defaultCostCenterId,
+      }
+    : null;
+}
+
+/**
+ * Where Zettle's fees book. Either half may be unset: the day still imports,
+ * and booking it is what refuses, naming the setting.
+ */
+export async function loadFeeRoute(): Promise<FeeRoute> {
+  const settings = await loadBookkeepingSettings();
+  return {
+    account: settings.zettleFeeAccount ?? "",
+    costCenterId: settings.zettleFeeCostCenterId,
+  };
 }
 
 /** What stands between the routing table and a fetch. Empty when nothing does. */
@@ -73,16 +91,20 @@ export async function incomeRoutingProblems(): Promise<IncomeConfigProblem[]> {
 
 /** The table a fetch routes by, or the first thing that stops one. */
 export async function loadRoutingTable(): Promise<RoutingResult> {
-  const [committees, prefixes, amountGuesses, accounts, fallback] = await Promise.all([
+  const [committees, prefixes, amountGuesses, fallback] = await Promise.all([
     prisma.resultUnitIncome.count({ where: { active: true } }),
     // Only prefixes of a verksamhet that still sells: retiring one is a
     // supported thing to do, and its prefixes then simply stop matching.
     prisma.incomeProductPrefix.findMany({
       where: { income: { active: true } },
-      select: { code: true, account: true, income: { select: { key: true } } },
+      select: {
+        code: true,
+        account: true,
+        costCenterId: true,
+        income: { select: { key: true, defaultCostCenterId: true } },
+      },
     }),
     prisma.swishAmountFallback.findMany(),
-    prisma.account.findMany({ select: { number: true, name: true } }),
     loadFallback(),
   ]);
 
@@ -93,11 +115,19 @@ export async function loadRoutingTable(): Promise<RoutingResult> {
     ok: true,
     table: {
       prefixes: new Map(
-        prefixes.map((p) => [p.code.toLowerCase(), { key: p.income.key, account: p.account }]),
+        prefixes.map((p) => [
+          p.code.toLowerCase(),
+          {
+            key: p.income.key,
+            account: p.account,
+            // The prefix's own, else its verksamhet's. Resolved here so routing
+            // never has to know there were two places to look.
+            costCenterId: p.costCenterId ?? p.income.defaultCostCenterId,
+          },
+        ]),
       ),
       fallback,
       swishAmountGuesses: new Map(amountGuesses.map((g) => [g.amount, g.message])),
-      accountNames: new Map(accounts.map((a) => [a.number, a.name])),
     },
   };
 }

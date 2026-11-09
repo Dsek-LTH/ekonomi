@@ -9,6 +9,9 @@ import { Clearable, Id, IsoDate, Ore, Trimmed } from "./common";
 /** Free text off the invoice: trimmed, capped, and clearable. */
 const Text = (max: number) => Clearable(Trimmed.max(max)).optional();
 
+/** Öresutjämning in öre, either sign, under a krona. See costTotal. */
+const Rounding = Clearable(z.number().int().min(-MAX_ROUNDING).max(MAX_ROUNDING)).optional();
+
 /** A BAS account is four digits. Whether Fortnox has it is Fortnox's to say
  *  at export, the same as for a voucher booked here. */
 const AccountNumber = Trimmed.regex(/^\d{4}$/);
@@ -53,7 +56,7 @@ export const PatchSupplierInvoice = z.object({
   dueDate: Clearable(IsoDate).optional(),
   amount: Clearable(Ore).optional(),
   /** Öresutjämning in öre, either sign, under a krona. */
-  rounding: Clearable(z.number().int().min(-MAX_ROUNDING).max(MAX_ROUNDING)).optional(),
+  rounding: Rounding,
   /** Saved as digits alone, however it was typed or pasted. Whether Fortnox
    *  will take it is asked at Spara (exportBlocker), so a wrong one stays in
    *  the field to be corrected rather than vanishing. */
@@ -96,6 +99,9 @@ export const TransitionSupplierInvoice = z.object({
   /** With the fördelning: the amount it is split against, öre, as the unit
    *  read it off the invoice. */
   amount: Ore.optional(),
+  /** With the fördelning: the öresutjämning, which the split adds up to the
+   *  amount without. Absent keeps what the invoice has. */
+  rounding: Rounding,
   /** With the fördelning: the due date, as the unit read it. */
   dueDate: IsoDate.optional(),
   /** With the fördelning: what the invoice is for, in a line. */
@@ -114,6 +120,8 @@ export const CreateSupplierInvoice = z.object({
   rows: z.array(KonteringRow).min(1).max(20),
   /** The amount it is split against, öre, as the unit read it off the invoice. */
   amount: Ore,
+  /** The öresutjämning, which the split adds up to the amount without. */
+  rounding: Rounding,
   /** The due date, as the unit read it. */
   dueDate: IsoDate,
   /** What the invoice is for, in a line. */

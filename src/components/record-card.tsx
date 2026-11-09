@@ -4,6 +4,7 @@
 // a document: an utlägg (expenses/[id]) and a levfaktura (invoices/[id]). The
 // fact strip, the ruled sections, the cost distribution and the voucher read
 // the same on both, so they are drawn by the same code.
+import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import { Amount } from "@/components/ui/amount";
 import { IconCheck } from "@/components/ui/icons";
@@ -106,12 +107,20 @@ export interface AllocationLine {
  * split that does not match the amount above is visible as two numbers that
  * disagree.
  *
- * On a phone the attest column is dropped and its content moves under the
- * cost centre's name. Three columns on 329px of card left the name about
- * 110px, which for a Swedish compound is the first syllable and an ellipsis.
- * The amount stays in its own column at every width, since it is the one
- * thing here that must never be cut.
+ * On a phone the attest column is dropped and its content gets a line of its
+ * own under the row, across both columns. Three columns on 329px of card left
+ * the name about 110px, which for a Swedish compound is the first syllable and
+ * an ellipsis. It used to sit under the name inside the first column, which
+ * was fine for a name but left no room for a row's own "Attestera" or "Dra
+ * tillbaka" beside it. The amount stays in its own column at every width,
+ * since it is the one thing here that must never be cut.
+ *
+ * The attest is cut with an ellipsis rather than wrapped, so it is drawn in a
+ * box that is `p-0.5` bigger than it looks (`-m-0.5` takes the room back).
+ * Without it the clip also cut off a button's focus ring at the box's edge.
  */
+const ATTEST_BOX = "-m-0.5 truncate p-0.5";
+
 export function AllocationTable({ caption, lines }: { caption: string; lines: AllocationLine[] }) {
   const t = useTranslations("common.allocation");
   const total = lines.reduce((sum, l) => sum + (l.amount ?? 0), 0);
@@ -131,26 +140,34 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} className="border-t border-border align-top">
-              <td className="py-2 pr-3">
-                <div className="truncate">
-                  <span className="font-medium tabular-nums">{l.costCenterCode}</span>
-                  <span className="ml-2 text-muted">{l.costCenterName}</span>
-                </div>
-                <div className="mt-0.5 truncate text-xs sm:hidden">{l.attest}</div>
-                {l.comment && <p className="mt-1 text-xs italic text-muted">{l.comment}</p>}
-              </td>
-              <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                {l.amount == null ? (
-                  <span className="text-muted">-</span>
-                ) : (
-                  <Amount value={l.amount} signed />
-                )}
-              </td>
-              <td className="hidden truncate py-2 pl-6 text-xs leading-5 sm:table-cell">
-                {l.attest}
-              </td>
-            </tr>
+            <Fragment key={l.id}>
+              <tr className="border-t border-border align-top">
+                {/* Less under the row on a phone, where the attest line below
+                    belongs to it. */}
+                <td className="pb-0.5 pr-3 pt-2 sm:pb-2">
+                  <div className="truncate">
+                    <span className="font-medium tabular-nums">{l.costCenterCode}</span>
+                    <span className="ml-2 text-muted">{l.costCenterName}</span>
+                  </div>
+                  {l.comment && <p className="mt-1 text-xs italic text-muted">{l.comment}</p>}
+                </td>
+                <td className="whitespace-nowrap pb-0.5 pt-2 text-right tabular-nums sm:pb-2">
+                  {l.amount == null ? (
+                    <span className="text-muted">-</span>
+                  ) : (
+                    <Amount value={l.amount} signed />
+                  )}
+                </td>
+                <td className="hidden py-2 pl-6 text-xs leading-5 sm:table-cell">
+                  <div className={ATTEST_BOX}>{l.attest}</div>
+                </td>
+              </tr>
+              <tr className="sm:hidden">
+                <td colSpan={2} className="pb-2 text-xs leading-5">
+                  <div className={ATTEST_BOX}>{l.attest}</div>
+                </td>
+              </tr>
+            </Fragment>
           ))}
         </tbody>
         {lines.length > 1 && (

@@ -10,115 +10,129 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import type { IncomeReportStatus, IncomeSource } from "@/lib/domain/types";
 import { isoDay } from "@/lib/domain/date";
+import { isLegacyReport } from "@/lib/income/legacy";
+import { sourcesOf, type IncomeSourceSlug } from "@/lib/income/source-slug";
+import { getPrefixes, resultUnitForCode } from "@/lib/server/result-units";
+import { voucherBasis, type ManualVoucherRow } from "@/lib/income/manual-voucher";
 
 // Money here is SEK, not öre: these cross into the browser and are rendered
 // by <Amount>, and the repo's rule is that the database keeps öre and the
 // interface shows kronor (lib/domain/money.ts).
 export interface IncomeLineRow {
   id: string;
+  kind: "SALE" | "FEE";
+  /** Whose sale. Null on a fee, and on a sale routing could not place. */
+  resultUnitId: string | null;
+  /** The verksamhet as the documents name it. */
+  unitName: string | null;
   name: string;
   variant: string | null;
   account: string;
   accountName: string;
+  costCenterId: string | null;
+  costCenterCode: string | null;
   quantity: number;
   unitPrice: number;
   discount: number;
+  /** What the line adds to the clearing account: negative for a fee. */
   total: number;
+  /** Matched no prefix and went to the reserv; nobody has placed it since. */
+  unmatched: boolean;
 }
 
 export interface IncomeReportRow {
   id: string;
   source: IncomeSource;
   date: string;
+  /** What the day moves the clearing account by: sales less fees. */
   total: number;
   status: IncomeReportStatus;
   /**
-   * Whose takings these are. Null for Zettle's own fees, which are nobody's.
-   *
-   * The id rather than only the name because moving lines is a question about
-   * units, not about what they are called: the move dialog has to leave this
-   * day's own unit out of the destinations it offers.
+   * Booked before the per-day voucher: one verksamhet's day, or a day of
+   * Zettle fees. Read-only from here on. See lib/income/legacy.ts.
    */
-  resultUnitId: string | null;
-  /** The verksamhet's income key, which its reports are grouped by. */
-  unitKey: string | null;
-  /** What the day is called on screen: the result unit's name. */
-  unitName: string | null;
+  legacy: boolean;
   /**
-   * The unit's voucher text, "Sexmästeriets verksamhet". What the verifikation
-   * is called, and therefore how the day is recognised in Fortnox
-   * (lib/income/duplicate.ts); the booking screen shows the text it will get.
+   * Every verksamhet with sales on the day, by name. On an old report, the one
+   * it was for, or none for a day of fees.
    */
-  unitDescription: string | null;
-  costCenterId: string | null;
-  costCenterCode: string | null;
-  /**
-   * The committee's default cost centre, whether or not this day carries it.
-   *
-   * The import copies the default onto the report, so normally the two agree.
-   * They don't for a day fetched before the committee had a default, or before
-   * someone set one, and those days would otherwise open with the field blank
-   * and refuse to book, with the answer sitting in the settings all along.
-   */
-  defaultCostCenterCode: string | null;
+  unitNames: string[];
+  /** Every cost centre the day books to, by code. */
+  costCenterCodes: string[];
   documentFilename: string | null;
   /** The Fortnox voucher, once exported, e.g. "IR-142". */
   voucherLabel: string | null;
   /**
-   * A voucher Fortnox already held for this source, verksamhet and day when the
-   * report was imported, "IR-142". The day is shown and bookable all the same;
+   * A voucher Fortnox already held for some of this source's money on this
+   * day when the report was imported, "IR-142". The day is shown all the same;
    * this is what colours it as a warning.
    */
   existingVoucher: string | null;
   /**
-   * The same day, already booked here, its voucher label if it has one, else
-   * an empty string. Null when there is no such report.
-   *
-   * Distinct from `existingVoucher`: this one cannot be booked at all, because
-   * the section already has the verifikation.
+   * A report booked here that already holds some of this day's money, its
+   * voucher label if it has one. Null when there is none. Distinct from
+   * `existingVoucher`: this one cannot be booked at all.
    */
   duplicateOf: { id: string; voucherLabel: string | null } | null;
   /** Which fetch brought this day in, for the provenance column. */
   batchId: string;
   importedAt: string;
   /**
-   * When the row last changed, moving lines onto or off it, above all.
+   * When the row last changed, a line corrected above all.
    *
    * It is in the row because of the document. A draft's intäktsräkning is
    * rendered on the way past and held by the browser for five minutes
    * (api/income/reports/[id]/document), which is right for stepping back to a
-   * day you just looked at and wrong the moment a move rewrites what the day
-   * contains. Hung on the document's URL, this makes the corrected report a
-   * different address, so what comes back is the corrected PDF.
+   * day you just looked at and wrong the moment a line is corrected. Hung on
+   * the document's URL, this makes the corrected report a different address.
    */
   updatedAt: string;
-  /** Who approved the day, and when. Null until it is booked. */
+  /**
+   * Who wrote the kontering: whoever konterade the day and whoever wrote it by
+   * hand. Neither may granska and bokföra it (lib/domain/review.ts).
+   */
+  bookedBy: string[];
+  /** Who konterade the day, and when. Null until it is konterad. */
   reviewedByName: string | null;
   reviewedAt: string | null;
   lines: IncomeLineRow[];
+  /**
+   * A kontering written by hand, or null when the day books the rows its lines
+   * give. See lib/income/manual-voucher.ts.
+   */
+  manual: {
+    /** Every row but the clearing account, kronor. */
+    rows: {
+      account: string;
+      accountName: string;
+      costCenterCode: string | null;
+      project: string | null;
+      description: string | null;
+      debit: number;
+      credit: number;
+    }[];
+    /** A line has changed since it was written, so it cannot be booked as it is. */
+    stale: boolean;
+    byName: string | null;
+    at: string | null;
+  } | null;
 }
 
 // What a report row is loaded with, wherever it is loaded: the review screen,
-// the booked list, a batch. One include, so the four lists cannot drift into
-// showing subtly different things about the same day.
+// the booked list. One include, so the lists cannot drift into showing subtly
+// different things about the same day.
+const UNIT_NAME = { select: { name: true, income: { select: { properName: true } } } } as const;
+
 const REPORT_INCLUDE = {
-  resultUnit: {
-    select: {
-      name: true,
-      income: {
-        select: {
-          key: true,
-          properName: true,
-          description: true,
-          defaultCostCenter: { select: { code: true } },
-        },
-      },
-    },
-  },
-  costCenter: { select: { id: true, code: true } },
+  resultUnit: UNIT_NAME,
+  costCenter: { select: { code: true } },
   reviewedBy: { select: { name: true } },
-  lines: { orderBy: { sortOrder: "asc" } },
-  verification: { select: { fortnoxSeries: true, fortnoxNumber: true } },
+  manualVoucherBy: { select: { name: true } },
+  lines: {
+    orderBy: { sortOrder: "asc" },
+    include: { resultUnit: UNIT_NAME, costCenter: { select: { code: true } } },
+  },
+  verification: { select: { fortnoxSeries: true, fortnoxNumber: true, createdById: true } },
   duplicateOf: {
     select: {
       id: true,
@@ -129,58 +143,96 @@ const REPORT_INCLUDE = {
 
 type LoadedReport = Prisma.IncomeReportGetPayload<{ include: typeof REPORT_INCLUDE }>;
 
+const unitName = (u: { name: string; income: { properName: string | null } | null } | null) =>
+  u ? (u.income?.properName ?? u.name) : null;
+
+const label = (v: { fortnoxSeries: string | null; fortnoxNumber: number | null } | null) =>
+  v?.fortnoxSeries && v.fortnoxNumber ? `${v.fortnoxSeries}-${v.fortnoxNumber}` : null;
+
+const distinct = (xs: (string | null)[]) =>
+  [...new Set(xs.filter((x): x is string => Boolean(x)))].sort((a, b) => a.localeCompare(b, "sv"));
+
 function reportRow(r: LoadedReport): IncomeReportRow {
+  const legacy = isLegacyReport(r);
   return {
     id: r.id,
     source: r.source,
     date: isoDay(r.date),
     total: oreToSEK(r.total),
     status: r.status,
-    resultUnitId: r.resultUnitId,
-    unitKey: r.resultUnit?.income?.key ?? null,
-    // The override if the documents need one, else the unit's own name.
-    unitName: r.resultUnit ? (r.resultUnit.income?.properName ?? r.resultUnit.name) : null,
-    // A unit whose income settings were removed after booking still has to say
-    // whose takings the day was, so its name stands in.
-    unitDescription: r.resultUnit?.income?.description ?? r.resultUnit?.name ?? null,
-    costCenterId: r.costCenter?.id ?? null,
-    costCenterCode: r.costCenter?.code ?? null,
-    defaultCostCenterCode: r.resultUnit?.income?.defaultCostCenter?.code ?? null,
+    legacy,
+    unitNames: legacy
+      ? distinct([unitName(r.resultUnit)])
+      : distinct(r.lines.map((l) => unitName(l.resultUnit))),
+    costCenterCodes: legacy
+      ? distinct([r.costCenter?.code ?? null])
+      : distinct(r.lines.map((l) => l.costCenter?.code ?? null)),
     documentFilename: r.documentFilename,
-    voucherLabel:
-      r.verification?.fortnoxSeries && r.verification.fortnoxNumber
-        ? `${r.verification.fortnoxSeries}-${r.verification.fortnoxNumber}`
-        : null,
+    voucherLabel: label(r.verification),
     existingVoucher: r.existingVoucher,
     duplicateOf: r.duplicateOf && {
       id: r.duplicateOf.id,
-      voucherLabel:
-        r.duplicateOf.verification?.fortnoxSeries && r.duplicateOf.verification.fortnoxNumber
-          ? `${r.duplicateOf.verification.fortnoxSeries}-${r.duplicateOf.verification.fortnoxNumber}`
-          : null,
+      voucherLabel: label(r.duplicateOf.verification),
     },
     batchId: r.batchId,
     importedAt: r.createdAt.toISOString(),
+    bookedBy: [
+      ...new Set(
+        [r.reviewedById, r.verification?.createdById, r.manualVoucherById].filter(
+          (x): x is string => Boolean(x),
+        ),
+      ),
+    ],
     reviewedByName: r.reviewedBy?.name ?? null,
     reviewedAt: r.reviewedAt?.toISOString() ?? null,
     updatedAt: r.updatedAt.toISOString(),
+    // A day booked before the per-day voucher keeps its verksamhet on the
+    // report, not the lines, and its fees in a report of their own. Read onto
+    // the lines here, so the screens draw an old day the way they draw a new
+    // one rather than as a day of unplaced sales.
     lines: r.lines.map((l) => ({
       id: l.id,
+      kind: legacy && r.source === "ZETTLE_FEE" ? ("FEE" as const) : l.kind,
+      resultUnitId: legacy ? r.resultUnitId : l.resultUnitId,
+      unitName: legacy ? unitName(r.resultUnit) : unitName(l.resultUnit),
       name: l.name,
       variant: l.variant,
       account: l.account,
       accountName: l.accountName,
+      costCenterId: l.costCenterId,
+      costCenterCode: l.costCenter?.code ?? null,
       quantity: l.quantity,
       unitPrice: oreToSEK(l.unitPrice),
       discount: oreToSEK(l.discount),
       total: oreToSEK(l.total),
+      unmatched: legacy ? false : l.unmatched,
     })),
+    manual: manualOf(r),
+  };
+}
+
+function manualOf(r: LoadedReport): IncomeReportRow["manual"] {
+  const rows = r.manualVoucher as ManualVoucherRow[] | null;
+  if (!rows) return null;
+  return {
+    rows: rows.map((m) => ({
+      account: m.account,
+      accountName: m.accountName,
+      costCenterCode: m.costCenterCode,
+      project: m.project,
+      description: m.description,
+      debit: oreToSEK(m.debit),
+      credit: oreToSEK(m.credit),
+    })),
+    stale: r.manualVoucherBasis !== voucherBasis(r.lines, r.total),
+    byName: r.manualVoucherBy?.name ?? null,
+    at: r.manualVoucherAt?.toISOString() ?? null,
   };
 }
 
 /**
- * A verksamhet a mis-routed sale can be moved to, and the accounts it books
- * revenue to. See lib/income/lines.ts and the move dialog.
+ * A verksamhet a mis-routed sale can be given to, and the accounts it books
+ * revenue to. See lib/income/lines.ts and the assign dialog.
  *
  * The accounts are the ones its product prefixes point at, which is the closest
  * thing to "where does this unit's money normally go" the routing table holds.
@@ -194,17 +246,23 @@ export interface IncomeMoveTarget {
   /** As the documents name it: the properName override, else the unit's own. */
   name: string;
   accounts: { account: string; accountName: string; prefixes: string[] }[];
+  /**
+   * The unit's own cost centres: active ones whose code its result-unit prefix
+   * matches (lib/server/result-units.ts). Offered first when a day's sales for
+   * the unit are given a cost centre.
+   */
+  costCenterCodes: string[];
 }
 
 /**
- * Every verksamhet still taking money in, as move destinations.
+ * Every verksamhet still taking money in, as places to give a sale to.
  *
  * Inactive ones are left out for the same reason the routing drops them
  * (lib/income/config.ts): a verksamhet that has stopped selling takes no new
  * takings.
  */
 export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
-  const [units, accounts] = await Promise.all([
+  const [units, accounts, prefixes, centres] = await Promise.all([
     prisma.resultUnitIncome.findMany({
       where: { active: true },
       select: {
@@ -215,8 +273,18 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
       },
     }),
     prisma.account.findMany({ select: { number: true, name: true } }),
+    getPrefixes(),
+    prisma.costCenter.findMany({
+      where: { active: true },
+      select: { code: true },
+      orderBy: { code: "asc" },
+    }),
   ]);
   const accountName = new Map(accounts.map((a) => [a.number, a.name]));
+  const ownCodes = (resultUnitId: string) =>
+    centres
+      .filter((c) => resultUnitForCode(c.code, prefixes)?.resultUnitId === resultUnitId)
+      .map((c) => c.code);
 
   return units
     .map((u) => {
@@ -239,79 +307,74 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
             accountName: accountName.get(account) ?? "",
             prefixes,
           })),
+        costCenterCodes: ownCodes(u.resultUnitId),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 }
 
-/** The working set: what the last fetch brought back, and what it could not. */
-export interface IncomeReviewQueue {
-  /** The fetch on the table. Null before anything has been fetched. */
-  batch: { id: string; source: IncomeSource; fromDate: string; toDate: string } | null;
-  /** Everything unbooked, oldest day first. */
-  reports: IncomeReportRow[];
-  /**
-   * How many of the fetch's days have been reviewed and booked already. With
-   * `reports`, what the progress through it is counted from: every day is
-   * reviewed one at a time, so how far along you are is worth saying.
-   */
-  reviewed: number;
-}
-
 /**
- * The days to go through: everything fetched and not yet booked, oldest first.
- *
- * This is a working set, not a record. A fetch clears it and puts back whatever
- * came in, so what is here is exactly the last fetch, and the only durable
- * income state is the booked and exported reports (see createSalesBatch). A
- * day nobody books is simply left here until the next fetch sweeps it away.
+ * Every day of one of Intäkter's pages, Zettle or Swish, newest first: the
+ * ones waiting to be konterade, the konterade ones waiting to be bokförda, and
+ * the bokförda. The stage is a tab on the page, cut in the browser.
  */
-export async function getIncomeReviewQueue(): Promise<IncomeReviewQueue> {
-  const [reports, batch] = await Promise.all([
-    prisma.incomeReport.findMany({
-      where: { status: "DRAFT" },
-      orderBy: [{ date: "asc" }, { source: "asc" }, { id: "asc" }],
-      include: REPORT_INCLUDE,
-    }),
-    prisma.incomeBatch.findFirst({
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: { id: true, source: true, fromDate: true, toDate: true },
-    }),
-  ]);
-
-  const reviewed = batch
-    ? await prisma.incomeReport.count({
-        where: { batchId: batch.id, status: { not: "DRAFT" } },
-      })
-    : 0;
-
-  return {
-    batch: batch && {
-      id: batch.id,
-      source: batch.source,
-      fromDate: isoDay(batch.fromDate),
-      toDate: isoDay(batch.toDate),
-    },
-    reports: reports.map(reportRow),
-    reviewed,
-  };
-}
-
-/**
- * The durable half: every day that has been booked, newest first.
- *
- * The only income state that outlives a fetch. Drafts are scratch, see
- * getIncomeReviewQueue, so this is the section's actual record of what it took
- * in, and what has been pushed to Fortnox. A day reopened for correction leaves
- * this list the moment it is unbooked: it is back in the queue, waiting to be
- * booked again like anything else there.
- */
-export async function getBookedIncome(limit = 1000): Promise<IncomeReportRow[]> {
+export async function getIncomeReports(slug: IncomeSourceSlug): Promise<IncomeReportRow[]> {
   const reports = await prisma.incomeReport.findMany({
-    where: { status: { in: ["BOOKED", "EXPORTED"] } },
+    where: { source: { in: sourcesOf(slug) } },
     orderBy: [{ date: "desc" }, { id: "desc" }],
-    take: limit,
     include: REPORT_INCLUDE,
   });
   return reports.map(reportRow);
+}
+
+/** One row of a stored verifikation, as the day's page shows it. Kronor. */
+export interface IncomeVoucherRow {
+  account: string;
+  accountName: string;
+  costCenterCode: string | null;
+  project: string | null;
+  description: string | null;
+  debit: number;
+  credit: number;
+}
+
+/** A day, and what its page needs beyond the list row. */
+export interface IncomeReportDetail {
+  report: IncomeReportRow;
+  /** The verifikation as konterad, once it is. */
+  voucher: IncomeVoucherRow[] | null;
+}
+
+export async function getIncomeReport(id: string): Promise<IncomeReportDetail | null> {
+  const r = await prisma.incomeReport.findUnique({
+    where: { id },
+    include: {
+      ...REPORT_INCLUDE,
+      verification: {
+        select: {
+          fortnoxSeries: true,
+          fortnoxNumber: true,
+          createdById: true,
+          lines: {
+            orderBy: { sortOrder: "asc" },
+            include: { costCenter: { select: { code: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!r) return null;
+  return {
+    report: reportRow(r),
+    voucher:
+      r.verification?.lines.map((l) => ({
+        account: l.account,
+        accountName: l.accountName,
+        costCenterCode: l.costCenter?.code ?? null,
+        project: l.project,
+        description: l.description,
+        debit: oreToSEK(l.debit),
+        credit: oreToSEK(l.credit),
+      })) ?? null,
+  };
 }

@@ -9,9 +9,10 @@
 // vouchers are in Fortnox all the same.
 //
 // So Fortnox itself is asked. A day's takings are identifiable over there by
-// two things and no more: the transaction date, and the description the
-// voucher carries (see incomeVoucherDescription). Same series, same date, same
-// text means the takings are already booked, whoever booked them.
+// two things and no more: the transaction date, and the payment method the
+// voucher's description starts with (see incomeVoucherCoversDay). Same series,
+// same date, same method means some of that day's money is already booked,
+// whoever booked it.
 //
 // Read with the SERVICE token rather than the bookkeeper's personal one. A
 // check that only ran for people who happen to have logged into Fortnox in the
@@ -29,9 +30,8 @@ import {
 } from "@/lib/fortnox";
 
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
-import { incomeVoucherKey, incomeVoucherSeries } from "./voucher";
-
-export { incomeVoucherKey };
+import { incomeVoucherCoversDay, incomeVoucherKey, incomeVoucherSeries } from "./voucher";
+import type { IncomeSource } from "@/lib/domain/types";
 
 /**
  * Why the check did not run. Both are ordinary states, running without
@@ -45,8 +45,17 @@ export interface FortnoxIncomeVouchers {
   /** False means nothing was compared. Treat every day as unknown, not free. */
   checked: boolean;
   skipped: IncomeCheckSkip | null;
-  /** `incomeVoucherKey` → the voucher's label, e.g. "IR-142". */
-  byKey: Map<string, string>;
+  /**
+   * The voucher already booking some of this source's money on this day, its
+   * label, e.g. "IR-142", or null. See incomeVoucherCoversDay for what counts.
+   */
+  forDay: (date: string, source: IncomeSource) => string | null;
+  /**
+   * The voucher with exactly this date and description (see incomeVoucherKey),
+   * or null. For a report booked before the per-day voucher, whose sibling
+   * verksamheter' vouchers on the same day are other money, not this.
+   */
+  exact: (date: string, description: string) => string | null;
   /** The series that was searched, for the message that names it. */
   series: string | null;
 }
@@ -54,7 +63,8 @@ export interface FortnoxIncomeVouchers {
 const empty = (skipped: IncomeCheckSkip, series: string | null): FortnoxIncomeVouchers => ({
   checked: false,
   skipped,
-  byKey: new Map(),
+  forDay: () => null,
+  exact: () => null,
   series,
 });
 
@@ -92,17 +102,26 @@ export async function fortnoxIncomeVouchers(
     const queries =
       years.length > 0 ? years.map((y) => ({ from, to, financialYearId: y.id })) : [{ from, to }];
 
-    const byKey = new Map<string, string>();
+    const byDate = new Map<string, { label: string; description: string }[]>();
     for (const query of queries) {
       for (const v of await listVouchers(token, query)) {
         // Other series are other work, utlägg go to their own, and a
         // description that matches one of ours there is a coincidence.
         if (v.series !== series) continue;
-        byKey.set(incomeVoucherKey(v.date, v.description), `${v.series}-${v.number}`);
+        const list = byDate.get(v.date) ?? [];
+        list.push({ label: `${v.series}-${v.number}`, description: v.description });
+        byDate.set(v.date, list);
       }
     }
 
-    return { checked: true, skipped: null, byKey, series };
+    const forDay = (date: string, source: IncomeSource) =>
+      byDate.get(date)?.find((v) => incomeVoucherCoversDay(source, v.description))?.label ?? null;
+    const exact = (date: string, description: string) =>
+      byDate
+        .get(date)
+        ?.find((v) => incomeVoucherKey(date, v.description) === incomeVoucherKey(date, description))
+        ?.label ?? null;
+    return { checked: true, skipped: null, forDay, exact, series };
   } catch (e) {
     console.error(`[fortnox] could not read vouchers ${from}..${to} for the duplicate check`, e);
     return empty("failed", series);

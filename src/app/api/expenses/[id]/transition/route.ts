@@ -71,7 +71,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const parsed = await parseBody(req, TransitionExpense);
   if (!parsed.ok) return parsed.res;
-  const { action, comment } = parsed.data;
+  const { action, comment, allocationIds } = parsed.data;
 
   const expense = await prisma.expense.findUnique({
     where: { id },
@@ -147,7 +147,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Allocations the acting user is authorised to attest and that aren't
     // approved yet. Authority comes from the role/result unit policy.
-    const mine = expense.allocations.filter((a) => !a.approvedById && mayAttest(a));
+    const attestable = expense.allocations.filter((a) => !a.approvedById && mayAttest(a));
+    // Narrowed to the rows the caller picked, when they picked. Every picked
+    // row has to be one they could sign now: a row somebody else signed in the
+    // meantime is said as that, anything else is not theirs to sign.
+    let mine = attestable;
+    if (allocationIds) {
+      const picked = new Set(allocationIds);
+      mine = attestable.filter((a) => picked.has(a.id));
+      if (mine.length < picked.size) {
+        const signedMeanwhile = expense.allocations.some((a) => picked.has(a.id) && a.approvedById);
+        return signedMeanwhile
+          ? fail(409, "expense.alreadyAttested")
+          : fail(403, "expense.nothingToApprove");
+      }
+    }
     if (mine.length === 0) {
       return fail(403, "expense.nothingToApprove");
     }
@@ -229,7 +243,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Rows this user signed and may still attest. Losing the authority (e.g.
     // handing over the resultatenhet) also ends the right to undo the signature.
-    const mine = expense.allocations.filter((a) => a.approvedById === actorId && mayAttest(a));
+    const signed = expense.allocations.filter((a) => a.approvedById === actorId && mayAttest(a));
+    // Narrowed to the rows picked, when some were. Every picked row has to be
+    // one of the caller's own signatures, still standing.
+    let mine = signed;
+    if (allocationIds) {
+      const picked = new Set(allocationIds);
+      mine = signed.filter((a) => picked.has(a.id));
+      if (mine.length < picked.size) return fail(403, "expense.noApprovalToWithdraw");
+    }
     if (mine.length === 0) {
       return fail(403, "expense.noApprovalToWithdraw");
     }

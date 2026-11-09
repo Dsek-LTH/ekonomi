@@ -11,7 +11,7 @@ export function routePath(url: string): string {
  *
  * The sidebar's rule for what to light up, and the top bar's for what to call
  * where you are. Longest and not first, because a route can be a prefix of
- * another without being its parent: /stock, /stock/events and /stock/log are
+ * another without being its parent: /stock, /stock/events and /stock/history are
  * three sections that share an area of the URL space, and the events list is
  * filed under /stock rather than being a page *of* Produkter. A test that stopped
  * at the first match lit both rows and said nothing about which one you were

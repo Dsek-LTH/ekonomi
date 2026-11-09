@@ -1,15 +1,10 @@
 {
   "title": "Filing score",
-  "ownSubtitle": "How promptly you file your purchases, over the last year.",
-  "outOf": "{value} of 5",
-  "starsLabel": "{value} of 5 stars",
+  "ownSubtitle": "How well you do your part: filing your purchases, and attesting what waits on you. Over the last year.",
+  "outOf": "of 100",
   "new": "New",
-  "newDescription": "No stars yet. The score shows once at least {min} purchases count.",
-  "basedOn": "Based on {count, plural, one {# purchase} other {# purchases}} over the last year.",
-  "withinWeek": "Within a week",
-  "withinWeekValue": "{count} of {of}",
-  "firstTime": "Approved first time",
-  "firstTimeValue": "{clean} of {of}",
+  "newDescription": "No score yet. It shows once any part has at least {min} things to go on.",
+  "basedOn": "{count, plural, one {Based on # part score over the last year.} other {Average of # part scores over the last year.}}",
   "waitingTitle": "Waiting to be submitted",
   "waitingOwn": "The score goes up when these are submitted.",
   "waitingOther": "Purchases not filed yet.",
@@ -17,20 +12,41 @@
   "tookDays": "{days, plural, =0 {Same day} one {# day} other {# days}}",
   "kind": {
     "draft": "Draft",
-    "cardPurchase": "Card purchase"
+    "cardPurchase": "Card purchase",
+    "expense": "Expense",
+    "invoice": "Supplier invoice"
   },
   "send": "Submit",
   "redovisa": "File",
   "slowestTitle": "Slowest first",
   "nothingCounted": "No purchase counts yet.",
   "howTitle": "How the score works",
-  "how": "Each purchase gets stars for how many days it took to submit: within 7 days 5, within 14 days 4, within 30 days 3, within 60 days 2, later 1. Purchases not submitted yet count by how long they have waited, after the first week. For a card purchase the count starts when its bank row is in the app, since it cannot be submitted before. The last six months weigh double, and a small part of the score is how many were approved without being sent back. The score has no consequences, it is only there for you.",
+  "how": "The score is the average of up to four part scores, each from 0 to 100. Submits on time: each purchase gets points for how many days it took to submit, 100 within a week and then down to 0 after four months. Purchases not submitted yet count by how long they have waited, after the first week, and for a card purchase the count starts when its bank row is in the app. Approved first time: how many of your utlägg went through without being sent back or having their date corrected at booking. Attested correctly: how many of your attests the treasury did not have to send back or correct the date on. Attests on time: 100 within three days of something reaching you and then down to 0 after two months, utlägg and supplier invoices alike, and what is waiting on you counts too. A part score only counts once it has at least three things to go on, so someone who does not attest is scored on what they submit alone. The last six months weigh double. The score has no consequences, it is only there for you.",
   "list": {
     "search": "Search member",
     "empty": "Nobody has filed anything in the last year.",
     "noMatch": "No member matches.",
     "waitingSummary": "{count, plural, one {# purchase waiting} other {# purchases waiting}}, oldest {days} days",
-    "upToDate": "Nothing waiting"
+    "upToDate": "Nothing waiting",
+    "attestSummary": "{count, plural, one {# attest waiting} other {# attests waiting}}"
   },
-  "ownTitle": "Your filing score"
+  "ownTitle": "Your filing score",
+  "scoreLabel": "{value} of 100",
+  "parts": {
+    "promptness": "Submits on time",
+    "firstTime": "Approved first time",
+    "attestAccuracy": "Attested correctly",
+    "attestSpeed": "Attests on time",
+    "promptnessDetail": "{count, plural, one {# purchase} other {# purchases}}",
+    "attestSpeedDetail": "{count, plural, one {# attest} other {# attests}}",
+    "ofDetail": "{count} of {of}",
+    "notEnough": "Counts from {min}"
+  },
+  "attestWaitingTitle": "Waiting on your attest",
+  "attestWaitingOwn": "The score goes up when these are attested.",
+  "attestWaitingOther": "What is waiting on this member's attest.",
+  "returnedTitle": "Sent back or corrected after attest",
+  "returnedLead": "Attested, but the treasury found something that needed fixing.",
+  "attestedOn": "attested {date}",
+  "slowestAttestsTitle": "Slowest attests"
 }

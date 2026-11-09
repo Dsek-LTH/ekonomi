@@ -1,13 +1,11 @@
 "use client";
 
-// "Flytta försäljning": the lines picked on one verksamhet's day, and where
-// they are going.
+// "Ge till verksamhet": the lines picked on a day, and whose sales they were.
 //
 // The case it exists for: Sexmästeriet's beer rung up without its prefix routes
-// to the fallback, Skattmästeriet, while the beer that was rung up properly
-// sits in Sexmästeriet's own report for the same day. Two reports, one day's
-// takings. This moves the strays across so there is one report to book, one
-// intäktsräkning and one verifikation.
+// to the reserv, Skattmästeriet. The lines stay on the same day's report; this
+// gives them their verksamhet and account, and the server gives them the cost
+// centre that verksamhet's routing would have (lib/income/lines.ts).
 //
 // The account is the part that cannot be worked out for anyone. A line in the
 // reserv got there by having no prefix, and the routing strips the prefix off
@@ -24,13 +22,13 @@ import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { Field } from "@/components/ui/field";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/notice";
-import type { IncomeLineRow, IncomeMoveTarget, IncomeReportRow } from "@/lib/data/income";
+import type { IncomeLineRow, IncomeMoveTarget } from "@/lib/data/income";
 import { productDisplayName } from "@/lib/income/product-groups";
 import type { AccountRecord } from "@/lib/domain/types";
 
-export interface MoveRequest {
-  toResultUnitId: string;
-  lines: { id: string; account?: string }[];
+/** The body of PATCH ../lines that gives these lines a verksamhet. */
+export interface AssignRequest {
+  lines: { id: string; resultUnitId: string; account?: string }[];
 }
 
 /**
@@ -78,7 +76,6 @@ export function accountOptions(
 }
 
 export function MoveLinesDialog({
-  report,
   lines,
   targets,
   accounts,
@@ -86,22 +83,24 @@ export function MoveLinesDialog({
   onCancel,
   onMove,
 }: {
-  /** The day the lines are leaving. */
-  report: IncomeReportRow;
   lines: IncomeLineRow[];
   targets: IncomeMoveTarget[];
   /** The chart, for the accounts the destination's own prefixes do not cover. */
   accounts: AccountRecord[];
   busy: boolean;
   onCancel: () => void;
-  onMove: (request: MoveRequest) => void;
+  onMove: (request: AssignRequest) => void;
 }) {
   const t = useTranslations("income.move");
   const tLines = useTranslations("income.lines");
 
   // Never the day's own unit: moving lines to where they already are is not a
   // move, and the route refuses it.
-  const choices = targets.filter((u) => u.resultUnitId !== report.resultUnitId);
+  // Leave out the verksamhet every picked line already has, if they share one.
+  const current = new Set(lines.map((l) => l.resultUnitId));
+  const only = current.size === 1 ? [...current][0] : null;
+  const choices = targets.filter((u) => u.resultUnitId !== only);
+  const from = [...new Set(lines.map((l) => l.unitName ?? "-"))].join(", ");
 
   const [toResultUnitId, setToResultUnitId] = useState("");
   const target = choices.find((u) => u.resultUnitId === toResultUnitId);
@@ -143,10 +142,7 @@ export function MoveLinesDialog({
 
   return (
     <Modal label={t("title")} onClose={onCancel} className="max-w-3xl">
-      <ModalHeader
-        title={t("title")}
-        subtitle={t("subtitle", { count: lines.length, from: report.unitName ?? "" })}
-      />
+      <ModalHeader title={t("title")} subtitle={t("subtitle", { count: lines.length, from })} />
 
       <ModalBody>
         <Field label={t("destination")} hint={t("destinationHint")} requirement="required">
@@ -245,9 +241,9 @@ export function MoveLinesDialog({
             onClick={() =>
               target &&
               onMove({
-                toResultUnitId: target.resultUnitId,
                 lines: lines.map((l) => ({
                   id: l.id,
+                  resultUnitId: target.resultUnitId,
                   // Only when it is actually a change. Sending the line's own
                   // account back would have the route rewrite `accountName`
                   // from the chart as it stands today, which is exactly what

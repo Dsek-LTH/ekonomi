@@ -97,7 +97,7 @@ export async function getExpenseTabCounts(
     scope === "mine"
       ? { submitterId: viewer.id }
       : scope === "unit"
-        ? await attestScopeWhere(viewer)
+        ? await attestScopeWhere(viewer, { ownUnits: true })
         : {};
   const [draft, attest, book, exp] = await Promise.all([
     returnedExpenses(viewer, during, within),

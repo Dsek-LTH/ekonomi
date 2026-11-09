@@ -9,7 +9,7 @@ export const generateMetadata = titled("members");
 
 // The profile's Medlemmar tab: every member's redovisningsbetyg, for
 // the holders of MEMBER_SCORE_VIEW. `?id=` opens one member's breakdown, which
-// is where Översikt's "Släpar efter" and the stars on an utlägg lead.
+// is where Översikt's "Släpar efter" and the score on an utlägg lead.
 export default async function ProfileMembersPage({
   searchParams,
 }: {

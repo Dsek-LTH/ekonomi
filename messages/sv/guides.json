@@ -165,15 +165,15 @@
   "income": {
     "intro": {
       "title": "Intäkter",
-      "body": "Sektionens försäljning, en rapport per dag. Rapporterna hämtas, granskas och bokförs, och skickas sedan till Fortnox."
+      "body": "Sektionens försäljning, en dag per rad. Zettle och Swish har var sin sida. Öppna en dag för att kontera den."
     },
     "actions": {
-      "title": "Hämta, granska, exportera",
-      "body": "Hämta period läser in nya dagar. Granska och bokför går igenom dem en i taget. Exportera alla skickar de bokförda till Fortnox."
+      "title": "Hämta",
+      "body": "Hämta från Zettle läser in nya dagar. På Swish laddar du upp bankens fil. Dagar som inte behöver dig kan konteras alla på en gång."
     },
     "stages": {
       "title": "Stegen",
-      "body": "Att bokföra är dagar som ingen har granskat än. Att exportera är bokförda men inte skickade. Exporterade ligger i Fortnox."
+      "body": "Att kontera är dagar ingen har konterat än. Att bokföra är konterade dagar som någon annan granskar och bokför i Fortnox. Bokförda ligger i Fortnox."
     }
   },
   "budget": {

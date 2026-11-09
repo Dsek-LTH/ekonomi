@@ -1,7 +1,5 @@
 {
-  "costCentreFailed": "Kunde inte ändra kostnadsstället.",
   "title": "Intäkter",
-  "reviewTitle": "Granska och bokför",
   "description": "Hämta försäljning från Zettle och Swish. Granska och bokför.",
   "source": {
     "SWISH": "Swish",
@@ -9,9 +7,9 @@
     "ZETTLE_FEE": "Zettleavgifter"
   },
   "status": {
-    "DRAFT": "Att bokföra",
-    "BOOKED": "Bokförd",
-    "EXPORTED": "Exporterad"
+    "DRAFT": "Att kontera",
+    "BOOKED": "Konterad",
+    "EXPORTED": "Bokförd"
   },
   "fetch": {
     "source": "Källa",
@@ -21,7 +19,9 @@
     "to": "Till",
     "submit": "Hämta",
     "chooseFile": "Välj Swish-fil",
-    "notReady": "Inställningarna är inte klara för att hämta. Se stegen på sidan."
+    "notReady": "Inställningarna är inte klara för att hämta. Se stegen på sidan.",
+    "titleZettle": "Hämta från Zettle",
+    "titleSwish": "Ladda upp Swish-fil"
   },
   "fetchDone": "Hämtning klar",
   "fetchFailed": "Hämtningen misslyckades",
@@ -56,14 +56,15 @@
     "reports": "Rapporter",
     "imported": "Hämtad",
     "date": "Datum",
-    "committee": "Verksamhet",
     "costCenter": "Kostnadsställe",
     "total": "Summa",
     "status": "Status",
     "fees": "Zettleavgifter",
     "chooseCostCenter": "Välj kostnadsställe",
     "voucher": "Verifikation",
-    "reviewedBy": "Granskad av"
+    "reviewedBy": "Granskad av",
+    "needs": "Behöver dig",
+    "units": "Verksamheter"
   },
   "lines": {
     "product": "Vara",
@@ -71,32 +72,39 @@
     "quantity": "Antal",
     "total": "Belopp",
     "accountFor": "Konto för {product}",
-    "accountFailed": "Kunde inte byta konto.",
     "unitPriceKr": "Styckpris (kr)",
     "discountKr": "Rabatt (kr)",
     "totalKr": "Belopp (kr)",
-    "changeAccount": "Byt konto",
     "unknownPrefix": "Prefix som ingen verksamhet har, {count, plural, one {# vara} other {# varor}}",
-    "movePrefix": "Flytta alla {prefix} ({count})",
-    "selectPrefix": "Markera alla varor med prefixet {prefix}"
+    "movePrefix": "Ge alla {prefix} till verksamhet ({count})",
+    "selectPrefix": "Markera alla varor med prefixet {prefix}",
+    "costCenter": "Kostnadsställe",
+    "costCenterFor": "Kostnadsställe för {product}",
+    "setCostCenter": "Sätt kostnadsställe…",
+    "noAccount": "Konto saknas",
+    "noCostCenter": "Saknas",
+    "saveFailed": "Kunde inte spara ändringen.",
+    "unmatchedSection": "Omatchade varor",
+    "unmatchedHint": "Matchade inget prefix. Ge dem rätt verksamhet.",
+    "feesSection": "Zettleavgifter",
+    "mixedCostCenters": "Blandat",
+    "sectionCostCenter": "Kostnadsställe för hela {unit} den här dagen",
+    "selectBlock": "Markera alla varor för {unit}",
+    "groupAccount": "Byt konto för alla varor på {account}",
+    "setAccount": "Byt konto…"
   },
   "move": {
-    "title": "Flytta försäljning",
+    "title": "Ge till verksamhet",
     "subtitle": "{count, plural, one {# vara} other {# varor}} från {from}",
-    "action": "Flytta…",
-    "unitField": "Verksamhet",
-    "mergeTitle": "Slå ihop med {unit}s rapport?",
-    "mergeBody": "{unit} har redan en rapport för {date}. {count, plural, one {# vara} other {# varor}} flyttas dit och de två dagarna blir en. Det går inte att dela upp dem igen.",
-    "mergeConfirm": "Flytta",
-    "dragHint": "Dra till en annan verksamhet samma dag",
+    "action": "Ge till verksamhet…",
     "picked": "{count, plural, one {# vald} other {# valda}}",
     "clear": "Avmarkera",
     "selectAll": "Markera alla varor",
     "selectLine": "Markera {product}",
-    "destination": "Till verksamhet",
-    "destinationHint": "Varorna hamnar på verksamhetens rapport för samma dag. Finns ingen skapas den.",
+    "destination": "Verksamhet",
+    "destinationHint": "Varorna stannar på samma dag och bokförs på verksamhetens kostnadsställe.",
     "destinationPlaceholder": "Välj verksamhet…",
-    "destinationRequired": "Välj vart varorna ska flyttas",
+    "destinationRequired": "Välj vems försäljning varorna är",
     "setAll": "Sätt alla till:",
     "setAllTo": "Sätt alla rader till konto {account}",
     "noAccounts": "Verksamheten har inga produktprefix. Välj konto för varje rad.",
@@ -104,38 +112,12 @@
     "accountFor": "Konto för {product}",
     "wasAccount": "Bokförs nu på {account}",
     "unknownAccountName": "okänt konto",
-    "stillOnOldAccount": "{count, plural, one {# rad ligger} other {# rader ligger}} kvar på samma konto som i reservrapporten. Stämmer det?",
-    "movingTotal": "Flyttas:",
+    "stillOnOldAccount": "{count, plural, one {# rad ligger} other {# rader ligger}} kvar på samma konto som förut. Stämmer det?",
+    "movingTotal": "Summa:",
     "cancel": "Avbryt",
-    "confirm": "Flytta {count, plural, one {# vara} other {# varor}}",
+    "confirm": "Ge {count, plural, one {# vara} other {# varor}}",
     "done": "{count, plural, one {# vara flyttad} other {# varor flyttade}}",
     "failed": "Kunde inte flytta varorna."
-  },
-  "newReport": {
-    "action": "Ny rapport",
-    "actionFor": "Ny rapport för {date}",
-    "title": "Ny rapport",
-    "subtitle": "{date} - {source}. En tom rapport att flytta försäljning till.",
-    "unit": "Verksamhet",
-    "unitHint": "Vems intäkter rapporten blir.",
-    "unitPlaceholder": "Välj verksamhet…",
-    "unitRequired": "Välj vems intäkter rapporten blir",
-    "alreadyExists": "Verksamheten har redan en rapport för den dagen, så den öppnas i stället. Två rapporter för samma dag går inte att bokföra båda två.",
-    "footerHint": "Rapporten skapas tom.",
-    "cancel": "Avbryt",
-    "confirm": "Skapa rapport",
-    "open": "Öppna rapporten",
-    "done": "Rapporten skapades.",
-    "opened": "Verksamheten hade redan en rapport för den dagen. Den är öppnad.",
-    "failed": "Kunde inte skapa rapporten.",
-    "emptyTitle": "Tom rapport",
-    "emptyBody": "Rapporten innehåller ingen försäljning än. Dra hit varor från en annan rapport samma dag, eller markera dem där och välj Flytta. Är det fel verksamhet: ta bort rapporten och skapa en ny.",
-    "delete": "Ta bort rapporten",
-    "deleteTitle": "Ta bort rapporten?",
-    "deleteBody": "{unit} {date} innehåller ingen försäljning. Rapporten tas bort.",
-    "deleteConfirm": "Ta bort",
-    "deleteDone": "Rapporten togs bort.",
-    "deleteFailed": "Kunde inte ta bort rapporten."
   },
   "undo": {
     "unexport": "Avmarkera export",
@@ -149,29 +131,33 @@
     "reopenConfirm": "Öppna",
     "delete": "Ta bort",
     "deleteTitle": "Ta bort {date}?",
-    "deleteBody": "{unit}s rapport, dess sålda varor och dess verifikation tas bort. Det går inte att ångra. En ny hämtning av samma period tar tillbaka dagen.",
+    "deleteBody": "{unit} tas bort, med sina sålda varor och sin verifikation.",
     "deleteConfirm": "Ta bort",
     "deleteDone": "Rapporten togs bort.",
-    "failed": "Åtgärden misslyckades."
+    "failed": "Åtgärden misslyckades.",
+    "reopenDone": "Konteringen är ångrad. Dagen väntar på att konteras igen."
   },
   "actions": {
     "book": "Bokför",
     "more": "Mer",
     "export": "Exportera",
-    "viewDocument": "Visa intäktsräkning",
-    "hideDocument": "Dölj intäktsräkning",
-    "bookAndNext": "Godkänn och bokför"
+    "kontera": "Kontera",
+    "review": "Granska och bokför"
   },
   "searchPlaceholder": "Sök källa, fil eller period…",
   "tab": {
-    "review": "Att bokföra",
-    "booked": "Att exportera",
-    "exported": "Exporterade",
+    "book": "Att kontera",
+    "export": "Att bokföra",
+    "done": "Bokförda",
     "all": "Alla"
   },
   "list": {
-    "reviewStart": "Granska och bokför ({count})",
-    "empty": "Inga intäkter än."
+    "empty": "Inga intäkter än.",
+    "bookedBy": "Konterad av {name}",
+    "ownBooking": "av dig",
+    "ownBookingHint": "Du har konterat dagen själv, så någon annan behöver granska och bokföra den.",
+    "manualStale": "Konteringen behöver sparas om",
+    "ready": "Klar"
   },
   "batches": {
     "title": "Hämtningar",
@@ -180,30 +166,33 @@
   "review": {
     "viewLabel": "Visning",
     "lines": "Sålda varor",
-    "noCostCenter": "Kostnadsställe saknas",
-    "edited": "Ändrad",
-    "modeReview": "Granska",
-    "modeTable": "Rapporter",
     "open": "Granska",
     "alreadyBooked": "{count} dagar i perioden är redan bokförda och kan inte bokföras igen.",
     "inFortnox": "Finns i Fortnox ({voucher})",
-    "inFortnoxWarning": "Det finns redan en verifikation i Fortnox för den här dagen och verksamheten ({voucher}). Bokför bara om det verkligen är två skilda dagsrapporter.",
+    "inFortnoxWarning": "Fortnox har redan en verifikation för en del av den här dagens pengar ({voucher}). Att bokföra hela dagen igen skulle räkna dem två gånger.",
     "alreadyBookedShort": "Redan bokförd",
-    "alreadyBookedWarning": "Den här dagen är redan bokförd här och kan inte bokföras igen. Verifikation:",
+    "alreadyBookedWarning": "En del av den här dagen är redan bokförd här och dagen kan inte bokföras igen. Verifikation:",
     "progress": "{reviewed} av {total} granskade",
-    "approvedAs": "Godkänns av {name}",
-    "approveShortcut": "Godkänn och bokför (⌘ eller Ctrl + Enter). j och k byter dag.",
     "findings": {
       "none": "Inget avvikande. Jämför de sålda varorna med intäktsräkningen och godkänn.",
-      "fallback": "Hit hamnade varor utan igenkänt prefix. Kontrollera att varje rad hör hit, och flytta de som hör till en annan verksamhet.",
-      "noCostCentre": "Kostnadsställe saknas. Välj det ovan innan du godkänner.",
-      "edited": "Verifikationen är ändrad för hand. Kontrollera raderna innan du godkänner."
-    }
+      "unplaced": "{count, plural, one {# vara} other {# varor}} matchade inget prefix och ligger i reserven. Ge dem rätt verksamhet, eller låt dem ligga kvar om de hör dit.",
+      "noCostCenter": "{count, plural, one {# rad saknar} other {# rader saknar}} kostnadsställe. Välj ett på raden innan du godkänner.",
+      "inactive": "Kostnadsstället {codes} är arkiverat i Fortnox och skulle stoppa exporten. Välj ett annat på raderna.",
+      "local": "{codes} är lokala kostnadsställen. De skickas inte till Fortnox som kostnadsställe, bara som text på raden."
+    },
+    "unplacedShort": "{count, plural, one {# omatchad} other {# omatchade}}",
+    "noCostCenterShort": "{count, plural, one {# utan kostnadsställe} other {# utan kostnadsställe}}",
+    "konteradAs": "Konteras av {name}"
   },
   "book": {
+    "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Intäkter innan du bokför.",
+    "voucherTitle": "Verifikation",
+    "voucherDerived": "En rad per konto och kostnadsställe. Ändra raderna ovan för att ändra verifikationen.",
+    "debit": "Debet",
+    "credit": "Kredit",
+    "sum": "Summa",
     "clearingHint": "Likvidkontot följer av hur dagen betalades och kan inte ändras här.",
-    "clearingLocked": "Låst rad",
-    "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Intäkter innan du bokför."
+    "clearingLocked": "Låst rad"
   },
   "exportAll": {
     "action": "Exportera alla ({count})",
@@ -216,7 +205,7 @@
     "titleFetch": "Innan du kan hämta intäkter",
     "titleBook": "Du kan hämta intäkter, men innan du kan bokföra dem",
     "steps": {
-      "service": "Anslut intäktstjänsten. Den som driftar appen behöver sätta INTAKT_URL och INTAKT_TOKEN.",
+      "service": "Anslut Zettle. Den som driftar appen behöver sätta ZETTLE_CLIENT_ID och ZETTLE_API_KEY. Swish kan hämtas utan.",
       "noCommittees": "Slå på försäljning för minst en resultatenhet, så att det finns en verksamhet att bokföra intäkterna på.",
       "noPrefixes": "Lägg till produktprefix på verksamheten. En vara vars namn börjar på prefixet bokförs mot dess konto, så c hämtar till exempel c-Cola.",
       "noFallback": "Välj reserv för okända varor: vilken verksamhet och vilket konto varor utan prefix bokförs på.",
@@ -227,9 +216,62 @@
     "askAdmin": "Stegen görs under Inställningar → Försäljning, som bara den med behörighet till inställningarna når. Be någon med den behörigheten.",
     "openSettings": "Öppna Inställningar → Försäljning",
     "goTo": {
-      "service": "Se Anslutning",
+      "service": "Se Zettle",
       "units": "Gå till Verksamheter och varor",
       "booking": "Gå till Bokföring"
     }
+  },
+  "blocker": {
+    "alreadyBooked": "Redan bokförd här.",
+    "noClearingAccount": "Inget likvidkonto är valt. Välj det under Inställningar → Försäljning.",
+    "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen.",
+    "unplacedLines": "Någon vara saknar verksamhet.",
+    "noFeeAccount": "Inget konto för Zettles avgifter är valt. Välj det under Inställningar → Försäljning.",
+    "noAccount": "Någon rad saknar konto.",
+    "unknownAccount": "Någon rad har ett konto som inte finns i kontoplanen.",
+    "noCostCenter": "Någon rad saknar kostnadsställe.",
+    "inactiveCostCenter": "Någon rad har ett arkiverat kostnadsställe.",
+    "noDistributions": "Dagen har inget att bokföra.",
+    "unbalanced": "Dagens summa stämmer inte med raderna.",
+    "manualStale": "Konteringen gjordes innan raderna ändrades. Spara den igen eller återställ.",
+    "manualInvalid": "Den handskrivna konteringen går inte att bokföra.",
+    "unknownProject": "Någon rad har ett projekt som inte finns i Fortnox."
+  },
+  "manual": {
+    "edit": "Ändra kontering",
+    "editing": "Kontera för hand. Likvidraden följer dagens summa och kan inte ändras.",
+    "by": "Konterad för hand av {name}, {date}.",
+    "reset": "Återställ",
+    "stale": "Raderna har ändrats sedan konteringen gjordes för hand. Spara den igen eller återställ den innan du bokför.",
+    "text": "Text",
+    "cancel": "Avbryt",
+    "save": "Spara kontering",
+    "saveFailed": "Kunde inte spara konteringen.",
+    "saved": "Konteringen sparades.",
+    "resetDone": "Konteringen följer raderna igen.",
+    "blocker": {
+      "noRows": "Lägg till minst en rad.",
+      "accountRequired": "Någon rad saknar konto.",
+      "amountRequired": "Någon rad saknar belopp.",
+      "negativeAmounts": "Belopp kan inte vara negativa. Byt sida i stället.",
+      "costCenterRequired": "Rader på resultatkonton (3000 till 8999) behöver ett kostnadsställe.",
+      "unbalanced": "Debet och kredit går inte jämnt ut."
+    }
+  },
+  "page": {
+    "zettle": "Zettle",
+    "swish": "Swish"
+  },
+  "bulk": {
+    "book": "Kontera {count, plural, one {# klar dag} other {# klara dagar}}",
+    "export": "Granska och bokför {count, plural, one {# dag} other {# dagar}}",
+    "bookDone": "{count} av {total} dagar konterade.",
+    "exportDone": "{count} av {total} dagar bokförda i Fortnox."
+  },
+  "day": {
+    "legacy": "Bokförd per verksamhet, före dagsverifikationen",
+    "total": "Att redovisa",
+    "text": "Verifikationstext",
+    "bookedBy": "Konterad av"
   }
 }

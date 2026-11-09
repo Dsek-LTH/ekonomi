@@ -1,13 +1,16 @@
-// Turning an income report into the rows of a verifikation.
+// Turning a day's takings into the rows of a verifikation.
 //
 // Income is the mirror image of an utlägg. An expense debits a cost account and
 // credits what paid for it; a day's takings credit each revenue account the
 // products routed to, and debit the account the money actually landed in, the
 // Zettle or Swish clearing account, depending on how it was paid.
 //
-// Zettle's own fees are the odd one out: they are a cost, so they go the other
-// way round, debiting the fee account and crediting the same clearing account
-// the takings were debited to.
+// One voucher per day and source. Every verksamhet that sold something that
+// day is on it, and each sold line carries its own cost centre, so a row of the
+// voucher is an (account, cost centre) pair summed over the lines that share
+// it. Zettle's fees are lines of the same day, on the fee account: they come
+// out of the same clearing account the takings went into, which is why Zettle
+// pays out what it does.
 //
 // Amounts are öre throughout, which is what makes "debit equals credit" an
 // integer comparison rather than a tolerance. See lib/domain/voucher.ts, whose
@@ -15,32 +18,22 @@
 // screen is held to.
 import type { VoucherLine } from "@/lib/domain/voucher";
 import type { IncomeSource } from "@/lib/domain/types";
-import type { IncomeAccountDistribution, IncomeFeeReportDto } from "./types";
 
 /**
- * What the verifikation says it is: "Swish - Café", "Zettleavgifter".
+ * What the verifikation says it is: "Zettle", "Swish".
  *
- * One function because this text has two jobs. It is the description the
- * voucher carries into Fortnox, and, together with the date, it is the only
- * thing that identifies a day's takings once they are over there: Fortnox
- * knows nothing about reports, batches or committees. The duplicate check
- * (lib/income/duplicate.ts) matches on this string, so it must be computed the
- * same way wherever it is needed.
+ * The payment method and nothing else, because the voucher is the whole day's
+ * takings for that method, every verksamhet on it. Together with the date it
+ * is how a day is recognised in Fortnox, which knows nothing about reports or
+ * batches (lib/income/duplicate.ts).
  *
- * It used to begin "IR ". Every one of these goes into the income series (see
- * incomeVoucherSeries), so the prefix repeated on every row what the series it
- * was filed under already said, and it said it in the 30-odd characters
- * Fortnox gives the description, where the verksamhet's own name is the part
- * that has to fit. Vouchers already over there still carry it; `incomeVoucherKey`
- * is where the two wordings are made to compare equal.
+ * Days booked before the per-day voucher said whose they were, "Swish - Café",
+ * and Zettle's fees had a voucher of their own, "Zettleavgifter". Those are
+ * still in Fortnox, which is why the duplicate check matches on the method a
+ * description starts with (`incomeVoucherCoversDay`) rather than on this text.
  */
-export function incomeVoucherDescription(
-  source: IncomeSource,
-  committeeDescription: string | null,
-): string {
-  if (source === "ZETTLE_FEE") return "Zettleavgifter";
-  const payment = source === "SWISH" ? "Swish" : "Zettle";
-  return `${payment} - ${committeeDescription ?? ""}`.trim();
+export function incomeVoucherDescription(source: IncomeSource): string {
+  return source === "SWISH" ? "Swish" : "Zettle";
 }
 
 /**
@@ -122,133 +115,132 @@ export function incomeVoucherKey(date: string, description: string): string {
   return `${date}|${text}`;
 }
 
-/** A line as it is stored: a VoucherLine plus what goes in the ledger beside it. */
+/**
+ * Whether a voucher already in Fortnox books the same source's takings on its
+ * date, judged by its description.
+ *
+ * By the method it starts with, not by equality, because three generations of
+ * wording are over there at once: "Zettle" for a whole day, "Zettle - Café" for
+ * one verksamhet's day before that, "Zettleavgifter" for a day's fees, and any
+ * of them with the old "IR " in front. Every one of them means some of this
+ * day's Zettle money is already booked, so booking the whole day again would
+ * count it twice. The reviewer is shown which voucher it was.
+ */
+export function incomeVoucherCoversDay(source: IncomeSource, description: string): boolean {
+  const text = incomeVoucherKey("", description).slice(1);
+  return source === "SWISH" ? /^swish\b/.test(text) : /^zettle/.test(text);
+}
+
+/** One line of a day as the voucher reads it. */
+export interface DayVoucherInputLine {
+  account: string;
+  costCenterId: string | null;
+  /** What the line adds to the clearing account, öre. Negative for a fee. */
+  total: number;
+}
+
+/** A row of the verifikation, as it is stored. */
 export interface IncomeVoucherLine extends VoucherLine {
   accountName: string;
   /** Null on the clearing row. See below. */
   costCenterId: string | null;
-  /** Fortnox project number. Only set when the bookkeeper picked one. */
-  project?: string | null;
   sortOrder: number;
 }
 
-export interface IncomeVoucherInput {
-  distributions: readonly IncomeAccountDistribution[];
-  /** The report's total in öre; must equal the distributions' sum. */
+export interface DayVoucherInput {
+  lines: readonly DayVoucherInputLine[];
+  /** The report's stored total, öre; must equal the lines' sum. */
   total: number;
   /** Where the money landed: the Zettle or Swish clearing account. */
   clearingAccount: string;
-  clearingAccountName: string;
-  /** Cost centre for the revenue rows. Null until one is chosen. */
-  costCenterId: string | null;
   accountName: (account: string) => string;
 }
 
 /**
- * Why these takings cannot be booked, or null when they can.
+ * Why these takings cannot be booked, or null when they can. Each is a message
+ * key under `errors.income`.
  *
- * `unbalanced` is the one worth explaining: the service computes the
- * distributions and the total independently, and a report where they disagree
- * is one whose voucher would be rejected by Fortnox, but only at export, long
- * after the app had said it was booked. Better to refuse it here.
+ * `noCostCenter` is the one the per-line cost centre exists for: a row that
+ * reaches Fortnox without one is takings no verksamhet's result will ever show,
+ * so a line nobody gave a cost centre stops the day rather than being booked
+ * blank. `unbalanced` means the stored total has drifted from the lines, which
+ * would be a bug, but a voucher Fortnox rejects at export is a worse place to
+ * find it.
  */
-type IncomeVoucherBlocker = "noDistributions" | "unbalanced" | "noClearingAccount" | "noCostCenter";
+export type IncomeVoucherBlocker =
+  | "noDistributions"
+  | "noClearingAccount"
+  | "noAccount"
+  | "noCostCenter"
+  | "unbalanced";
 
-export function incomeVoucherBlocker(input: IncomeVoucherInput): IncomeVoucherBlocker | null {
-  const usable = input.distributions.filter((d) => d.total !== 0);
+export function incomeVoucherBlocker(input: DayVoucherInput): IncomeVoucherBlocker | null {
+  const usable = input.lines.filter((l) => l.total !== 0);
   if (usable.length === 0) return "noDistributions";
   if (!input.clearingAccount.trim()) return "noClearingAccount";
-  if (!input.costCenterId) return "noCostCenter";
-
-  const distributed = usable.reduce((sum, d) => sum + d.total, 0);
-  if (distributed !== input.total || input.total === 0) return "unbalanced";
-
+  // A fee line with no fee account chosen, or a line someone cleared.
+  if (usable.some((l) => !l.account.trim())) return "noAccount";
+  if (usable.some((l) => !l.costCenterId)) return "noCostCenter";
+  const sum = input.lines.reduce((s, l) => s + l.total, 0);
+  if (sum !== input.total) return "unbalanced";
   return null;
 }
 
 /**
- * The voucher rows for a day's takings.
+ * The voucher rows for a day: one per (account, cost centre), then the
+ * clearing account.
  *
- * Zero-valued distributions are dropped rather than written: a row for nothing
- * is noise in the ledger, and Fortnox rejects some of them outright. They can
- * legitimately occur: a product sold and then fully refunded on the same day
- * nets to zero against its account.
+ * A positive sum is money in, credited; a negative one (a fee, or a net refund
+ * against an account) is debited, booked as the row the other way round rather
+ * than as a negative amount, which is what a ledger can actually represent.
+ * Pairs that come to nothing are dropped: a product sold and refunded the same
+ * day is noise in the ledger, and Fortnox rejects some zero rows outright.
+ *
+ * The clearing row takes what is left, which is what the day pays out. It has
+ * no cost centre, deliberately: a clearing account is a bank balance, not a
+ * dimension of anybody's budget. A day that nets to exactly nothing has no
+ * clearing row at all, since its other rows already balance.
  */
-export function buildIncomeVoucherLines(input: IncomeVoucherInput): IncomeVoucherLine[] {
-  const revenue = input.distributions
-    .filter((d) => d.total !== 0)
-    // Stable order, so two vouchers for the same shape of day read the same.
-    .toSorted((a, b) => a.account.localeCompare(b.account))
-    .map((d, i) => ({
-      account: d.account,
-      accountName: input.accountName(d.account),
-      // A negative distribution is a net refund against that account, which is
-      // a debit, booked as the row the other way round rather than as a
-      // negative credit, which is what a ledger can actually represent.
-      debit: d.total < 0 ? -d.total : 0,
-      credit: d.total > 0 ? d.total : 0,
-      costCenterId: input.costCenterId,
+export function buildDayVoucherLines(input: DayVoucherInput): IncomeVoucherLine[] {
+  const byRow = new Map<string, { account: string; costCenterId: string | null; total: number }>();
+  for (const line of input.lines) {
+    const key = `${line.account}|${line.costCenterId ?? ""}`;
+    const row = byRow.get(key);
+    if (row) row.total += line.total;
+    else byRow.set(key, { account: line.account, costCenterId: line.costCenterId, total: line.total });
+  }
+
+  // Stable order, so two vouchers for the same shape of day read the same:
+  // revenue before costs, then by account, then by cost centre.
+  const rows = [...byRow.values()]
+    .filter((r) => r.total !== 0)
+    .toSorted(
+      (a, b) =>
+        Number(b.total > 0) - Number(a.total > 0) ||
+        a.account.localeCompare(b.account) ||
+        (a.costCenterId ?? "").localeCompare(b.costCenterId ?? ""),
+    )
+    .map((r, i) => ({
+      account: r.account,
+      accountName: input.accountName(r.account),
+      debit: r.total < 0 ? -r.total : 0,
+      credit: r.total > 0 ? r.total : 0,
+      costCenterId: r.costCenterId,
       sortOrder: i,
     }));
 
-  const total = revenue.reduce((sum, r) => sum + r.credit - r.debit, 0);
+  const net = rows.reduce((sum, r) => sum + r.credit - r.debit, 0);
+  if (net === 0) return rows;
 
   return [
-    ...revenue,
+    ...rows,
     {
       account: input.clearingAccount,
-      accountName: input.clearingAccountName,
-      // The counter-row: what the revenue rows credit, this debits.
-      debit: total > 0 ? total : 0,
-      credit: total < 0 ? -total : 0,
-      // Deliberately none. A clearing account is a bank balance, not a
-      // dimension of anybody's budget. Putting a cost centre on it would make
-      // every committee's outcome count the money twice.
+      accountName: input.accountName(input.clearingAccount),
+      debit: net > 0 ? net : 0,
+      credit: net < 0 ? -net : 0,
       costCenterId: null,
-      sortOrder: revenue.length,
-    },
-  ];
-}
-
-interface FeeVoucherInput {
-  report: IncomeFeeReportDto;
-  /** Debited: Zettle's fees are a cost to the section.  */
-  feeAccount: string;
-  feeAccountName: string;
-  /** Credited: the money never arrived, so the clearing account is reduced. */
-  clearingAccount: string;
-  clearingAccountName: string;
-  costCenterId: string | null;
-}
-
-/**
- * The two rows a day of Zettle fees becomes.
- *
- * Fees arrive from Zettle as negative amounts and the service stores them as a
- * positive cost. A day can still come to a negative total: when a purchase is
- * refunded, Zettle pays its fee back. Those rows are booked the other way
- * round, crediting the fee account, rather than as a negative debit.
- */
-export function buildFeeVoucherLines(input: FeeVoucherInput): IncomeVoucherLine[] {
-  const total = input.report.total;
-  const cost = total > 0 ? total : 0;
-  const refund = total < 0 ? -total : 0;
-  return [
-    {
-      account: input.feeAccount,
-      accountName: input.feeAccountName,
-      debit: cost,
-      credit: refund,
-      costCenterId: input.costCenterId,
-      sortOrder: 0,
-    },
-    {
-      account: input.clearingAccount,
-      accountName: input.clearingAccountName,
-      debit: refund,
-      credit: cost,
-      costCenterId: null,
-      sortOrder: 1,
+      sortOrder: rows.length,
     },
   ];
 }

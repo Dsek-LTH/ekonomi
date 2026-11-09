@@ -82,6 +82,12 @@ enum ExpenseEventType {
   /// on. `comment` is the message they wrote, if any, and `diff` is
   /// `{ recipients: string[] }`, the names it went to as they were then.
   REMINDER_SENT
+  /// A bokförare corrected the utlägg's date at the kontering, rather than
+  /// sending it back. `diff` is `{ field: "purchaseDate", from, to }` and
+  /// `comment` is why. It counts against the submitter and the attesters
+  /// exactly as a send-back would (see lib/domain/correction.ts). Nobody is
+  /// mailed.
+  CORRECTED
 }
 
 model Expense {

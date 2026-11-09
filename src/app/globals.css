@@ -136,9 +136,10 @@
   --color-accent-soft: #e2e2e6;
 
   /* Links are the section's pink, so a thing that goes somewhere stands out
-       from the ink around it. The button pink is too pale for text on white
-       (2.6:1), so this is the chart's deeper pink, 5.2:1 on a card. */
-  --color-link: #d02253;
+       from the ink around it. It is the button pink itself, chosen over the
+       deeper #d02253 (5.2:1) which read as red. It measures only 2.6:1 on
+       white, so links lean on their underline as well as their colour. */
+  --color-link: #f280a1;
 
   /* ── Tints ───────────────────────────────────────────────────
        Every soft tint below is one step deeper than it was, 1.13 to 1.27:1

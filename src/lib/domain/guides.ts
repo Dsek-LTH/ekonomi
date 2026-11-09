@@ -141,7 +141,7 @@ export const GUIDES: Guide[] = [
   },
   {
     id: "income",
-    page: "/income",
+    page: "/income/zettle",
     steps: [
       { key: "intro" },
       { key: "actions", target: "list-action" },

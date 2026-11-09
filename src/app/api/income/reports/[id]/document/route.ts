@@ -18,8 +18,10 @@ function documentFailure(failure: DocumentFailure) {
   switch (failure.reason) {
     case "reportNotFound":
       return fail(404, "income.reportNotFound");
-    case "serviceUnavailable":
-      return fail(503, "income.serviceUnavailable");
+    case "legacyReport":
+      // Booked before the per-day voucher with its document stored then, so
+      // reaching here means the stored copy is gone, not that it needs drawing.
+      return fail(404, "income.documentMissing");
     case "renderFailed":
       return fail(502, "income.renderFailed", { values: { detail: failure.detail } });
     case "storeFailed":

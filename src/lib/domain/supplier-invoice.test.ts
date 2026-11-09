@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attestBlocker,
-  bookedShares,
+  costTotal,
   daysUntilDue,
   documentCapabilities,
   exportBlocker,
@@ -63,6 +63,15 @@ describe("attestBlocker", () => {
     expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000 })).toBeNull();
   });
 
+  it("takes the öresutjämning off what a split must add up to", () => {
+    // Lines of 899,56 to pay as 900,00.
+    const rows = [{ amount: 50000 }, { amount: 39956 }];
+    expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000 })).toBe(
+      "supplierInvoice.allocationSumMismatch",
+    );
+    expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000, rounding: 44 })).toBeNull();
+  });
+
   it("lets a split through while the total is unknown, for the export to check", () => {
     expect(
       attestBlocker({
@@ -93,6 +102,22 @@ describe("exportBlocker", () => {
 
   it("takes an OCR grouped the way it is printed", () => {
     expect(exportBlocker({ ...ready, ocr: "1234 5678-97" })).toBeNull();
+  });
+
+  it("checks a split against the amount less the rounding", () => {
+    const split = {
+      ...ready,
+      rounding: 44,
+      shares: [100000, 24956],
+      lines: [
+        { account: "5615", debit: 100000, credit: 0 },
+        { account: "5615", debit: 24956, credit: 0 },
+      ],
+    };
+    expect(exportBlocker(split)).toBeNull();
+    expect(exportBlocker({ ...split, shares: [100000, 25000] })).toBe(
+      "supplierInvoice.allocationSumMismatch",
+    );
   });
 
   it("counts the rounding and any credit line into what is booked", () => {
@@ -277,22 +302,15 @@ describe("daysUntilDue", () => {
   });
 });
 
-describe("bookedShares", () => {
-  it("leaves the shares as they are without a rounding", () => {
-    expect(bookedShares([100_00, 50_00], 0)).toEqual([100_00, 50_00]);
+describe("costTotal", () => {
+  it("is the amount to pay without a rounding", () => {
+    expect(costTotal(1234_00, null)).toBe(1234_00);
   });
 
-  it("takes the rounding on the largest share, so cost and rounding make the amount to pay", () => {
-    // Lines of 1 234,56 rounded to 1 234,00 to pay: -0,56 rounding, the cost
-    // booked is 0,56 more than attested.
-    const shares = [1000_00, 234_00];
-    const booked = bookedShares(shares, -56);
-    expect(booked).toEqual([1000_56, 234_00]);
-    expect(booked.reduce((a, b) => a + b, 0) + -56).toBe(1234_00);
-  });
-
-  it("picks the first of equal shares", () => {
-    expect(bookedShares([50_00, 50_00], 10)).toEqual([49_90, 50_00]);
+  it("is what the lines came to, so cost and rounding make the amount to pay", () => {
+    // Lines of 1 233,56 rounded up to 1 234,00 to pay: +0,44 rounding.
+    expect(costTotal(1234_00, 44)).toBe(1233_56);
+    expect(costTotal(1234_00, -56)).toBe(1234_56);
   });
 });
 

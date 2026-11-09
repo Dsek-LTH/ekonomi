@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { soldSections, unplacedPrefix, type SectionLine } from "./sold-lines";
+import { daySections, soldSections, unplacedPrefix, type DayLine, type SectionLine } from "./sold-lines";
 
 const line = (over: Partial<SectionLine> = {}): SectionLine => ({
   name: "Cola",
@@ -91,5 +91,38 @@ describe("unplacedPrefix", () => {
       prefix: "s0",
       rest: "Briska Hallon",
     });
+  });
+});
+
+describe("daySections", () => {
+  const sale = (over: Partial<DayLine> = {}): DayLine => ({
+    ...line(),
+    kind: "SALE",
+    resultUnitId: "cafe",
+    unitName: "Caféutskottet",
+    unmatched: false,
+    ...over,
+  });
+
+  it("puts unmatched sales first, then each verksamhet by name, then the fees", () => {
+    const got = daySections([
+      sale({ resultUnitId: "sex", unitName: "Sexmästeriet", total: 40 }),
+      sale({ kind: "FEE", resultUnitId: null, unitName: null, account: "6570", total: -2 }),
+      sale({ name: "s9 - Okänd", resultUnitId: "skatt", unitName: "Skattmästeriet", unmatched: true }),
+      sale({ total: 13 }),
+      sale({ name: "Lost", resultUnitId: null, unitName: null, unmatched: true }),
+    ]);
+    expect(got.map((s) => [s.kind, s.title, s.total])).toEqual([
+      ["unmatched", null, 26],
+      ["unit", "Caféutskottet", 13],
+      ["unit", "Sexmästeriet", 40],
+      ["fees", null, -2],
+    ]);
+    // Each block carries its own lines, for setting a cost centre on all of
+    // them at once from the heading.
+    expect(got[2].lines.map((l) => l.total)).toEqual([40]);
+    expect(got[0].lines).toHaveLength(2);
+    // Unmatched lines are pulled under the prefix they were rung up with.
+    expect(got[0].accounts[0].rows[0]).toMatchObject({ kind: "prefix", prefix: "s9" });
   });
 });

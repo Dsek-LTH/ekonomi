@@ -65,11 +65,10 @@ const NEAR_DAYS = 3;
  * amount", it is the same amount going the other way, and saying the former
  * about it sends somebody off to check a figure that was never wrong.
  *
- * Ordered by what is asked first when the row is looked at: does it even point
- * the right way, is it the right size, and only then is it still free. A row
- * whose amount is wrong is reported as such whether or not somebody else has
- * claimed it, because saying "already claimed" of a row that would not have
- * fitted anyway is an answer that sends the reader after the wrong thing.
+ * A row another utlägg already claims says only that. It is settled, and how
+ * far its amount is from this claim is beside the point: a list of matched
+ * rows each showing a difference read as if none of them were matched. For a
+ * free row, the direction is asked before the size.
  */
 type MatchBlock =
   /** Money out where money in is needed, or the reverse. */
@@ -156,12 +155,12 @@ export function matchCandidates<T extends MatchableTransaction>(
       const wrongWay = incoming ? txn.amount <= 0 : txn.amount >= 0;
       const taken = Boolean(txn.matchedExpenseId) && txn.id !== keepTransactionId;
       const fits = cancelsOut(txn.amount, grossAmount);
-      const blocked: MatchBlock | null = wrongWay
-        ? "direction"
-        : !fits
-          ? "amount"
-          : taken
-            ? "taken"
+      const blocked: MatchBlock | null = taken
+        ? "taken"
+        : wrongWay
+          ? "direction"
+          : !fits
+            ? "amount"
             : null;
       const on = day(txn.transactionDate);
       const daysOff =

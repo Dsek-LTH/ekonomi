@@ -41,7 +41,8 @@
     "bankgiro": "Bankgiro",
     "plusgiro": "Plusgiro",
     "description": "Vad gäller fakturan?",
-    "yourReference": "Er referens"
+    "yourReference": "Er referens",
+    "rounding": "Öresutjämning"
   },
   "detail": {
     "save": "Spara",
@@ -146,7 +147,10 @@
   },
   "inkorg": {
     "title": "Inkorg",
-    "upload": "Lägg till dokument",
+    "dropLead": "Dra hit fakturor",
+    "pickLead": "Lägg till fakturor",
+    "pick": "Välj filer",
+    "addSeparate": "Lägg till som nytt dokument i inkorgen",
     "mailIn": "Fakturor kan också mejlas till {address} från en dsek.se-adress.",
     "uploaded": "{name} ligger i inkorgen",
     "emptyTitle": "Inkorgen är tom",
@@ -207,7 +211,7 @@
     "payableHint": "Leverantörsskulden tas med hela fakturans belopp, så den raden ändras inte här.",
     "ourRef": "Vår referens",
     "rounding": "Öresutjämning",
-    "roundingHint": "Öresutjämningen bokas på sitt eget konto, och den största raden tar skillnaden.",
+    "roundingHint": "Öresutjämningen bokas på sitt eget konto. Kostnadsraderna är fakturans rader som de står.",
     "roundingInvalid": "Öresutjämningen får vara högst 0,99 kr åt något håll.",
     "save": "Spara kontering",
     "giroAtSend": "Du får bekräfta numret igen när fakturan skickas till Fortnox."
@@ -242,6 +246,7 @@
   "allocate": {
     "fromScan": "Läst från fakturan. Kontrollera att det stämmer.",
     "descriptionHint": "Det fakturan heter i listor och för andra enheter som ska attestera.",
-    "descriptionPlaceholder": "Till exempel hyra av släp till nollningen"
+    "descriptionPlaceholder": "Till exempel hyra av släp till nollningen",
+    "roundingHint": "Om fakturan rundar av. Raderna ska bli beloppet minus öresutjämningen."
   }
 }

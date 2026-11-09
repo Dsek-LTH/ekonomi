@@ -27,7 +27,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { parseOre, parseSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import type { KonteringRow } from "@/lib/api/schemas/supplier-invoice";
-import { attestBlocker } from "@/lib/domain/supplier-invoice";
+import { attestBlocker, costTotal, isValidRounding } from "@/lib/domain/supplier-invoice";
 import { cn } from "@/lib/ui/utils";
 import type { CostCenter } from "@/lib/domain/types";
 import type { AttestReach } from "@/lib/data/supplier-invoices";
@@ -132,9 +132,11 @@ export function InvoiceAllocateClient({
   );
 }
 
-/** What the form opens on: the amount in kronor, the due date and the line. */
+/** What the form opens on: the amount and öresutjämning in kronor, the due
+ *  date and the line. */
 export interface AllocateDefaults {
   amount: number | null;
+  rounding: number | null;
   dueDate: string;
   description: string;
 }
@@ -143,6 +145,7 @@ export interface AllocateDefaults {
 export interface AllocateSubmission {
   rows: KonteringRow[];
   amount: number; // öre
+  rounding: number | null; // öre, signed
   dueDate: string;
   description: string | null;
 }
@@ -207,6 +210,17 @@ export function AllocateForm({
   const total = totalInput.trim() ? parseSEK(totalInput) : null;
   const totalOre = total == null || !Number.isFinite(total) || total <= 0 ? null : sekToOre(total);
 
+  // Öresutjämning, either sign. A plain text field rather than an amount
+  // field, since it needs the minus a phone's number pad does not have. The
+  // split adds up to the amount without it: a unit splitting an invoice
+  // copies its lines, and the öre rounded away belong to none of them.
+  const [roundingInput, setRoundingInput] = useState(
+    defaults.rounding ? sekToInput(defaults.rounding) : "",
+  );
+  const roundingOre = roundingInput.trim() ? parseOre(roundingInput) : 0;
+  const roundingOk = isValidRounding(roundingOre);
+  const costOre = totalOre == null ? null : costTotal(totalOre, roundingOk ? roundingOre : 0);
+
   const [rows, setRowsState] = useState<AllocationRow[]>(initialRows);
   // Stable, because the editor keeps a lone row's amount equal to the total
   // in an effect that depends on it.
@@ -235,7 +249,9 @@ export function AllocateForm({
   const blocker =
     totalOre == null
       ? "supplierInvoice.noAmount"
-      : !dueDate
+      : !roundingOk
+        ? "supplierInvoice.badRounding"
+        : !dueDate
         ? "supplierInvoice.noDueDate"
         : payload.length !== rows.length
           ? "supplierInvoice.noAllocations"
@@ -243,6 +259,7 @@ export function AllocateForm({
               documentCount,
               rows: payload.map((p) => ({ amount: p.amount })),
               invoiceAmount: totalOre,
+              rounding: roundingOre,
             });
 
   // Who will sign what, once sent: the reader now, the rest asked. Only worth
@@ -270,7 +287,7 @@ export function AllocateForm({
 
       <Card>
         <section className="space-y-4 px-inset py-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_9rem_1fr]">
             <Field
               label={tField("amount")}
               hint={fromScan.amount ? t("fromScan") : undefined}
@@ -281,6 +298,16 @@ export function AllocateForm({
                 value={totalInput}
                 onChange={setTotalInput}
                 inputClassName="text-right"
+              />
+            </Field>
+            <Field label={tField("rounding")} hint={t("roundingHint")}>
+              <Input
+                value={roundingInput}
+                inputMode="text"
+                placeholder="0,00"
+                aria-invalid={!roundingOk || undefined}
+                onChange={(e) => setRoundingInput(e.target.value)}
+                className="text-right tabular-nums"
               />
             </Field>
             <Field
@@ -313,7 +340,7 @@ export function AllocateForm({
           <FieldGroup label={tAttest("distribution")}>
             <AllocationEditor
               costCenters={options}
-              grossAmount={totalOre == null ? 0 : totalOre / 100}
+              grossAmount={costOre == null ? 0 : costOre / 100}
               value={rows}
               onChange={setRows}
             />
@@ -352,6 +379,7 @@ export function AllocateForm({
                 onSubmit({
                   rows: payload,
                   amount: totalOre!,
+                  rounding: roundingOre || null,
                   dueDate,
                   description: description.trim() || null,
                 })

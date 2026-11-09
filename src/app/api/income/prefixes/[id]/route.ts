@@ -15,11 +15,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const parsed = await parseBody(req, UpdateIncomePrefix);
   if (!parsed.ok) return parsed.res;
-  const { incomeId, account } = parsed.data;
+  const { incomeId, account, costCenterId } = parsed.data;
 
   if (incomeId) {
     const income = await prisma.resultUnitIncome.findUnique({ where: { id: incomeId } });
     if (!income) return fail(422, "income.committeeNotFound");
+  }
+
+  if (costCenterId) {
+    const cc = await prisma.costCenter.findUnique({ where: { id: costCenterId } });
+    if (!cc) return fail(422, "income.unknownCostCenter");
   }
 
   const updated = await orNotFound(
@@ -29,6 +34,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         data: {
           ...(incomeId !== undefined && { incomeId }),
           ...(account !== undefined && { account }),
+          ...(costCenterId !== undefined && { costCenterId }),
         },
         select: { id: true },
       }),

@@ -6,6 +6,7 @@
   "exportDone": "{id}: bokförd i Fortnox ({label})",
   "voucherLabel": "Verifikat {label}",
   "bookingNowTitle": "Öppet för kontering av {names}",
+  "reviewingNowTitle": "Granskas av {names}",
   "someone": "Någon",
   "exportingNow": "{name} bokför just nu",
   "exportUncertain": "Bokföringen som {name} startade gav inget tydligt svar från Fortnox. Den behöver kontrolleras i Fortnox innan utlägget kan bokföras igen.",
@@ -41,6 +42,9 @@
       "inactiveAccount": "Ett konto på verifikationen är inaktivt i Fortnox.",
       "inactiveCostCenter": "Ett kostnadsställe på verifikationen är inaktivt.",
       "inactiveProject": "Ett projekt på verifikationen är avslutat i Fortnox."
-    }
+    },
+    "othersReviewing": "{names} granskar också utlägget just nu.",
+    "confirmTitle": "Någon annan granskar samma utlägg",
+    "confirmMessage": "{names} har också utlägget öppet för granskning. Vill du bokföra det ändå?"
   }
 }

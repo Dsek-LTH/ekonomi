@@ -78,7 +78,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const parsed = await parseBody(req, TransitionSupplierInvoice);
   if (!parsed.ok) return parsed.res;
-  const { action, comment, resultUnitId, rows, amount, dueDate, description } = parsed.data;
+  const { action, comment, resultUnitId, rows, amount, rounding, dueDate, description } =
+    parsed.data;
 
   const access = await loadInvoiceFor(actor, id);
   if (!access.ok) return access.res;
@@ -167,11 +168,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       // says, and the treasury checks both again at the kontering.
       const total = amount ?? invoice.amount;
       if (total == null) return fail(422, "supplierInvoice.noAmount");
+      const roundOff = rounding !== undefined ? rounding || null : invoice.rounding;
       const due = dueDate ?? (isoDate(invoice.dueDate) || null);
       if (!due) return fail(422, "supplierInvoice.noDueDate");
       const planning = await planAllocation({
         rows,
         total,
+        rounding: roundOff,
         documentCount: invoice._count.documents,
         viewer,
         actorId: actor.id,
@@ -187,6 +190,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const reading = await readInvoiceScan(invoice.id);
       const typed = {
         amount: total,
+        rounding: roundOff,
         dueDate: isoToDate(due),
         ...(description !== undefined && { description }),
       };

@@ -9,20 +9,17 @@
     "expense": "Utlägg",
     "editExpense": "Redigera utlägg",
     "bookExpense": "Bokför utlägg",
-    "cardPurchases": "Kortköp",
     "budget": "Budget",
     "budgetSheet": "Budget",
     "budgetCompare": "Jämför budgetar",
     "ledger": "Utfall & rapporter",
     "bank": "Bankhändelser",
     "income": "Intäkter",
-    "incomeReview": "Granska intäkter",
     "invoices": "Leverantörsfakturor",
     "invoiceInbox": "Inkorg",
     "invoiceDocument": "Inkorg",
     "invoice": "Leverantörsfaktura",
     "allocateInvoice": "Fördela faktura",
-    "attestInvoice": "Attestera faktura",
     "bookInvoice": "Bokför faktura",
     "closing": "Bokslut",
     "closingAccounts": "Bokslut - Konton",
@@ -43,8 +40,6 @@
     "stockEvents": "Tillfällen",
     "stockEvent": "Tillfälle",
     "stockHistory": "Lagerhistorik",
-    "stockLog": "Lagerlogg",
-    "stockStats": "Lagerstatistik",
     "stocktake": "Inventering",
     "faq": "Frågor & svar",
     "profile": "Min profil",
@@ -59,6 +54,7 @@
     "resultUnits": "Resultatenheter",
     "roles": "Roller & behörigheter",
     "stockSettings": "Lagerinställningar",
-    "users": "Användare"
+    "users": "Användare",
+    "incomeDay": "Intäktsdag"
   }
 }

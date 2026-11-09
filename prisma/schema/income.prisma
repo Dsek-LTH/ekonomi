@@ -47,8 +47,9 @@ model ResultUnitIncome {
   // date it is how a day is recognised in Fortnox (lib/income/duplicate.ts).
   description String
 
-  // Pre-filled on every report this unit produces. Still editable per report
-  // before booking, which is the point of the review step.
+  // The cost centre this unit's sales book to, unless the prefix they were
+  // rung up with names its own (IncomeProductPrefix.costCenter). Copied onto
+  // each sold line at import, and editable per line in review.
   defaultCostCenter   CostCenter? @relation("IncomeDefaultCostCenter", fields: [defaultCostCenterId], references: [id], onDelete: SetNull)
   defaultCostCenterId String?
 
@@ -85,6 +86,12 @@ model IncomeProductPrefix {
   // appear, and validated against Account rather than related to it, because a prefix
   // may name an account Fortnox has since retired.
   account String
+
+  // Where sales with this prefix book, when it is not the verksamhet's
+  // default: Sexmästeriet's pub prefix to its pub cost centre, its sittning
+  // prefix to the sittning one. Null means the verksamhet's default.
+  costCenter   CostCenter? @relation("IncomePrefixCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -158,7 +165,14 @@ model IncomeBatch {
   @@index([source, createdAt, id])
 }
 
-// One committee's takings for one day: one PDF, one voucher.
+// One source's takings for one day: one PDF, one voucher. Every verksamhet
+// that sold something that day is in it, each sold line carrying its own
+// verksamhet and cost centre (IncomeLine), and a Zettle day carries that day's
+// fees as lines too.
+//
+// Reports booked before 2026-11 are one verksamhet's day (resultUnitId set),
+// or a day of Zettle fees on their own (ZETTLE_FEE). They stay as they were
+// booked and are read, never re-booked. See lib/income/legacy.ts.
 model IncomeReport {
   id      String      @id @default(cuid())
   batch   IncomeBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -171,7 +185,8 @@ model IncomeReport {
   // check below to be an index lookup.
   source IncomeSource
 
-  // Null for ZETTLE_FEE, which is not attributable to a verksamhet.
+  // Only on reports booked before the per-day voucher: whose day it was.
+  // Null on every report made since, where the verksamhet is on each line.
   //
   // The unit rather than its income profile: whose takings these were is a fact
   // about the section, and it must survive someone deciding the unit no longer
@@ -184,8 +199,8 @@ model IncomeReport {
 
   status IncomeReportStatus @default(DRAFT)
 
-  // Pre-filled from the committee, then editable in review. This is the one
-  // field the old workflow made a person edit a YAML file for.
+  // Only on reports booked before the per-day voucher. A day's cost centres
+  // are on its lines now, one per verksamhet or prefix.
   costCenter   CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   costCenterId String?
 
@@ -197,6 +212,23 @@ model IncomeReport {
   reviewedBy   User?     @relation("IncomeReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedById String?
   reviewedAt   DateTime?
+
+  // A kontering written by hand, when the rows derived from the lines are not
+  // what should be booked. The rows other than the clearing account, in öre:
+  // [{ account, accountName, costCenterId, project, description, debit,
+  // credit }]. The clearing row is always derived from the day's total, so the
+  // voucher can never book a different figure from the document beside it.
+  //
+  // `manualVoucherBasis` is a fingerprint of the rows the lines would give at
+  // the moment it was saved (lib/income/manual-voucher.ts). If a line is
+  // corrected afterwards the two no longer match, and booking refuses until
+  // the kontering is saved again or reset: a hand-written voucher must never
+  // outlive the lines it was written against unnoticed.
+  manualVoucher      Json?
+  manualVoucherBasis String?
+  manualVoucherBy    User?     @relation("IncomeManualVoucher", fields: [manualVoucherById], references: [id], onDelete: SetNull)
+  manualVoucherById  String?
+  manualVoucherAt    DateTime?
 
   // The report this one repeats: same source, same verksamhet, same day, and
   // already booked here. Set at import, and the reason the row is shown as a
@@ -236,7 +268,10 @@ model IncomeReport {
   // Not a unique constraint, because re-fetching a range after a failure is
   // normal and must stay possible. The uniqueness that matters is over
   // *booked* reports only, which Postgres expresses as a partial index and
-  // Prisma cannot, so it is added by hand in the migration.
+  // Prisma cannot, so it is added by hand in the migration. Two of them:
+  // IncomeReport_booked_once over (source, resultUnitId, date) for the old
+  // per-verksamhet reports, and IncomeReport_day_booked_once over (source,
+  // date) for the per-day ones, whose resultUnitId is null.
   @@index([source, resultUnitId, date])
   @@index([batchId])
   @@index([status, date, id])
@@ -262,9 +297,38 @@ model IncomeLine {
   quantity  Int
   unitPrice Int // öre
   discount  Int @default(0) // öre, this line's share of any purchase discount
-  total     Int // öre, quantity*unitPrice - discount
+  // öre. What the line adds to the clearing account: a sale is positive, a
+  // refund or a fee negative, a fee paid back positive. On reports booked
+  // before the per-day voucher, a fee line was stored as a positive cost.
+  total     Int
 
   sortOrder Int @default(0)
 
+  // A sale, or one of Zettle's fees for the day. Both are lines of the same
+  // voucher: a sale credits its revenue account, a fee debits the fee account,
+  // and the clearing account takes what is left, which is what Zettle pays out.
+  kind IncomeLineKind @default(SALE)
+
+  // Whose sale this was. Null on a fee, which is nobody's, and on lines of
+  // reports booked before the per-day voucher, whose report carries it.
+  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: Restrict)
+  resultUnitId String?
+
+  // Where this line books: the prefix's cost centre, else the verksamhet's
+  // default, else the fee setting for a fee. Set at import, changed in review.
+  // A row of the voucher is a (account, cost centre) pair summed over lines.
+  costCenter   CostCenter? @relation("IncomeLineCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  // Matched no prefix and went to the reserv. Cleared once somebody places
+  // it. What makes a day one that needs looking at.
+  unmatched Boolean @default(false)
+
   @@index([reportId])
+  @@index([resultUnitId])
+}
+
+enum IncomeLineKind {
+  SALE
+  FEE
 }

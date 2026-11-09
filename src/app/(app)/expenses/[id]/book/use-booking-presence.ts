@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HEARTBEAT_MS, isIdle, type PresenceAnswer, type PresentUser } from "@/lib/domain/presence";
+import {
+  HEARTBEAT_MS,
+  isIdle,
+  type PresenceAnswer,
+  type PresenceScreen,
+  type PresentUser,
+} from "@/lib/domain/presence";
 
 // Activity that means somebody is at this screen. Listened to in the capture
 // phase, so a control that stops propagation still counts.
@@ -10,6 +16,10 @@ const ACTIVITY = ["pointerdown", "keydown", "input", "wheel", "focus"] as const;
 /**
  * The booking screen's side of presence: say that we are here, learn who else
  * is, and notice when somebody saved the utlägg underneath us.
+ *
+ * `screen` "review" is the same for the utlägg's own page while a konterat
+ * utlägg is granskat there, so two bookkeepers see each other before both
+ * granska it. The two screens are counted apart.
  *
  * `expenseId` is null when there is nothing to announce (no utlägg, nothing
  * bookable about it, or a viewer who may not book), and then this does nothing.
@@ -26,7 +36,11 @@ const ACTIVITY = ["pointerdown", "keydown", "input", "wheel", "focus"] as const;
  * A heartbeat already on the wire when the DELETE goes out can land after it
  * and put the row back. The TTL takes it off again, and nothing waits on it.
  */
-export function useBookingPresence(expenseId: string | null, loadedUpdatedAt: string | null) {
+export function useBookingPresence(
+  expenseId: string | null,
+  loadedUpdatedAt: string | null,
+  screen: PresenceScreen = "book",
+) {
   const [others, setOthers] = useState<PresentUser[]>([]);
   // Set once the utlägg has moved on from the version on screen. `by` is whoever
   // acted on it last, when the server knows.
@@ -57,7 +71,7 @@ export function useBookingPresence(expenseId: string | null, loadedUpdatedAt: st
       const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active }),
+        body: JSON.stringify({ active, screen }),
         signal: controller.signal,
       });
       if (res.status === 401 || res.status === 403 || res.status === 404) {
@@ -75,7 +89,7 @@ export function useBookingPresence(expenseId: string | null, loadedUpdatedAt: st
     } catch {
       // Aborted, or offline. The next heartbeat asks again.
     }
-  }, [url, loadedUpdatedAt]);
+  }, [url, loadedUpdatedAt, screen]);
 
   useEffect(() => {
     if (!url) return;
@@ -99,7 +113,7 @@ export function useBookingPresence(expenseId: string | null, loadedUpdatedAt: st
       void beat();
     };
     const goodbye = () => {
-      fetch(url, { method: "DELETE", keepalive: true }).catch(() => {});
+      fetch(`${url}?screen=${screen}`, { method: "DELETE", keepalive: true }).catch(() => {});
     };
     // Back out of the bfcache after a `pagehide` said goodbye.
     const onPageShow = (e: PageTransitionEvent) => {
@@ -129,7 +143,7 @@ export function useBookingPresence(expenseId: string | null, loadedUpdatedAt: st
       inFlight.current?.abort();
       goodbye();
     };
-  }, [url, beat]);
+  }, [url, beat, screen]);
 
   /** Our own save is about to change the version. Ignore heartbeats until it settles. */
   const pause = useCallback(() => {

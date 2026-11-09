@@ -17,11 +17,9 @@ import { useNotify } from "@/components/shell/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
-import { Combobox } from "@/components/ui/combobox";
-import { DateInput, Field, FieldGroup } from "@/components/ui/field";
+import { DateInput, Field } from "@/components/ui/field";
 import { useFiscalYear } from "@/components/shell/fiscal-year-context";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
-import type { IncomeSource } from "@/lib/domain/types";
 
 /** What a fetch answers with. See api/income/batches. */
 interface FetchResult {
@@ -36,14 +34,18 @@ interface FetchResult {
   fortnoxCheckSkipped: "notConnected" | "seriesUnset" | "failed" | null;
 }
 
-const SOURCES: IncomeSource[] = ["SWISH", "ZETTLE", "ZETTLE_FEE"];
+/** The two ways a day comes in: fetched from Zettle, or read from a Swish file. */
+export type FetchSource = "ZETTLE" | "SWISH";
 
 /** The form inside a card, as the page, for when there is nothing to book. */
 export function FetchPanel({
+  source,
   ready,
   title,
   subtitle,
 }: {
+  /** Which page this is on: a Zettle fetch, or a Swish upload. */
+  source: FetchSource;
   /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
   title: string;
@@ -52,7 +54,7 @@ export function FetchPanel({
   return (
     <Card>
       <CardHeader title={title} subtitle={subtitle} />
-      <FetchForm ready={ready} />
+      <FetchForm source={source} ready={ready} />
     </Card>
   );
 }
@@ -60,27 +62,38 @@ export function FetchPanel({
 /** The form in a dialog, from the list's header. Closes itself once a fetch
  *  has gone through, since what it fetched is then on the list behind it. */
 export function FetchDialog({
+  source,
   ready,
   onClose,
 }: {
+  source: FetchSource;
   /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations("income");
   return (
-    <Modal label={t("fetch.title")} onClose={onClose} className="max-w-2xl">
-      <ModalHeader title={t("fetch.title")} subtitle={t("fetch.description")} />
-      <FetchForm ready={ready} onDone={onClose} onCancel={onClose} />
+    <Modal
+      label={t(source === "SWISH" ? "fetch.titleSwish" : "fetch.titleZettle")}
+      onClose={onClose}
+      className="max-w-xl"
+    >
+      <ModalHeader
+        title={t(source === "SWISH" ? "fetch.titleSwish" : "fetch.titleZettle")}
+        subtitle={t("fetch.description")}
+      />
+      <FetchForm source={source} ready={ready} onDone={onClose} onCancel={onClose} />
     </Modal>
   );
 }
 
 function FetchForm({
+  source,
   ready,
   onDone,
   onCancel,
 }: {
+  source: FetchSource;
   /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
   /** After a fetch that went through. */
@@ -96,7 +109,6 @@ function FetchForm({
   const { pending, mutate } = useMutation();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [source, setSource] = useState<IncomeSource>("SWISH");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -145,7 +157,7 @@ function FetchForm({
     report(
       await mutate<FetchResult>("/api/income/batches", {
         key: "fetch",
-        body: { source, from, to },
+        body: { from, to },
         error: t("fetchFailed"),
       }),
     );
@@ -167,20 +179,6 @@ function FetchForm({
 
   const fields = (
     <>
-      {/* A FieldGroup rather than a Field: the picker's trigger is a button,
-          and a <label> forwards a click anywhere in its box to the first
-          labelable element inside, so the label's own whitespace would pop
-          the menu open. See components/ui/field.tsx. */}
-      <div className="w-48">
-        <FieldGroup label={t("fetch.source")} requirement="required">
-          <Combobox
-            options={SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
-            value={source}
-            onChange={(v) => setSource(v as IncomeSource)}
-            aria-label={t("fetch.source")}
-          />
-        </FieldGroup>
-      </div>
       {/* Sized on a wrapper rather than on the control: every field in the
           app is `w-full` inside whatever holds it (see `control` in
           components/ui/field.tsx), and `cn` joins classes rather than merging

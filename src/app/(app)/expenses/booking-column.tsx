@@ -69,6 +69,8 @@ export function useBookingColumn(
 
   const bookingHint = (users: PresentUser[]) =>
     t("bookingNowTitle", { names: list(users.map((u) => u.name)) });
+  const reviewingHint = (users: PresentUser[]) =>
+    t("reviewingNowTitle", { names: list(users.map((u) => u.name)) });
   // The lock's own words, for the tooltip and for a screen reader.
   const exportHint = (v: ExportLockView) => {
     const name = v.by?.name ?? t("someone");
@@ -135,13 +137,21 @@ export function useBookingColumn(
                 </Tooltip>
               );
             }
+            // Somebody else granskar it right now. Said, not enforced, the
+            // same as booking: the lock above is what stops a second export.
+            const reviewers = live.reviewing[e.id];
+            const hint = locked ? exportHint(locked) : reviewers ? reviewingHint(reviewers) : null;
             return (
-              <Tooltip label={locked ? exportHint(locked) : null}>
+              <Tooltip label={hint}>
                 <ButtonLink href={`/expenses/${e.id}`} size="sm" variant="secondary">
                   {t("review.open")}
-                  {locked && <span className="sr-only">{exportHint(locked)}</span>}
+                  {hint && <span className="sr-only">{hint}</span>}
                 </ButtonLink>
-                {locked && <CornerDot tone={locked.lock === "exporting" ? "warning" : "danger"} />}
+                {locked ? (
+                  <CornerDot tone={locked.lock === "exporting" ? "warning" : "danger"} />
+                ) : (
+                  reviewers && <CornerDot tone="warning" />
+                )}
               </Tooltip>
             );
           })()}

@@ -146,7 +146,7 @@ export const canSendReminders = (caps: readonly Capability[]) => has(caps, "SEND
 // ── Redovisningsbetyg ─────────────────────────────────────────────
 
 /** May see every member's redovisningsbetyg: the profile's Medlemmar tab,
- *  Översikt's "Släpar efter" and the stars beside a submitter. A member sees
+ *  Översikt's "Släpar efter" and the score beside a submitter. A member sees
  *  their own without it. See lib/domain/member-score.ts. */
 export const canViewMemberScores = (caps: readonly Capability[]) => has(caps, "MEMBER_SCORE_VIEW");
 
