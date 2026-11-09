@@ -12,8 +12,7 @@ describe("reference format", () => {
     expect(referencePrefix(2009)).toBe("DEK09-");
   });
 
-  // Lists sort on this string, and the next number is the highest one plus one.
-  // Both are only true while the format sorts the way it counts.
+  // Lists sort on this string and the next number is the highest plus one.
   it("sorts in counting order, within a year and across years", () => {
     const refs = [
       formatReference(2026, 100),
@@ -35,9 +34,7 @@ describe("nextReference", () => {
     expect(nextReference(2026, "DEK26-0099")).toBe("DEK26-0100");
   });
 
-  // The counter outgrowing its padding is not an error: it stops being
-  // zero-padded and keeps counting, and the year's own numbers still sort
-  // among themselves because they're all wider than the padded ones.
+  // The counter outgrowing its padding keeps counting; the year's numbers still sort among themselves.
   it("keeps counting past four digits", () => {
     expect(nextReference(2026, "DEK26-9999")).toBe("DEK26-10000");
   });

@@ -54,8 +54,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const prefix = await prisma.incomeProductPrefix.findUnique({ where: { id } });
   if (!prefix) return fail(404, "income.prefixNotFound");
 
-  // Prefixes carry no history of their own: a report's lines record the account
-  // they routed to, not the rule that chose it. So this really is a delete.
+  // Prefixes carry no history (lines record the account, not the rule), so this is a real delete.
   await prisma.incomeProductPrefix.delete({ where: { id } });
   return new Response(null, { status: 204 });
 }

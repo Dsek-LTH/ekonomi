@@ -7,7 +7,6 @@ import { parseBody } from "@/lib/api/parse";
 import { UpdateCounterparty } from "@/lib/api/schemas/contract";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
-// PATCH /api/counterparties/:id
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate(canManageRentals, "contract.noManageAccess");
@@ -27,9 +26,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (d.phone !== undefined) data.phone = d.phone;
   if (d.notes !== undefined) data.notes = d.notes;
 
-  // Nothing here reaches a contract that already points at this row: the
-  // fields it printed were copied at the moment it was filed. See
-  // Contract.counterpartyId in the schema.
+  // Contracts already pointing at this row keep the fields copied when filed (Contract.counterpartyId).
   const updated = await orNotFound(
     () => prisma.counterparty.update({ where: { id }, data, select: { id: true } }),
     "contract.counterpartyNotFound",
@@ -39,7 +36,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return new Response(null, { status: 204 });
 }
 
-// DELETE /api/counterparties/:id
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate(canManageRentals, "contract.noManageAccess");
@@ -51,10 +47,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   });
   if (!counterparty) return fail(404, "contract.counterpartyNotFound");
 
-  // Deleted even when a contract names it, the same as a rental item. An
-  // agreement copies the counterparty's details at the moment it is filed, so
-  // it still says what it said, and the relation is SetNull, so all it loses is
-  // the link back to this row.
+  // Deleted even when a contract names it: agreements copy the details when filed and the relation is SetNull.
   await prisma.counterparty.delete({ where: { id: counterparty.id } });
   return new Response(null, { status: 204 });
 }

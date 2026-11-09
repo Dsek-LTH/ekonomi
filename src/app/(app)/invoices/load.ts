@@ -1,5 +1,3 @@
-// What a page needs to show one invoice, loaded the same way whichever page
-// shows it: the record, the fördelning or the kontering.
 import "server-only";
 
 import {
@@ -18,24 +16,19 @@ import type { WorkspaceProps } from "./invoice-shared";
 
 export type WorkspaceData = Omit<WorkspaceProps, "onDone">;
 
-/** Whether the viewer works the invoices as the treasury does, and so gets
- *  the table's tabs for each of its steps. */
 export const isTreasury = (v: Viewer) =>
   canTriageInvoices(v.capabilities) || canBookkeep(v.capabilities);
 
 export async function loadWorkspace(
   id: string,
   viewer: Viewer,
-  /** What the PDF says, for the fördelning's page. See getInvoice. */
   reading?: DocumentReading,
 ): Promise<WorkspaceData | null> {
   const found = await getInvoice(id, viewer, reading);
   if (!found) return null;
   const { invoice, can } = found;
 
-  // The pickers only for someone who can use them. A page ships what it asks
-  // for, and nobody reading an attested invoice needs a few hundred cost
-  // centres. What the invoice already points at is kept in, retired or not.
+  // Pickers only for those who can use them. What the invoice already points at is kept, retired or not.
   const kept = [
     ...invoice.allocations.map((a) => a.costCenterCode),
     ...invoice.lines.flatMap((l) => (l.costCenterCode ? [l.costCenterCode] : [])),

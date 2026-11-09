@@ -21,9 +21,6 @@ export function LanguageSwitcher({ round = false }: { round?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  // This one keeps its own transition rather than going through
-  // useProgressRouter: the dimmed flags below are its local feedback, and it
-  // needs the flag for that. The bar is told separately.
   useEffect(() => {
     if (!pending) return;
     return startRouteProgress();

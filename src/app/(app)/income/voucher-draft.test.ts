@@ -5,10 +5,6 @@ import type { IncomeLineRow, IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 
-// What decides whether a day of takings is written to the ledger, and what the
-// screen says it will be written as. The same rows and the same refusals as
-// the booking route, which is the whole point of it.
-
 const settings = {
   zettleClearingAccount: "1580",
   swishClearingAccount: "1585",
@@ -101,9 +97,7 @@ describe("dayVoucher", () => {
     expect(voucher(report([line()], { source: "SWISH" })).rows.at(-1)?.account).toBe("1585");
   });
 
-  // The bug the per-line cost centre was built to end: a day whose revenue
-  // rows had no cost centre could be booked once it counted as edited, and
-  // reached Fortnox with none.
+  // A day whose revenue rows had no cost centre once booked as edited and reached Fortnox with none.
   it("refuses to book a line with no cost centre", () => {
     const v = voucher(report([line({ costCenterId: null, costCenterCode: null })]));
     expect(v.blocker).toBe("noCostCenter");
@@ -225,8 +219,7 @@ describe("dayVoucher with a hand-written kontering", () => {
     expect(v.canBook).toBe(true);
   });
 
-  // The rule the server holds it to: a kontering written before the lines
-  // changed is never booked as if nothing had happened.
+  // A kontering written before the lines changed is never booked as if nothing had happened.
   it("refuses to book a kontering written before the lines changed", () => {
     expect(voucher(withManual({ stale: true })).blocker).toBe("manualStale");
   });

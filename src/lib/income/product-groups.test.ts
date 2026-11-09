@@ -33,14 +33,10 @@ describe("productRows", () => {
   });
 
   it("groups one variant as readily as several", () => {
-    // `hasMultipleVariants` in intakt/report/pdf.go answers "any", not "several",
-    // and this follows it: one variant is still a distinction worth showing.
     expect(shown([line({ name: "Läsk", variant: "Stor" })])).toEqual(["Läsk:", "  Stor"]);
   });
 
   it("steps a variant-less row of a grouped product in, under its own name", () => {
-    // Unlike the document, which leaves it flush with the heading, where it read
-    // as a separate product rather than one of the group's.
     expect(shown([line({ name: "Macka" }), line({ name: "Macka", variant: "Ost" })])).toEqual([
       "Macka:",
       "  Macka",
@@ -55,9 +51,6 @@ describe("productRows", () => {
       line({ name: "Öl", variant: "Liten", account: "3011" }),
       line({ name: "Chips" }),
     ]);
-    // "Chips" before "Öl"; within the group Liten before both Stors, and the
-    // cheaper of the two same-variant rows first. Case is ignored on the
-    // variant, so "Stor" and "stor" sort together rather than apart.
     expect(got).toEqual(["Chips", "Öl:", "  Liten", "  stor", "  Stor"]);
   });
 

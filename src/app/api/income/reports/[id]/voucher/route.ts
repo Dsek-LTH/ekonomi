@@ -1,6 +1,5 @@
-// A day's kontering written by hand: save it, or go back to the rows the lines
-// give. See lib/income/manual-voucher.ts for why it is saved with a
-// fingerprint of the lines, and booking (../book) for where it is used.
+// A day's hand-written kontering: save it, or go back to the rows the lines give
+// (lib/income/manual-voucher.ts, used by ../book).
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -55,11 +54,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!found.ok) return found.res;
   const { report } = found;
 
-  // The editor's spare rows are not rows of the voucher.
+  // The editor's spare rows are not voucher rows.
   const lines = parsed.data.lines.filter((l) => l.account || l.debit || l.credit);
 
-  // Every value has to exist, and be in use, or Fortnox refuses the whole
-  // voucher at export, long after this said it was fine.
+  // Every value must exist and be in use, or Fortnox refuses the voucher at export.
   const accounts = [...new Set(lines.map((l) => l.account).filter(Boolean))];
   const known = await prisma.account.findMany({
     where: { number: { in: accounts } },

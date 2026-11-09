@@ -1,18 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Taking your own utlägg back out of the attest queue.
-//
-// Tested at the route rather than only through `canRecall`, because the two
-// things that make it safe are here and nowhere else: who is allowed to do it,
-// and that every signature already given is cleared on the way out. An attest
-// is a statement about the claim as it stood: "this 420 kr was spent
-// privately", and this action exists to change what it stood for. A signature
-// that survived would be a name against a claim that no longer says what was
-// signed.
-//
-// Mocked at the lowest layer: the session and the database. Everything above
-// them is the real thing: the real gate, the real schema, the real status
-// rules, the real response.
+// Taking your own utlägg back out of the attest queue: who may do it, and that every signature already given is cleared
+// (an attest states the claim as it stood).
 
 const h = vi.hoisted(() => ({
   status: "PENDING_APPROVAL" as string,

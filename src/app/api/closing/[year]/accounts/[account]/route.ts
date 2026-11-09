@@ -4,12 +4,8 @@ import { parseBody } from "@/lib/api/parse";
 import { ReconcileAccountBody } from "@/lib/api/schemas/closing";
 import { canBookkeep } from "@/lib/domain/permissions";
 
-// "Avstämt i Fortnox": the reconciliation is done there, and this records that
-// it was. PUT marks it (or rewrites the note), DELETE takes the mark away.
-
 type Ctx = { params: Promise<{ year: string; account: string }> };
 
-/** The year and account a URL names, if the ledger has a balance for them. */
 async function resolve(ctx: Ctx) {
   const { year, account } = await ctx.params;
   const financialYear = Number(year);
@@ -32,8 +28,6 @@ export async function PUT(req: Request, ctx: Ctx) {
   const key = await resolve(ctx);
   if (!key) return fail(404, "closing.accountNotFound");
 
-  // Marking again moves the mark to now and to whoever did it: the account was
-  // looked at again, and that is what the mark should say.
   await prisma.accountReconciliation.upsert({
     where: { financialYear_account: key },
     create: { ...key, reconciledById: g.actor.id, note: parsed.data.note },

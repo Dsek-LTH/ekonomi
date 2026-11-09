@@ -1,11 +1,7 @@
 "use client";
 
-// Dokument → Motparter. Who the section has signed with before, and what a new
-// contract can pick instead of retyping.
-//
-// The same shape as the rental item catalogue's screen
-// (rentals/equipment/rental-items-client.tsx): a table for comparing rows,
-// editing as a dialog. See item-dialog.tsx's sibling here, counterparty-dialog.tsx.
+// Dokument → Motparter: who the section has signed with before. A table with editing in a dialog (counterparty-dialog.tsx),
+// like rental-items-client.tsx.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";

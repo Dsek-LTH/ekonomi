@@ -69,7 +69,9 @@ describe("attestBlocker", () => {
     expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000 })).toBe(
       "supplierInvoice.allocationSumMismatch",
     );
-    expect(attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000, rounding: 44 })).toBeNull();
+    expect(
+      attestBlocker({ documentCount: 1, rows, invoiceAmount: 90000, rounding: 44 }),
+    ).toBeNull();
   });
 
   it("lets a split through while the total is unknown, for the export to check", () => {

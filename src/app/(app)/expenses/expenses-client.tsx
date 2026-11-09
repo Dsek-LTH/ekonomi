@@ -72,16 +72,8 @@ export function ExpensesClient({
     rowLabel: (e) => e.reference ?? e.title,
   });
 
-  // Stage is a tab, the same six on every scope, so a stage is where you left
-  // it when you switch whose list you are reading. They replace a dropdown of
-  // every status: that answered "which status" and nothing else, and stage is
-  // a tab on every other list. The exact status is still in its column.
-  //
-  // No predicates: these are names the server matches on (STATUS_TAB in
-  // lib/data/expenses.ts), so the rows arrive already narrowed.
-  //
-  // On Mina the stages are named for what the utlägg waits on. "Att attestera"
-  // reads as a task for the reader, and on your own utlägg somebody else does it.
+  // Stage is a tab, the same six on every scope. No predicates: these are names the server matches on (STATUS_TAB in lib/data/expenses.ts).
+  // On Mina the stages are named for what the utlägg waits on, since somebody else attests your own.
   const tabLabels = showOwnOnly ? "tabMine" : "tab";
   const tabs: TabFilter = useMemo(
     () =>
@@ -94,13 +86,8 @@ export function ExpensesClient({
     [t, tabLabels, waiting],
   );
 
-  // "Nothing here at all" and "nothing matching what you asked for" are
-  // different things and read differently. With the filtering done in the
-  // database the row count alone can no longer tell them apart, so the question
-  // is asked of the controls: an empty list nobody has narrowed is the first.
-  // The scope is deliberately not in this. Showing your own and having none is
-  // still an empty list, not a fruitless search. Only Mina draws it at all:
-  // the other two are somebody else's work, and an empty one is just done.
+  // "Nothing here at all" differs from "nothing matching", asked of the controls since the row count can't tell.
+  // The scope is not in this. Only Mina draws it; elsewhere an empty list is just done.
   const narrowed = Boolean(
     controls.query || controls.dateFrom || controls.dateTo || controls.tab !== "all",
   );
@@ -117,10 +104,7 @@ export function ExpensesClient({
       {
         key: "attest",
         header: t("col.attest"),
-        // Off the phone row. It is a line per allocation (a tick, a name and a
-        // cost centre each) which is a column of its own on a table and cannot
-        // be a clause in a one-line summary. The same thing, laid out for a
-        // narrow screen, is on the utlägg's own page under Fördelning.
+        // Off the phone row: a line per allocation is a column on a table, not a clause in a summary. It is on the utlägg's page under Fördelning.
         mobile: "hide",
         cell: (e) =>
           e.allocations.length === 0 ? (
@@ -144,8 +128,7 @@ export function ExpensesClient({
                           })
                     }
                   >
-                    {/* The slot is kept when it is empty, so a waiting name
-                      lines up with an attested one under it. */}
+                    {/* The slot is kept when empty so a waiting name lines up with an attested one. */}
                     <span className="flex size-3.5 shrink-0 items-center justify-center">
                       {attested && <IconCheck className="size-3.5 text-success" />}
                     </span>
@@ -169,15 +152,9 @@ export function ExpensesClient({
 
   return (
     <PageShell
-      // Fixed, whichever scope is showing: the track below says which of the
-      // two you are on, and a heading that said it too would be the same word
-      // twice on one screen.
+      // Fixed whichever scope shows (the track says which).
       title={t("title")}
-      // No description. The header wraps on a narrow screen, and a paragraph
-      // between the title and the Mina/Alla track pushed the track onto a line
-      // of its own well below the heading it belongs to. The two are meant to
-      // read as one, and on the list you land on most often the sentence was
-      // costing more than it said.
+      // No description: it pushed the Mina/Alla track onto a line of its own.
 
       collections={
         scopes.length > 1
@@ -190,30 +167,22 @@ export function ExpensesClient({
           : undefined
       }
     >
-      {/* The table even with nothing in it: its toolbar carries the way to
-          make the first one, and its heads say what the list will hold. */}
       <Card>
         <DataTable
           columns={columns}
           rows={page.rows}
           controls={controls}
           tabs={tabs}
-          // On the list's own toolbar rather than in the page header: it adds
-          // a row to what is below it, so that is where it lives.
+          // On the list's own toolbar: it adds a row to what is below it.
           action={
             <>
-              {/* Filled: making an utlägg is the main thing this page is for,
-                  so it is drawn as the page's primary action even on a bar it
-                  shares with the search and the status filter. */}
               <NewExpenseMenu variant="primary" />
             </>
           }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(e) => e.id}
           rowHref={(e) => `/expenses/${e.id}`}
-          // Konterade by the reader, so somebody else's to bokföra: still
-          // listed, so the stage shows everything in it, but held back. The
-          // reason is on the row's Granska button.
+          // Konterade by the reader: still listed but held back, the reason on the row's Granska button.
           rowClassName={(e) => (booking.isOwn(e) ? "text-muted [&_td]:opacity-70" : undefined)}
           // Nothing of one's own yet reads differently from a filter that
           // found nothing.

@@ -1,20 +1,8 @@
-// The printed report, laid out the way Fortnox prints its resultat- and
-// balansrapport.
-//
-// The screen groups accounts into the BAS sections of lib/ledger/bas, one level
-// deep, which is what searching and drilling into rows wants. A printed report
-// is read top to bottom by somebody comparing it with Fortnox's, so it follows
-// Fortnox's structure instead: a heading per side ("Rörelsens intäkter"), the
-// account classes under it with an "S:a" line each, and the intermediate
-// results (Bruttovinst, Rörelseresultat, Resultat efter finansiella poster)
-// where Fortnox puts them.
-//
-// Pure: a report group in, a list of lines out. Every figure is summed from the
-// accounts, so the lines add up to whatever the screen's filters left in.
+// The printed report in Fortnox's resultat-/balansrapport structure (a heading per side, classes with an "S:a" line,
+// intermediate results), unlike the screen's BAS sections. Pure; every figure is summed from the accounts.
 import type { ReportAccount, ReportGroup } from "./report-types";
 import type { ReportKind } from "@/lib/ledger/bas";
 
-/** The figures on one line. Nullable columns stay null when no account has one. */
 export interface Figures {
   amount: number;
   opening: number | null;
@@ -25,10 +13,7 @@ export interface Figures {
   priorAccumulated: number | null;
 }
 
-/**
- * One printed line. `label` is a key under `ledger.print.layout`. A `partTotal`
- * reads "S:a <part>", so it carries the part's key and not a label of its own.
- */
+/** One printed line. `label` is a key under `ledger.print.layout`; a `partTotal` reads "S:a <part>" via the part's key. */
 export type PrintLine =
   | { kind: "heading"; label: string }
   | { kind: "part"; label: string }
@@ -37,14 +22,12 @@ export type PrintLine =
   | { kind: "total"; label: string; figures: Figures }
   | { kind: "result"; label: string; figures: Figures };
 
-/** An account class: a range of BAS accounts printed under one name. */
 interface Part {
   part: string;
   from: number;
   to: number;
 }
 
-/** A running result: everything from the report's first account up to `upTo`. */
 interface Result {
   result: string;
   upTo: number;
@@ -131,7 +114,6 @@ function figuresOf(accounts: ReportAccount[]): Figures {
   };
 }
 
-/** One cost centre's report (or the whole report, when summed), as lines. */
 export function printLines(group: ReportGroup, kind: ReportKind): PrintLine[] {
   const accounts = group.sections
     .flatMap((s) => s.accounts)

@@ -21,8 +21,6 @@ import { INCOME_TABS, incomeDefaultTab, type IncomeTab } from "../tabs";
 
 export const generateMetadata = titled("income");
 
-// One of Intäkter's two lists: Zettle or Swish, every day of takings with the
-// stage as a tab. A row opens the day (./[id]). See docs/navigation.md.
 export default async function IncomeListPage({
   params,
   searchParams,
@@ -43,8 +41,7 @@ export default async function IncomeListPage({
     getFiscalYear(),
     books ? incomeSetupSteps() : [],
   ]);
-  // The settings, chart and cost centres the Behöver dig column judges a
-  // draft by, the same the day's own page uses.
+  // The settings, chart and cost centres the Behöver dig column judges a draft by (same as the day page).
   const context = await loadReviewContext(reports.filter((r) => r.status === "DRAFT"));
 
   return (

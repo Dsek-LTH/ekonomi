@@ -1,19 +1,5 @@
 "use client";
 
-// The last resort: the root layout itself threw, so there is no locale, no
-// messages, no theme class and no shell. Next replaces the whole document with
-// this, which is why it has to render its own <html> and <body>.
-//
-// It is the one file in the app allowed to hardcode its wording and its
-// colours. Everything that would normally supply them is upstream of the thing
-// that failed: `NextIntlClientProvider` lives in the layout that isn't there,
-// and globals.css may not have loaded. Swedish and English together rather than
-// a guess at which one the reader wants, because there is nothing left to ask.
-//
-// In practice this should almost never be reached. A misconfigured server is
-// refused at boot by instrumentation.ts rather than allowed to serve broken
-// pages. If it does appear, that is the fact worth reporting.
-
 export default function GlobalError({
   error,
   reset,

@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildCoverData, coverFilename } from "./document";
 
-// The wording decisions, asserted without a typesetter anywhere in sight. That
-// is the whole reason `buildCoverData` takes a plain object and returns one:
-// swapping Typst for LaTeX changes how this data is placed and none of what it
-// says, so these tests survive the swap. See cover/types.ts.
+// The wording decisions, asserted without a typesetter (see cover/types.ts).
 
 const TODAY = new Date("2026-08-14T09:30:00Z");
 
@@ -71,9 +68,7 @@ describe("buildCoverData", () => {
   });
 
   it("names the date for what it is on each kind of utlägg", () => {
-    // A milersättning has no receipt, so "Kvittodatum" over the day it was
-    // driven would name a document that does not exist, on a page that is
-    // filed as evidence.
+    // A milersättning has no receipt, so "Kvittodatum" would name a document that does not exist.
     expect(buildCoverData(base, TODAY).dateLabel).toBe("Kvittodatum");
     expect(buildCoverData({ ...base, paymentType: "MILEAGE" }, TODAY).dateLabel).toBe("Resdag");
   });
@@ -83,8 +78,7 @@ describe("buildCoverData", () => {
       { ...base, allocations: [{ ...base.allocations[0], amount: 106900 }] },
       TODAY,
     );
-    // A non-breaking space is what sv-SE groups with, and the document wants
-    // exactly that: "1 069,00 kr" must never break across a line.
+    // sv-SE groups with a non-breaking space, and "1 069,00 kr" must never break across a line.
     expect(d.total.replace(/ /g, " ")).toBe("1 069,00 kr");
     expect(d.allocations[0].amount.replace(/ /g, " ")).toBe("1 069,00 kr");
   });
@@ -94,8 +88,7 @@ describe("buildCoverData", () => {
   });
 
   it("totals the allocations rather than the recorded gross", () => {
-    // The page is a statement about what was attested, and attestation is per
-    // allocation, so a grossAmount that disagrees does not get to decide.
+    // Attestation is per allocation, so a disagreeing grossAmount does not decide.
     const d = buildCoverData(
       {
         ...base,
@@ -111,8 +104,6 @@ describe("buildCoverData", () => {
   });
 
   it("leaves an unattested slice null rather than inventing a placeholder", () => {
-    // How a missing approver reads is the template's decision, made once for
-    // every field that can be absent, not smuggled in here as a dash.
     const d = buildCoverData(
       {
         ...base,
@@ -141,9 +132,7 @@ describe("buildCoverData", () => {
 });
 
 describe("buildCoverData, the dispens", () => {
-  // A late utlägg the skattmästare took anyway. The page has to say so, because
-  // it is the only place the decision is written down beside the voucher it
-  // belongs to. See ExpenseCoverWaiver.
+  // A late utlägg the skattmästare took anyway: the page is the only place the decision is written beside the voucher. See ExpenseCoverWaiver.
   const waived = {
     ...base,
     // 19 March, granted on 3 June: 76 days, well past the 60-day frist.
@@ -164,9 +153,7 @@ describe("buildCoverData, the dispens", () => {
   });
 
   it("counts the lateness to the day of the dispens, not to today", () => {
-    // Both of these are rendered from the same row; the second is drawn months
-    // later. A document filed beside a voucher must not say something different
-    // the next time somebody opens it.
+    // The second is drawn months later: a document filed beside a voucher must not change.
     expect(buildCoverData(waived, TODAY).waiver!.lateness).toBe("76 dagar efter köpet");
     expect(buildCoverData(waived, new Date("2027-01-01T00:00:00Z")).waiver!.lateness).toBe(
       "76 dagar efter köpet",
@@ -174,24 +161,19 @@ describe("buildCoverData, the dispens", () => {
   });
 
   it("says resan rather than köpet on a milersättning", () => {
-    // The same distinction `dateLabel` makes: nothing was bought.
     expect(buildCoverData({ ...waived, paymentType: "MILEAGE" }, TODAY).waiver!.lateness).toBe(
       "76 dagar efter resan",
     );
   });
 
   it("needs both the day and the reason before it states one at all", () => {
-    // The route writes and clears the three columns together, so a half-set
-    // dispens is a row nobody wrote. Reading it as absent is the safe way round.
+    // The route writes and clears the three columns together, so a half-set dispens reads as absent.
     expect(buildCoverData({ ...waived, deadlineWaiverReason: null }, TODAY).waiver).toBeNull();
     expect(buildCoverData({ ...waived, deadlineWaivedAt: null }, TODAY).waiver).toBeNull();
   });
 });
 
-// Swedish groups thousands with a non-breaking space, which is what
-// Intl.NumberFormat emits and what an assertion written with an ordinary space
-// would silently fail on. Named, so the expectations below read as numbers
-// rather than as escape sequences.
+// Swedish groups thousands with a non-breaking space, which an assertion with an ordinary space would silently fail on.
 const NB = "\u00a0";
 
 type ForCover = Parameters<typeof buildCoverData>[0];
@@ -208,9 +190,6 @@ const mileage = (over: Partial<ForCover> = {}): ForCover => ({
 });
 
 describe("buildCoverData, the journey", () => {
-  // The section that used to be a second PDF. Everything it says is decided
-  // here, which is why these read as assertions about wording rather than about
-  // a document.
   it("is absent from an utlägg that rests on a receipt", () => {
     expect(buildCoverData(base, TODAY).journey).toBeNull();
     expect(buildCoverData({ ...base, paymentType: "CARD" }, TODAY).journey).toBeNull();
@@ -226,9 +205,7 @@ describe("buildCoverData, the journey", () => {
   });
 
   it("keeps every stop, not just the ends", () => {
-    // The errand that called at two places before going home. Printing only
-    // where it began and ended would drop the reason the distance is what it
-    // is, which is the part Skatteverket asks to see.
+    // The errand that called at two places: printing only the ends would drop the reason for the distance.
     const j = buildCoverData(
       mileage({ journeyStops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }),
       TODAY,
@@ -237,8 +214,7 @@ describe("buildCoverData, the journey", () => {
   });
 
   it("says nothing rather than drawing arrows between blanks", () => {
-    // A draft saved with rows still empty. "-" is the honest word for a route
-    // nobody has given; " → → " would look like data.
+    // A draft with rows still empty: "-" is the honest word for a route nobody has given.
     expect(buildCoverData(mileage({ journeyStops: [] }), TODAY).journey!.route).toBe("-");
     expect(
       buildCoverData(mileage({ journeyStops: ["E-huset", "  ", ""] }), TODAY).journey!.route,
@@ -246,8 +222,7 @@ describe("buildCoverData, the journey", () => {
   });
 
   it("writes the readings and the difference to the same precision", () => {
-    // The subtraction is one the reader is invited to do by eye; two numbers
-    // written to different precisions is the one thing that would stop them.
+    // Readings and difference share one precision, so the subtraction can be done by eye.
     const j = buildCoverData(
       mileage({ odometerStart: 12300.1, odometerEnd: 12345.6 }),
       TODAY,

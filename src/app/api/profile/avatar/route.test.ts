@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
-// The profile picture: only ever an image, always stored as the 256px WebP the
-// server made of it, and the old one removed only once the row points at the
-// new one.
-
 const h = vi.hoisted(() => ({
   before: { avatarKey: null as string | null },
   update: vi.fn(),

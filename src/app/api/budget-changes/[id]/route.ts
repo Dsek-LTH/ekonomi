@@ -1,7 +1,4 @@
-// Revoking a redaktionell ändring. DELETE, because "ta bort ändringen" is what
-// it is from where the skattmästare stands, but nothing is deleted: the change
-// stops counting towards the figures and stays in the history, struck through,
-// with who revoked it and when. See BudgetChange in schema.prisma for why.
+// Revoking a redaktionell ändring: nothing is deleted. It stops counting and stays in the history, struck through.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { gateEditorialChange } from "@/lib/budget/access";

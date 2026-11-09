@@ -1,17 +1,5 @@
 "use client";
 
-// The bar across the top of the frame, over the nav and the page both: what
-// applies to the whole app rather than to one area of it. On the left the menu
-// button and the brand; on the right the treasury's Fortnox login,
-// the räkenskapsår and the reader's own menu.
-//
-// These used to live at the foot of the rail, where they were only on screen
-// while the rail was open, and the year has no home anywhere else: it is a
-// filter over every page at once, one level above the scope switch (see
-// docs/navigation.md). The rail is navigation and nothing else now.
-//
-// From md only. The phone keeps its own top bar (app-shell.tsx), which takes
-// the year picker from here and leaves the rest to its menu.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -33,13 +21,10 @@ import { useGuides } from "./guide";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "./theme-toggle";
 
-/** The section's own site, from the account menu. Not a route of this app:
- *  this app is one thing the section runs. */
 const DSEK_URL = "https://dsek.se";
 
 export interface FiscalYears {
   years: FiscalYear[];
-  /** The one in force, as the server resolved it. See lib/server/fiscal-year.ts. */
   selected: FiscalYear;
 }
 
@@ -55,22 +40,14 @@ export function AppHeader({
   user: CurrentUser;
   fortnox?: { session: FortnoxStatus["session"] | null; company: string | null };
   fiscal: FiscalYears | null;
-  /** Whether the nav panel is showing. This button is the only way to it. */
   navOpen: boolean;
-  /** The button, which the panel's press-outside dismissal treats as inside. */
   navToggleRef: React.RefObject<HTMLButtonElement | null>;
   onToggleNav: () => void;
-  /** Something waits behind one of the nav's links. With the nav shut the
-   *  counts beside them are out of sight, so the button carries a dot. */
   waiting: boolean;
 }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   return (
-    // `box-content`, so the 48px is all room for the controls and the rule is
-    // drawn below it. Inside it, the rule took a pixel of the height and a 32px
-    // button sat 7.5px from the top and 7.5 from the line, which the browser
-    // rounds to an off-centre 7 and 8.
     <header className="z-30 hidden box-content h-12 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:flex print:hidden">
       <button
         ref={navToggleRef}
@@ -79,17 +56,12 @@ export function AppHeader({
         aria-expanded={navOpen}
         aria-controls="app-nav"
         className={cn(
-          // The primary button's pink, so the way into the app is the first
-          // thing the header offers. Held in the hover tint while the panel is
-          // open, so the button says it is pressed in.
           "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-white",
           navOpen && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
         )}
       >
         <IconMenu className="size-4" />
         {t("menu")}
-        {/* Off the corner rather than inside it, where it would crowd the
-            label. */}
         {waiting && !navOpen && (
           <span
             aria-hidden
@@ -98,11 +70,6 @@ export function AppHeader({
         )}
       </button>
 
-      {/* The app's name, and the way home to Översikt, which is what a click
-          on an app's name is expected to do. The D says whose app it is, so
-          the text only has to say which one. It used to read "D-sektionen"
-          over "Ekonomi" on two lines and go out to dsek.se; that link is in
-          the account menu now. */}
       <Link href="/dashboard" className="flex shrink-0 items-center gap-2 rounded-control">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-6" />
@@ -110,9 +77,6 @@ export function AppHeader({
       </Link>
 
       <div className="ms-auto flex items-center gap-2">
-        {/* The rules, for when a purchase is in front of you and you're not
-            sure. Up here rather than at the foot of the nav, so it is one
-            click from every page instead of two. */}
         <Link
           href="/faq"
           data-tour="faq"
@@ -133,13 +97,6 @@ export function AppHeader({
   );
 }
 
-/**
- * The räkenskapsår, for every page it narrows, and greyed out on the ones it
- * does not, so the header keeps its shape from page to page.
- *
- * Writing the cookie and refreshing is the whole of it: the server reads the
- * year (getFiscalYear) and every page that cares asks for it there.
- */
 export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
   const t = useTranslations("nav");
   const router = useProgressRouter();
@@ -149,25 +106,16 @@ export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
 
   function pick(y: FiscalYear) {
     rememberFiscalYear(y.id);
-    // A voucher is one year's, so its page has nothing to show for another:
-    // back to the year's vouchers. Everywhere else the page reads the year from
-    // the cookie and only has to be asked again.
     if (pathname.startsWith("/closing/vouchers/")) router.push("/closing/vouchers");
     else router.refresh();
   }
 
   return (
-    // The reason it is grey, on hover, since a disabled button says nothing.
     <span title={applies ? undefined : t("fiscalYearNotHere")} data-tour="fiscal-year">
-      {/* The year alone on the button. What it is a year of goes to the
-          accessible name, since a bare number says nothing to a screen
-          reader. */}
       <Menu
         label={year}
         accessibleName={`${t("fiscalYear")} ${year}`}
         variant="quiet"
-        // Tighter than a page's button: it is a word in a row of controls,
-        // and a year has nothing to give room to.
         className="[&_button]:gap-1 [&_button]:px-2"
         narrow
         disabled={!applies}
@@ -183,22 +131,11 @@ export function FiscalYearPicker({ fiscal }: { fiscal: FiscalYears }) {
   );
 }
 
-/**
- * The treasury's own Fortnox login. On screen signed in as well as signed
- * out, and the dot says which: the session is short-lived by design, so a
- * button that only appeared once it had lapsed would be one nobody could get
- * ahead of. Signed in it is quiet and still clickable, which is how a session
- * about to go is renewed.
- *
- * A plain `<a>`: /api/fortnox/connect is a redirect out to Fortnox's consent
- * screen, and the client router would ask for a page that never arrives.
- */
 function FortnoxStatusButton({
   session,
   company,
 }: {
   session: FortnoxStatus["session"] | null;
-  /** The company the section is connected to, which is where a login lands. */
   company: string | null;
 }) {
   const t = useTranslations("nav");
@@ -214,10 +151,6 @@ function FortnoxStatusButton({
       className="flex h-8 items-center gap-2 rounded-control px-2.5 text-sm font-medium transition-colors hover:bg-hover"
     >
       <IconFortnox className="size-4" />
-      {/* Which company, since a test company and the real books look the
-          same otherwise, and the mark already says it is Fortnox. Whether the
-          session holds is the dot's to say, and the full sentence is the
-          title and the accessible name. */}
       <span className="max-w-48 truncate">{company ?? "Fortnox"}</span>
       <span
         aria-hidden
@@ -227,12 +160,6 @@ function FortnoxStatusButton({
   );
 }
 
-/**
- * The reader's own corner: who is signed in, the way to /profile, and the two
- * switches worth reaching from anywhere without a page load (theme and
- * language). One click from every page, where it used to take opening the rail
- * first.
- */
 function AccountMenu({ user }: { user: CurrentUser }) {
   const t = useTranslations("common");
   const tNav = useTranslations("nav");
@@ -252,16 +179,12 @@ function AccountMenu({ user }: { user: CurrentUser }) {
       </div>
       <MenuItem onClick={() => router.push("/profile")}>{tNav("profile")}</MenuItem>
       <MenuSeparator />
-      {/* The guides, whole, to run again: this page's, and the round of the
-          app from Översikt. Each starts by itself once, with what is new. */}
       <p className="px-2.5 pb-1 pt-1.5 text-xs font-medium text-muted">{tGuides("menuHeading")}</p>
       {pageGuide && pageGuide.id !== "start" && (
         <MenuItem onClick={() => start(pageGuide.id)}>{tGuides("thisPage")}</MenuItem>
       )}
       <MenuItem onClick={() => start("start")}>{tGuides("tour")}</MenuItem>
       <MenuSeparator />
-      {/* Switches rather than items: they act in place, and the menu stays
-          open so the reader sees what they did. */}
       <div className="flex items-center justify-between gap-4 px-2.5 py-1.5" data-tour="theme">
         <span className="text-sm">{t("theme")}</span>
         <ThemeToggle round />
@@ -271,9 +194,7 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         <LanguageSwitcher round />
       </div>
       <MenuSeparator />
-      {/* A new tab, because leaving takes somebody out of a form they may be
-          halfway through, and `noopener` because a tab we opened must not be
-          handed a way to steer this one. */}
+      {/* A new tab, because leaving takes somebody out of a form they may be halfway through, and `noopener` because a tab we opened must not be handed a way to steer this one. */}
       <MenuItem onClick={() => window.open(DSEK_URL, "_blank", "noopener,noreferrer")}>
         <span className="flex-1">{tNav("toDsek")}</span>
         <IconExternal aria-hidden className="size-3.5 text-muted" />

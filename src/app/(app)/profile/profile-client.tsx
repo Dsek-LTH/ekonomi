@@ -1,10 +1,7 @@
 "use client";
 
-// My profile: who you are across the top, then what you can set, in two
-// columns. A page of its own rather than the overlay it used to be: it holds
-// four forms and the betyg, which a dialog-width column stacked into a long
-// scroll. The account menu in the header keeps theme and language as well,
-// being the two switches not worth a page load.
+// My profile: the hero across the top, then two columns of settings. The account menu in the header keeps theme and language.
+
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react";
@@ -39,7 +36,7 @@ export function ProfileClient({
   score,
 }: {
   userId: string;
-  /** Whether a picture is set, which decides "Byt bild" and "Ta bort". */
+  /** Decides "Byt bild" and "Ta bort". */
   hasAvatar: boolean;
   name: string;
   email: string;
@@ -86,29 +83,14 @@ export function ProfileClient({
         hasAvatar={hasAvatar}
       />
 
-      {/* The forms on the left, where the eye goes after the hero; the small
-          things beside them. One column on a phone, in the same order, so the
-          payout account (the one thing here a member is sent to fill in)
-          stays first. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title={tProfile("payoutTitle")} subtitle={tProfile("payoutDescription")} />
             <CardBody className="space-y-5">
               <div className="grid gap-5 sm:grid-cols-2">
-                {/* Named, and told outright that they are not credentials.
-                    Unnamed, these are two text fields over a Save button, which
-                    is the shape of a login form, and a password manager
-                    offering to put a username in Kontonummer is what that guess
-                    looks like. `autoComplete="off"` is the standard half;
-                    managers routinely ignore it, so 1Password's own opt-out
-                    says it again in the one language it does read. If another
-                    manager starts guessing here, it will have an attribute of
-                    its own to add beside this one.
-
-                    No `inputMode="numeric"`: the format asked for carries a
-                    hyphen and spaces (see the placeholders), and a digits-only
-                    keypad on a phone has no way to type either. */}
+                {/* Named and autoComplete="off" (plus 1Password's opt-out) so password managers do not
+                    read this as a login form. No inputMode="numeric": the format has a hyphen and spaces. */}
                 <Field label={tProfile("clearing")}>
                   <Input
                     name="bank-clearing"
@@ -140,7 +122,6 @@ export function ProfileClient({
 
           <NotificationSettings email={email} initial={notifications} />
 
-          {/* The hero's score links here. */}
           <Card id="betyg" className="scroll-mt-20">
             <CardHeader title={tScore("title")} subtitle={tScore("ownSubtitle")} />
             <CardBody>
@@ -150,8 +131,6 @@ export function ProfileClient({
         </div>
 
         <div className="min-w-0 space-y-4">
-          {/* Only rendered for the treasury. Everyone else has no Fortnox
-              login to have an opinion about. */}
           {fortnox && (
             <Card>
               <CardHeader title="Fortnox" subtitle={tProfile("fortnoxSubtitle")} />
@@ -224,12 +203,7 @@ export function ProfileClient({
   );
 }
 
-/**
- * Who you are, across the top: the picture (and the way to change it), the
- * name, the address the mail goes to, the roles, and the betyg. Sign out sits
- * here too, as the one thing on the page about the session rather than the
- * person.
- */
+/** Who you are: picture (and how to change it), name, mail address, roles and betyg. Sign out sits here. */
 function ProfileHero({
   userId,
   name,
@@ -265,8 +239,6 @@ function ProfileHero({
   return (
     <Card>
       <div className="flex flex-col items-center gap-5 px-inset py-6 text-center sm:flex-row sm:items-center sm:text-left">
-        {/* The picture is its own button: pressing your own face to change it
-            is the move people try first. */}
         <button
           type="button"
           onClick={pick}

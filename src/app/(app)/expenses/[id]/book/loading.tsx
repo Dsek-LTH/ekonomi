@@ -1,7 +1,6 @@
 import { Card, CardBody } from "@/components/ui/card";
 import { Skeleton, SkeletonPage, SkeletonTable } from "@/components/ui/skeleton";
 
-// Booking: the voucher head in a card, then the lines as a table.
 export default function Loading() {
   return (
     <SkeletonPage back titleWidth="w-64">

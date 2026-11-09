@@ -1,10 +1,4 @@
-// The intäktsräkning's typesetter: which template draws it, and nothing else.
-//
-// It used to be the intakt service's /v1/render, a LaTeX page drawn by
-// pdflatex in another container. Rendering here means the document can change
-// with the app that decides what it says, in one deploy. Documents already
-// stored for booked days are bytes in object storage and are never re-rendered,
-// so they stay exactly as they were.
+// The intäktsräkning's typesetter: which template draws it. Stored documents are never re-rendered.
 import "server-only";
 
 import path from "node:path";

@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Two bookkeepers booking the same utlägg. The booking screen warns about it,
-// but a warning is not a guard, so what is pinned here is the server's half:
-// each write carries the version its screen was built from, and a write against
-// a version that is gone is a 409, whichever way the race was lost. It used to
-// be a 500 from the unique index on a second booking, and a silent overwrite on
-// a second amend.
+// Two bookkeepers booking the same utlägg: each write carries the version its screen was built from,
+// and a write against a version that is gone is a 409.
 
 const h = vi.hoisted(() => ({
   expense: null as Record<string, unknown> | null,
@@ -19,7 +15,6 @@ const h = vi.hoisted(() => ({
 const VERSION = "2026-05-02T09:14:03.512Z";
 const NEXT_VERSION = "2026-05-02T09:20:00.000Z";
 
-// The year picked in the header is its own test (lib/api/fiscal-year.test.ts).
 vi.mock("@/lib/api/fiscal-year", () => ({ denyOutsideFiscalYear: async () => null }));
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "u1",
@@ -56,7 +51,6 @@ vi.mock("@/lib/server/db", () => {
 
 const { POST, PATCH } = await import("./route");
 
-// A private outlay of 125 kr, balanced against one cost row.
 const body = (over: Record<string, unknown> = {}) => ({
   expectedUpdatedAt: VERSION,
   date: "2026-05-01",

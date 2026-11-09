@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Exporting a levfaktura to Fortnox, where the one thing that must never
-// happen is a supplier invoice made twice.
-//
-// Fortnox is mocked; the lock, the order of the steps and what is written at
-// each are the real ones. The rule under test: the lock is let go only when it
-// is certain nothing was made, and kept, UNCERTAIN, when it is not.
+// Exporting a levfaktura to Fortnox: a supplier invoice must never be made twice.
+// The lock is let go only when certain nothing was made, else kept UNCERTAIN.
 
 const h = vi.hoisted(() => ({
   invoice: {} as Record<string, unknown>,

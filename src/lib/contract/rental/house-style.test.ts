@@ -5,17 +5,9 @@ import { renderRentalContract } from "./typst";
 import { RENTAL_TERMS, TERMS_VERSION } from "./terms";
 import type { RentalContractData } from "./types";
 
-// The contract is set in the guild's own faces, the ones dsekdoc.cls names.
-//
-// This guards a failure that is silent and expensive: Typst falls back when a
-// named family is missing, so a vendored .otf that does not reach the container
-// produces a document that renders, has the right words in the right places,
-// and is in the wrong hand. Nothing throws and no test that only counts pages
-// would notice. What a renter signs would then not match what was checked on
-// the laptop it was drawn on.
-//
-// Read off the PDF's own font table rather than trusted from the template,
-// because the template only *asks* for a family.
+// Guards a silent failure: Typst falls back when a named family is missing, so a vendored
+// .otf that does not reach the container renders fine in the wrong typeface. Read off the
+// PDF's own font table, since the template only asks for a family.
 
 const data: RentalContractData = {
   lessor: {
@@ -71,11 +63,9 @@ describe("the uthyrningsavtal is set in the guild's hand", () => {
   it("embeds Domitian and TeX Gyre Heros, and nothing else", async () => {
     const fonts = embeddedFonts(await renderRentalContract(data));
     expect(fonts.length).toBeGreaterThan(0);
-    // Anything else here means a family was named and not found, and Typst
-    // quietly reached for Libertinus instead.
+    // Anything else means a named family was not found and Typst fell back to Libertinus.
     expect(fonts.filter((f) => !/^(Domitian|TeXGyreHeros)-/.test(f))).toEqual([]);
-    // Both families are actually in use: the body is the serif, the headings
-    // are the sans, and losing either would still pass a one-family check.
+    // Both families in use: losing either would still pass a one-family check.
     expect(fonts.some((f) => f.startsWith("Domitian-"))).toBe(true);
     expect(fonts.some((f) => f.startsWith("TeXGyreHeros-"))).toBe(true);
   });

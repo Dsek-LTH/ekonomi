@@ -1,30 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Filing an utlägg's voucher in Fortnox.
-//
-// The most consequential write in the app, and the one that cannot be undone
-// over there: a voucher has no delete in the Fortnox API. So the order the two
-// calls happen in is the safety, and it is an ordering no pure function can be
-// asked about. What is pinned here:
-//
+// Filing an utlägg's voucher in Fortnox, which cannot be undone (no voucher delete), so the call order is the safety. Pinned:
 //   the gate           only a bookkeeper, and only a BOOKED utlägg
-//   the order          the attachment goes up first, because a file nobody
-//                      links is harmless and a voucher nobody wanted is not
-//   the rows           öre become decimal SEK, and only a cost centre Fortnox
-//                      knows about travels with them
-//   the failure paths  nothing local is written when Fortnox refuses, and a
-//                      missing personal login is a prompt rather than a failure
+//   the order          the attachment goes up first
+//   the rows           öre become decimal SEK, only a Fortnox-known cost centre travels
+//   the failure paths  nothing local is written when Fortnox refuses; a missing personal login is a prompt
 //   the attach         its failure does not undo an export that worked
-//   the lock           an utlägg is exported once: a second press is refused
-//                      while the first holds the lock, and the lock is only
-//                      let go of when it is certain no voucher was made
-//
-// Mocked at the boundaries: the session, the database, object storage and
-// Fortnox itself. The gate, the ordering and the response are the real thing.
+//   the lock           a second press is refused while the first holds it; released only when certainly no voucher was made
 
 const h = vi.hoisted(() => ({
   capabilities: ["BOOKKEEPING"] as string[],
-  /** The two-person rule's answer. See lib/server/review.ts. */
   reviewBlocker: null as "ownBooking" | null,
   status: "BOOKED" as string,
   verification: {
@@ -50,19 +35,15 @@ const h = vi.hoisted(() => ({
       },
     ],
   } as unknown,
-  /** The order Fortnox was called in, so the test can read it back. */
   calls: [] as string[],
   createVoucher: vi.fn(),
   uploadInboxFile: vi.fn(),
   connectFile: vi.fn(),
   getUserToken: vi.fn(),
   verificationUpdate: vi.fn(),
-  /** Every conditional write to the utlägg: the lock's steps and the record. */
   expenseUpdateMany: vi.fn(),
-  /** Taking the lock. */
   claimWrite: vi.fn(),
   event: vi.fn(),
-  // The lock as the row holds it when Exportera is pressed.
   claimState: null as string | null,
   claimedAt: null as Date | null,
 }));
@@ -149,8 +130,6 @@ vi.mock("@/lib/fortnox", () => ({
   FortnoxError,
 }));
 
-// The cover page and the storage behind it are their own modules. What matters
-// here is that something is uploaded before the voucher is made.
 vi.mock("@/lib/expense/document", () => ({
   storeExpenseDocument: async () => ({
     ok: true,
@@ -244,9 +223,7 @@ describe("POST /api/expenses/[id]/export", () => {
   });
 
   it("uploads the attachment before it makes the voucher", async () => {
-    // The whole ordering rule. A file sitting unused in the Fortnox inbox is
-    // harmless; a voucher that should not exist cannot be deleted through the
-    // API and has to be cleaned up by hand.
+    // The ordering rule: an unused file in Fortnox's inbox is harmless, a stray voucher cannot be deleted through the API.
     const res = await exportIt();
     expect(res.status).toBe(200);
     expect(h.calls).toEqual([
@@ -290,7 +267,6 @@ describe("POST /api/expenses/[id]/export", () => {
         fortnoxYear: 10,
       }),
     });
-    // Conditional on the lock this export took, and letting go of it.
     expect(h.expenseUpdateMany).toHaveBeenLastCalledWith({
       where: { id: "e1", status: "BOOKED", exportClaimedAt: expect.any(Date) },
       data: {
@@ -309,8 +285,7 @@ describe("POST /api/expenses/[id]/export", () => {
     h.createVoucher.mockRejectedValue(new FortnoxError("Kontot finns inte", 400));
     const res = await exportIt();
     expect(res.status).toBe(400);
-    // Not EXPORTED. The bookkeeper fixes the account and presses again, which
-    // they can, because a refusal made no voucher and the lock was let go.
+    // Not EXPORTED. A refusal made no voucher and the lock was let go, so the bookkeeper can press again.
     expect(lockSteps()).toEqual(["SENT", "released"]);
     expect(h.verificationUpdate).not.toHaveBeenCalled();
   });

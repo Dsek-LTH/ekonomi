@@ -1,9 +1,4 @@
-// One made-up mail of every kind, drawn by the same code a real one is.
-//
-// For the React Email preview server (emails/), which shows them while a
-// mail's design is being worked on. Only the data is made up. The words, the
-// facts and the layout are the ones a member gets. The test mail in
-// Inställningar is built from real data instead; see lib/server/test-email.ts.
+// One made-up mail of every kind for the React Email preview server (emails/). Only the data is made up.
 import {
   appUrl,
   digestEmail,
@@ -49,8 +44,6 @@ const SAMPLE_TRANSACTIONS = [
   { transactionDate: new Date("2026-10-07"), description: "DOLLARSTORE LUND", amount: -4000 },
 ];
 
-// The mails about one utlägg, by the key content.ts words them under, and the
-// comment the actor left where the real mail would usually carry one.
 const EXPENSE: Partial<
   Record<NotificationKind, { key: Parameters<typeof expenseNotice>[0]; comment?: string }>
 > = {
@@ -79,7 +72,6 @@ const EXPENSE: Partial<
   },
 };
 
-/** A mail of `kind` with made-up content. `name` is who it is addressed to. */
 export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
   const expense = EXPENSE[kind];
   if (expense) {
@@ -97,7 +89,6 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
   }
 
   if (kind === "CARD_TRANSACTIONS_IMPORTED") {
-    // Built the way app/api/bank/import/route.ts builds it, for one holder.
     const cards = emailT("cardMask", { last4: "4821" });
     const count = SAMPLE_TRANSACTIONS.length;
     const url = appUrl("/bank?scope=mine");
@@ -123,9 +114,7 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
   }
 
   if (kind === "EXPENSE_REMINDER") {
-    // Several at once, utlägg and card purchases both, the shape a reminder
-    // from the lists takes. One utlägg reads like that utlägg's own mail,
-    // which the others already show.
+    // Several at once, utlägg and card purchases: the shape of a reminder from the lists.
     const decor = {
       ...SAMPLE_EXPENSE,
       id: "preview-2",
@@ -152,7 +141,6 @@ export function sampleEmail(kind: NotificationKind, name = "Maja Holm"): Email {
     );
   }
 
-  // WEEKLY_DIGEST, the one kind left.
   return digestEmail(name, "2026-W41", {
     unmatched: SAMPLE_TRANSACTIONS.slice(1, 3),
     deadline: [

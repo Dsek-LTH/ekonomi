@@ -1,25 +1,5 @@
 "use client";
 
-// The levfaktura Inkorg: a table of every document no invoice has yet that
-// the reader may see. Each row is the file, who sent it in and when, and
-// nothing read off it. What the PDF says is read when its unit fördelar it.
-//
-// Two readers, one page. Triage's question is whose it is, and the file
-// answers that once opened: its tabs are what waits to be given to a unit and
-// what is with the units. A resultatansvarig's question is whether it is
-// theirs: they see what was given to their units, and fördelar it, which
-// makes it an invoice, or say it is not theirs.
-//
-// Clicking a row opens its PDF in the document panel beside the page, with
-// what to do with it in a bar along the panel's foot. Beside the document
-// being read, and out of the table, which stays as it was so the next row is
-// always where it was. Nothing is open when the page loads. For triage the
-// panel stands anyway, empty, as the place to drop new documents (as on an
-// utlägg). For anyone else it comes when they ask to look at something.
-//
-// Deleting is the table's, a row action: it is the answer for a document that
-// is not worth opening at all (a reminder, a newsletter), and the bar is for
-// the ones that are.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -55,9 +35,6 @@ import type { InboxHealth } from "@/lib/data/supplier-invoices";
 
 const HOME = "/invoices/inbox";
 
-/** The tabs, each a question somebody has to answer about the documents in
- *  it: whose it is (triage), whether it is ours (the unit), and which are
- *  waiting on a unit (triage, keeping an eye on them). */
 type InkorgTab = "sort" | "allocate" | "units";
 
 const TAB_HOLDS: Record<InkorgTab, (d: InboxDocument) => boolean> = {
@@ -75,15 +52,10 @@ export function InkorgClient({
   ownsUnits,
 }: {
   documents: InboxDocument[];
-  /** The one opened from the table, or null with none open. */
   selected: InboxDocument | null;
-  /** For triage's picker. Empty for anyone else. */
   resultUnits: { id: string; name: string }[];
-  /** The mailbox, for triage. Null for anyone else. */
   health: InboxHealth | null;
-  /** Whether the reader gives documents to units. */
   triage: boolean;
-  /** Whether the reader answers for a unit, and so has documents to fördela. */
   ownsUnits: boolean;
 }) {
   const t = useTranslations("invoices.inkorg");
@@ -93,8 +65,6 @@ export function InkorgClient({
   const remover = useMutation();
   const confirm = useConfirm();
   const { dateTime } = useFormat();
-  // Whoever gives documents out starts on what waits for that; a unit on
-  // what waits for it. An admin who is neither sees what is with the units.
   const tabValues: InkorgTab[] = [
     ...(triage ? (["sort"] as const) : []),
     ...(ownsUnits ? (["allocate"] as const) : []),
@@ -110,25 +80,17 @@ export function InkorgClient({
             predicate: TAB_HOLDS[value],
           }))
         : undefined,
-    // The values follow from the two flags.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, triage, ownsUnits],
   );
-  // With one tab there is no tab bar, and the rows are that tab's.
   const rows = tabs ? documents : documents.filter(TAB_HOLDS[tabValues[0]]);
 
-  // Opening a row is asking to see it, so the panel unfolds even if it was
-  // folded on some other page.
   const selectedId = selected?.id ?? null;
   useEffect(() => {
     if (selectedId) reveal();
   }, [selectedId, reveal]);
 
-  // The next one once this one is dealt with: the one after it, or before it
-  // when it was the last, so working down the table never needs a click to
-  // open the next. Next as the table shows it, on the tab that is open, and
-  // nothing from a tab that is not. One opened from outside what the table
-  // shows (a search typed since) has no next, and closes.
+  // Next on the open tab once this one is dealt with; none for one opened from outside what the table shows.
   const advance = (id: string) => {
     const shown = visibleRows({ columns, rows, controls, tabs });
     const i = shown.findIndex((d) => d.id === id);
@@ -148,21 +110,16 @@ export function InkorgClient({
       key: d.id,
       method: "DELETE",
       success: t("deleted"),
-      // The open one gone, the next opens; any other, the table refreshes.
       refresh: d.id !== selectedId,
     });
     if (res && d.id === selectedId) advance(d.id);
   }
 
-  // One that came back from an invoice is marked, so it is not taken for
-  // new. Why it came back is in the panel once it is opened.
   const columns: Column<InboxDocument>[] = [
     {
       key: "document",
       header: t("col.document"),
       mobile: "title",
-      // The mail's subject and the forwarder's note are searched too, though
-      // not shown: the panel shows them once the row is opened.
       value: (d) => [d.filename, d.subject ?? "", d.note ?? ""].join(" "),
       sortable: true,
       searchable: true,
@@ -194,7 +151,6 @@ export function InkorgClient({
         </span>
       ),
     },
-    // Whose Inkorg it is in, for whoever sees more than their own.
     ...(triage || !ownsUnits
       ? [
           {
@@ -208,8 +164,6 @@ export function InkorgClient({
           },
         ]
       : []),
-    // When it is due, once triage has said, so the unit can tell what is
-    // urgent. Undated after every dated one.
     {
       key: "dueDate",
       header: t("col.dueDate"),
@@ -233,8 +187,7 @@ export function InkorgClient({
       mobile: "hide",
       cell: (d) =>
         d.can.canDelete && (
-          // Above the row's link, which covers the row so a click anywhere
-          // opens it. See the note on rowHref in components/ui/data-table.tsx.
+          // Above the row link that covers the row (see rowHref in data-table.tsx).
           <span className="relative z-10 flex justify-end">
             <IconButton
               tone="danger"
@@ -263,10 +216,6 @@ export function InkorgClient({
               ]
             : []
         }
-        // Triage puts documents in here too, so its panel stands even with
-        // nothing open, as the place to drop them, as on an utlägg. With one
-        // open, a file dropped on it is still a document of its own, not an
-        // addition to the open one, and the panel says so.
         onFile={triage ? (f) => void upload.send(f) : undefined}
         uploading={upload.busy}
         multiple
@@ -281,8 +230,6 @@ export function InkorgClient({
       {selected && (
         <ReceiptPanelFooter>
           <DocumentBar
-            // Fresh per document, so a unit picked for one is not still picked
-            // for the next.
             key={selected.id}
             document={selected}
             resultUnits={resultUnits}
@@ -299,12 +246,8 @@ export function InkorgClient({
           tabs={tabs}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
-          // The open row's link closes it again; any other opens that one.
           rowHref={(d) => (d.id === selectedId ? HOME : `${HOME}?doc=${d.id}`)}
-          // Opening one shows it beside the table, so the table stays put.
           rowScroll={false}
-          // The fill and an ink bar at the row's start, so the open one is
-          // not told from a hovered one by a step of grey alone.
           rowClassName={(d) =>
             d.id === selectedId
               ? "bg-accent-soft hover:bg-accent-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--color-accent)]"
@@ -321,21 +264,13 @@ export function InkorgClient({
   );
 }
 
-// ── Putting documents in ──────────────────────────────────────────
-
-/**
- * Sends each file in as a document of its own. With nothing open, the first
- * to land is opened, so a file dropped on the empty panel is the one the
- * panel then shows, ready to be given to a unit.
- */
 function useUpload(selectedId: string | null) {
   const t = useTranslations("invoices.inkorg");
   const notify = useNotify();
   const router = useProgressRouter();
   const m = useMutation();
   const [count, setCount] = useState(0);
-  // Read when an upload lands, not when it started, so a second file in the
-  // same drop does not open over the first.
+  // Read when the upload lands, so a second file in the drop does not open over the first.
   const open = useRef(selectedId);
   useEffect(() => {
     open.current = selectedId;
@@ -360,14 +295,6 @@ function useUpload(selectedId: string | null) {
   return { send, busy: count > 0 };
 }
 
-// ── The bar at the panel's foot ───────────────────────────────────
-
-/**
- * What can be done with the open document, by whoever is reading it. Triage
- * gives it to a unit, or to another one. The unit fördelar it, on a page of its
- * own beside the PDF, or says it is not theirs. Triage may fördela on the
- * unit's behalf too, once it has one.
- */
 function DocumentBar({
   document: d,
   resultUnits,
@@ -386,7 +313,6 @@ function DocumentBar({
   const [dueDate, setDueDate] = useState(d.dueDate);
   // A date half typed is not one to send. Empty is: it clears it.
   const dueReady = dueDate === "" || isCompleteDate(dueDate);
-  // Sent again to the unit it is with, only the due date changes.
   const changed = unit !== d.resultUnitId || dueDate !== d.dueDate;
 
   async function assign() {
@@ -432,11 +358,6 @@ function DocumentBar({
           {d.note}
         </p>
       )}
-      {/* The buttons are md, the button register level with an sm field (32px,
-          44px on a phone), so they stand as tall as the fields beside them.
-          One row, whatever the panel's width: the buttons keep their size and
-          the fields give way. The date only down to a whole date, which is
-          as small as DateInput goes, and the unit's name the rest. */}
       {(d.can.canAssign || d.can.canAllocate || d.can.canDecline) && (
         <div className="flex items-end gap-2">
           {d.can.canAssign && (
@@ -503,11 +424,7 @@ function DocumentBar({
   );
 }
 
-/**
- * The inkorg mailbox: when it was last read, the error if the last read
- * failed, and the mail it refused lately. A forward that "never arrived" is
- * usually here, refused for coming from a private address.
- */
+/** The inkorg mailbox: last read, last error and recently refused mail (often from private addresses). */
 function MailboxCard({ health }: { health: InboxHealth }) {
   const t = useTranslations("invoices.mailbox");
   const { dateTime } = useFormat();

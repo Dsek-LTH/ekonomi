@@ -1,17 +1,6 @@
 "use client";
 
-// What a list screen is currently showing, as React state, the other half of
-// list-query.ts, which is the value itself and how it is spelled in a URL.
-//
-// It lived in components/ui for a while, beside spinner.tsx and chip.tsx, which
-// is the wrong shelf: this is not a UI primitive, it is the client end of the
-// list-query subsystem, and it re-exported that module's own types to get at
-// them. The distance showed: the URL-backed hook was parsing the address
-// without the `defaultTab` the page had passed to `parseListQuery` four lines
-// away in another file, so the two disagreed about which tab was in force.
-//
-// The two components that draw the controls (the sortable header and the pager)
-// went the other way, into data-table.tsx, which was their only caller.
+// Client end of list-query.ts: a list screen's state as React state.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useProgressRouter } from "@/components/shell/route-progress";
@@ -29,20 +18,12 @@ import {
 export { PAGE_SIZES };
 export type { PageSize, SortDir };
 
-// ── The two kinds of list, as two types ───────────────────────────
-//
-// A list either has the database choose its rows or does it in the browser, and
-// the components that draw the two are different (DataTable / ClientDataTable).
-// These are the halves that go with them: `ClientControls` can paginate a set
-// of rows because it has them all, `ServerControls` knows a total it was told
-// because it does not. Handing one to the wrong component does not compile,
-// which is what stops a server-backed table from quietly filtering nothing.
+// A list is either database-chosen (ServerControls, DataTable) or browser-cut (ClientControls,
+// ClientDataTable); handing one to the wrong component does not compile.
 type BaseControls = {
   tab: string;
   setTab: (v: string) => void;
-  // Values active in DataTable's dropdown filter. Empty means it isn't
-  // narrowing anything, which is its resting state, unlike `tab`, where one
-  // option is always in force.
+  // DataTable's dropdown values. Empty narrows nothing, unlike `tab`.
   picks: string[];
   setPicks: (v: string[]) => void;
   query: string;
@@ -52,15 +33,8 @@ type BaseControls = {
   dateTo: string;
   setDateTo: (v: string) => void;
   /**
-   * Picks and the date range back to their resting state, in one move.
-   *
-   * One move because on a URL-backed list each setter is a navigation, and
-   * three of them fired from the same handler do not see each other's work:
-   * `commit` reads the address as it stands, which does not change until the
-   * router has been round the houses, so each write was merged onto the
-   * address the *first* one started from and the last one out won. Clearing
-   * the sheet left the picks it had just cleared. The search box is not part
-   * of this, it is not in the sheet either. See DataTable's filter sheet.
+   * Picks and the date range back to resting state in one move. On a URL-backed list each setter is a
+   * navigation, and `commit` reads the address as it stands, so separate writes would undo each other.
    */
   clearFilters: () => void;
   pageSize: PageSize;
@@ -70,29 +44,21 @@ type BaseControls = {
   sortKey: string | null;
   sortDir: SortDir;
   toggleSort: (key: string) => void;
-  /**
-   * The page's own segmented toggle (whose utlägg to show), where it has one.
-   * Carried here so it travels with the rest of the list's state. On a
-   * URL-backed list it is a filter like any other and belongs in the address.
-   */
+  /** The page's own segmented toggle (whose utlägg to show). On a URL-backed list it lives in the address. */
   view: string;
   setView: (v: string) => void;
 };
 
-/** A list the database narrowed. The total is what it reported. */
 export type ServerControls = BaseControls & {
   server: true;
-  /** Matching rows in the database, not on this page. The pager needs both. */
   total: number;
 };
 
-/** A list narrowed in the browser, which therefore holds every row. */
 export type ClientControls = BaseControls & {
   server: false;
   paginate: <T>(items: T[]) => T[];
 };
 
-/** Either kind, for the few helpers that genuinely take both. */
 export type TableControlState = ServerControls | ClientControls;
 
 type TableControlDefaults = {
@@ -147,8 +113,6 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
   const setDateTo = withReset(setDateToRaw);
   const setPageSize = withReset(setPageSizeRaw);
   const setView = withReset(setViewRaw);
-  // Three state writes React batches into one render. Nothing to merge here,
-  // unlike the URL-backed version below.
   const clearFilters = () => {
     setPage(0);
     setPicksRaw([]);
@@ -194,41 +158,20 @@ export function useTableControls(defaults: TableControlDefaults = {}): ClientCon
   };
 }
 
-// ── The same controls, kept in the URL ────────────────────────────
-//
-// For a list whose query runs on the server. The state lives in the address
-// rather than in this component: the rows are chosen by the Server Component
-// above, and the only thing it can read a choice from is its own URL.
-//
-// What that buys beyond the paging: a filtered list is now a link. It survives
-// a reload, it can be sent to someone, and the browser's Back button walks back
-// through it. None of that was possible while the state was useState.
+// The same controls kept in the URL, for a list whose query runs on the server (linkable, survives reload, Back works).
 
 /** How long a search box sits still before the server is asked again. */
 const SEARCH_DEBOUNCE_MS = 300;
 
-/** Whatever was typed is worth asking about. The search box's rule. */
 const always = () => true;
 
 /** A whole date, or nothing at all. Anything in between is still being typed. */
 const wholeOrEmpty = (v: string) => v === "" || isWholeDate(v);
 
 /**
- * A control whose value lives in the URL but is typed into.
- *
- * The URL is the state, and on these pages a URL change is a Server Component
- * render, a round trip. A controlled input reading straight from it therefore
- * shows nothing until the trip lands, which means every character is thrown
- * away in front of you, and every character starts another trip.
- *
- * So the draft is echoed here and the URL is written on the caller's terms:
- *
- *   the search box  commits anything, once the typing stops
- *   a date          commits only a whole one, and empty to clear it. A
- *                   half-typed date is not a filter, and parseListQuery drops
- *                   it on the way back in, which is what blanked the field
- *
- * Returns the draft to render and the setter to hand the input.
+ * A control whose value lives in the URL but is typed into. A URL change is a Server Component round trip,
+ * so a controlled input would lose characters. The draft is echoed and the URL written on the caller's terms:
+ * the search box commits anything once typing stops; a date commits only a whole one (or empty to clear).
  */
 function useUrlDraft(
   committed: string,
@@ -237,8 +180,7 @@ function useUrlDraft(
 ): [string, (value: string) => void] {
   const [draft, setDraft] = useState(committed);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // What we last wrote, so the effect below can tell the URL moving on its own
-  // from the URL moving because of us.
+  // What we last wrote, to tell the URL moving on its own from moving because of us.
   const ours = useRef(committed);
 
   // Re-seed when the URL's own value moves without us typing. Back, or a link.
@@ -266,32 +208,19 @@ function useUrlDraft(
   return [draft, set];
 }
 
-// Every parameter `listQueryToSearch` can write, so `commit` knows which ones
-// are the list's to rewrite and which belong to the page.
+// Every parameter `listQueryToSearch` can write, so `commit` knows which are the list's to rewrite.
 const LIST_KEYS = ["page", "size", "tab", "picks", "view", "q", "from", "to", "sort", "dir"];
 
 export function useUrlTableControls(
   total: number,
-  /**
-   * The tab in force when the URL names none, the same value the page passed
-   * to `parseListQuery`, and the reason this is an argument at all.
-   *
-   * The page parses the URL to build its query, and this parses it again to
-   * draw the controls. Only the page was passing a default, so on a list whose
-   * first tab is a real filter the two parses disagreed: the query ran with
-   * "PENDING" while `q.tab` here was "" and the highlighted tab came from
-   * DataTable falling back to its first option. It worked only because that
-   * first option happened to *be* PENDING, an agreement nothing enforced.
-   */
+  /** The tab in force when the URL names none: the same value the page passed to `parseListQuery`, or the two parses disagree. */
   defaultTab?: string,
 ): ServerControls {
   const router = useProgressRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
-  // The URL is the state. Re-parsed on every render, which is cheap and means
-  // Back, Forward and a pasted link all land in exactly the same place as a
-  // click. There is no second copy of this to keep in step.
+  // The URL is the state, re-parsed on every render so Back, Forward and pasted links land like a click.
   const q = parseListQuery(Object.fromEntries(params.entries()), { defaultTab });
 
   const commit = useCallback(
@@ -300,39 +229,26 @@ export function useUrlTableControls(
         ...parseListQuery(Object.fromEntries(params.entries()), { defaultTab }),
         ...next,
       };
-      // Whatever else the address carries (/bank's `scope`, say) belongs to
-      // the page, not the list, and rides along untouched. Rebuilding from the
-      // list's own keys alone dropped it, so a tab click on the section's feed
-      // put you back on your own.
+      // Whatever else the address carries (/bank's `scope`, say) belongs to the page and rides along untouched.
       const kept = new URLSearchParams(params.toString());
       for (const key of LIST_KEYS) kept.delete(key);
       const own = new URLSearchParams(listQueryToSearch(merged));
       for (const [k, v] of own) kept.set(k, v);
       const search = kept.toString();
-      // `replace`, not `push`: narrowing a list is adjusting a view, not going
-      // somewhere. Pushing would put every keystroke and every tab on the
-      // history stack, and Back out of the list would take a dozen presses.
+      // `replace`, not `push`: narrowing a list adjusts a view, and pushing every keystroke would bury Back.
       router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
     },
     [params, pathname, router, defaultTab],
   );
 
-  // Everything except the search box resets to the first page: page 4 of a
-  // narrower list is usually past the end of it, and an empty table is a
-  // confusing answer to "show me the drafts".
-  //
-  // One call per handler. `commit` merges onto the address as it stands, and
-  // the address stands still until the navigation lands, so two of these in a
-  // row would both be merged onto the state the first one started from and the
-  // second would undo the first. Anything that changes two things at once
-  // says so in a single commit, as `clearFilters` does.
+  // Everything except the search box resets to the first page. One call per handler: `commit` merges onto
+  // the address as it stands, so two in a row undo each other. Changing two things says so in one commit (`clearFilters`).
   const set =
     <K extends keyof ListQuery>(key: K) =>
     (v: ListQuery[K]) =>
       commit({ [key]: v, page: 0 } as Partial<ListQuery>);
 
-  // The three controls that are typed into rather than clicked. None of them
-  // can wait for a round trip per keystroke. See useUrlDraft.
+  // The typed controls, which cannot wait a round trip per keystroke (see useUrlDraft).
   const [query, setQuery] = useUrlDraft(q.q, (v) => commit({ q: v, page: 0 }), {
     ready: always,
     debounceMs: SEARCH_DEBOUNCE_MS,
@@ -340,13 +256,11 @@ export function useUrlTableControls(
   const [dateFrom, setDateFrom] = useUrlDraft(q.from, set("from"), { ready: wholeOrEmpty });
   const [dateTo, setDateTo] = useUrlDraft(q.to, set("to"), { ready: wholeOrEmpty });
 
-  // The drafts above follow: clearing the dates in the URL is the URL moving
-  // without anyone typing, which is what re-seeds them. See useUrlDraft.
+  // Clearing the dates in the URL is the URL moving on its own, which re-seeds the drafts.
   const clearFilters = () => commit({ picks: [], from: "", to: "", page: 0 });
 
   const toggleSort = (key: string) => {
-    // Same rule as the local version: re-clicking the active column flips it,
-    // a new column starts ascending.
+    // Re-clicking the active column flips it; a new column starts ascending.
     const dir: SortDir = q.sort === key && q.dir === "asc" ? "desc" : "asc";
     commit({ sort: key, dir, page: 0 });
   };
@@ -379,17 +293,8 @@ export function useUrlTableControls(
 }
 
 /**
- * The scope switch's `onChange` for a list whose scope is in the URL as
- * `?scope=` (Utlägg, Fakturor, Bankhändelser). One function so every list
- * switches the same way. See docs/navigation.md.
- *
- * The stage you were on comes along, so flipping scope compares the same slice
- * of both. It is written out even where it was the old default, because the
- * defaults differ per scope and leaving it unstated would open the other one's.
- * Paging is dropped: page 4 of the section's list is not page 4 of your own.
- *
- * `push`, not `replace`, unlike the controls above: whose list you are reading
- * is a place you went, and Back should take you to the other one.
+ * The scope switch's `onChange` for a list with `?scope=`. Keeps the stage (written out even at its default,
+ * since defaults differ per scope), drops paging. `push`, not `replace`: whose list you read is a place you went.
  */
 export function useScopeSwitch(
   tab: string,
@@ -409,14 +314,8 @@ export function useScopeSwitch(
 }
 
 /**
- * Client-side controls whose tab is in the URL too, for a list whose rows
- * arrive whole and are cut in the browser (Fakturor, Intäkter). The page reads
- * `?tab=` and hands it in as the controls' first tab; this writes every change
- * back, so Back, a reload and a link all land on the same stage, the same as a
- * server list. See docs/navigation.md.
- *
- * `replace`: changing stage is adjusting the view, not going somewhere (see
- * useUrlTableControls). The scope's own default is left out of the address.
+ * Client-side controls with the tab in the URL, for lists cut in the browser (Fakturor, Intäkter).
+ * `replace`; the scope's own default is left out of the address.
  */
 export function useUrlTab<C extends ClientControls>(local: C, defaultTab: string): C {
   const router = useProgressRouter();

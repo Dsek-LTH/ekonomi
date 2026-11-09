@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// What one forwarded mail becomes, and how the sync moves through the mailbox.
-//
-// Gmail, storage and the database are mocked; the rules in between (who may
-// send, what the note says, whose the invoice is) are the real ones from
-// lib/domain/inbound-mail.ts, and what is checked is what gets written.
+// What one forwarded mail becomes and how the sync moves through the mailbox. Gmail, storage and the database
+// are mocked; the rules in lib/domain/inbound-mail.ts are real.
 
 const PDF = Buffer.from("%PDF-1.4\n%fake\n");
 const GIF = Buffer.from("GIF89a....");
@@ -217,8 +214,7 @@ describe("one mail", () => {
     );
     expect(await syncInbox()).toEqual({ accepted: 1, rejected: 0, skipped: 0 });
     expect(h.put).toHaveBeenCalledTimes(2);
-    // Several PDFs may be one invoice and its specification: no invoice is
-    // guessed, even with a unit to give it to.
+    // Several PDFs may be one invoice and its specification: no invoice is guessed.
     expect(h.assignedCreate).not.toHaveBeenCalled();
     const rows = h.docCreate.mock.calls[0][0].data;
     expect(rows.map((r: { filename: string }) => r.filename)).toEqual([
@@ -260,8 +256,6 @@ describe("one mail", () => {
       note: "Till CAFE01 tack",
       originalFrom: "order@grossisten.se",
     });
-    // A document in that unit's Inkorg, not an invoice: the unit's fördelning
-    // is what makes one.
     expect(assigned()).toMatchObject({
       filename: "f.pdf",
       inboundMailId: "mail1",

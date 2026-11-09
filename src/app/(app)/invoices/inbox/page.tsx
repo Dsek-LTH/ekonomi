@@ -9,11 +9,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("invoiceInbox");
 
-// The levfaktura Inkorg: every document no invoice has yet. Where forwarded
-// PDFs and hand uploads land, and where the documents of an invoice sent back
-// return to. Triage gives each to a result unit, or deletes it. A unit's
-// resultatansvarig reads the same page narrowed to what was given to them,
-// and fördelar each, which makes it an invoice, or says it is not theirs.
 export default async function InvoiceInboxPage({
   searchParams,
 }: {
@@ -29,8 +24,6 @@ export default async function InvoiceInboxPage({
     triage ? getInboxHealth() : null,
     ownedResultUnits(user),
   ]);
-  // Only one asked for: the list opens with nothing open, and the document
-  // panel comes when a row is clicked.
   const selected = documents.find((d) => d.id === doc) ?? null;
   return (
     <InkorgClient

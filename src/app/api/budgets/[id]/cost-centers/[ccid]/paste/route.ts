@@ -8,22 +8,8 @@ import { parseBody } from "@/lib/api/parse";
 import { PasteIntoSheet } from "@/lib/api/schemas/budget";
 import { rebindCopiedRefs } from "@/lib/budget/paste";
 
-// POST /api/budgets/[id]/cost-centers/[ccid]/paste: copied rows, or copied
-// accounts, into this sheet (admin, unlocked).
-//
-// The copy is named by ids, so this reads the originals and brings everything
-// over: the equation, the antal × á-pris pair, the six general columns. A copy
-// assembled on the screen would be a second opinion about what a row is.
-//
-// One request and one transaction, because of the references. A row's equation
-// can point at another row by its id, and pasting a block of rows that point at
-// each other has to end with the copies pointing at the copies, which is only
-// answerable once the copies have ids. So: insert, then rewrite what was
-// copied, in the same breath (see lib/budget/paste.ts).
-//
-// Everything must live in this budget. The guard below answers for this one
-// alone, so an id from another budget is one this request was never entitled to
-// read, let alone copy.
+// Copies by ids, reading the originals. Everything must live in this budget: the guard answers for this one only.
+// One transaction: insert, then rewrite references to the copies (see lib/budget/paste.ts).
 export async function POST(req: Request, ctx: { params: Promise<{ id: string; ccid: string }> }) {
   const { id: budgetId, ccid: ccId } = await ctx.params;
   const g = await allowBudgetWrite({ costCenter: ccId });
@@ -45,8 +31,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
 
   const inThisBudget = { account: { budgetCostCenter: { budgetId } } };
 
-  // The rows being copied, in the order they were named: that is the order they
-  // were shown in, and so the order to paste them in.
   const sourceRows = await prisma.budgetLineItem.findMany({
     where: { id: { in: lineItemIds }, ...inThisBudget },
   });
@@ -62,8 +46,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
 
   if (rows.length === 0 && accounts.length === 0) return fail(404, "notFound");
 
-  // The target account has to be one of this sheet's, or rows would be pasted
-  // somewhere the sheet on screen isn't showing.
   if (accountId) {
     const target = await prisma.budgetAccount.findUnique({
       where: { id: accountId },
@@ -73,8 +55,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
   }
 
   await prisma.$transaction(async (tx) => {
-    // The sheet, so two pastes into it queue up rather than numbering their
-    // accounts the same; each account is locked as its rows are added.
+    // Locks the sheet so concurrent pastes do not number accounts the same.
     await lockForAppend(tx, "budgetCostCenter", ccId);
 
     type SourceRow = {
@@ -88,7 +69,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
 
     /** Copied row id → the row it became, for the reference rewrite at the end. */
     const copied = new Map<string, string>();
-    /** The new rows, each still holding what it was copied from. */
     const made: { id: string; from: SourceRow }[] = [];
 
     async function appendRows(into: string, source: SourceRow[]) {
@@ -99,9 +79,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
         select: { sortOrder: true },
       });
       let order = nextSortOrder(last);
-      // One statement for the whole account rather than one per row. A sheet of
-      // two hundred rows was two hundred round trips inside a transaction that
-      // every other paste into this budget is queued behind.
       const created = await tx.budgetLineItem.createManyAndReturn({
         data: source.map((row) => ({
           accountId: into,
@@ -114,8 +91,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
         })),
         select: { id: true },
       });
-      // `createManyAndReturn` answers in the order it was given, which is what
-      // pairs each new row with the one it came from.
+      // createManyAndReturn answers in input order, which pairs each new row with its source.
       created.forEach((row, i) => {
         copied.set(source[i].id, row.id);
         made.push({ id: row.id, from: source[i] });
@@ -128,8 +104,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
     }
 
     for (const source of accounts) {
-      // An account this sheet already budgets for takes the rows; the account
-      // code is what identifies it, and one sheet never holds it twice.
       const existing = await tx.budgetAccount.findFirst({
         where: { budgetCostCenterId: ccId, accountCode: source.accountCode },
         select: { id: true },
@@ -151,31 +125,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       await appendRows(into, source.lineItems);
     }
 
-    // Now that the copies have ids: a copy whose equation pointed at another
-    // row of the same copy is pointed at that row's copy instead. Anything it
-    // pointed at from outside (another sheet, an account total, a variable)
-    // is left exactly where it was aimed.
-    //
-    // Rebound from the source row rather than by reading each copy back. The
-    // copy is a duplicate of its source, formulas included, so the two have the
-    // same references and the round trip per row was asking the database to
-    // repeat something already in hand. Only the rows that actually changed are
-    // written.
+    // Rebind equations that pointed at another copied row to that row's copy; outside references stay.
+    // Rebound from the source row, writing only the rows that changed.
     for (const row of made) {
       const bound = rebindCopiedRefs(row.from, copied);
       if (bound) await tx.budgetLineItem.update({ where: { id: row.id }, data: bound });
     }
   });
 
-  // The sheet as it now stands, so the screen can put this one straight in
-  // rather than reading the whole budget back for it.
   const updated = await prisma.budgetCostCenter.findUnique({
     where: { id: ccId },
     include: {
       costCenter: true,
       accounts: {
-        // Same order the sheet is loaded in (lib/data/budget.ts), or a paste
-        // would hand back a sheet ordered unlike the one a reload draws.
+        // Same order as lib/data/budget.ts.
         orderBy: { accountCode: "asc" },
         include: {
           lineItems: { orderBy: { sortOrder: "asc" } },

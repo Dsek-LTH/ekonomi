@@ -1,14 +1,5 @@
-// Putting a file on a contract, and taking one off again.
-//
-// The upload route could do this inline, the way the receipt one does, and for
-// a while it should have. It is here instead because of one rule that has to
-// hold in every caller and would otherwise be re-stated in each: a SIGNED file
-// is never overwritten, and signing evidence is never deleted.
-//
-// That rule is cheap to write and easy to forget, and the place it gets
-// forgotten is the second caller. Phase 3 adds two more (the webhook that
-// stores the sealed PDF, and whatever re-renders a draft), so it lives in one
-// module now, before there are three copies of it.
+// Putting a file on a contract and taking one off. Rule for every caller: a SIGNED file is
+// never overwritten and signing evidence is never deleted.
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
@@ -31,14 +22,7 @@ interface StoredContractFile {
   sha256: string;
 }
 
-/**
- * Write bytes to the bucket and record the row, or leave neither behind.
- *
- * Object first, row second, and the object is swept if the row does not land.
- * The same order every upload in this app uses, for the same reason: an orphan
- * object is collectable (scripts/gc-receipts.ts finds one), and an orphan row
- * is a document the app offers and cannot open.
- */
+/** Write bytes to the bucket and record the row, or leave neither behind. Object first, so an orphan is collectable (scripts/gc-receipts.ts). */
 export async function storeContractFile(args: {
   contractId: string;
   role: ContractFileRole;
@@ -49,18 +33,11 @@ export async function storeContractFile(args: {
 }): Promise<StoredContractFile> {
   const { contractId, role, filename, mimeType, bytes, uploadedById } = args;
 
-  // The id is drawn here rather than by the database, because it is part of the
-  // object key and the key has to be known before there is a row to read it
-  // from. A uuid, the same as a receipt's, and for the same reason: it is the
-  // half of the key that guarantees two files called scan.pdf never collide.
+  // Part of the object key, so it is drawn before the row exists. A uuid, as for receipts.
   const id = randomUUID();
   const objectKey = contractFileKey(contractId, id, filename);
 
-  // While the bytes are already in memory. Computing this later would mean
-  // reading the whole object back out of MinIO to learn something we were
-  // holding a moment ago, and skipping it means the archive can never answer
-  // "is this the file that was signed" for anything filed before somebody
-  // thought to ask.
+  // Computed while the bytes are in memory, to avoid reading the object back.
   const sha256 = createHash("sha256").update(bytes).digest("hex");
 
   await putObject(objectKey, bytes, mimeType);
@@ -88,28 +65,16 @@ export async function storeContractFile(args: {
     });
     return row;
   } catch (err) {
-    // The request is already failing and there is no useful way to report a
-    // second problem behind the first, so the object is swept best-effort and
-    // the sweeper collects whatever that could not reach.
+    // Already failing: sweep best effort, the sweeper collects the rest.
     await deleteObjectBestEffort(objectKey);
     throw err;
   }
 }
 
-/** Why a file could not be removed. Maps to a message key under
- *  `errors.contract`, so a route hands it straight to `fail()`. */
+/** Why a file could not be removed. Maps to a message key under `errors.contract`. */
 type DeleteFailure = "fileNotFound" | "fileImmutable";
 
-/**
- * Remove a file from a contract: the bytes first, then the row.
- *
- * That order is the one thing worth being careful about. Dropping the row first
- * and failing on the object leaves bytes nothing points at, which nothing will
- * ever find again; dropping the object first and failing on the row leaves a
- * row whose document is gone, which the next reader sees immediately and can
- * say so. `deleteObject` throws rather than failing quietly, which is what
- * makes the second case the only one that can happen.
- */
+/** Remove a file: bytes first, then the row. `deleteObject` throws, so a half-failure leaves a visible row without a document, never orphaned bytes. */
 export async function deleteContractFile(
   fileId: string,
 ): Promise<{ ok: true } | { ok: false; reason: DeleteFailure }> {
@@ -125,19 +90,7 @@ export async function deleteContractFile(
   return { ok: true };
 }
 
-/**
- * Replace the rendered contract, keeping one GENERATED file rather than a pile
- * of them.
- *
- * A rendering is not evidence: draw it again from the same row and the same
- * bytes come back, so the previous one is a stale copy rather than a record.
- * The one that is kept is the one the counterparty will be sent.
- *
- * Nothing here can touch a SIGNED file, because it only ever looks at
- * GENERATED ones. That is deliberate, and it is why re-rendering a contract
- * that has already been signed is safe: the signed PDF is a different row with
- * a different role and this never sees it.
- */
+/** Replace the rendered contract, keeping one GENERATED file. Never touches a SIGNED file, so re-rendering a signed contract is safe. */
 export async function replaceGeneratedFile(args: {
   contractId: string;
   filename: string;
@@ -152,10 +105,7 @@ export async function replaceGeneratedFile(args: {
 
   const stored = await storeContractFile({ ...args, role: "GENERATED" });
 
-  // After the new one is safely down, so a failure here leaves two renderings
-  // rather than none. Best-effort for the same reason: the caller has what it
-  // asked for, and a stale object nothing points at is the sweeper's problem,
-  // not this request's.
+  // After the new one is down, best effort: a stale object is the sweeper's problem.
   for (const f of stale) {
     await prisma.contractFile.delete({ where: { id: f.id } });
     await deleteObjectBestEffort(f.objectKey);

@@ -1,6 +1,3 @@
-// Utlägg: the list every screen renders, and the full single one behind the
-// detail page. Also the place a viewer's scope is applied: which expenses they
-// may see at all, and which allocations they may attest.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -43,8 +40,6 @@ import { isoDate } from "./shared";
 import { RECEIPT_ORDER } from "./receipt-order";
 import type { ExpenseFingerprint } from "@/lib/domain/duplicates";
 
-// Map one allocation row (+ its cost-centre/approver relations) to the UI shape.
-// Shared by both the list and the detail mappers.
 function mapAllocation(
   a: {
     id: string;
@@ -72,31 +67,22 @@ function mapAllocation(
   };
 }
 
-// Relations needed to render a row in any expense list (no per-expense audit
-// timeline and no voucher lines, since those are loaded only on the detail page).
+// Relations needed to render a row in any list (no audit timeline or voucher lines; detail only).
 const summaryInclude = {
   submitter: true,
-  // Only the name, and only so a standing dispens can say whose it is. Nearly
-  // every utlägg has none, so this is a null column on the row and no join at
-  // all for the rows that matter.
+  // Only the name, so a standing dispens can say whose it is.
   deadlineWaivedBy: { select: { name: true } },
   allocations: {
-    // By cost-centre code, as the utläggsräkning prints them (lib/expense/
-    // document.ts). Without an order Postgres returns them as it finds them,
-    // and a row it has just updated tends to move, so attesting one cost
-    // centre reshuffled the table under the reader's pointer.
-    // Cast for the same reason as the receipts' order below.
+    // By cost-centre code (lib/expense/document.ts); without an order Postgres reshuffles updated rows
+    // under the reader. Cast for the same reason as the receipts' order below.
     orderBy: [
       { costCenter: { code: "asc" } },
       { id: "asc" },
     ] as Prisma.ExpenseCostAllocationOrderByWithRelationInput[],
     include: { costCenter: true, approvedBy: true },
   },
-  // Every receipt, in the order the submitter put them (see RECEIPT_ORDER),
-  // which is the order they are stapled behind the cover for Fortnox (see
-  // lib/server/pdf-merge.ts) and the order they page through in the panel.
-  // The annotation keeps this array mutable despite the `as const` below,
-  // which is what Prisma's argument types require.
+  // Every receipt in the submitter's order (RECEIPT_ORDER), also the staple order for Fortnox (lib/server/pdf-merge.ts).
+  // The annotation keeps this array mutable despite the `as const` below, as Prisma's argument types require.
   receipts: {
     orderBy: RECEIPT_ORDER as Prisma.ReceiptOrderByWithRelationInput[],
     select: { id: true, filename: true, mimeType: true },
@@ -117,13 +103,7 @@ function fortnoxLabel(v: {
     : undefined;
 }
 
-// One shape for the booked voucher, whether or not its rows were loaded.
-//
-// A list wants the heading: the date, who booked it, the Fortnox number, and
-// has no use for the rows; the detail page wants both. That was two copies of
-// the same object literal, and the detail one worked by building the version
-// without rows and then discarding it whole to build it again with them.
-// `lines` is what actually differs, so it is the argument.
+// One shape for the booked voucher, with or without its rows (`lines`): lists want the heading only.
 function mapVerification(
   v: NonNullable<SummaryRow["verification"]>,
   lines: VerificationLine[] = [],
@@ -141,8 +121,7 @@ function mapVerification(
 function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
   return {
     id: e.id,
-    // Absent until the utlägg is submitted for attest. See reference in
-    // schema.prisma. The interface says so rather than inventing a placeholder.
+    // Absent until the utlägg is submitted for attest.
     reference: e.reference ?? undefined,
     title: e.title,
     submitterId: e.submitterId,
@@ -156,9 +135,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
     currency: e.currency,
     matchedTransactionId: e.matchedTransactionId ?? undefined,
     receipts: e.receipts.map((r) => ({ id: r.id, filename: r.filename, mimeType: r.mimeType })),
-    // Absent, not empty, for anything that is not a milersättning. See the
-    // field on the Expense interface. The readings live on the utlägg itself,
-    // so this costs no join.
+    // Absent, not empty, for anything that is not a milersättning (the readings live on the utlägg).
     mileage:
       e.paymentType === "MILEAGE"
         ? {
@@ -174,10 +151,7 @@ function mapSummary(e: SummaryRow, prefixes: PrefixRow[]): Expense {
         : undefined,
     submitterHasPayout: Boolean(e.submitter.bankClearingNumber && e.submitter.bankAccountNumber),
     verification: e.verification ? mapVerification(e.verification) : undefined,
-    // All three columns or none: the route writes and clears them together, so
-    // a half-set dispens would be a row nobody wrote. Reading it as absent is
-    // the safe way round either way, since it is what lifts the filing
-    // deadline.
+    // All three columns or none: the route writes and clears them together. Absent is the safe reading, since a dispens lifts the filing deadline.
     deadlineWaiver:
       e.deadlineWaivedAt && e.deadlineWaiverReason
         ? {
@@ -199,13 +173,8 @@ function reminderRecipients(diff: unknown): string[] {
   return Array.isArray(names) ? names.filter((n): n is string => typeof n === "string") : [];
 }
 
-// Per-request attest context: what the viewer may do and what they answer for,
-// resolved once, plus the prefix table used to place each allocation in a result
-// unit.
-//
-// Both roles and capabilities, because the attest rule reads both: ADMIN is a
-// capability, the vice-skattmästare and resultatansvarig clauses are roles.
-// See canAttestAllocation in lib/domain/permissions.ts.
+// Per-request attest context: the viewer's capabilities, roles and answerable units, plus the prefix table
+// placing each allocation in a result unit. Both roles and capabilities, as canAttestAllocation reads both.
 type AttestCtx = {
   viewerId: string;
   viewerRoles: Role[];
@@ -225,9 +194,7 @@ async function attestCtx(viewer: Viewer): Promise<AttestCtx> {
   };
 }
 
-// Stamp attest capabilities onto a mapped expense: per-allocation `canAttest`
-// (authority for the viewer, regardless of approval state) and expense-level
-// `canReturn` (may pull a wrongly-approved expense back).
+// Stamp attest capabilities on a mapped expense: per-allocation `canAttest`, expense-level `canReturn`.
 function annotateAttest(
   raw: {
     submitterId: string;
@@ -253,24 +220,14 @@ function annotateAttest(
   mapped.canReturn = canReturnApproved(ctx.viewerCapabilities);
 }
 
-// ── The list screens ──────────────────────────────────────────────
-
-/**
- * Which slice of the section's utlägg a list screen is about, before anything
- * the reader has typed. This is the page's own subject: "the attest queue",
- * "what bookkeeping still has to book", and it is the page that knows it.
- */
+/** Which slice of the section's utlägg a list screen is about ("the attest queue"), before anything the reader typed. */
 export type ExpenseListScope =
   | { kind: "all" }
-  /** Only the viewer's own. */
   | { kind: "mine" }
-  /** The viewer's own result units' utlägg, not everything they may attest.
-   *  See attest-scope.ts. */
+  /** The viewer's own result units' utlägg, not everything they may attest (attest-scope.ts). */
   | { kind: "attestable" };
 
-// The stage tabs (see app/(app)/expenses/scope.ts), as the database spells the
-// statuses behind them. Utkast holds the returned ones too: the submitter acts
-// next on both. "all" is not here, and so narrows nothing.
+// The stage tabs (app/(app)/expenses/scope.ts) as statuses. Utkast holds the returned ones too. "all" is absent and narrows nothing.
 const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
   draft: ["DRAFT", "CHANGES_REQUESTED"],
   attest: ["PENDING_APPROVAL"],
@@ -279,10 +236,7 @@ const STATUS_TAB: Record<string, DbExpenseStatus[]> = {
   done: ["EXPORTED"],
 };
 
-// What each sortable column on the list is, as an order the database can take.
-// Every one ends in `id`: a page is a window onto an ordering, so an ordering
-// with ties is a window that can show the same row twice and skip another as
-// the reader pages through it. The client offers exactly these keys.
+// Sortable columns as database orders. Every one ends in `id` so paging never repeats or skips a row on ties.
 const EXPENSE_ORDER: Record<string, (dir: SortDir) => Prisma.ExpenseOrderByWithRelationInput[]> = {
   date: (d) => [{ purchaseDate: d }, { id: d }],
   title: (d) => [{ title: d }, { id: d }],
@@ -293,14 +247,12 @@ const EXPENSE_ORDER: Record<string, (dir: SortDir) => Prisma.ExpenseOrderByWithR
   submitter: (d) => [{ submitter: { name: d } }, { id: d }],
 };
 
-// Newest first, and the order references are handed out in. Not unique: a
-// seeded batch shares a timestamp, so it carries a tiebreaker too.
+// Newest first, the order references are handed out in. Not unique (a seeded batch shares a timestamp), hence the tiebreaker.
 const EXPENSE_DEFAULT_ORDER: Prisma.ExpenseOrderByWithRelationInput[] = [
   { createdAt: "desc" },
   { id: "desc" },
 ];
 
-/** The page's own subject, as a filter. */
 async function listScopeWhere(
   scope: ExpenseListScope,
   viewer: Viewer,
@@ -315,20 +267,17 @@ async function listScopeWhere(
   }
 }
 
-/** What the reader has typed and picked, as a filter. */
 function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
   const and: Prisma.ExpenseWhereInput[] = [];
 
-  // The tab is a stage, one or more statuses. Stage is only ever a tab, so
-  // the dropdown's picks are not read here.
+  // The tab is a stage (one or more statuses); the dropdown's picks are not read here.
   const statuses = STATUS_TAB[q.tab];
   if (statuses?.length) and.push({ status: { in: statuses } });
 
   const date = dateRangeFilter(q, { dateOnly: true });
   if (date) and.push({ purchaseDate: date });
 
-  // The columns the table marks searchable, asked of the database instead of
-  // of an array. Case-insensitive, because nobody types a reference in caps.
+  // Searchable columns asked of the database, case-insensitive.
   if (q.q) {
     and.push({
       OR: [
@@ -343,37 +292,19 @@ function listQueryWhere(q: ListQuery): Prisma.ExpenseWhereInput[] {
 }
 
 /**
- * One page of a list screen, and how many rows are behind it.
- *
- * Replaces loading every utlägg the viewer may see and letting the browser cut
- * it down to twenty-five. The filtering, the sorting and the cut all happen in
- * the database.
- *
- * What that is worth depends on there being an index behind the ordering, which
- * for a while there was not. The work moved to Postgres and Postgres sorted the
- * whole matching set for every page. The orderings this issues by default, and
- * the columns it filters on, are indexed now (see Expense in schema.prisma);
- * `title` and `paymentType` are deliberately not, so choosing one of those sorts
- * is a sort. On a section's table that is a few milliseconds, which is the
- * reason it is allowed to be.
- *
- * The search is a different matter and no index helps it: `contains` is
- * `ILIKE '%q%'`, which no btree can answer, so it reads the table. Same
- * conclusion at this size, and the same thing to revisit first if it ever stops
- * being true. A trigram index is the answer, and it needs the pg_trgm
- * extension.
+ * One page of a list screen, and how many rows are behind it, with filter, sort and cut in the database.
+ * The default orderings and filter columns are indexed (Expense in schema.prisma); `title` and
+ * `paymentType` are not. The search is `ILIKE '%q%'`, which no btree answers, so it reads the table
+ * (pg_trgm would fix that).
  */
 export async function getExpensePage(
   viewer: Viewer,
   scope: ExpenseListScope,
   q: ListQuery,
-  /** The räkenskapsår, by purchase date. See docs/navigation.md. */
+  /** The räkenskapsår, by purchase date. */
   { during }: { during?: During } = {},
 ): Promise<RowPage<Expense>> {
-  // Two filters, both always applied: what this screen is about, and what the
-  // viewer is allowed to see at all. The second is not the first's business.
-  // an attest queue is narrower than "everything you may see", and a
-  // bookkeeping list is wider, but neither may reach past the scope.
+  // Both always applied: what this screen is about, and what the viewer may see at all. Neither may reach past the scope.
   const where: Prisma.ExpenseWhereInput = {
     AND: [
       expenseScopeWhere(await expenseScopeOf(viewer)),
@@ -410,34 +341,19 @@ export async function getExpensePage(
 }
 
 /**
- * Everything that could possibly be waiting on this viewer, and their own most
- * recent utlägg, the two things the dashboard is made of.
- *
- * The queue is derived by `buildQueue` (domain/queue.ts), which asks each utlägg
- * whether it is waiting on this person. It used to be asked of every utlägg in
- * the section; the answer is only ever yes for a handful of statuses, so those
- * are what is fetched. An exported utlägg from three years ago cannot be
- * waiting on anybody, and there is no reason to read it to find that out.
- *
- * The filter is otherwise wider than `queueActionFor`. It is a shortlist, not
- * a second copy of the rule. That function still decides, unchanged, and if
- * the two ever disagree the worst case is a row fetched and then dropped.
- *
- * The one place it is narrower on purpose is attest: only the viewer's own
- * result units' utlägg. The skattmästare may attest anyone's, but only their
- * own units' are waiting on them, the same rule as the nav badge and the "Min
- * resultatenhet" list the queue links to.
+ * Everything that could be waiting on this viewer, and their own most recent utlägg (the dashboard).
+ * Only statuses that can wait are fetched; the filter is wider than `queueActionFor`, which still decides.
+ * Attest is narrower on purpose: only the viewer's own result units' utlägg, as for the nav badge.
  */
 export async function getDashboardExpenses(
   viewer: Viewer,
   minePreview: number,
-  /** The räkenskapsår, by purchase date, for both halves. See docs/navigation.md. */
+  /** The räkenskapsår, by purchase date, for both halves. */
   { during }: { during?: During } = {},
 ): Promise<{ queueCandidates: Expense[]; mine: Expense[] }> {
   const scope = expenseScopeWhere(await expenseScopeOf(viewer));
   const inYear: Prisma.ExpenseWhereInput = during ? { purchaseDate: during } : {};
 
-  // Waiting on you as the person who sent it in.
   const waitingOnSubmitter: Prisma.ExpenseWhereInput = {
     submitterId: viewer.id,
     status: { in: ["CHANGES_REQUESTED", "DRAFT"] },
@@ -462,7 +378,6 @@ export async function getDashboardExpenses(
       orderBy: EXPENSE_DEFAULT_ORDER,
       include: summaryInclude,
     }),
-    // The dashboard shows a handful, so it asks for a handful.
     prisma.expense.findMany({
       where: { submitterId: viewer.id, ...inYear },
       orderBy: [{ purchaseDate: "desc" }, { id: "desc" }],
@@ -483,18 +398,14 @@ export async function getDashboardExpenses(
   return { queueCandidates: map(queueRows), mine: map(mineRows) };
 }
 
-// Full single expense for the detail page. Adds the event timeline and the
-// verification's voucher lines on top of the summary shape.
 export async function getExpense(id: string, viewer?: Viewer): Promise<Expense | null> {
-  // The scope goes into the lookup rather than after it: an expense the viewer
-  // may not see is simply not found, which is the answer both callers want
-  // anyway (the page renders notFound, the API answers 404).
+  // Scope goes into the lookup: an out-of-scope expense is simply not found (notFound page, 404 API).
   const scopeWhere = viewer ? expenseScopeWhere(await expenseScopeOf(viewer)) : {};
   const e = await prisma.expense.findFirst({
     where: { AND: [{ id }, scopeWhere] },
     include: {
       ...summaryInclude,
-      // Several events can be written in one transaction and share a timestamp.
+      // Several events in one transaction share a timestamp.
       events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }], include: { actor: true } },
       verification: {
         include: {
@@ -539,12 +450,7 @@ export async function getExpense(id: string, viewer?: Viewer): Promise<Expense |
   return mapped;
 }
 
-/**
- * One member's utlägg, as little of each as a duplicate check needs. See
- * lib/domain/duplicates.ts. The last fifteen months, since the same receipt
- * handed in twice is handed in twice within weeks, and a member's whole
- * history is not worth shipping to a form to find that out.
- */
+/** One member's utlägg from the last fifteen months, as little of each as the duplicate check needs (lib/domain/duplicates.ts). */
 export async function getExpenseFingerprints(submitterId: string): Promise<ExpenseFingerprint[]> {
   const since = new Date();
   since.setUTCMonth(since.getUTCMonth() - 15);

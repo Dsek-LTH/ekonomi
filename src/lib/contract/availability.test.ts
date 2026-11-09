@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bookedOver, freeOver, overlaps, shortfalls, type Booking } from "./availability";
 
-// One Soundboks, four microphone stands. The shape of a real section's
-// catalogue, and the two cases that behave differently: the thing there is one
-// of, and the thing there are several of.
 const OWNED = new Map([
   ["soundboks", 1],
   ["stativ", 4],
@@ -30,9 +27,7 @@ describe("overlaps", () => {
   });
 
   it("treats a shared end day as a clash", () => {
-    // Due back on the 5th and due out on the 5th. Conservative on purpose: the
-    // two handovers may well fit, but nobody has said so, and a system that
-    // assumes they do is volunteering an afternoon it knows nothing about.
+    // Same-day handovers count as a clash, on purpose (conservative).
     expect(
       overlaps({ from: "2026-09-01", to: "2026-09-05" }, { from: "2026-09-05", to: "2026-09-07" }),
     ).toBe(true);
@@ -47,8 +42,6 @@ describe("overlaps", () => {
 
 describe("bookedOver", () => {
   it("adds quantities of the same item rather than counting contracts", () => {
-    // Two contracts, two stands each. That is four stands out, not two
-    // bookings, and only the first reading answers "is there one left".
     const taken = bookedOver(
       [
         booking("stativ", 2, "2026-09-01", "2026-09-03"),
@@ -83,7 +76,6 @@ describe("shortfalls", () => {
   });
 
   it("refuses the one Soundboks to a second contract over the same weekend", () => {
-    // The case the whole module exists for.
     const out = shortfalls({
       requests: [{ itemId: "soundboks", quantity: 1 }],
       owned: OWNED,
@@ -126,8 +118,6 @@ describe("shortfalls", () => {
   });
 
   it("adds up the same item listed on two lines of one form", () => {
-    // A form listing the Soundboks twice is asking for two of them, whatever
-    // the person typing it thought.
     const out = shortfalls({
       requests: [
         { itemId: "soundboks", quantity: 1 },
@@ -141,8 +131,7 @@ describe("shortfalls", () => {
   });
 
   it("says nothing about a line that is not a catalogue item", () => {
-    // Free-text lines are allowed: somebody lends out a thing the catalogue has
-    // never heard of, and refusing that would make the catalogue compulsory.
+    // Free-text lines are allowed.
     expect(
       shortfalls({
         requests: [{ itemId: "en-sak-som-inte-finns", quantity: 3 }],
@@ -169,8 +158,7 @@ describe("freeOver", () => {
   });
 
   it("floors an over-booked item at zero rather than reporting a negative", () => {
-    // A quantity lowered after the contracts were drawn. "None free" is the
-    // useful answer; "-2 free" is a puzzle.
+    // A lowered quantity reads as "none free", not negative.
     const free = freeOver({
       owned: new Map([["soundboks", 1]]),
       bookings: [

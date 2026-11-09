@@ -3,18 +3,12 @@ import { buildQueue, queueActionFor } from "./queue";
 import type { Capability, Expense, ExpenseStatus, Role } from "./types";
 import { DEFAULT_ROLE_CAPABILITIES } from "@/lib/server/authority-defaults";
 
-// The dashboard's whole content. What makes this worth testing is the property
-// the old role-block dashboard did not have: one utlägg is waiting on at most
-// one person, and holding more roles must never make the same row appear twice.
+// One utlägg waits on at most one person: holding more roles must never make a row appear twice.
 
 const ME = "u_me";
 const SOMEONE_ELSE = "u_other";
 
-// A viewer holding these roles, with the capabilities those roles have on the
-// day the database is created (lib/server/authority-defaults.ts). Which roles
-// carry which capability is editable now, so a case below saying "the ordförande
-// cannot export" is a statement about the section's starting policy, which is
-// exactly what it always was, when that policy was a list in permissions.ts.
+// A viewer holding these roles, with the capabilities those roles have on the day the database is created (lib/server/authority-defaults.ts).
 const capsFor = (roles: Role[]): Capability[] => [
   ...new Set(
     DEFAULT_ROLE_CAPABILITIES.filter((r) => roles.includes(r.role)).map((r) => r.capability),
@@ -23,8 +17,7 @@ const capsFor = (roles: Role[]): Capability[] => [
 
 const viewer = (roles: Role[], id = ME) => ({ id, roles, capabilities: capsFor(roles) });
 
-// Only the fields the queue actually reads; cast once here rather than building
-// a full Expense in every case.
+// Only the fields the queue reads; cast once instead of building a full Expense.
 function expense(over: Partial<Expense> & { status: ExpenseStatus }): Expense {
   return {
     id: "e_1",
@@ -98,8 +91,7 @@ describe("queueActionFor", () => {
   });
 
   it("puts your own stuck utlägg ahead of your treasury duties", () => {
-    // Same row, and the viewer is both the submitter and the bookkeeper. It is
-    // waiting on them as a person before it is waiting on them as an office.
+    // Submitter and bookkeeper: waiting on them as a person before as an office.
     const mineAndApproved = expense({ status: "CHANGES_REQUESTED" });
     expect(queueActionFor(mineAndApproved, viewer(["SKATTMASTARE"]))).toBe("FIX");
   });
@@ -128,9 +120,7 @@ describe("buildQueue", () => {
   });
 
   it("never lists one utlägg twice, however many roles the viewer holds", () => {
-    // The bug the old dashboard had: a skattmästare who also owned a
-    // result unit rendered the attest block AND the bookkeeping block, so the
-    // same work appeared under two headings.
+    // A skattmästare who also owns a result unit must not get the same work under two headings.
     const rows = [
       expense({
         id: "WAITING",

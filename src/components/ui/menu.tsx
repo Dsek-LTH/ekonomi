@@ -9,18 +9,6 @@ import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 
-// A button that drops a short list of actions beneath itself. For the case where
-// one button is really two or three variants of the same verb, "new budget",
-// but empty or copied from one of these, and a form would only be asking a
-// question the list can answer directly.
-//
-// Not a substitute for a form: everything here is one click with no arguments.
-// If an action needs typing, it belongs on the page it leads to.
-//
-//   <Menu label="Ny budget" icon={<IconPlus className="size-4" />}>
-//     <MenuItem onClick={createEmpty}>Tom budget 2026</MenuItem>
-//   </Menu>
-
 const CloseCtx = createContext<() => void>(() => {});
 
 export function Menu({
@@ -46,56 +34,21 @@ export function Menu({
   variant?: React.ComponentProps<typeof Button>["variant"];
   size?: React.ComponentProps<typeof Button>["size"];
   disabled?: boolean;
-  /**
-   * Below sm, show the icon alone.
-   *
-   * For a trigger that shares a row with the thing it is secondary to, the
-   * expense page's actions, where the primary should have the width and this
-   * should have as little of it as it can manage. The label stays as the
-   * button's accessible name, so nothing is lost to a screen reader; it is the
-   * pixels that go, not the word.
-   */
+  /** Below sm, show the icon alone (label stays the accessible name). */
   compact?: boolean;
-  /**
-   * The icon alone, at every width, with `label` left as the accessible name.
-   *
-   * For a menu that belongs to a row rather than to a page: a sheet with forty
-   * products has forty of these, and a word beside each one is a column of
-   * repeated text where the row's own content should be. `compact` is the
-   * page-header version of the same idea. It keeps the word where there is
-   * room for it, and the two are not the same question.
-   */
+  /** The icon alone at every width, for a menu that belongs to a row. */
   iconOnly?: boolean;
-  /**
-   * The trigger's name for a screen reader, where the drawn label leans on
-   * what is around it: the header's year picker draws "2026" and is named
-   * "Räkenskapsår 2026".
-   */
+  /** Accessible name where the drawn label leans on context ("Räkenskapsår 2026"). */
   accessibleName?: string;
-  /**
-   * An action picked from this menu is still running. The trigger carries the
-   * spinner because the item that started it is gone. The menu closes on
-   * choosing, so the trigger is the only thing left to say so.
-   */
+  /** An action picked here is still running: the trigger carries the spinner. */
   loading?: boolean;
-  /**
-   * Draw this instead of a button, for a menu whose trigger is not an action:
-   * the avatar in the header. `label` stays its accessible name.
-   */
+  /** Draw this instead of a button, for a trigger that is not an action. `label` stays the accessible name. */
   trigger?: React.ReactNode;
   triggerClassName?: string;
-  /**
-   * A panel as wide as its items rather than at least 14rem, for a list of
-   * short words: the header's years.
-   */
+  /** A panel as wide as its items rather than at least 14rem. */
   narrow?: boolean;
-  /** Which edge the panel lines up with, "end" hangs it left of the button. */
   align?: "start" | "end";
-  /**
-   * Open whatever the reader does, for as long as it is true: a guide showing
-   * what is inside (the account menu's theme and language). A press outside
-   * or Escape closes only what the reader opened themselves.
-   */
+  /** Open whatever the reader does, e.g. for a guide; a press outside or Escape closes only what the reader opened. */
   holdOpen?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -106,15 +59,11 @@ export function Menu({
   const panelRef = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
 
-  // Where the trigger is on screen, kept current while open. Held in state
-  // rather than read at paint, because the panel is positioned against it from
-  // outside its subtree. See lib/ui/anchored-panel.ts, shared with the combobox.
+  // Held in state: the panel is positioned from outside its subtree (lib/ui/anchored-panel.ts).
   const shown = open || holdOpen;
   const [rect, setRect] = useAnchorRect(shown, triggerRef, panelRef, close);
 
-  // Held open from outside, so nobody pressed the trigger to measure it.
-  // Measured in a frame rather than in the effect itself, which would render
-  // twice for one change.
+  // Measured in a frame, not the effect, which would render twice.
   useEffect(() => {
     if (!holdOpen) return;
     const frame = requestAnimationFrame(() =>
@@ -130,23 +79,14 @@ export function Menu({
     });
   }
 
-  // Clicking away closes it, and Escape closes it and hands focus back to the
-  // button, otherwise a keyboard user is left standing on nothing.
-  //
-  // Both boxes, because the panel is portalled out of the trigger's subtree: a
-  // press on a menu item is not a press "inside" the wrapper any more.
+  // Both boxes count as inside: the panel is portalled. Escape returns focus to the button.
   useDismissOnOutside(open, [boxRef, panelRef], close);
 
-  /** Below this much room underneath, look at whether there is more above. */
   const WANTED = 220;
 
-  // No `cap`: WANTED is the flip threshold and not a ceiling. The panel sizes
-  // itself to its own content (w-max, above a minimum width), so a long menu with room for
-  // all of it gets all of it. See lib/ui/anchored-panel.ts.
+  // No `cap`: WANTED is the flip threshold, not a ceiling.
   const panelStyle = () => placeAnchored(rect, { wanted: WANTED, align });
 
-  // Escape closes the menu and hands focus back to the button, and closes
-  // only the menu, even inside a dialog that would once have gone with it.
   useEscape(open, () => {
     setOpen(false);
     triggerRef.current?.focus();
@@ -177,15 +117,10 @@ export function Menu({
           loading={loading}
           aria-haspopup="menu"
           aria-expanded={shown}
-          // Named even when the word is not drawn.
           aria-label={accessibleName ?? (compact || iconOnly ? label : undefined)}
           title={compact || iconOnly ? label : undefined}
           onClick={toggle}
-          // The wrapper decides how wide this is, not the label. Everywhere a
-          // menu currently stands it is a flex item that shrinks to its content,
-          // so `w-full` is that same width, and where a caller does stretch it
-          // (the table toolbar makes its action fill the row on a phone) the
-          // trigger goes with it instead of sitting a third of the way across.
+          // The wrapper decides the width, so a stretched wrapper stretches the trigger.
           className="w-full"
         >
           {icon}
@@ -195,9 +130,6 @@ export function Menu({
               className={cn(
                 "size-4 transition-transform duration-200 ease-[var(--ease-out-quint)]",
                 shown && "rotate-180",
-                // Nothing to point at once the label is gone. The icon is the
-                // whole button, and a chevron beside it is half the width again
-                // for no more meaning.
                 compact && "hidden sm:block",
               )}
             />
@@ -205,18 +137,8 @@ export function Menu({
         </Button>
       )}
 
-      {/* Portalled to the body, with fixed positioning, so that no ancestor can
-          crop it. As an absolutely positioned child it was cut off by any
-          scroll container it happened to sit in: the stock sheet is a table
-          inside TableScroll, whose `overflow-x-auto` also clips vertically (CSS
-          forces the other axis to `auto` when one axis is not `visible`), so a
-          row menu near the foot of the sheet lost its items to the edge of the
-          card. No z-index could have fixed that. Clipping by an overflow
-          ancestor is not a question of stacking order.
-
-          z-[210] is the combobox's layer, and for the same reason: both are
-          popovers over a field, both have to clear a modal at z-[200], and both
-          belong under the notifications at z-[220]. */}
+      {/* Portalled with fixed positioning so overflow ancestors (TableScroll) cannot clip it.
+      z-[210] is the combobox's layer: above modals at z-[200], below notifications at z-[220]. */}
       {shown &&
         rect &&
         createPortal(
@@ -224,9 +146,7 @@ export function Menu({
             ref={panelRef}
             role="menu"
             aria-label={label}
-            // A layer of its own, over whatever it was opened from. A dialog
-            // underneath holds Tab inside itself and has to leave this alone.
-            // See lib/ui/focus-trap.ts.
+            // Its own focus layer (lib/ui/focus-trap.ts).
             data-popup-layer=""
 
             style={panelStyle()}
@@ -243,8 +163,6 @@ export function Menu({
   );
 }
 
-// Choosing an item closes the menu. Every item here is a complete action, so
-// there is never a reason to stay.
 export function MenuItem({
   onClick,
   disabled,
@@ -284,7 +202,6 @@ export function MenuLabel({ children }: { children: React.ReactNode }) {
   return <p className="px-2.5 pb-1 pt-1.5 text-xs font-medium text-muted">{children}</p>;
 }
 
-/** A closing line of small print: what the actions above will actually do. */
 export function MenuNote({ children }: { children: React.ReactNode }) {
   return <p className="px-2.5 pb-1.5 pt-1 text-xs leading-snug text-muted">{children}</p>;
 }

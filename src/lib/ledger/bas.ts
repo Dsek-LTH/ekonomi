@@ -1,10 +1,6 @@
-// BAS chart-of-accounts structure for the Utfall reports.
-//
-// The ledger stores raw debit/credit (positive = debit, as in SIE). Fortnox's
-// reports instead show income and equity/liabilities as positive figures, so
-// each section declares the orientation used to turn a raw net into a display
-// amount. With that convention a result report's sections sum to the period's
-// result, and a balance report's sections sum to zero.
+// BAS chart-of-accounts structure for the Utfall reports. The ledger stores raw debit/credit (positive =
+// debit, as in SIE); each section declares the orientation that turns a raw net into a display amount, so a
+// result report's sections sum to the result and a balance report's to zero.
 
 export type ReportKind = "RESULT" | "BALANCE";
 
@@ -22,13 +18,8 @@ export interface BasSection {
   orientation: Orientation;
 }
 
-// Balansräkning, printed with raw signs the way Fortnox does: assets positive,
-// equity and liabilities negative. Every section is therefore debit-oriented.
-//
-// That makes the report's bottom line meaningful rather than zero. Since
-//   assets = equity + liabilities + result,
-// summing every section leaves exactly the period's result: the figure Fortnox
-// labels "Beräknat resultat", and it must match the result report's total.
+// Balansräkning, printed with raw signs as Fortnox does (assets positive, equity and liabilities negative),
+// so every section is debit-oriented and summing them leaves the period's result ("Beräknat resultat").
 const BALANCE_SECTIONS: BasSection[] = [
   { key: "anlaggning", from: 1000, to: 1399, orientation: "debit" },
   { key: "omsattning", from: 1400, to: 1999, orientation: "debit" },
@@ -39,9 +30,7 @@ const BALANCE_SECTIONS: BasSection[] = [
   { key: "kortfristiga", from: 2400, to: 2999, orientation: "debit" },
 ];
 
-// Resultaträkning. Income is credit-oriented (so it reads positive); every cost
-// section is credit-oriented too, which makes costs read negative, matching how
-// Fortnox prints them, and letting the sections simply add up to the result.
+// Resultaträkning. Every section is credit-oriented, so income reads positive and costs negative as in Fortnox.
 const RESULT_SECTIONS: BasSection[] = [
   { key: "intakter", from: 3000, to: 3999, orientation: "credit" },
   { key: "varor", from: 4000, to: 4999, orientation: "credit" },
@@ -57,8 +46,7 @@ export function sectionsFor(kind: ReportKind): BasSection[] {
   return kind === "BALANCE" ? BALANCE_SECTIONS : RESULT_SECTIONS;
 }
 
-// The account-number span a report covers. Anything outside it is not part of
-// that report (a 1930 row has no place in a result report, and vice versa).
+// The account-number span a report covers.
 export function accountRangeFor(kind: ReportKind): { from: number; to: number } {
   return kind === "BALANCE" ? { from: 1000, to: 2999 } : { from: 3000, to: 8999 };
 }
@@ -68,7 +56,4 @@ export function orient(net: number, orientation: Orientation): number {
   return orientation === "credit" ? -net : net;
 }
 
-// The bottom line each report closes with is `ledger.calculatedResult`. Both
-// reports close on the period's result: the result report reaches it from income
-// minus costs, the balance report from assets minus equity and liabilities. They
-// must agree, which is why they share one label.
+// Both reports close on the period's result and must agree, so they share one label.

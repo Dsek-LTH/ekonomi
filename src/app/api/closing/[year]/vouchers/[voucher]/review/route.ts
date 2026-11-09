@@ -6,11 +6,7 @@ import { ReviewVoucherBody } from "@/lib/api/schemas/closing";
 import { reviewPassFor } from "@/lib/closing/review";
 import { resolveVoucher } from "@/lib/server/closing-voucher";
 
-// Record a review of one voucher, in the actor's own pass: the revisorer's for
-// a revisor, the treasury's for whoever works the books. Not chosen by the
-// request, so nobody can review in a pass that is not theirs.
-//
-// Appended, never updated. See VoucherReview in prisma/schema/closing.prisma.
+// Records in the actor's own pass (revisorer's for a revisor, treasury's otherwise), never chosen by the request. Appended, never updated.
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ year: string; voucher: string }> },

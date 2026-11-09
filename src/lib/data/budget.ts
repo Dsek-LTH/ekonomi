@@ -1,12 +1,4 @@
-// One budget, loaded and evaluated: the sheets, the variables, the editorial
-// history, every figure the formula engine resolves, and the year's actual
-// outcome beside it.
-//
-// Two callers want exactly this: the budget page, which server-renders the
-// first copy, and GET /api/budgets/[id], which the page's client re-fetches
-// after each write. They must agree down to the shape: the client seeds its
-// state from one and replaces it with the other, so the loading lives here
-// and neither owns it.
+// One budget loaded and evaluated, shared by the budget page and GET /api/budgets/[id] so both agree on shape.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -20,36 +12,20 @@ import type { CompareSheet } from "@/lib/budget/compare";
 import { financialYearIdForCalendarYear, getActualsByAccountCostCenter } from "@/lib/ledger";
 import { isoDay } from "@/lib/domain/date";
 
-/** A budget as the list and the compare picker know it: a year and a name. */
 export interface BudgetSummary {
   id: string;
   year: number;
   name: string;
-  /** The day the meeting adopted it, YYYY-MM-DD, or null while it is a draft. */
   adoptedAt: string | null;
   createdAt: string;
   lockedAt: string | null;
 }
 
-/**
- * Every budget, shallow. A flat list: budgets of the same year are siblings,
- * not a group, so nothing here nests.
- *
- * Shared by the list page (which server-renders it) and GET /api/budgets (which
- * the compare view fetches for its picker), the same reason
- * `getEvaluatedBudget` is shared, and the same rule: one loader, so the two can
- * never disagree about what a budget row is.
- */
+/** Every budget, shallow and flat (same-year budgets are siblings). Shared by the list page and GET /api/budgets. */
 export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
   const budgets = await prisma.budget.findMany({
-    // Newest year first; within a year, in the order the section decided them,
-    // the ordinary budget before any revision adopted after it.
-    //
-    // `adoptedAt` leads because it is the section's own chronology, and
-    // `createdAt` only records when a row was typed: a budget imported from an
-    // old workbook was created today and adopted years ago. Nulls sort last
-    // under Postgres's default for ascending order, which is what we want. An
-    // unadopted draft belongs after everything that was actually decided.
+    // Newest year first, then `adoptedAt` (the section's chronology; `createdAt` is wrong for imports).
+    // Nulls sort last, so drafts come after decided budgets.
     orderBy: [{ year: "desc" }, { adoptedAt: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
@@ -64,41 +40,21 @@ export async function getBudgetSummaries(): Promise<BudgetSummary[]> {
     id: b.id,
     year: b.year,
     name: b.name,
-    // Date-only: the column is a DATE, and slicing the ISO string keeps it the
-    // day it was stored as rather than a timestamp the client would re-zone.
+    // Date-only: slicing the ISO string keeps the stored day instead of a timestamp the client would re-zone.
     adoptedAt: b.adoptedAt ? isoDay(b.adoptedAt) : null,
     createdAt: b.createdAt.toISOString(),
     lockedAt: b.lockedAt?.toISOString() ?? null,
   }));
 }
 
-/** What a caller can leave out of the payload, and why it would want to. */
 interface EvaluatedBudgetOptions {
-  /**
-   * The year's outcome from the ledger. Costly (a group-by over every posting
-   * of the financial year, plus the chart and the cost-centre list to name them)
-   * and editing a budget cannot change any of it. The page asks for it; the
-   * re-fetch after a write does not, and the client keeps the copy it has.
-   */
+  /** The year's outcome from the ledger. Costly, and editing a budget cannot change it, so the re-fetch after a write omits it. */
   actuals?: boolean;
-  /**
-   * The figures every formula resolves to. Left out, the payload is the budget's
-   * rows and nothing derived from them, and the caller works the values out
-   * itself, which the budget page does anyway on every cell it commits, with
-   * this same `evaluate`. The page's first paint wants them; the re-fetch after
-   * a write does not, and they are the larger half of that response.
-   */
+  /** The figures every formula resolves to. The re-fetch after a write omits them (the larger half of the response). */
   evaluated?: boolean;
 }
 
-/**
- * The evaluated budget, or null when there is no budget with that id.
- *
- * Overloaded on `evaluated`, so a caller that did not turn the figures off gets
- * a type that has them. Otherwise every ordinary caller (both of them) would
- * have to test for a field it knows is there, and the budget page used to
- * assert its way past exactly that with `as unknown as Budget`.
- */
+/** The evaluated budget, or null for no such id. Overloaded on `evaluated` so callers that kept the figures get a type with them. */
 export async function getEvaluatedBudget(
   id: string,
   options?: EvaluatedBudgetOptions & { evaluated?: true },
@@ -117,9 +73,7 @@ export async function getEvaluatedBudget(
       createdBy: { select: { name: true } },
       lockedBy: { select: { name: true } },
       variables: { orderBy: { sortOrder: "asc" } },
-      // The editorial history, oldest first. It reads as a chronicle, and the
-      // running numbers then come out in order. Revoked ones come along: they
-      // are struck through, not hidden.
+      // Oldest first so running numbers come out in order. Revoked ones come along (struck through, not hidden).
       changes: {
         orderBy: { seq: "asc" },
         include: {
@@ -133,13 +87,7 @@ export async function getEvaluatedBudget(
         include: {
           costCenter: true,
           accounts: {
-            // By account number, which is the order a chart of accounts is
-            // read in and the one every printed budget uses. It was
-            // `sortOrder`, and since accounts are not draggable (only line
-            // items are) that amounted to "the order somebody happened to add
-            // them", so 3010 could sit under 5800 for no reason a reader could
-            // see. BAS codes are four digits throughout, so the string sort is
-            // the numeric one.
+            // By account number, the order of a chart of accounts (BAS codes are four digits, so string sort is numeric).
             orderBy: { accountCode: "asc" },
             include: {
               lineItems: { orderBy: { sortOrder: "asc" } },
@@ -156,16 +104,11 @@ export async function getEvaluatedBudget(
 
   if (!budget) return null;
 
-  // Which result unit a cost centre belongs to is derived from its code on every
-  // read (lib/server/result-units.ts), never stored, so re-assigning a prefix regroups
-  // every budget that mentions it, including ones drafted before the result unit
-  // existed. Cost centres that aren't linked to one yet have no code and no
-  // result unit; the client groups those on their own.
+  // A cost centre's result unit is derived from its code on every read (lib/server/result-units.ts), never stored.
+  // Unlinked cost centres have none; the client groups them.
   const prefixes = await getPrefixes();
 
-  // The evaluator's inputs, built the one way (lib/budget/inputs.ts). The
-  // browser builds them from the same function after a cell edit, which is what
-  // stops the two from ever answering differently.
+  // The evaluator's inputs, built by lib/budget/inputs.ts, which the browser also uses after a cell edit.
   const inputs = evaluatorInputs(budget);
   const figures = withEvaluated
     ? evaluate(
@@ -177,9 +120,7 @@ export async function getEvaluatedBudget(
       )
     : null;
 
-  // Left out entirely rather than sent empty: a caller that didn't ask for the
-  // outcome has its own copy, and an `actuals: []` would overwrite it with
-  // "there isn't any", which is a different thing and reads as one on screen.
+  // Left out rather than sent empty: `actuals: []` would overwrite the client's copy with "none".
   const outcome = withActuals
     ? {
         actuals: await actualSheets(budget.year, budget.costCenters),
@@ -188,29 +129,13 @@ export async function getEvaluatedBudget(
       }
     : {};
 
-  // Built field by field rather than spread from the row and pushed through
-  // `JSON.parse(JSON.stringify(...))`.
-  //
-  // The round trip was doing two jobs: turning Dates into strings, and erasing
-  // the type, so what came out was `Record<string, unknown>` and the page
-  // bridged it to the client with `as unknown as Budget`. Nothing checked that
-  // the two agreed. Writing the payload out means the compiler does, it means
-  // the columns nobody reads (createdById, updatedAt, the changes' foreign
-  // keys) stop crossing the wire, and it means one pass over the tree instead
-  // of three.
-  //
-  // Dates are ISO strings here for the reason the round trip made them so: the
-  // page hands the client this object and the client's own re-fetch hands it
-  // the JSON of the same object, and seeding state from one then replacing it
-  // with the other must not produce two shapes.
+  // Built field by field so it is typed and createdById/updatedAt and friends stay off the wire.
+  // Dates are ISO strings so the page's object and the client re-fetch's JSON share one shape.
   return {
     id: budget.id,
     name: budget.name,
     year: budget.year,
-    // Date-only, and deliberately not an instant. `toISOString()` on a DATE
-    // gives "…T00:00:00.000Z", and midnight UTC read in a browser west of it is
-    // the day before, which for the day a meeting sat is simply the wrong
-    // answer. So the day itself travels and no zone gets a say in it.
+    // Date-only, not an instant: midnight UTC read west of it in a browser is the day before.
     adoptedAt: budget.adoptedAt ? isoDay(budget.adoptedAt) : null,
     createdBy: { name: budget.createdBy.name },
     lockedAt: budget.lockedAt?.toISOString() ?? null,
@@ -275,20 +200,10 @@ export async function getEvaluatedBudget(
   };
 }
 
-// The year's actual outcome from the Fortnox ledger, shaped as a side of a
-// comparison (lib/budget/compare.ts) so it joins against a budget exactly like
-// another budget does.
-//
-// It carries everything the ledger has, not only what this budget happens to
-// budget for: a cost centre or an account that was spent on without being
-// budgeted is precisely what the comparison is there to show. Figures are
-// oriented by account kind (income = credit−debit, cost = debit−credit), taking
-// the kind from the budget wherever it has an opinion, so an account
-// reclassified by hand keeps its sign.
-//
-// Two things are deliberately left out: postings with no cost centre (they
-// belong to no sheet, and are mostly balance-sheet movements), and accounts
-// outside the result range 3-8, which no budget holds either way.
+// The year's actual outcome from the Fortnox ledger as a side of a comparison (lib/budget/compare.ts).
+// Carries everything the ledger has, including unbudgeted spend. Income = credit-debit, cost =
+// debit-credit, kind taken from the budget where it has one. Left out: postings with no cost centre,
+// and accounts outside the result range 3-8.
 async function actualSheets(
   year: number,
   budgeted: {
@@ -322,8 +237,7 @@ async function actualSheets(
 
     let sheet = sheets.get(code);
     if (!sheet) {
-      // A linked sheet's compareKey is its cost-centre code, which is what makes
-      // this line up with the budget without either side arranging it.
+      // A linked sheet's compareKey is its cost-centre code, which lines it up with the budget.
       sheet = {
         key: code,
         name: ccByCode.get(code)?.name ?? code,
@@ -339,9 +253,7 @@ async function actualSheets(
       code: accountCode,
       name: acctName.get(accountCode) ?? accountCode,
       kind,
-      // Öre, as the ledger stores it. This used to divide by 100 because the
-      // budget side was kronor and the two had to meet somewhere; they meet in
-      // öre now, so the conversion is gone rather than moved.
+      // Öre, as the ledger stores it.
       total: net,
       lines: [], // the ledger has no line items, only account totals
     });

@@ -8,8 +8,7 @@ describe("isCompleteDate", () => {
   });
 
   it("rejects a date still being typed", () => {
-    // What the masked field leaves behind on the way to a full date. `new Date`
-    // reads both, as 1 January and 1 July, which is the whole reason for this.
+    // What the masked field leaves mid-entry; `new Date` would read both.
     expect(isCompleteDate("")).toBe(false);
     expect(isCompleteDate("2026")).toBe(false);
     expect(isCompleteDate("2026-0")).toBe(false);
@@ -42,7 +41,6 @@ describe("isFutureDate", () => {
   it("rejects tomorrow and beyond", () => {
     expect(isFutureDate("2026-08-04", "2026-08-03")).toBe(true);
     expect(isFutureDate("2026-09-01", "2026-08-03")).toBe(true);
-    // The typo this is really for: a year typed one ahead.
     expect(isFutureDate("2027-08-03", "2026-08-03")).toBe(true);
   });
 
@@ -53,8 +51,7 @@ describe("isFutureDate", () => {
   });
 
   it("counts the day in Stockholm, not the host's UTC day", () => {
-    // 01:30 on 3 August in Stockholm (summer time, UTC+2), a purchase made an
-    // hour ago. A server reading its own UTC clock still says 2 August here.
+    // 01:30 on 3 August in Stockholm (UTC+2): a UTC server clock still says 2 August.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-02T23:30:00Z"));
     expect(today()).toBe("2026-08-03");
@@ -76,9 +73,7 @@ describe("daysAgo", () => {
   });
 
   it("is unmoved by the clocks changing between the two days", () => {
-    // Sweden went back an hour on 25 October 2026. Counted in local time the
-    // span below would be 60 days and one hour, which is how a deadline check
-    // starts letting day 61 through.
+    // Sweden went back an hour on 25 October 2026: local time would make the span 60 days and one hour.
     expect(daysAgo("2026-10-01", "2026-11-30")).toBe(60);
   });
 });

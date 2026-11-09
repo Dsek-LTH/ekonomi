@@ -8,23 +8,9 @@ import { cn } from "@/lib/ui/utils";
 const MOVE_MS = 200;
 
 /**
- * What can be done with the rows ticked on a list, pinned to the foot of the
- * screen while any are, and gone the moment none are.
- *
- * At the foot rather than on the toolbar: the toolbar is what the list is
- * (search, filters, the page's own action), and a button that only exists
- * while rows are ticked made it change shape under the reader's hand. Down
- * here it is in reach of the rows that were just ticked, and costs no room the
- * rest of the time.
- *
- * It rises in and sinks out rather than appearing, so it reads as having come
- * from the ticking. Leaving, it keeps the last count it showed, so it does not
- * say "0 valda" on its way out. `prefers-reduced-motion` is answered by the
- * blunt rule in globals.css: it simply arrives.
- *
- * Portalled to <body>: a `fixed` box inside anything with a transform or a
- * backdrop filter (the section band has one) is fixed to that, not to the
- * screen.
+ * What can be done with the rows ticked on a list, pinned to the foot of the screen while any are. Leaving,
+ * it keeps the last count. Portalled to <body>: a `fixed` box inside a transform or backdrop filter (the
+ * section band has one) is fixed to that.
  */
 export function SelectionBar({
   count,
@@ -39,13 +25,9 @@ export function SelectionBar({
   children: React.ReactNode;
 }) {
   const active = count > 0;
-  // Whether the bar has risen into place. Set a frame after it is first drawn
-  // (at rest below the edge, so the transition has a start to move from) and
-  // cleared once it has sunk out again, which is also when it unmounts.
+  // Whether the bar has risen into place (set a frame after first draw so the transition has a start).
   const [entered, setEntered] = useState(false);
-  // The last count worth saying, kept through the way out so the bar does not
-  // read "0 valda" as it goes. Followed during render: it is a value derived
-  // from the props, and a render-phase update is how React keeps one.
+  // The last count worth saying, kept through the way out and followed during render.
   const [shown, setShown] = useState(count);
   if (active && count !== shown) setShown(count);
 
@@ -58,9 +40,7 @@ export function SelectionBar({
     return () => clearTimeout(timer);
   }, [active]);
 
-  // Drawn while ticked, and while it is still sinking out after. Derived from
-  // the two rather than kept as a "mounted" flag of its own, which fell out of
-  // step with the ticks and left the bar hidden while rows were ticked.
+  // Derived from the ticks and the sink-out, not a "mounted" flag, which fell out of step.
   if (!active && !entered) return null;
   const up = active && entered;
 
@@ -69,8 +49,7 @@ export function SelectionBar({
       role="region"
       aria-label={label(shown)}
       className={cn(
-        // Above the phone's tab bar, which is about 4rem plus the safe area,
-        // and clear of the screen's edge from md, where there is none.
+        // Above the phone's tab bar (about 4rem plus the safe area), clear of the edge from md.
         "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-30 flex justify-center px-4 md:bottom-6 print:hidden",
         "pointer-events-none transition-[translate,opacity] duration-200 ease-[var(--ease-out-quint)]",
         up ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",

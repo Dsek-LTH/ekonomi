@@ -31,9 +31,6 @@ describe("replay", () => {
   });
 
   it("keeps a count true when something before it changes", () => {
-    // The whole reason this exists. The delivery was 200 and is corrected to
-    // 20; the count still said 90, so the difference has to become +70 or the
-    // shelf reads 20 for a product somebody physically counted at 90.
     const before = replay([
       row({ id: "a", units: 200 }),
       row({ id: "c", kind: "COUNT", countedQty: 90 }),
@@ -75,8 +72,6 @@ describe("replay", () => {
   });
 
   it("leaves an older count that never recorded what it counted", () => {
-    // Written before a count was a statement rather than a difference. Nothing
-    // says what it was counting, so guessing would be worse than leaving it.
     const out = replay([row({ id: "a", units: 100 }), row({ id: "c", kind: "COUNT", units: -10 })]);
     expect(out.get("c")?.units).toBe(-10);
   });

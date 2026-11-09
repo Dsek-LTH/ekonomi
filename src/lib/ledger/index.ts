@@ -10,8 +10,7 @@ export interface LedgerYear {
   id: number; // Fortnox financial-year id
   year: number; // calendar year (from FromDate)
   lastSyncAt: string | null; // ISO
-  // The year's own span, so the report can offer exactly its months. A broken
-  // financial year doesn't start in January.
+  // The year's own span. A broken financial year doesn't start in January.
   fromDate: string; // YYYY-MM-DD
   toDate: string; // YYYY-MM-DD
 }
@@ -27,8 +26,7 @@ export async function getLedgerYears(): Promise<LedgerYear[]> {
   }));
 }
 
-// Resolve a Fortnox financial-year id from a calendar year (the budget works in
-// calendar years). Returns null if that year hasn't been synced.
+// Resolve a Fortnox financial-year id from a calendar year. Null if that year hasn't been synced.
 export async function financialYearIdForCalendarYear(year: number): Promise<number | null> {
   const fy = await prisma.fortnoxFinancialYear.findFirst({
     where: {
@@ -50,10 +48,8 @@ interface LedgerRowView {
   credit: number; // SEK
 }
 
-// Individual voucher rows behind a (year, cost centre, account) cell: the
-// drill-down for the report. `costCenterCodes` is the report's own filter:
-// undefined spans every cost centre, otherwise only those codes, "" among them
-// for the "no cost centre" bucket. See cost-center-filter.ts.
+// Voucher rows behind a (year, cost centre, account) cell: the report drill-down. `costCenterCodes` is the
+// report's filter, "" meaning the "no cost centre" bucket (cost-center-filter.ts).
 export async function getLedgerRows(
   financialYear: number,
   account: string,
@@ -67,13 +63,8 @@ export async function getLedgerRows(
       ...costCenterWhere(costCenterCodes),
       ...(period ? { date: { gte: period.from, lte: period.to } } : {}),
     },
-    // The voucher is still joined. This is the drill-down, and its series,
-    // number and description are the whole point of it. What moved off the
-    // relation is the *filtering*, which is what had to read every row.
     include: { voucher: true },
-    // On the row's own date, so the sort is served by the same index as the
-    // filter. It ties for rows of one voucher, hence the tiebreaker. Without
-    // one, tied rows come back in whatever order the plan produces.
+    // On the row's own date, served by the filter's index; the id tiebreaker orders rows of one voucher.
     orderBy: [{ date: "asc" }, { id: "asc" }],
     take: 500,
   });
@@ -91,9 +82,7 @@ export async function getLedgerRows(
   }));
 }
 
-// Actuals for budget-vs-actual, keyed `${costCenterCode}|${account}` → öre net.
-// net is signed so the caller can apply income/cost orientation. Returns an
-// empty map (not an error) when the year hasn't been synced.
+// Actuals for budget-vs-actual, keyed `${costCenterCode}|${account}` to öre net (signed). Empty map when the year isn't synced.
 export async function getActualsByAccountCostCenter(
   calendarYear: number,
 ): Promise<Map<string, { debit: number; credit: number }>> {

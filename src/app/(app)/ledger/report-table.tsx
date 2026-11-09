@@ -1,20 +1,7 @@
 "use client";
 
-// The report's grid: one cost-centre group per card, the voucher rows behind
-// any account one click away, and the bottom line under it all.
-//
-// Laid out on CSS grid rather than as tables, and, the part that matters, the
-// group cards share ONE sideways scrollport instead of having one each. Column
-// widths were never the hard part; two scroll containers were. Identically
-// sized columns in two scrollports are aligned exactly until you scroll one of
-// them, which is why the earlier per-card version needed JavaScript to keep
-// fifty of them in step on every scroll event. With a single scrollport the
-// alignment is structural and there is nothing to synchronise.
-//
-// From lg the same scrollport also scrolls down, and it is the only thing on
-// the page that does: the page around it is sized to the window (see
-// useFillViewport in ledger-client.tsx), so the parameters, the bar and the
-// header stay put while the accounts move.
+// The report's grid on CSS grid: the group cards share ONE sideways scrollport, so column alignment is structural.
+// From lg it also scrolls down (the page is sized to the window, see useFillViewport in ledger-client.tsx).
 import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -39,14 +26,10 @@ export interface Shape {
   showComparison: boolean;
   comparisonLabel: string;
   diff: boolean; // the difference column beside the comparison
-  /** Which figure columns a result report shows. See ResultColumn. */
   columns: readonly ResultColumn[];
 }
 
-// One description of the columns for the whole report. It becomes grid tracks
-// on a custom property that every grid in the report reads, so a cost centre's
-// rows, the next cost centre's and the bottom line are laid out by the same
-// declaration rather than by three that have to agree.
+// One description of the columns for the whole report, as grid tracks on a custom property every grid reads.
 interface ColumnSpec {
   key:
     | "account"
@@ -76,8 +59,7 @@ export function reportColumns(shape: Shape): ColumnSpec[] {
       { key: "closing", label: "closing", width: 9 },
     );
   } else {
-    // The reader's pick, in the one order they always stand in. With nothing
-    // picked the period is shown: a report of no figures is not a report.
+    // The reader's pick in fixed order; with nothing picked the period is shown.
     const picked = RESULT_COLUMNS.filter((c) => shape.columns.includes(c));
     for (const c of picked.length ? picked : (["period"] as const)) {
       cols.push(
@@ -106,18 +88,13 @@ export function reportSurfaceVars(cols: ColumnSpec[]): React.CSSProperties {
 }
 
 const GRID = "grid grid-cols-[var(--report-cols)]";
-// A row spans every track and hands them straight back to its own cells, so
-// each row lines up with every other row in the report without repeating the
-// track list. `items-center` because the diff cell is two lines and the figures
-// beside it should sit against the middle of it, as table cells used to.
+// A row spans every track and hands them back to its cells, so rows align without repeating the track list.
+// `items-center` because the diff cell is two lines.
 const ROW = "col-span-full grid grid-cols-subgrid items-center";
 
 const AMOUNT_CELL = "px-3 py-2 text-right tabular-nums whitespace-nowrap last:pr-inset";
 
-// The report's scrollport: sideways at every width, and down as well from lg,
-// where it is given the height left over in the window and is the one part of
-// the page that scrolls. On paper nothing scrolls and nothing has a minimum
-// width. The page is as wide as it is.
+// The report's scrollport: sideways at every width, down from lg (given the height left in the window). On paper nothing scrolls.
 export function ReportScroller({
   className,
   children,
@@ -137,9 +114,8 @@ export function ReportScroller({
   );
 }
 
-// The difference against the comparison column, with the relative change under
-// it. No colour: whether a number above budget is good news depends on which
-// side of the report it sits on, and a green cost is a lie.
+// The difference against the comparison column, with relative change under it. No colour: above budget is not
+// good or bad news without knowing the side of the report.
 function Diff({ value, against }: { value: number; against: number | null }) {
   if (against == null) return null;
   const diff = value - against;
@@ -157,12 +133,9 @@ function Diff({ value, against }: { value: number; against: number | null }) {
   );
 }
 
-// Every totalling row in the report (a section's sum, a cost centre's heading,
-// the bottom line) is the same row with a different label and weight. One
-// renderer, so they cannot end up disagreeing about which column a figure
-// belongs under.
-// What a figure column reads off a line, an account or a total alike. `period`
-// is passed in because an account calls it `amount` and a total `total`.
+// Every totalling row (section sum, cost-centre heading, bottom line) goes through one renderer so they agree on
+// columns. A figure column reads off a line, account or total alike; `period` is passed in because an account
+// calls it `amount` and a total `total`.
 function figure(
   key: ColumnSpec["key"],
   line: {
@@ -214,7 +187,6 @@ function SummaryRow({
     prior: number | null;
     priorAccumulated: number | null;
   };
-  /** Colour the result figure green or red, only where the sign is the news. */
   tone?: boolean;
   className?: string;
   cellClassName?: string;
@@ -266,21 +238,9 @@ function SummaryRow({
   );
 }
 
-// Account-name bars of different lengths, so the placeholder reads as a list
-// of accounts rather than as a grid of identical blocks.
 const SKELETON_NAMES = ["w-3/5", "w-2/5", "w-1/2", "w-2/3", "w-1/3", "w-1/2"];
 
-/**
- * The report while it loads: the same card, the same column grid and the real
- * column headings, with the rows still to come shimmering where they will be.
- *
- * Its own shape rather than the app's generic sheet, which was a card of a few
- * faint lines that looked like an empty report and then, a moment later, like a
- * different one. Switching between resultat- and balansrapport did that every
- * time. Drawn from the same `Shape` as the report that replaces it, so the
- * columns are already where the figures will land and nothing moves when they
- * do.
- */
+/** The report while it loads: same card, column grid and real headings (from the same `Shape`), rows shimmering. */
 export function ReportSkeleton({ shape }: { shape: Shape }) {
   const t = useTranslations("ledger");
   const cols = reportColumns(shape);
@@ -302,8 +262,7 @@ export function ReportSkeleton({ shape }: { shape: Shape }) {
         </div>
         {[7, 5].map((count, s) => (
           <Fragment key={s}>
-            {/* A section heading. Not on the tinted band the real one has: the
-                shimmer is drawn in that same tint and would vanish on it. */}
+            {/* Not on the tinted band the real heading has: the shimmer would vanish on it. */}
             <div className="col-span-full border-t border-border px-inset py-2.5">
               <Skeleton className="h-3 w-28" />
             </div>
@@ -352,8 +311,6 @@ export function ReportGroupCard({
   return (
     <Card className="overflow-hidden print:overflow-visible">
       <div role="table" className={cn(GRID, "text-sm")}>
-        {/* The cost-centre heading only exists in per-cost-centre grouping. Its
-            figures sit in the columns they belong to, like the bottom line. */}
         {groupMode === "SPECIFIED" && (
           <SummaryRow
             cols={cols}
@@ -404,15 +361,8 @@ export function ReportGroupCard({
   );
 }
 
-// The bottom line: the whole report's result, on the same tracks as the cards
-// above it, so each total sits under the column it totals, the outcome under
-// Belopp, the budget under Budget.
-//
-// The last thing in the report's scrollport rather than pinned over it. Pinned,
-// it sat on top of the last rows and took a strip of the window on every
-// screen of a report most people read from the top. Here it is where a
-// printed report puts it, after the last account, and inside the same
-// scrollport, so it moves sideways with the columns it lines up with.
+// The bottom line on the same tracks as the cards, last in the scrollport (not pinned) as a printed report puts it,
+// so it moves sideways with its columns.
 export function ReportResult({
   report,
   shape,
@@ -476,18 +426,8 @@ function SectionRows({
         const value = rowValue(a, isBalance);
         return (
           <Fragment key={key}>
-            {/* The expander is a real button on the account name, not a click
-                handler on the row. A `role="row"` with an onClick is reachable
-                by mouse alone: no tab stop, no Enter, and `aria-expanded` on a
-                row announces a state nothing can be operated to change. The row
-                keeps its hover, driven from the button's own focus too, so
-                nothing looks different and it can now be used.
-
-                The button's hit area is stretched over the whole row (its
-                `after:` box, against the row's `relative`), so a click on the
-                figures opens it as well as one on the name. It was the name
-                alone, and a row that lights up on hover and then ignores a
-                click on most of itself reads as broken. */}
+            {/* The expander is a real button, not an onClick on role="row" (no tab stop). Its hit area is stretched
+                over the row via `after:`. */}
             <div
               role="row"
               className={cn(
@@ -507,8 +447,6 @@ function SectionRows({
                   <span className="text-muted">{a.accountName}</span>
                 </button>
               </div>
-              {/* The figures in the columns' own order, so a row always lines up
-                  with the heading above it whatever the reader picked. */}
               {cols.slice(1).map((c) => {
                 if (c.key === "diff" || c.key === "priorDiff") {
                   return (
@@ -559,8 +497,7 @@ function SectionRows({
   );
 }
 
-// The voucher rows behind one account, fetched on first expand. A real table:
-// it is its own little grid of columns, unrelated to the report's.
+// The voucher rows behind one account, fetched on first expand: its own small table, unrelated to the report's grid.
 function VoucherRows({
   rows,
   showCostCenter,

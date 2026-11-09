@@ -1,14 +1,4 @@
-// POST /api/budgets/import: a past budget, from the interchange CSV.
-//
-// The browser POSTs the raw file; the year and the name ride along as query
-// parameters (see ImportBudgetQuery). Admin only, like every other way of
-// creating a budget.
-//
-// What comes back is as interesting as what goes in: `problems` names the rows
-// that could not be read, and `unmatchedCostCenters` the sheets that landed
-// detached. Both are reported rather than thrown, because an old budget that is
-// 95% readable is worth having, and because the alternative, a silent partial
-// import, is the failure that would matter.
+// Admin only. Unreadable rows land in `problems` and sheets with no matching cost centre in `unmatchedCostCenters`, rather than failing the import.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { isAdmin } from "@/lib/domain/permissions";
@@ -39,17 +29,11 @@ export async function POST(req: Request) {
   if (buf.byteLength > MAX_BYTES) return fail(413, "budget.fileTooLarge");
 
   const { sheets, problems } = parseBudgetCsv(decodeCsvBytes(buf));
-  // Nothing readable at all is a failed upload, not an empty budget: creating
-  // one would leave the user with a budget to delete and no idea why.
+  // Nothing readable is a failed upload, not an empty budget.
   if (sheets.length === 0) return fail(422, "budget.noRows", { extra: { problems } });
 
-  // Sheets are linked to cost centres by code. A code with no cost centre is
-  // NOT created here: a cost centre invented as a side effect of a file upload
-  // would show up in every allocation dropdown in the app, so the sheet is
-  // imported detached, carrying its name as a label, and the code is reported.
-  // Note a detached sheet is left out of the Utfall comparison
-  // (lib/ledger/comparison.ts), which is usually the reason a past budget was
-  // imported at all, so this is worth surfacing loudly in the UI.
+  // A code with no cost centre is not created: the sheet is imported detached (label only) and the code reported.
+  // Detached sheets are left out of the Utfall comparison (lib/ledger/comparison.ts).
   const codes = sheets.map((s) => s.costCenterCode);
   const known = await prisma.costCenter.findMany({
     where: { code: { in: codes } },
@@ -69,8 +53,6 @@ export async function POST(req: Request) {
         data: {
           budgetId: created.id,
           costCenterId,
-          // Only a detached sheet needs a label. A linked one is named by the
-          // cost centre, and a second name here would be a second opinion.
           label: costCenterId ? null : sheet.costCenterName,
           sortOrder: si,
           accounts: {

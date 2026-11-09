@@ -11,14 +11,11 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("stockHistory");
 
-// The stock's history, in one of two views (see ./views.ts): the movements, or
-// the statistics. Everything about either lives in the address, so a view of
-// a period can be sent to somebody, and the back button walks the questions.
+// The stock's history in one of two views (see ./views.ts), all in the address so a view can be sent on.
 
 type Params = Record<string, string | string[] | undefined>;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-/** A comma-separated parameter, which is how this app spells a list in a URL. */
 const list = (v: string | string[] | undefined): string[] =>
   first(v)?.split(",").filter(Boolean) ?? [];
 const isDate = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);

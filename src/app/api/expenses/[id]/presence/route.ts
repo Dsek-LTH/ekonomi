@@ -1,12 +1,5 @@
-// The booking screen's or the review's heartbeat (PUT) and goodbye (DELETE).
-// [id] = expense id. The goodbye names its screen with ?screen=review, and
-// means the booking screen without it.
-//
-// The heartbeat says "I am still here", or, once its user has gone idle, "I am
-// not", and is answered with who else is here and the utlägg's current version.
-// That answer is how a screen learns that a colleague saved while it was open.
-//
-// Presence is advisory and never a lock. See lib/domain/presence.ts.
+// PUT: heartbeat of the booking or review screen, answered with who else is here and the current version.
+// DELETE: goodbye (?screen=review names the review screen). Advisory, never a lock (lib/domain/presence.ts).
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canBookkeep } from "@/lib/domain/permissions";
@@ -18,9 +11,7 @@ import type { PresenceAnswer } from "@/lib/domain/presence";
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  // The same gate as the booking screen itself: only somebody who could book
-  // it has any business announcing that they are. Bokföring after the review
-  // is the same authority, so it holds for the review too.
+  // Same gate as the booking screen; bokföring after the review is the same authority.
   const g = await gate(canBookkeep, "auth.bookkeeperBook");
   if (!g.ok) return g.res;
 
@@ -59,10 +50,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   return NextResponse.json(answer);
 }
 
-// Sent with `keepalive` as the screen unmounts or the tab goes away, so the
-// name leaves a colleague's screen at once rather than when the TTL runs out.
-// Not gated on canBookkeep: anybody may take themselves off a screen, and a
-// bookkeeper who just lost the role should not be left on it for 30 seconds.
+// Sent with `keepalive` on unmount so the name leaves at once. Not gated on canBookkeep:
+// a bookkeeper who lost the role should not be stuck on a screen.
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();

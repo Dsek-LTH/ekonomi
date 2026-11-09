@@ -13,29 +13,11 @@ import {
 // phase, so a control that stops propagation still counts.
 const ACTIVITY = ["pointerdown", "keydown", "input", "wheel", "focus"] as const;
 
-/**
- * The booking screen's side of presence: say that we are here, learn who else
- * is, and notice when somebody saved the utlägg underneath us.
- *
- * `screen` "review" is the same for the utlägg's own page while a konterat
- * utlägg is granskat there, so two bookkeepers see each other before both
- * granska it. The two screens are counted apart.
- *
- * `expenseId` is null when there is nothing to announce (no utlägg, nothing
- * bookable about it, or a viewer who may not book), and then this does nothing.
- * `loadedUpdatedAt` is the version the screen was rendered from.
- *
- * Every way out takes the user off a colleague's screen, and none of them
- * depends on the others:
- *   - leaving the page sends a DELETE (with `keepalive`, so it survives the tab
- *     closing);
- *   - going idle, or leaving the tab hidden, makes the heartbeat say so, and the
- *     server drops the row;
- *   - a crash or a dropped network stops the heartbeats, and the server stops
- *     counting the row once the TTL runs out.
- * A heartbeat already on the wire when the DELETE goes out can land after it
- * and put the row back. The TTL takes it off again, and nothing waits on it.
- */
+/** The booking screen's side of presence: say we are here, learn who else is, notice when somebody saved underneath us.
+ * `screen` "review" is the same for the utlägg's own page while granskat; the two screens are counted apart.
+ * `expenseId` null means nothing to announce. `loadedUpdatedAt` is the version the screen was rendered from.
+ * Ways out: leaving sends a DELETE (`keepalive`), idle or hidden makes the heartbeat say so, and a crash stops heartbeats until the TTL expires the row.
+ * A heartbeat in flight can land after the DELETE and put the row back; the TTL takes it off. */
 export function useBookingPresence(
   expenseId: string | null,
   loadedUpdatedAt: string | null,

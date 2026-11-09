@@ -1,8 +1,5 @@
 "use client";
 
-// The fördelning of a document in the unit's Inkorg, which makes it an
-// invoice. The form is the invoice's own (AllocateForm). What is different is
-// what sending it does: it makes the invoice, and the reader goes on to it.
 import { useTranslations } from "next-intl";
 import { makeRow } from "@/components/allocation-editor";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";

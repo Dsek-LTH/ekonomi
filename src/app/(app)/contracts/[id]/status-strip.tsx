@@ -1,19 +1,7 @@
 "use client";
 
-// The agreement at a glance: where it stands, and the facts it turns on.
-//
-// The first card on the page, because whether it is signed is the first thing
-// anybody opening a contract wants to know, and the facts beside it are the
-// ones read next: who it is with, for when, and for how much.
-//
-// Each of them is said once, here. The period used to sit on this card and
-// again as Uthämtas and Återlämnas further down, and the renter's number and
-// contact details were in Historik at the foot of the page, away from the
-// renter they describe.
-//
-// Signerat means the signed copy is in the archive, and nothing else (see
-// lib/contract/status.ts). So a draft says what would change that, beside the
-// pill it would change.
+// The agreement at a glance: where it stands and the facts it turns on, each said once. Signerat means the signed copy is
+// in the archive and nothing else (lib/contract/status.ts), so a draft says what would change that.
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Tag } from "@/components/ui/status-pill";
@@ -32,10 +20,7 @@ export function StatusStrip({
 }: {
   contract: ContractDetail;
   today: string;
-  /** The contract's own actions. They ride this header because this is the
-   *  card that *is* the contract, which is the rule the utlägg page follows
-   *  for the same reason: what you can do to a thing belongs to the thing
-   *  rather than to the page around it. See components/page-shell.tsx. */
+  /** The contract's own actions; they ride this header because this card is the contract (see components/page-shell.tsx). */
   action?: React.ReactNode;
 }) {
   const t = useTranslations("contracts");
@@ -43,14 +28,10 @@ export function StatusStrip({
   const { date } = useFormat();
   const { rental } = contract;
 
-  // Only ever rendered for a CONTRACT (see contract-client.tsx), which always
-  // has a status.
+  // Only rendered for a CONTRACT (see contract-client.tsx), which always has a status.
   const status = displayStatus(contract, today)!;
 
-  // A rental carries two states that are not the same question: where the
-  // agreement stands, and where the gear is. Both, side by side, because a
-  // signed contract whose Soundboks is a week overdue is a row somebody has to
-  // act on and "Signerat" alone would not say so.
+  // A rental has two states: where the agreement stands and where the gear is. Both, so overdue gear on a signed contract shows.
   const gear = rental
     ? rentalState(
         {
@@ -63,8 +44,7 @@ export function StatusStrip({
       )
     : null;
 
-  // A rental's own dates rather than the archive's copy of them, which is what
-  // the contract actually states.
+  // A rental's own dates, which the contract actually states, not the archive's copy.
   const from = rental?.pickupAt ?? contract.validFrom;
   const to = rental?.returnAt ?? contract.validTo;
   const period =

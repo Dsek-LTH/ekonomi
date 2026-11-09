@@ -14,12 +14,8 @@ export default async function ContractsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  // The archive list is for whoever may read the archive. An uthyrningsansvarig
-  // has /rentals, which is the same rows read for their job, and sending them
-  // here would be a second list showing them the subset they already have.
-  //
-  // The scope is still applied underneath, because a gate is a decision about a
-  // page and this is a decision about rows.
+  // The archive list is for whoever may read the archive (uthyrningsansvariga use /rentals). The scope is still applied
+  // underneath: a gate decides on a page, the scope on rows.
   const user = await requirePage(canViewContracts);
   const query = parseListQuery(await searchParams);
   const page = await getContractPage(query, contractScopeOf(user));
@@ -27,11 +23,8 @@ export default async function ContractsPage({
   return (
     <ContractsClient
       page={page}
-      // Expiry is derived rather than stored (lib/contract/status.ts), so the
-      // day it is derived against has to come from somewhere. The server's, in
-      // the section's timezone, decided once for the whole page: letting each
-      // row ask the browser would mean a list that disagrees with itself if it
-      // is left open over midnight.
+      // Expiry is derived (lib/contract/status.ts) against one server-side `today` in the section's timezone, so the list
+      // cannot disagree with itself over midnight.
       today={today()}
       canManage={canManageContracts(user.capabilities)}
     />

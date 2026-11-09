@@ -1,10 +1,5 @@
-// What each email says: the words, the facts, and the shape they are put in.
-//
-// The content half of the email feature, kept apart from the half that sends.
-// Nothing here reads the database, sends anything or needs a request, so the
-// same functions serve lib/server/notify.ts, which writes their output to the
-// outbox, and the React Email preview server (emails/), which draws them with
-// sample data. Everything returns an `Email` (types.ts) for render.tsx to draw.
+// What each email says, as an `Email` (types.ts) for render.tsx. No database or request, so it serves
+// lib/server/notify.ts and the React Email preview (emails/) alike.
 import { createTranslator } from "next-intl";
 import { oreToSEK } from "@/lib/domain/money";
 import { formatSEK } from "@/lib/ui/format";
@@ -16,27 +11,18 @@ import svCommon from "../../../messages/sv/common.json";
 import { isoDay } from "@/lib/domain/date";
 import { serverEnv } from "@/lib/server/env";
 
-/**
- * The address links in a mail point at. A mail is read outside the app, so
- * every link in it has to be absolute.
- */
+/** The address links in a mail point at. Absolute, since a mail is read outside the app. */
 export function appUrl(path = "/"): string {
   return new URL(path, serverEnv("APP_URL")).toString();
 }
 
-// ── Words ─────────────────────────────────────────────────────────
-//
-// Swedish, the section's language and the app's default. A member's language
-// lives in a cookie in their browser, where a mail sent from a cron job cannot
-// read it. messages/en/email.json is kept in step all the same, so storing a
-// language on User is the only thing needed to send in English.
+// Swedish: a mail from a cron job cannot read the member's language cookie. Keep messages/en/email.json in step.
 export const emailT = createTranslator({
   locale: "sv",
   messages: { email: svEmail },
   namespace: "email",
 });
 
-// Payment types and statuses are worded the way the app words them.
 const commonT = createTranslator({
   locale: "sv",
   messages: { common: svCommon },
@@ -51,7 +37,6 @@ const signedSek = new Intl.NumberFormat("sv-SE", {
   signDisplay: "exceptZero",
 });
 
-/** An amount in öre, the way a mail shows it. */
 export const formatOre = (ore: number): string => formatSEK(oreToSEK(ore));
 
 /** A bank amount, signed both ways, so a refund reads as money coming back. */
@@ -63,12 +48,10 @@ const stockholmMinute = new Intl.DateTimeFormat("sv-SE", {
   timeStyle: "short",
 });
 
-/** What an utlägg is called in a mail: its reference and title, or only the
- *  title for a draft that has not been given a number yet. */
+/** What an utlägg is called in a mail: reference and title, or only the title for a draft. */
 export const mailLabel = (e: { reference: string | null; title: string }): string =>
   e.reference ? `${e.reference} - ${e.title}` : e.title;
 
-/** Why the reader got this mail, and the way out of getting more of them. */
 export function frame(
   reason: string,
   settings: "settings" | "settingsDigest" = "settings",
@@ -96,9 +79,7 @@ type ExpenseKind =
   | "exported"
   | "exportReverted";
 
-// The colour of each mail, and who it is written to. Amber is for the mails
-// that say something went backwards and the reader has something to fix or
-// check; everything else carries the brand pink.
+// Amber is for mails saying something went backwards that the reader must fix or check; the rest carry the brand pink.
 const EXPENSE_KINDS: Record<
   ExpenseKind,
   { tone: Tone; reason: "attester" | "submitter" | "bookkeeper" }
@@ -116,8 +97,7 @@ const EXPENSE_KINDS: Record<
   exportReverted: { tone: "warning", reason: "bookkeeper" },
 };
 
-/** What a mail about an utlägg can say about it. Only id, reference, title and
- *  amount are needed; every other fact is shown when the caller has it. */
+/** What a mail about an utlägg can say about it. Only id, reference, title and amount are required. */
 export interface ExpenseFacts {
   id: string;
   reference: string | null;
@@ -128,11 +108,7 @@ export interface ExpenseFacts {
   allocations?: { costCenter: { code: string; name: string } }[];
 }
 
-/**
- * The mail about one utlägg: what happened, which utlägg, and the button that
- * takes the reader to it. A comment, when the actor left one, is quoted above
- * the utlägg, since it is usually the reason the mail was sent.
- */
+/** The mail about one utlägg. A comment from the actor is quoted above it, being usually the reason for the mail. */
 export function expenseNotice(
   key: ExpenseKind,
   expense: ExpenseFacts,
@@ -156,8 +132,7 @@ export function expenseNotice(
   };
 }
 
-/** One utlägg as a mail shows it: reference, title, amount, and the facts the
- *  caller had to hand. */
+/** One utlägg as a mail shows it. */
 function expenseBlock(expense: ExpenseFacts): Block {
   const facts: Extract<Block, { kind: "expense" }>["facts"] = [];
   if (expense.allocations?.length) {
@@ -186,8 +161,6 @@ function expenseBlock(expense: ExpenseFacts): Block {
   };
 }
 
-// ── Leverantörsfakturor ───────────────────────────────────────────
-
 type InvoiceKind = "assigned" | "returned" | "submitted";
 
 const INVOICE_KINDS: Record<InvoiceKind, { tone: Tone; reason: "unitOwner" | "attester" }> = {
@@ -196,10 +169,8 @@ const INVOICE_KINDS: Record<InvoiceKind, { tone: Tone; reason: "unitOwner" | "at
   submitted: { tone: "action", reason: "attester" },
 };
 
-/** What a mail about a levfaktura can say about it. */
 export interface InvoiceFacts {
   id: string;
-  /** "LEV26-0012". */
   reference: string | null;
   supplierName: string | null;
   invoiceNumber: string | null;
@@ -209,17 +180,10 @@ export interface InvoiceFacts {
   allocations?: { costCenter: { code: string; name: string } }[];
 }
 
-/** What a levfaktura is called in a mail: what its unit said it was for, as
- *  its page calls it. An invoice fresh from the inkorg has not been told yet.
- *  The supplier is the treasury's to settle, at the kontering, and is not
- *  named before then. */
+/** What a levfaktura is called in a mail: what its unit said it was for. The supplier is the treasury's to settle at the kontering, so it is not named before then. */
 const invoiceLabel = (i: InvoiceFacts): string => i.description || emailT("invoice.untitled");
 
-/**
- * The mail about one levfaktura, the same shape as an utlägg's: what happened,
- * which invoice, and the button to it. The invoice is drawn as the utlägg card
- * is, with its own LEV number where an utlägg's DEK number goes.
- */
+/** The mail about one levfaktura, same shape as an utlägg's, with its LEV number. */
 export function invoiceNotice(
   key: InvoiceKind,
   invoice: InvoiceFacts,
@@ -228,9 +192,7 @@ export function invoiceNotice(
 ): Email {
   const { tone, reason } = INVOICE_KINDS[key];
   const label = invoiceLabel(invoice);
-  // Every one of these asks the reader to act. A unit given an invoice, or
-  // given it back, goes straight to the fördelning; an attester to the record,
-  // where Attestera is the main button.
+  // Every one asks the reader to act: a unit goes straight to the fördelning, an attester to the record.
   const url = appUrl(
     key === "submitted" ? `/invoices/${invoice.id}` : `/invoices/${invoice.id}/allocate`,
   );
@@ -268,12 +230,7 @@ export function invoiceNotice(
   };
 }
 
-/**
- * The mail to a unit given a document from the Inkorg: the same "att fördela"
- * as an invoice given to it, since to the unit it is the same errand. It is
- * not an invoice yet, so it has no number and no amount, and the button goes
- * to the document's fördelning, which is what makes it one.
- */
+/** The mail to a unit given a document from the Inkorg. Not an invoice yet, so no number or amount; the button goes to the fördelning. */
 export function documentNotice(
   doc: { id: string; title: string | null; dueDate?: Date | null },
   values: Record<string, string | number> = {},
@@ -305,7 +262,6 @@ export function documentNotice(
   };
 }
 
-/** What somebody wrote when they acted, quoted as of now. Nothing without text. */
 function commentBlock(comment?: { author: string; text: string | null }): Block[] {
   if (!comment?.text) return [];
   return [
@@ -318,31 +274,16 @@ function commentBlock(comment?: { author: string; text: string | null }): Block[
   ];
 }
 
-// ── Reminders ─────────────────────────────────────────────────────
-
-/**
- * Where an utlägg in a reminder stands, from the reader's side: waiting for
- * their attest, sent back to them, or never sent in.
- */
+/** Where an utlägg in a reminder stands from the reader's side: waiting for their attest, sent back, or never sent in. */
 export type ReminderState = "attest" | "changes" | "draft";
 
 export interface ReminderItem {
   expense: ExpenseFacts;
   state: ReminderState;
-  /** Who sent it in, for the line under an utlägg waiting on the reader's attest. */
   submitter: string;
 }
 
-/**
- * A reminder somebody sent by hand, about everything in it that is waiting on
- * this reader: utlägg, and purchases on their card with no utlägg yet. One mail
- * per reader however much was picked: a resultatansvarig with eight unsigned
- * claims gets one mail listing eight, not eight mails.
- *
- * About a single utlägg it reads like the mail that utlägg would have sent,
- * with its facts and a button straight to it. Otherwise it is sections, like
- * the digest: the utlägg to attest, the reader's own, and the card purchases.
- */
+/** A hand-sent reminder about everything waiting on this reader, as one mail however much was picked. About a single utlägg it reads like that utlägg's own mail; otherwise it is sections like the digest. */
 export function reminderEmail(
   sender: string,
   message: string | null,
@@ -407,7 +348,6 @@ export function reminderEmail(
     });
   }
 
-  // Worded by what is in it: utlägg alone, card purchases alone, or both.
   const count = items.length + txns.length;
   const kind = txns.length === 0 ? "expenses" : items.length === 0 ? "transactions" : "mixed";
   return {
@@ -419,11 +359,7 @@ export function reminderEmail(
   };
 }
 
-/**
- * Bank rows as a table, oldest first, refunds marked. Past `max` rows the
- * rest is one line saying how many more; the link under the table leads to
- * all of them.
- */
+/** Bank rows as a table, oldest first, refunds marked. Past `max` rows the rest is one line saying how many more. */
 export function transactionsBlock(
   txns: readonly { transactionDate: Date; description: string; amount: number }[],
   max: number,
@@ -449,15 +385,11 @@ export function transactionsBlock(
   };
 }
 
-// ── The weekly digest ─────────────────────────────────────────────
-
-// Per section. The link under it leads to the whole list.
 const MAX_LINES = 15;
 
 export type Txn = { transactionDate: Date; description: string; amount: number };
 export type ListRow = Extract<Block, { kind: "list" }>["rows"][number];
 
-/** What one member has waiting, by section. A section left undefined is empty. */
 export type Waiting = { unmatched?: Txn[]; deadline?: ListRow[]; attest?: ListRow[] };
 
 function capped(rows: ListRow[]): Extract<Block, { kind: "list" }> {

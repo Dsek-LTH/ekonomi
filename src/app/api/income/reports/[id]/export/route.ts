@@ -1,14 +1,8 @@
-// Push a booked income voucher to Fortnox: create the verifikation, attach the
-// intäktsräkning, record the number, and only then flip the report to EXPORTED.
-//
-// Deliberately the same shape as api/expenses/[id]/export, including the order
-// the two Fortnox calls happen in and the reason for it. A voucher cannot be
-// deleted through the API, so anything that fails after one exists leaves a
-// mess to be cleaned up by hand in Fortnox; a file sitting unused in the inbox
-// is harmless. The fragile half goes first.
-//
-// The voucher is written with the bookkeeper's OWN Fortnox login rather than
-// the service account, so Fortnox stamps it with their name.
+// Push a booked income voucher to Fortnox: create the verifikation, attach the intäktsräkning, record
+// the number, then flip to EXPORTED. Same shape and call order as api/expenses/[id]/export (a voucher
+// cannot be deleted through the API, so the fragile half goes first). Written with the bookkeeper's
+// OWN Fortnox login so Fortnox stamps their name.
+
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -50,9 +44,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const verification = report.verification;
   if (!verification) return fail(409, "income.noVoucherToExport");
 
-  // Granskning is a second pair of eyes, as on an utlägg (lib/domain/review.ts):
-  // whoever konterade the day, or wrote its kontering by hand, does not bokföra
-  // it, unless their role is exempt.
+  // Granskning (lib/domain/review.ts): whoever konterade or hand-wrote the kontering does not bokföra, unless exempt.
   const own = reviewBlocker({
     exempt: canReviewOwnBooking(g.actor.capabilities),
     viewerId: g.actor.id,
@@ -65,22 +57,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
 
-  // Which verifikationsserie takings are filed under: its own setting, falling
-  // back to the connection's. The duplicate check below reads the same one
-  // through the same function, which is the point of there being one.
+  // The series takings are filed under; the duplicate check reads the same one.
   const settings = await loadBookkeepingSettings();
   const series = incomeVoucherSeries(settings, conn.voucherSeries);
   if (!series) return fail(409, "settings.voucherSeriesUnset");
 
-  // The last gate before anything is written over there. Import already flags
-  // a day Fortnox has a voucher for, but that check ran against the range as
-  // it was then. This one runs against the day as it is now, with whatever has
-  // been exported since, including by someone else in the last minute. Before
-  // the file upload deliberately: a refusal here leaves nothing behind at all.
-  //
-  // A whole day is refused if any voucher in Fortnox already books some of
-  // that day's money in this source. A day booked before the per-day voucher
-  // is one verksamhet's, so only a voucher with its own text is the same one.
+  // Last gate before anything is written: runs against the day as it is now (not as at import), before
+  // the file upload so a refusal leaves nothing behind. A whole day is refused if any voucher already
+  // books some of its money in this source (pre-per-day days match only their own text).
   const voucherDate = isoDay(verification.date);
   const existing = await fortnoxIncomeVouchers(voucherDate, voucherDate);
   const duplicate = isLegacyReport(report)
@@ -96,9 +80,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!auth.ok) return auth.res;
   const token = auth.token;
 
-  // The intäktsräkning goes up first, for the reason at the top of this file.
-  // Unlike an expense, a report always has one: it is rendered at import, and
-  // booking will not have got this far without it.
+  // The intäktsräkning goes up first. A report always has one (booking required it).
   let fileId: string | null = null;
   if (report.documentKey) {
     let step = "readDocument";

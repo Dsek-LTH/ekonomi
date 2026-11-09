@@ -1,19 +1,5 @@
 "use client";
 
-// The phone's tab bar: the few places most members go, a thumb's reach from
-// wherever they are, and "Mer" for the rest.
-//
-// The menu used to be the only way round on a phone, so every trip was two
-// taps (open it, pick the page) and the commonest one, a new utlägg, was three.
-// Now that is one tap, and so are Översikt and Utlägg. The fourth tab is
-// whichever errand this member has most: attest for somebody who signs,
-// otherwise their card's purchases, otherwise the budget. "Mer" opens the
-// full menu (mobile-nav.tsx), and carries a dot when something waiting is
-// behind it rather than on a tab.
-//
-// "+" asks which kind first, a purchase or a milersättning, because the two
-// are different forms and neither can be drawn before that is answered (see
-// components/new-expense-menu.tsx). From the bottom, where the thumb already is.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -51,8 +37,6 @@ export function TabBar({
   const router = useProgressRouter();
   const [choosing, setChoosing] = useState(false);
 
-  // An attester's other list: their utlägg to attest are on Utlägg already,
-  // and the levfakturor are the rest of what they sign.
   const fourth: Tab | null = hasAttestRole(user.capabilities)
     ? { href: "/invoices", label: "invoices", icon: IconInvoice }
     : user.holdsCard
@@ -65,10 +49,8 @@ export function TabBar({
     { href: "/expenses", label: "expenses", icon: IconReceipt },
   ];
   const onTabs = new Set([...tabs, ...(fourth ? [fourth] : [])].map((x) => x.href));
-  // Something is waiting somewhere only the full menu leads to.
   const moreWaiting = Object.entries(counts).some(([href, n]) => n > 0 && !onTabs.has(href));
 
-  // Escape closes the chooser, as it closes every sheet in the app.
   useEffect(() => {
     if (!choosing) return;
     const key = (e: KeyboardEvent) => e.key === "Escape" && setChoosing(false);
@@ -154,8 +136,6 @@ export function TabBar({
         </div>
       )}
 
-      {/* `data-guide-edge`: a guide keeps the control it lights above this
-          bar (shell/guide.tsx). */}
       <nav
         data-guide-edge="bottom"
         aria-label={t("tabBar")}

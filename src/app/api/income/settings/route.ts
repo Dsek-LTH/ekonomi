@@ -1,5 +1,4 @@
-// Where income lands, and what Zettle's own fees cost. Part of
-// BookkeepingSettings, which is a single row.
+// Where income lands, and what Zettle's fees cost. Part of BookkeepingSettings (single row).
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { UpdateIncomeSettings } from "@/lib/api/schemas/income";
@@ -28,8 +27,7 @@ export async function PATCH(req: Request) {
     if (!cc) return fail(422, "income.unknownCostCenter");
   }
 
-  // Creating the row writes only what was chosen. No column has a default, so
-  // everything else stays unset. See lib/server/bookkeeping-settings.ts.
+  // Creating the row writes only what was chosen (no column has a default; see lib/server/bookkeeping-settings.ts).
   await prisma.bookkeepingSettings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },

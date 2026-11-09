@@ -7,10 +7,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("closing");
 
-// Bokslut, for the header's räkenskapsår, opened on its checklist: what is
-// left to do, how to do it, and what last year's skattmästare wanted this one
-// to know. Readable by whoever may read the books, which is the treasury and
-// the revisorer.
+// Bokslut for the header's räkenskapsår, opened on its checklist. Readable by the treasury and the revisorer.
 export default async function ClosingPage() {
   const user = await requirePage(canViewBookkeeping);
   const year = await getOpenClosingYear();

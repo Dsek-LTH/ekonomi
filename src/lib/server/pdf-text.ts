@@ -1,18 +1,9 @@
-// A PDF's text layer, as lines in reading order, for the invoice prefill
-// (lib/domain/invoice-text.ts).
-//
-// pdfjs, the same library the receipt viewer draws PDFs with, run on the
-// server. Its worker is loaded into this process and handed to it through
-// `globalThis.pdfjsWorker`, which pdfjs looks for before it tries to start a
-// worker of its own: a server has no Worker to start, and the import below is
-// also what makes the standalone build trace the worker file in.
-//
-// Best effort throughout. An invoice whose text cannot be read is one whose
-// fields are typed by hand, which is how every invoice was before this.
+// A PDF's text layer as lines in reading order, for the invoice prefill (lib/domain/invoice-text.ts). Runs
+// pdfjs on the server with its worker handed over through `globalThis.pdfjsWorker` (a server has no Worker
+// to start; the import also makes the standalone build trace the file). Best effort throughout.
 import "server-only";
 
-// How much of a PDF is read. An invoice's fields are on its first page or two;
-// the rest is specification.
+// How much of a PDF is read: an invoice's fields are on its first page or two.
 const MAX_PAGES = 3;
 
 type PdfJs = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -34,18 +25,13 @@ interface TextItem {
   transform: number[];
 }
 
-/**
- * The text of the first pages, one string per printed line, top to bottom.
- * Items are grouped into a line by their baseline, within a point or two, and
- * joined left to right with the gaps kept as spaces, so "Att betala" and the
- * amount far to its right end up on one line the way a reader sees them.
- */
+/** The text of the first pages, one string per printed line, top to bottom (items grouped by baseline). */
 export async function pdfLines(bytes: Uint8Array): Promise<string[]> {
   try {
     const { getDocument } = await pdfjs();
     const doc = await getDocument({
       data: new Uint8Array(bytes),
-      // No fonts fetched, nothing evaluated: the text layer is all this wants.
+      // No fonts fetched, nothing evaluated.
       disableFontFace: true,
       isEvalSupported: false,
       useSystemFonts: false,

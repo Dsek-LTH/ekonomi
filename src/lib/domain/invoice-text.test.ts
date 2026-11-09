@@ -70,8 +70,7 @@ describe("parseInvoiceText", () => {
   });
 
   it("reads a due date whose label lost its ö", () => {
-    // Some suppliers' PDFs draw their text with a font that lacks the
-    // Swedish letters, and the text layer has "Forfallodatum".
+    // A font lacking the Swedish letters leaves "Forfallodatum" in the text layer.
     expect(parseInvoiceText(["Forfallodatum 2026-11-10"]).dueDate).toBe("2026-11-10");
   });
 

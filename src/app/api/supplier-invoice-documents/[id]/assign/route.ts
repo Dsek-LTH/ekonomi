@@ -1,12 +1,3 @@
-// Giving a document in the Inkorg to a result unit, or to another one: it is
-// in that unit's Inkorg then, for the unit to fördela, which is what makes it
-// an invoice. Triage's. The unit's resultatansvarig is told.
-//
-// Nothing else is kept: who gave it and when, for the invoice's history once
-// there is one, and the due date when triage read one off it, so the unit can
-// see what is urgent. A reason it came back from another unit is cleared,
-// since it is answered by giving it somewhere else. Sent again to the unit it
-// is already with, only the due date changes, and nobody is mailed twice.
 import { prisma } from "@/lib/server/db";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { documentNotice } from "@/lib/email/content";
@@ -18,7 +9,6 @@ import { parseBody } from "@/lib/api/parse";
 import { AssignInvoiceDocument } from "@/lib/api/schemas/supplier-invoice";
 import { loadInboxDocumentFor, unitOwnersOf } from "@/lib/api/supplier-invoice-access";
 
-// POST /api/supplier-invoice-documents/:id/assign: { resultUnitId, dueDate? }
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
@@ -56,8 +46,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const owners = await unitOwnersOf(unit.name);
   const result = await commit(() =>
     prisma.$transaction(async (tx) => {
-      // Where it was when this was decided: fördelad or given elsewhere in
-      // another tab a moment ago, it is not this request's to move.
       applied(
         await tx.supplierInvoiceDocument.updateMany({
           where,

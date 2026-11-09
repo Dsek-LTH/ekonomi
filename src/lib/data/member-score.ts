@@ -1,8 +1,4 @@
-// The redovisningsbetyg as the pages read it: the database turned into what
-// lib/domain/member-score.ts scores, for one member or for all of them.
-//
-// Who may ask for whose is the page's to check (canViewMemberScores, or the
-// member's own on /profile). Nothing here narrows by viewer.
+// Callers check who may ask (canViewMemberScores, or the member's own on /profile); nothing here narrows by viewer.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -32,7 +28,6 @@ function windowStart(now: string): Date {
   return d;
 }
 
-/** Every input the score needs, for the given members or for everybody. */
 async function load(submitterIds: string[] | null, now: string) {
   const since = windowStart(now);
   const who = submitterIds ? { in: submitterIds } : undefined;
@@ -87,9 +82,7 @@ async function load(submitterIds: string[] | null, now: string) {
 
   for (const e of expenses) {
     const bought = e.purchaseDate ? isoDay(e.purchaseDate) : momentDay(e.createdAt);
-    // A card purchase can only be sent once its bank row is in the app to
-    // match, so its clock waits for the import. Without a row it has not
-    // started.
+    // A card purchase can only be sent once its bank row is imported, so its clock starts then.
     const startedOn =
       e.paymentType === "CARD"
         ? e.matchedTransaction
@@ -97,8 +90,7 @@ async function load(submitterIds: string[] | null, now: string) {
           : null
         : bought;
     const submitted = e.events.find((ev) => ev.type === "SUBMITTED");
-    // A date corrected at the kontering is the same mistake as one sent back
-    // for, caught without the round trip. See lib/domain/correction.ts.
+    // A date corrected at kontering counts as sent back (lib/domain/correction.ts).
     const returned = e.events.some(
       (ev) =>
         ev.type === "CHANGES_REQUESTED" ||
@@ -133,7 +125,6 @@ interface Inputs {
   attests: ScoreAttest[];
 }
 
-/** The events the attest walk reads (attestsFromEvents), on each record. */
 const EXPENSE_ATTEST_EVENTS = [
   "SUBMITTED",
   "COST_CENTER_APPROVED",
@@ -154,7 +145,6 @@ const INVOICE_ATTEST_EVENTS = [
   "EXPORTED",
 ] as const;
 
-/** Faktura statuses that wait on a unit's signature. */
 const INVOICE_WAITING = ["ASSIGNED", "CHANGES_REQUESTED", "PENDING_APPROVAL"] as const;
 
 const asEvent = (e: { type: string; actorId: string | null; createdAt: Date; diff?: unknown }) =>
@@ -167,13 +157,8 @@ const asEvent = (e: { type: string; actorId: string | null; createdAt: Date; dif
   }) satisfies AttestEvent;
 
 /**
- * Every attest given in the window by the given members (or anybody), and
- * every one waiting on them now, on utlägg and leverantörsfakturor alike.
- *
- * Waiting is read the way the Att attestera queue reads it: the rows nobody
- * has signed, and the active resultatansvariga of the unit each one falls in,
- * the submitter excepted. A row no unit owns waits on the admins, and is left
- * out here: that is a gap in the setup, not anybody's slow attest.
+ * Every attest given in the window, and every one waiting now, on utlägg and leverantörsfakturor.
+ * Waiting is read as the Att attestera queue does; a row no unit owns is left out (a setup gap, not a slow attest).
  */
 async function loadAttests(memberIds: string[] | null, since: Date) {
   const signedBy = memberIds ? { actorId: { in: memberIds } } : {};
@@ -272,8 +257,7 @@ async function loadAttests(memberIds: string[] | null, since: Date) {
   }
   for (const i of invoices) {
     const signers = new Set(i.allocations.map((a) => a.approvedById).filter(Boolean));
-    // Before its split is signed the faktura is the unit's to fördela. Once
-    // some of it is, the rest waits on the units of the rows left.
+    // Before its split is signed the faktura is the unit's to fördela; after, the rest waits on the remaining rows' units.
     const waitingOn =
       i.status === "PENDING_APPROVAL"
         ? unsignedUnits(i.allocations).flatMap(ownersOf)
@@ -297,7 +281,6 @@ async function loadAttests(memberIds: string[] | null, since: Date) {
   return byActor;
 }
 
-/** One member's score. */
 export async function getMemberScore(userId: string): Promise<MemberScore> {
   const now = today();
   const inputs = (await load([userId], now)).get(userId);
@@ -309,7 +292,6 @@ export async function getMemberScore(userId: string): Promise<MemberScore> {
   });
 }
 
-/** One member's score with who they are, or null for nobody by that id. */
 export async function getMemberScoreRow(userId: string): Promise<MemberScoreRow | null> {
   const [user, score] = await Promise.all([
     prisma.user.findUnique({
@@ -328,8 +310,7 @@ export interface MemberScoreRow {
   score: MemberScore;
 }
 
-/** Everybody with anything in the window to score, for the treasury's list:
- *  whoever bought something, and whoever attested or has something to. */
+/** Everybody with anything in the window to score: buyers, attesters and those with something waiting. */
 export async function getMemberScores(): Promise<MemberScoreRow[]> {
   const now = today();
   const byMember = await load(null, now);

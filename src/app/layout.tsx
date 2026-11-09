@@ -9,14 +9,6 @@ import { cn } from "@/lib/ui/utils";
 import { ServiceWorker } from "@/components/pwa/service-worker";
 import "./globals.css";
 
-// The tab title follows the reader's language like everything else, so it has
-// to be built per request rather than exported as a constant.
-//
-// Almost everything here sits behind a sign-in, so the one page a search engine
-// or a chat link preview ever sees is /login. The defaults are therefore
-// "do not index", and app/login/page.tsx is the single page that opts back in.
-// metadataBase is what turns the relative canonical and og:image paths into
-// absolute URLs, which crawlers and preview bots require.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
   const locale = await getLocale();
@@ -27,9 +19,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: title, template: `%s | ${title}` },
     description,
     applicationName: title,
-    // Installed from Safari's "Lägg till på hemskärmen", this is the name under
-    // the icon and what makes it open full screen. The status bar style is left
-    // to iOS, which colours it from themeColor (generateViewport below).
     appleWebApp: { capable: true, title: "Ekonomi" },
     robots: { index: false, follow: false },
     openGraph: {
@@ -43,23 +32,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/**
- * What the browser paints its own chrome in: the address bar on Android, the
- * status bar area of an installed PWA, the strip either side of the page.
- *
- * There was none of this at all, so a dark app sat inside a white browser. It
- * is a `generateViewport` rather than a constant because the answer is the
- * reader's stored choice where they have made one, and only where they have not
- * does it fall back to the pair the OS picks between. The colours are
- * `--color-canvas` in each theme, the ground the page itself is on, so the
- * chrome continues the page instead of framing it.
- *
- * `viewportFit: "cover"` is what makes `env(safe-area-inset-*)` mean anything.
- * Every bar fixed to the foot of a phone (the tab bar, the action bar, the
- * sheets) pads itself by `safe-area-inset-bottom`, and without it iOS reports
- * every inset as nought: the tab bar sat under the home indicator and Safari's
- * floating toolbar on a recent iPhone.
- */
 export async function generateViewport(): Promise<Viewport> {
   const choice = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   if (choice) return { viewportFit: "cover", themeColor: CANVAS[choice] };
@@ -72,13 +44,8 @@ export async function generateViewport(): Promise<Viewport> {
   };
 }
 
-// Self-hosted at build time by next/font, so no request leaves for Google at
-// runtime. Exposed as a variable rather than a class: --font-sans in
-// globals.css puts it first and keeps the system stack behind it.
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
-/** `--color-canvas` in both themes. The one pair of values that has to exist
- *  outside globals.css, because a <meta> tag cannot read a custom property. */
 const CANVAS = { light: "#f4f4f5", dark: "#17171a" } as const;
 
 export default async function RootLayout({
@@ -88,24 +55,9 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
-  // The theme arrives with the request, so the document is simply served in it.
-  // This is the whole of the no-flash story: the class is in the markup the
-  // parser reads, which is earlier than any script could run and needs no
-  // `suppressHydrationWarning`, because nothing corrects the DOM afterwards.
-  // See lib/ui/theme.ts for what this replaced.
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
 
   return (
-    // No class at all when the reader has never chosen, which is what hands the
-    // question to `prefers-color-scheme` in globals.css. An explicit light is a
-    // class of its own and not the absence of `dark`: on a machine set to dark
-    // those are two different documents. See lib/ui/theme.ts.
-    //
-    // suppressHydrationWarning because browser extensions write attributes onto
-    // <html> before React hydrates (one leaves `__gcrremoteframetoken`), and each
-    // of them was a hydration error in dev. It covers this element's own
-    // attributes and nothing below it. The theme class is rendered here from the
-    // cookie, so there is no difference of our own for it to hide.
     <html lang={locale} className={cn("h-full", inter.variable, theme)} suppressHydrationWarning>
       <body className="min-h-full">
         <NextIntlClientProvider locale={locale} messages={messages}>

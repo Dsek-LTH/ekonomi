@@ -1,20 +1,7 @@
 "use client";
 
-// Putting a delivery right.
-//
-// The case it exists for: somebody books 200 bottles of Fireball meaning 20.
-// The old answer was a second row of −180, which left the log saying the guild
-// once bought two hundred bottles it never bought, and made fixing a typo an
-// arithmetic problem, at the moment somebody has just demonstrated they are not
-// doing arithmetic well.
-//
-// So it asks the only question worth asking: what should it have been? Zero, or
-// the remove button, takes the row away entirely, because picking the wrong
-// product is not a movement of nothing. It is no movement.
-//
-// Who changed it, and from what, goes to the product's own feed. That is what
-// keeps an editable ledger checkable, and it is the reason none of this has to
-// be expressed as a correction the reader then has to add up.
+// Putting a delivery right: asks what the row should have been, not a second row of the difference.
+// Zero, or the remove button, takes the row away entirely (a wrong product is no movement). Who changed what goes to the product's feed.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -25,14 +12,7 @@ import { isQuantityInput, quantity } from "@/lib/stock/quantity";
 import type { PatchStockEntry } from "@/lib/api/schemas/stock";
 import type { CellarRowDto } from "@/lib/data/stock";
 
-/**
- * The figure the row shows a person: positive, in things.
- *
- * Read off the rung the row is about, not off `units`, because a row about an
- * opened bottle leaves that at nought and puts its one bottle on the ladder.
- * The same rule the route applies when it writes the row back. See
- * api/stock/entries/[id]/route.ts.
- */
+/** The figure the row shows: positive, in things. Read off the rung the row is about, not `units`, matching api/stock/entries/[id]/route.ts. */
 const shown = (row: CellarRowDto): number => {
   const level = row.level ?? 0;
   if (level === 0) return Math.abs(row.units ?? 0);
@@ -87,13 +67,7 @@ export function EntryDialog({ row, onClose }: { row: CellarRowDto; onClose: () =
           />
         </Field>
       </div>
-      {/* The blocker is about the save button alone. Removing the row is still
-          live while it shows, which is the point of saying which button is
-          waiting for what rather than greying the strip out. */}
       <ModalFooter blocker={qty === was ? t("entry.unchanged") : null}>
-        {/* Removing it outright, for the row that should never have existed.
-            Not a destructive act on the record: the product's feed keeps what
-            it said and who took it off. */}
         <Button variant="ghost" onClick={() => void save(0)} disabled={pending !== null}>
           {t("entry.remove")}
         </Button>

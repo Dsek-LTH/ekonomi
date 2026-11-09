@@ -1,10 +1,5 @@
-// The first lines of every levfaktura route: find the invoice the way the
-// viewer is allowed to see it, and work out what they may do with it.
-//
-// One loader so that every route asks the visibility question the same way the
-// page did (lib/data/supplier-invoices.ts). An invoice outside the viewer's
-// scope is a 404, not a 403, for the reason it is everywhere else in the app:
-// whether it exists at all is not their business.
+// The first lines of every levfaktura route: find the invoice as the viewer may see it (404 outside scope, as in
+// lib/data/supplier-invoices.ts) and work out what they may do.
 import "server-only";
 
 import type { NextResponse } from "next/server";
@@ -93,11 +88,7 @@ export type DocumentAccess =
   | { ok: true; doc: LoadedDocument; viewer: InvoiceViewerCtx; can: DocumentCapabilities }
   | { ok: false; res: NextResponse };
 
-/**
- * A document in an Inkorg, the way the viewer may see it, and what they may
- * do with it. One already on an invoice is a 409: it is the invoice's now, and
- * asked about through the invoice. One the viewer may not see is a 404.
- */
+/** A document in an Inkorg as the viewer may see it. One already on an invoice is a 409; one the viewer may not see is a 404. */
 export async function loadInboxDocumentFor(actor: Actor, id: string): Promise<DocumentAccess> {
   const [viewer, doc] = await Promise.all([invoiceViewerOf(actor), findDocument(id)]);
   const can = doc && documentCapabilities(viewer, doc);
@@ -123,8 +114,7 @@ export function exportFactsOf(invoice: LoadedInvoice): ExportFacts {
   };
 }
 
-/** The refusal for a change the actor may not make to this invoice: a 409 when
- *  it is the invoice's state that stands in the way, a 403 when it is them. */
+/** Refusal for a change the actor may not make: 409 when the invoice's state blocks it, 403 when it is the actor. */
 export function refuseChange(invoice: { status: string }, stateAllows: boolean): NextResponse {
   return stateAllows
     ? fail(403, "supplierInvoice.denied")
@@ -133,8 +123,7 @@ export function refuseChange(invoice: { status: string }, stateAllows: boolean):
       });
 }
 
-/** Every active resultatansvarig for a unit, by its name, which is what
- *  User.resultUnits holds. Who an assigned invoice's mail goes to. */
+/** Every active resultatansvarig for a unit by name (what User.resultUnits holds): who an assigned invoice's mail goes to. */
 export async function unitOwnersOf(unitName: string): Promise<string[]> {
   const users = await prisma.user.findMany({
     where: { active: true, roles: { has: "RESULTATANSVARIG" }, resultUnits: { has: unitName } },

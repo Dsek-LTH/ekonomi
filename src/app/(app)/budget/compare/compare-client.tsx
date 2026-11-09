@@ -1,9 +1,5 @@
 "use client";
 
-// The comparison table. Everything it needs is joined and totalled before it
-// gets here. This file is the rendering, the "remove this column" buttons and
-// the "add another" picker, and those three all work by changing the URL.
-
 import { useMemo } from "react";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { useTranslations } from "next-intl";
@@ -24,11 +20,7 @@ import {
 import { fmt, fmtSigned } from "../[budgetId]/budget-helpers";
 import { cn } from "@/lib/ui/utils";
 
-// Spreadsheet notation: whole kronor, no unit, and not the app's `Amount`.
-// This is a budget sheet held up against another budget sheet, and the figures
-// have to read as the same figures they do on /budget/[id]: a column of
-// "1 247,50 kr" beside a column of "1 247" is two different documents. Amount is
-// for the places money is a value in a list; here it is a cell in a grid.
+// Spreadsheet notation (whole kronor, no unit), not `Amount`: it must read like /budget/[id].
 function Cell({ value, className }: { value: number | undefined; className?: string }) {
   return (
     <td className={cn("px-4 py-2 text-right tabular-nums", className)}>
@@ -37,9 +29,7 @@ function Cell({ value, className }: { value: number | undefined; className?: str
   );
 }
 
-// Only meaningful between two columns: with three or more, "the" difference is
-// not a number anyone asked for. So the column appears when there are exactly
-// two budgets and not otherwise.
+// Only meaningful between exactly two columns.
 function Diff({ values, className }: { values: (number | undefined)[]; className?: string }) {
   const diff = (values[1] ?? 0) - (values[0] ?? 0);
   if (diff === 0)
@@ -62,17 +52,13 @@ export function CompareClient({
   snapshots,
   options,
 }: {
-  /** The budgets being compared, in the order the URL names them. */
   ids: string[];
   snapshots: Snapshot[];
-  /** Every budget not already a column, for the "add another" picker. */
   options: { value: string; label: string }[];
 }) {
   const router = useProgressRouter();
   const t = useTranslations("budget.compare");
 
-  // The comparison lives in the URL, so changing it is a navigation, which is
-  // also what re-runs the page's loader and brings back the new column.
   const setIds = (next: string[]) =>
     router.replace(next.length ? `/budget/compare?b=${next.join(",")}` : "/budget/compare");
 
@@ -83,10 +69,6 @@ export function CompareClient({
 
   return (
     <PageShell title={t("title")} back="/budget" width="content">
-      {/* The picker sits on the card it fills rather than in the page header,
-          and the card is rendered even before there is anything to compare.
-          reaching two budgets is what the picker is for, so it cannot be behind
-          the same condition as the table. */}
       <Card>
         <CardHeader
           title={t("included")}
@@ -161,8 +143,6 @@ export function CompareClient({
   );
 }
 
-// Highlight a row where the sides disagree, including "one has it, one
-// doesn't", which is a disagreement of the most interesting kind.
 const differs = (values: (number | undefined)[]) => values.some((v) => v !== values[0]);
 
 function SectionHeader({ label, cols }: { label: string; cols: number }) {
@@ -187,8 +167,7 @@ function SheetRows({
   showDiff: boolean;
 }) {
   const t = useTranslations("budget.compare");
-  // The result (income − cost) per side, which is the only sheet-level figure
-  // that means the same thing whichever accounts each side happens to hold.
+  // The result (income - cost) per side, the one sheet-level figure comparable across sides.
   const results = Array.from({ length: n }, (_, i) => sheetTotals(sheet, i).result);
   const label = /^[@#]/.test(sheet.key) ? sheet.name : `${sheet.key} - ${sheet.name}`;
 

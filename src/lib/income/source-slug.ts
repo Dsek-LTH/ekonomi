@@ -1,9 +1,6 @@
-// Which of Intäkter's two pages a day belongs to: Zettle or Swish.
-//
-// Two pages rather than one list with a filter, because the two are worked
-// differently: Zettle is fetched over its API, a Swish export is uploaded as a
-// file, and each books against its own clearing account. A day of Zettle's
-// fees booked on its own before the per-day voucher (ZETTLE_FEE) is Zettle's.
+// Which of Intäkter's two pages a day belongs to: Zettle or Swish. A ZETTLE_FEE day booked before
+// the per-day voucher is Zettle's.
+
 import type { IncomeSource } from "@/lib/domain/types";
 
 const INCOME_SOURCE_SLUGS = ["zettle", "swish"] as const;

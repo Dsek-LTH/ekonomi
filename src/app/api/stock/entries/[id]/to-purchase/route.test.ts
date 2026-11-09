@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// A stocktake that should have been a delivery, made one. What matters: the
-// purchase is what the count found more of, sealed only, priced from the
-// product, and written to sort just before the count so the count then agrees.
-
 const h = vi.hoisted(() => ({
   entry: null as null | { productId: string; kind: string; occurredAt: Date },
   product: null as null | { id: string; costPriceOre: number | null },

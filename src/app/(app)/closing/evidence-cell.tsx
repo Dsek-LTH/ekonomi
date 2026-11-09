@@ -5,7 +5,6 @@ import { Tag } from "@/components/ui/status-pill";
 import type { VoucherEvidence } from "@/lib/closing/evidence";
 import { useFormat } from "@/lib/ui/use-format";
 
-/** What underlag the app holds for a voucher, in a few words. */
 export function EvidenceTag({ evidence }: { evidence: VoucherEvidence }) {
   const t = useTranslations("closing.evidence");
   const { date } = useFormat();

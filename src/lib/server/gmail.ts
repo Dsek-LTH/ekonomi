@@ -1,22 +1,8 @@
-// The Gmail API, as far as the levfaktura inkorg needs it: reading one mailbox,
-// and being told when something arrives in it.
-//
-// Written against the REST API with fetch and node:crypto rather than through
-// googleapis. What is used is five endpoints and two kinds of signed token, and
-// the official client is a very large dependency to carry for that.
-//
-// How the pieces fit (docs/gmail-inbound.md has the setup):
-//
-//   • A Google Cloud service account, given domain-wide delegation for
-//     gmail.readonly by a Workspace admin, reads the mailbox as the mailbox:
-//     the token below is a JWT it signs with `sub` set to the mailbox address.
-//   • `watch` asks Gmail to publish to a Pub/Sub topic whenever the mailbox
-//     changes. It lasts seven days, so the cron job renews it.
-//   • Pub/Sub pushes to /api/inbound/gmail with a Google-signed OIDC token,
-//     which verifyPushToken checks, so nobody else can make the app sync.
-//
-// Off unless every GMAIL_* variable is set. The app runs fine without it: the
-// inkorg then only fills by hand.
+// The Gmail API as far as the levfaktura inkorg needs it (fetch and node:crypto, no googleapis; setup in
+// docs/gmail-inbound.md). A service account with domain-wide delegation reads the mailbox via a signed JWT,
+// `watch` publishes changes to Pub/Sub (lasts seven days, renewed by cron), and Pub/Sub pushes to
+// /api/inbound/gmail with a Google-signed OIDC token that verifyPushToken checks. Off unless every GMAIL_*
+// variable is set.
 import "server-only";
 
 import { createPublicKey, createSign, createVerify, type JsonWebKey } from "node:crypto";
@@ -58,8 +44,7 @@ export function gmailConfig(): GmailConfig | null {
   return {
     mailbox,
     serviceAccount,
-    // A PEM in an environment variable usually arrives with its newlines
-    // written as \n, which is the only way most secret stores will hold one.
+    // A PEM in an environment variable arrives with its newlines written as \n.
     privateKey: privateKey.replace(/\\n/g, "\n"),
     topic,
     pushAudience,
@@ -76,8 +61,6 @@ export class GmailError extends Error {
     super(message);
   }
 }
-
-// ── Signing in as the mailbox ─────────────────────────────────────
 
 const b64url = (data: Buffer | string) => Buffer.from(data).toString("base64url");
 
@@ -102,8 +85,7 @@ export function serviceAccountAssertion(
   return `${header}.${claims}.${b64url(signer.sign(c.privateKey))}`;
 }
 
-// One token per process, renewed a minute before it runs out. They last an
-// hour, and a burst of notifications should not mean a burst of exchanges.
+// One token per process, renewed a minute before it runs out.
 let cached: { token: string; expiresAt: number } | null = null;
 
 async function accessToken(c: GmailConfig): Promise<string> {
@@ -151,8 +133,6 @@ async function call<T>(c: GmailConfig, path: string, init: RequestInit = {}): Pr
   return json;
 }
 
-// ── What is read ──────────────────────────────────────────────────
-
 /** Ask Gmail to publish changes to the inbox. Returns where it starts from. */
 export async function watch(c: GmailConfig): Promise<{ historyId: string; expiration: Date }> {
   const r = await call<{ historyId: string; expiration: string }>(c, "/watch", {
@@ -172,10 +152,8 @@ export async function currentHistoryId(c: GmailConfig): Promise<string> {
 }
 
 /**
- * Every message added to the inbox since `startHistoryId`, oldest first, and
- * the history id to start from next time. Throws a GmailError with status 404
- * when the start is older than Gmail keeps history for (about a week), which
- * the caller answers by listing recent mail instead.
+ * Every message added to the inbox since `startHistoryId`, oldest first, and the next history id. Throws a
+ * GmailError with status 404 when the start is older than Gmail keeps history (about a week).
  */
 export async function messagesAddedSince(
   c: GmailConfig,
@@ -255,13 +233,10 @@ export async function getAttachment(
   return Buffer.from(r.data, "base64url");
 }
 
-// ── Being told ────────────────────────────────────────────────────
-
 let certs: { keys: Map<string, JsonWebKey>; fetchedAt: number } | null = null;
 
 async function googleKey(kid: string): Promise<JsonWebKey | null> {
-  // Refetched hourly, and at once for a key id we have not seen: Google rotates
-  // its signing keys, and the new one is in use before the old one is gone.
+  // Refetched hourly, and at once for an unseen key id: Google rotates its signing keys.
   if (!certs || Date.now() - certs.fetchedAt > 3_600_000 || !certs.keys.has(kid)) {
     const res = await fetch(CERTS_URL);
     if (!res.ok) throw new GmailError(`Google certs: ${res.status}`, res.status);
@@ -272,12 +247,8 @@ async function googleKey(kid: string): Promise<JsonWebKey | null> {
 }
 
 /**
- * Whether a push request really comes from our Pub/Sub subscription: the
- * bearer token is an OIDC token Google signed, for our endpoint, on behalf of
- * the service account the subscription was set up to push as.
- *
- * `keyFor` is the key lookup, injectable so the check can be tested with a key
- * of the test's own.
+ * Whether a push request really comes from our Pub/Sub subscription (an OIDC token Google signed for our
+ * endpoint). `keyFor` is injectable for tests.
  */
 export async function verifyPushToken(
   c: GmailConfig,

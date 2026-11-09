@@ -1,43 +1,17 @@
-// Routing: which verksamhet a sale is, which account it is credited to, and
-// which cost centre it books against.
-//
-// The one place this is decided. intakt used to do it, from a copy of the
-// routing table sent with every request, while this app corrected its mistakes
-// afterwards (lib/income/lines.ts), so the rule lived in two places and the two
-// could disagree. The sharpest case was the reserv: the app let a treasurer
-// mark any prefix as the reserv and never sent the flag, and intakt routed
-// every unknown product to whichever prefix happened to be called "sk". Now the
-// service returns sales as rung up and everything about meaning is here.
-//
-// Pure: a table in, sales in, reports out, so it is tested without a database.
-// lib/income/config.ts builds the table from the settings.
-//
-// Ported from intakt's report/purchases.go and report/swish.go with two
-// deliberate differences. Prefixes match in any case, where intakt matched only
-// all-lower or all-upper ("Ca - Kaffe" fell through to the reserv). And longer
-// prefixes are tried first, where intakt's order was Go's map order, so which
-// of two overlapping prefixes won could change from one run to the next.
-import type {
-  IncomeDayDto,
-  IncomeDayLine,
-  SwishPayment,
-  ZettleFee,
-  ZettleSaleLine,
-} from "./types";
+// Routing: which verksamhet a sale is, which account it is credited to and which cost centre it
+// books against. The one place this is decided. Pure: a table in (built by lib/income/config.ts),
+// sales in, reports out. Prefixes match in any case and longer prefixes are tried first.
 
-/**
- * Where a sale is booked: a verksamhet by its income key, an account, and a
- * cost centre. The cost centre is already resolved when the table is built
- * (lib/income/config.ts): the prefix's own if it has one, else the
- * verksamhet's default, else none.
- */
+import type { IncomeDayDto, IncomeDayLine, SwishPayment, ZettleFee, ZettleSaleLine } from "./types";
+
+/** Where a sale is booked: a verksamhet by income key, an account and a cost centre (resolved in lib/income/config.ts). */
 export interface Route {
   key: string;
   account: string;
   costCenterId: string | null;
 }
 
-/** Where Zettle's fees book. Nobody's sales, so not a route. */
+/** Where Zettle's fees book. Not a route. */
 export interface FeeRoute {
   account: string;
   costCenterId: string | null;
@@ -52,8 +26,7 @@ export interface RoutingTable {
   swishAmountGuesses: ReadonlyMap<number, string>;
 }
 
-// Between the prefix and the product: any run of hyphens, en or em dashes and
-// spaces, so "c-Cola", "c - Cola" and "c \u2013 Cola" all read the same.
+// Between prefix and product: hyphens, en or em dashes and spaces.
 const SEPARATOR = "[-\u2013\u2014 ]+";
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -75,11 +48,7 @@ function byPrefix(table: RoutingTable, pattern: RegExp | null, text: string) {
   return route ? { route, name: m[2].trim() } : null;
 }
 
-/**
- * What a product rung up with no name at all is called. A custom amount typed
- * into the till comes through that way, and a blank row in the review table
- * and on the intäktsräkning would read as a rendering fault.
- */
+/** A custom till amount has no name, and a blank review row would look like a rendering fault. */
 export const UNNAMED_PRODUCT = "Vara utan namn";
 
 /** A Zettle product: by its prefix, or to the reserv under its full name. */
@@ -115,10 +84,7 @@ class Days {
       this.byDate.set(date, day);
     }
 
-    // The same product at the same price, for the same verksamhet, on the same
-    // account and cost centre, is one line with its quantity summed: a day of
-    // colas is "Cola, 40", not forty rows. Anything that would put two of them
-    // on different voucher rows keeps them apart.
+    // Same product, price, verksamhet, account and cost centre is one line with summed quantity.
     const same = day.lines.find(
       (l) =>
         l.kind === line.kind &&
@@ -150,10 +116,7 @@ const saleLine = (
   route: Route,
   name: string,
   unmatched: boolean,
-  rest: Pick<
-    IncomeDayLine,
-    "variant" | "quantity" | "unitPrice" | "effectiveDiscount" | "total"
-  >,
+  rest: Pick<IncomeDayLine, "variant" | "quantity" | "unitPrice" | "effectiveDiscount" | "total">,
 ): IncomeDayLine => ({
   kind: "SALE",
   unitKey: route.key,
@@ -169,15 +132,9 @@ const saleLine = (
 });
 
 /**
- * A Zettle range as one report per day: every verksamhet's sales, and the
- * day's fees.
- *
- * The fees are lines of the same day because they leave the same account the
- * sales land in. Zettle pays out takings net of its fees, so a day whose
- * voucher carries both moves the clearing account by what Zettle actually
- * sends. Equal fees are one line with a count. A fee line's total is negative,
- * since it takes money out of the clearing account. A fee Zettle paid back
- * (a refunded purchase takes its fee with it) is positive.
+ * A Zettle range as one report per day: every verksamhet's sales plus the day's fees. Fees are
+ * lines of the same day (they leave the clearing account), equal fees are one line with a count,
+ * and a fee line is negative unless Zettle paid it back.
  */
 export function routeZettleSales(
   table: RoutingTable,

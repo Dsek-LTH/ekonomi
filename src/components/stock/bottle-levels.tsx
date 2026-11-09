@@ -1,14 +1,7 @@
 "use client";
 
-// What is on the shelf of a product, drawn rather than spelled out.
-//
-// "3 oöppnade, 1 på 60 %" is a sentence to read on every row of a list. As
-// bottles it is read at a glance: a full one with its count beside it for the
-// sealed, and each opened bottle filled to its level, so the shelf that is
-// about to run dry looks like it. A can or a bottle of beer is never opened
-// on the shelf, so a UNIT product is its count and nothing to draw.
-//
-// The words are still there, as the drawing's accessible name and its title.
+// A product's shelf drawn as bottles: a full one with its count for sealed, each opened bottle filled to its level.
+// A UNIT product is its count, nothing to draw.
 import { useId } from "react";
 import { useTranslations } from "next-intl";
 import { LEVELS, bottlesAt, type OpenBottles } from "@/lib/stock/levels";
@@ -26,7 +19,6 @@ export function BottleLevels({
   kind: "UNIT" | "VOLUME";
   sealed: number;
   open: OpenBottles;
-  /** `lg` on the product page, where it is the figure the page is about. */
   size?: "sm" | "lg";
 }) {
   const t = useTranslations("stock");
@@ -46,7 +38,6 @@ export function BottleLevels({
     );
   }
 
-  // Fullest first, the order they will be poured in reverse.
   const levels = LEVELS.flatMap((l) => Array.from({ length: bottlesAt(open, l) }, () => l));
   const shown = levels.slice(0, MAX_OPEN);
   const more = levels.length - shown.length;
@@ -74,35 +65,13 @@ export function BottleLevels({
   );
 }
 
-/**
- * One bottle, filled to `level` per cent.
- *
- * Drawn the way every icon in the app is (components/ui/icons.tsx): a 24-unit
- * box, a 1.6 stroke with round ends and joins, in the muted ink. The liquid is
- * the same ink rather than a colour of its own: it was amber in a narrow
- * 10-unit bottle of a thinner line, and next to the list's other marks it
- * looked like it came from somewhere else.
- *
- * The liquid fills the body wall to wall, clipped to the bottle's own outline
- * and drawn under its stroke, at most of the ink's strength. It was a faint
- * rectangle standing clear of the glass, and at 18 pixels the difference
- * between 40 and 60 % was a guess.
- *
- * Exported for the event sheet, which marks each rung of a spirit's ladder with
- * the bottle it stands for.
- */
+/** One bottle filled to `level` per cent, in the app's icon style (24-unit box, 1.6 stroke, muted ink). Also marks a spirit's ladder rungs on the event sheet. */
 const BODY =
   "M10.5 5.9l-2.6 2.6A2 2 0 0 0 7.3 9.9V20a1.5 1.5 0 0 0 1.5 1.5h6.4a1.5 1.5 0 0 0 1.5-1.5V9.9a2 2 0 0 0-.6-1.4l-2.6-2.6z";
 
 export function Bottle({ level, big = false }: { level: number; big?: boolean }) {
-  // The inside of the body runs from the foot of the neck at y 5.9 down to
-  // 20.7, where the base's stroke begins. The level is measured over that,
-  // shoulder included: measured from where the shoulder starts to slope, a full
-  // bottle left the shoulder empty and read as four-fifths full. The liquid
-  // carries on under the stroke to the outline at 21.5, so 20 % shows as 20 %
-  // of the glass rather than mostly hidden behind the base. The neck is never
-  // filled, since an opened bottle's level is a fraction of what the body
-  // holds.
+  // The body's inside runs from y 5.9 to 20.7 and the level is measured over that, shoulder included.
+  // The liquid continues under the stroke to 21.5, and the neck is never filled.
   const top = 5.9;
   const inner = 20.7;
   const bottom = 21.5;

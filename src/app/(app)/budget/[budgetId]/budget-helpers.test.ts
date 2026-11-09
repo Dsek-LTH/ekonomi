@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formulaIdleText } from "./budget-helpers";
 
-// What a budget cell reads when nobody is editing it. Each case is one branch
-// of the rule, in the order the rule takes them.
 describe("formulaIdleText", () => {
   const cell = {
     raw: "=2*TROJA_POLICY",
@@ -19,7 +17,6 @@ describe("formulaIdleText", () => {
 
   it("shows the formula itself on a cell drawn as one", () => {
     expect(formulaIdleText({ ...cell, asFormula: true })).toBe("2 × TROJA_POLICY");
-    // A plain number has no pretty form, so it is shown as typed.
     expect(formulaIdleText({ ...cell, raw: "350", pretty: "", asFormula: true })).toBe("350");
   });
 

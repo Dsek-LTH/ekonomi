@@ -19,19 +19,8 @@ import {
   isAdmin,
 } from "./permissions";
 
-// The authority these functions grant is the whole access-control story of the
-// app: every nav item, page and API route defers to them, so each case below
-// is a policy decision written down, not a coverage exercise.
-//
-// Which roles hold which capability is a table now (Inställningar → Roller), so
-// the policy is no longer a property of this file. It moved one step out, into
-// the defaults the section starts from, and that is where the old cases are
-// asserted: `caps("ORDFORANDE")` below is what the chair can do on the day the
-// database is created, and every "deliberately narrow gate" this app has is
-// still written down here as a sentence about it.
-//
-// What is tested against the helpers themselves is the part that stayed code:
-// the attest rule, which is not a capability and cannot become one.
+// Each case is a policy decision written down. Which roles hold which capability is a table (Inställningar → Roller),
+// so `caps("ORDFORANDE")` is what the chair can do on the day the database is created. The attest rule is the part that stayed code.
 const defaults = (role: Role): Capability[] =>
   DEFAULT_ROLE_CAPABILITIES.filter((r) => r.role === role).map((r) => r.capability);
 
@@ -52,7 +41,6 @@ describe("the defaults the section starts from", () => {
       "SKATTFORMAN",
     ] as Role[]) {
       expect(canBookkeep(defaults(role))).toBe(true);
-      // Working the books implies reading them.
       expect(canViewBookkeeping(defaults(role))).toBe(true);
     }
     expect(canBookkeep(defaults("RESULTATANSVARIG"))).toBe(false);
@@ -64,8 +52,7 @@ describe("the defaults the section starts from", () => {
     const revisor = defaults("REVISOR");
     expect(canViewBookkeeping(revisor)).toBe(true);
     expect(canAccessBudget(revisor)).toBe(true);
-    // Every capability that acts, written out so that a new one has to be
-    // placed on one side of this line by somebody deciding to.
+    // Every capability that acts, written out so a new one has to be placed on one side of this line.
     const acting: Capability[] = [
       "ADMIN",
       "SETTINGS",
@@ -85,7 +72,6 @@ describe("the defaults the section starts from", () => {
     ];
     for (const cap of acting) expect(revisor).not.toContain(cap);
     expect(canBookkeep(revisor)).toBe(false);
-    // The one thing a revisor writes is their own review of the books.
     expect(canAuditReview(revisor)).toBe(true);
   });
 
@@ -128,30 +114,24 @@ describe("the defaults the section starts from", () => {
     for (const role of ["SKATTMASTARE", "ORDFORANDE", "RESULTATANSVARIG"] as Role[]) {
       expect(hasAttestRole(defaults(role))).toBe(true);
     }
-    // The skattförman books rather than attests, and the vice no longer
-    // attests anything (Policy för ekonomi names nobody but firmatecknare and
-    // resultatansvarig), so neither has a queue to see.
+    // The skattförman books rather than attests, and the vice attests nothing (Policy för ekonomi), so neither has a queue.
     expect(hasAttestRole(defaults("SKATTFORMAN"))).toBe(false);
     expect(hasAttestRole(defaults("VICE_SKATTMASTARE"))).toBe(false);
     expect(hasAttestRole(defaults("ORDINARIE"))).toBe(false);
   });
 
   it("leaves the budget open to the whole section", () => {
-    // `canAccessBudget` was `() => true`. Making it a row must not have quietly
-    // narrowed it. The budget is the section's, not the treasury's.
+    // Making `canAccessBudget` a row must not have narrowed it.
     for (const role of ROLES) expect(canAccessBudget(defaults(role))).toBe(true);
   });
 
   it("leaves somebody able to reach Inställningar", () => {
-    // The invariant the whole feature rests on, asserted at its starting point.
-    // Enforced on every write in lib/server/capabilities.ts.
+    // The invariant the feature rests on, enforced on every write in lib/server/capabilities.ts.
     expect(ROLES.some((role) => canAccessSettings(defaults(role)))).toBe(true);
   });
 
   it("grants nothing the app does not ask about", () => {
-    // A row for a capability no call site checks would be a tickbox that does
-    // nothing. CAPABILITIES is the list the settings grid draws, so it is also
-    // the list a default is allowed to name.
+    // CAPABILITIES is the list the settings grid draws, so it is the list a default may name.
     for (const { capability } of DEFAULT_ROLE_CAPABILITIES) {
       expect(CAPABILITIES).toContain(capability);
     }
@@ -164,8 +144,7 @@ describe("the helpers themselves", () => {
   });
 
   it("grant nothing to somebody with no capabilities at all", () => {
-    // A role the grid says nothing about. Not an error. It is what "this role
-    // exists but does nothing yet" looks like.
+    // A role the grid says nothing about: it exists but does nothing yet.
     const none: Capability[] = [];
     expect(isAdmin(none)).toBe(false);
     expect(canAccessSettings(none)).toBe(false);
@@ -176,8 +155,7 @@ describe("the helpers themselves", () => {
 });
 
 describe("canAttestAllocation", () => {
-  // One allocation, on a cost centre belonging to Sexmästeriet. Each test below
-  // changes only what it is about.
+  // One allocation on a Sexmästeriet cost centre; each test changes only what it is about.
   const base = {
     actorCapabilities: [] as Capability[],
     actorRoles: ["ORDINARIE"] as Role[],
@@ -201,22 +179,18 @@ describe("canAttestAllocation", () => {
 
   it("lets an admin attest anything", () => {
     expect(canAttestAllocation({ ...base, ...admin })).toBe(true);
-    // Including an expense with no result unit behind its cost centre.
     expect(canAttestAllocation({ ...base, ...admin, allocationResultUnit: null })).toBe(true);
   });
 
   it("reads admin authority off the capability, not off a role name", () => {
-    // Which roles are admins is editable; that admins attest anything is not.
-    // Someone holding no listed role but granted ADMIN still attests.
+    // Admin comes from the capability, not a role name.
     expect(canAttestAllocation({ ...base, actorRoles: [], ...admin })).toBe(true);
-    // And the treasurer's role name alone grants nothing if the grid took ADMIN
-    // away from it.
+    // A treasurer role alone grants nothing if the grid took ADMIN away.
     expect(canAttestAllocation({ ...base, actorRoles: ["SKATTMASTARE"] })).toBe(false);
   });
 
   it("gives the vice treasurer no attest authority of their own", () => {
-    // Policy för ekonomi names firmatecknare and resultatansvarig, and nobody
-    // else. The vice used to attest ordinary members' expenses.
+    // Policy för ekonomi names firmatecknare and resultatansvarig only.
     expect(canAttestAllocation({ ...base, actorRoles: ["VICE_SKATTMASTARE"] })).toBe(false);
   });
 
@@ -228,8 +202,7 @@ describe("canAttestAllocation", () => {
     };
     expect(canAttestAllocation(head)).toBe(true);
     expect(canAttestAllocation({ ...head, allocationResultUnit: "Källarmästeriet" })).toBe(false);
-    // An unassigned cost centre belongs to no result unit, so no head owns it,
-    // it falls to an admin.
+    // An unassigned cost centre belongs to no result unit, so it falls to an admin.
     expect(canAttestAllocation({ ...head, allocationResultUnit: null })).toBe(false);
   });
 
@@ -238,8 +211,7 @@ describe("canAttestAllocation", () => {
   });
 
   it("takes authority from the role, not from a stale ownership row", () => {
-    // Someone who answers for a result unit on their row but has lost the role
-    // gets nothing. The roles are what the check reads.
+    // Someone who answers for a unit on their row but lost the role gets nothing: the roles are what the check reads.
     expect(
       canAttestAllocation({
         ...base,
@@ -257,9 +229,7 @@ describe("the vocabulary", () => {
   });
 
   it("draws every capability in the grid, exactly once", () => {
-    // The grid is built from CAPABILITIES, so a value missing from it would be
-    // a permission nobody could ever grant, and a duplicate would be two
-    // tickboxes writing the same row.
+    // A value missing from CAPABILITIES is a permission nobody can grant; a duplicate is two tickboxes on one row.
     expect([...new Set(CAPABILITIES)]).toHaveLength(CAPABILITIES.length);
   });
 });

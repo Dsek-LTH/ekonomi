@@ -1,10 +1,3 @@
-// The counterparty directory, as the settings screen and the two
-// contract-creation forms read it.
-//
-// Two callers with two different needs, the same split rental-items.ts makes.
-// The settings screen wants a count of how many contracts point at each row,
-// so the dialog can say where it is used. The creation forms only pick from
-// the list, and have no use for the counts.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -23,7 +16,6 @@ export interface CounterpartyRow {
   usedBy: number;
 }
 
-/** What the contract forms pick from: one option per row still on offer. */
 export interface CounterpartyOption {
   id: string;
   name: string;

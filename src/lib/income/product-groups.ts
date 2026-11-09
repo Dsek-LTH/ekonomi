@@ -1,30 +1,8 @@
-// How a day's sold products are laid out: grouped by product, variants indented
-// under the name they belong to.
-//
-// A till rings up "Macka" three times with a different variant each (ost,
-// skinka, hummus) and read as three unrelated rows that is a list where the
-// same word appears three times and the thing that differs is at the end of it.
-// Grouped, the name is said once and what actually differs lines up under it.
-//
-// This is a port, not an invention. The intäktsräkning has laid its products out
-// this way all along (intakt/report/pdf.go, `productRowsToTex`) and the review
-// screen showed a flat list beside it. The same day, in two shapes, side by
-// side on one screen, because the PDF is in the document panel while you work.
-// So the rules here are that file's rules, down to the sort:
-//
-//   • group by the product's trimmed name, groups in name order;
-//   • inside a group, by variant (case-insensitively), then account, then unit
-//     price, so the same day always reads the same way;
-//   • a group where *anything* carries a variant gets a heading of its own and
-//     its rows indented under it; one where nothing does is just its rows.
-//
-// One deliberate difference: every row under a heading is stepped in, the one
-// sold without a variant as well, which keeps its plain name. The document
-// leaves that row flush with the heading, so it read as a product of its own
-// that had wandered into the group ("Mat" alone, under "Mat" with "Billys").
-//
-// Otherwise keep the two in step. If pdf.go's ordering changes, this changes
-// with it, or the table and the document it renders stop being the same list.
+// How a day's sold products are laid out: grouped by trimmed name (name order), variants indented
+// under it, sorted by variant (case-insensitive), account, unit price. Must stay in step with
+// intakt's pdf.go `productRowsToTex`, so the table and the rendered document match. One
+// difference: the variant-less row under a heading is also stepped in.
+
 export interface GroupableLine {
   name: string;
   variant: string | null;
@@ -32,12 +10,7 @@ export interface GroupableLine {
   unitPrice: number;
 }
 
-/**
- * A row to draw: either a group's heading, or one sold line.
- *
- * The heading carries no figures. Quantities and amounts belong to the lines,
- * and a group total would be a number the document does not have.
- */
+/** A row to draw: a group heading (no figures) or one sold line. */
 export type ProductRow<T> =
   | { kind: "group"; key: string; name: string }
   | {
@@ -50,21 +23,13 @@ export type ProductRow<T> =
       indented: boolean;
     };
 
-/**
- * What one line is called on its own: "Läsk Stor".
- *
- * The document's `displayName`. Used where a line has to be identifiable
- * without the heading above it to lean on: a row outside any group, and the
- * move dialog, which shows a handful of lines lifted out of their day.
- */
+/** What one line is called on its own: "Läsk Stor" (the document's `displayName`). */
 export function productDisplayName(line: GroupableLine): string {
   const variant = (line.variant ?? "").trim();
   return variant ? `${line.name} ${variant}` : line.name;
 }
 
-// Byte order, as Go's `slices.Sort` gives for strings, rather than a
-// locale-aware collation: the document sorts one way and this has to sort the
-// same way, and "å after z" is what both of these do.
+// Byte order, as Go's `slices.Sort`, so this sorts like the document ("å after z").
 export const byCodePoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 export function productRows<T extends GroupableLine>(lines: readonly T[]): ProductRow<T>[] {
@@ -87,8 +52,7 @@ export function productRows<T extends GroupableLine>(lines: readonly T[]): Produ
       return a.unitPrice - b.unitPrice;
     });
 
-    // Any variant at all, not several: one variant among a product's rows is
-    // still a distinction worth stepping in, and it is what the document does.
+    // Any variant at all (even one) gets a heading, as the document does.
     const grouped = sorted.some((l) => (l.variant ?? "").trim() !== "");
     if (grouped) rows.push({ kind: "group", key: `group:${name}`, name });
 
@@ -96,13 +60,10 @@ export function productRows<T extends GroupableLine>(lines: readonly T[]): Produ
       const variant = (line.variant ?? "").trim();
       rows.push({
         kind: "line",
-        // The lines carry no id here. This stays usable for anything shaped
-        // like a sold line, so position within the group is the key. Stable,
-        // because the order above is a pure function of the lines.
+        // No ids here, so position in the group is the (stable) key.
         key: `${name}:${i}`,
         line,
         label: grouped && variant ? variant : productDisplayName(line),
-        // Every row under a heading, the variant-less one too. See the top.
         indented: grouped,
       });
     }

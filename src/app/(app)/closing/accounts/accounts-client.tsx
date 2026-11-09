@@ -25,7 +25,6 @@ export default function AccountsClient({
 }: {
   year: ClosingYear;
   accounts: BalanceAccount[];
-  /** May mark accounts and write their notes. */
   canWork: boolean;
 }) {
   const t = useTranslations("closing");

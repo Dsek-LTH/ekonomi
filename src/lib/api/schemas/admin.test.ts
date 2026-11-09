@@ -3,11 +3,8 @@ import { describe, expect, it } from "vitest";
 import { CAPABILITIES } from "@/lib/domain/permissions";
 import { CapabilityName } from "./admin";
 
-// One test, and it exists because the two lists it compares are written out by
-// hand in two files. CAPABILITIES is what Inställningar → Roller draws a tickbox
-// for; CapabilityName is what the route accepts when that tickbox is saved. A
-// capability in the first and not the second is a box that ticks and then fails
-// to save, and the screen has nothing to say about why.
+// CAPABILITIES (what Roller draws tickboxes for) and CapabilityName (what the route accepts) are written by hand, so a
+// capability in one but not the other is a box that ticks and fails to save.
 describe("the capabilities the authority routes accept", () => {
   it("covers every capability the settings grid can offer", () => {
     for (const capability of CAPABILITIES) {
@@ -16,8 +13,7 @@ describe("the capabilities the authority routes accept", () => {
   });
 
   it("names nothing the grid does not draw", () => {
-    // The other direction: a value the route would take but no screen can send
-    // is a permission that could only ever arrive by hand.
+    // The other direction: a value the route takes but no screen can send.
     for (const capability of CapabilityName.options) {
       expect(CAPABILITIES).toContain(capability);
     }

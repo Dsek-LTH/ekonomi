@@ -60,8 +60,6 @@ describe("entryColumns", () => {
   });
 
   it("moves no stock for a spill", () => {
-    // What was dropped left the cellar when it was checked out. Taking it off
-    // the shelf again would remove it twice.
     expect(entryColumns(spill(40), 2)).toEqual({ units: 0, open: {}, spilledQty: 2 });
   });
 
@@ -154,13 +152,6 @@ describe("totalsFromCells", () => {
   });
 });
 
-/**
- * A sheet with nothing unsaved on it: what it reads and what the log holds are
- * the same map.
- *
- * Which is what every case below describes but one, and that one is the point:
- * see "cellFault, before anything is saved".
- */
 const saved = (cells: Map<string, number>): SheetState => ({ sheet: cells, booked: cells });
 
 describe("cellFault", () => {
@@ -206,15 +197,11 @@ describe("cellFault", () => {
   });
 
   it("lets a figure be lowered without asking the shelf for anything", () => {
-    // Correcting 120 down to 100 puts twenty cans back. The cellar is never
-    // short of room, so this can only ever be allowed.
     const cells = cellTotals([stored({ units: -120 })]);
     expect(cellFault(cans, { sealed: 0, open: {} }, saved(cells), out(), 100)).toBeNull();
   });
 
   it("refuses lowering a return below what the shelf could give back", () => {
-    // Undoing a homecoming takes the cans off the shelf again, and they have to
-    // still be there.
     const cells = cellTotals([stored({ units: -50 }), stored({ kind: "RETURN", units: 20 })]);
     expect(cellFault(cans, { sealed: 5, open: {} }, saved(cells), back(), 0)).toBe(
       "notThatManySealed",
@@ -229,14 +216,6 @@ describe("cellFault", () => {
 });
 
 describe("cellFault, before anything is saved", () => {
-  // Reported from the bar: eight beers out, nothing saved yet, and one of them
-  // dropped, refused, on the grounds that nothing had gone out. It had: it was
-  // on the screen. The rule was reading the log where it should have been
-  // reading the sheet.
-  //
-  // Which half reads which is the whole of it. The night's arithmetic is about
-  // what the sheet says; only the cellar's is about what the log holds, because
-  // the shelf has moved for those rows and for no others.
   const shelf = { sealed: 200, open: {} };
   const nothingSaved = new Map<string, number>();
 
@@ -250,10 +229,6 @@ describe("cellFault, before anything is saved", () => {
   });
 
   it("lets a row be cleared column by column", () => {
-    // Taking a product off the sheet zeroes every one of its cells. Each zero
-    // used to be judged with its neighbours still at their old figures, so
-    // clearing Ut while Spill still read 1 was "more than went out". The Ut
-    // cell was held back from the save and only the spill was cleared.
     const cleared = new Map<string, number>();
     const booked = cellTotals([stored({ units: -8 }), stored({ kind: "WASTE", spilledQty: 1 })]);
     const state = { sheet: cleared, booked };
@@ -262,8 +237,6 @@ describe("cellFault, before anything is saved", () => {
   });
 
   it("still measures the cellar against the log, not against the sheet", () => {
-    // The shelf has not moved for a figure nobody has saved. Counting an
-    // unsaved checkout against it as well would spend the same bottles twice.
     const typed = cellTotals([stored({ units: -150 })]);
     const state = { sheet: typed, booked: new Map<string, number>() };
     expect(cellFault(cans, { sealed: 200, open: {} }, state, out(), 150)).toBeNull();
@@ -282,11 +255,6 @@ describe("cellKey", () => {
 });
 
 describe("cellFault, against what the night found", () => {
-  // The trap this closes: two bottles go out sealed and come home at 60 %, and
-  // the 60 % rung then lights up offering the very bottles just carried in. The
-  // ladder used to mutate as the In column was filled, which is confusing, and
-  // pointless, because out-and-back-and-out again is the same 1 400 ml as out
-  // and never returned.
   const cellsOf = (...rows: CellRow[]) => cellTotals(rows);
 
   it("refuses taking out what this event has just brought back", () => {
@@ -299,8 +267,6 @@ describe("cellFault, against what the night found", () => {
   });
 
   it("still allows taking out what the cellar had before", () => {
-    // Three at 60 % to begin with, two more brought back: the three are still
-    // takeable and the two are not.
     const shelf = { sealed: 0, open: { 60: 5 } };
     const cells = cellsOf(stored({ kind: "RETURN", level: 60, open: { 60: 2 } }));
     expect(cellFault(vodka, shelf, saved(cells), out(60), 3)).toBeNull();
@@ -308,8 +274,6 @@ describe("cellFault, against what the night found", () => {
   });
 
   it("counts what it has already taken from a rung as still its own", () => {
-    // Three there at the start, one already out: taking a second is fine, a
-    // fourth is not.
     const shelf = { sealed: 0, open: { 40: 2 } };
     const cells = cellsOf(stored({ level: 40, open: { 40: -1 } }));
     expect(cellFault(vodka, shelf, saved(cells), out(40), 3)).toBeNull();
@@ -317,8 +281,6 @@ describe("cellFault, against what the night found", () => {
   });
 
   it("does not let a night's own returns lock its sealed bottles away", () => {
-    // The open-first rule is about the dregs the cellar was already holding.
-    // Bottles this night carried back are not somebody else's problem to take.
     const shelf = { sealed: 4, open: { 60: 2 } };
     const cells = cellsOf(
       stored({ units: -2 }),
@@ -333,18 +295,12 @@ describe("cellFault, against what the night found", () => {
   });
 
   it("lets a sealed bottle go along with the last of the open ones", () => {
-    // The rule is about what stays behind. The cellar's one 20 % bottle is
-    // already on this night's Ut ladder, so the shelf reads empty at that rung
-    // and nothing is being left to go stale.
     const shelf = { sealed: 5, open: {} };
     const cells = cellsOf(stored({ level: 20, open: { 20: -1 } }));
     expect(cellFault(vodka, shelf, saved(cells), out(WHOLE), 2)).toBeNull();
   });
 
   it("counts the open ones typed and not yet saved", () => {
-    // The commonest way round: both rungs are typed into the sheet and neither
-    // has been sent, so the shelf still shows them and only the night's own Ut
-    // column knows the dregs are coming too.
     const shelf = { sealed: 5, open: { 60: 1, 20: 1 } };
     const typing: SheetState = {
       booked: new Map<string, number>(),
@@ -357,8 +313,6 @@ describe("cellFault, against what the night found", () => {
   });
 
   it("still refuses a sealed one while a rung is left behind", () => {
-    // Taking the 60 % bottle and leaving the 20 % one is exactly what the rule
-    // exists to stop.
     const shelf = { sealed: 5, open: { 60: 1, 20: 1 } };
     const typing: SheetState = {
       booked: new Map<string, number>(),
@@ -379,10 +333,6 @@ describe("cellFault, against what the night found", () => {
 });
 
 describe("cellFault, bringing back more than went out", () => {
-  // Reported from the sheet: two bottles out, both home at 80 %, and one more
-  // typed in at 60 %. Three bottles cannot come home from a night that took
-  // two, and the rule has to say so, as a fault somebody can retype, never by
-  // closing the box they are typing in.
   const shelf = { sealed: 3, open: { 80: 2 } };
   const night = cellTotals([
     stored({ units: -2 }),
@@ -395,9 +345,6 @@ describe("cellFault, bringing back more than went out", () => {
   });
 
   it("refuses a third bottle even where the millilitres would allow it", () => {
-    // 280 ml is unaccounted for, which is a 40 % bottle's worth. But both
-    // bottles are already home. The missing 280 ml was drunk; it is not a third
-    // bottle waiting to be carried back.
     expect(cellFault(vodka, shelf, saved(night), back(40), 1)).toBe("moreBottlesThanWentOut");
   });
 
@@ -410,10 +357,6 @@ describe("cellFault, bringing back more than went out", () => {
   });
 
   it("lets an overshoot already in the log be cleared", () => {
-    // The repair path. A product whose figures do not add up must not have
-    // every one of its cells refused, or the cell you clear to fix it is
-    // refused too. The bottle that came back at 60 % is on the shelf, which is
-    // what makes clearing it possible: undoing a homecoming takes it off again.
     const wrong = cellTotals([
       stored({ units: -2 }),
       stored({ kind: "RETURN", level: 80, open: { 80: 2 } }),
@@ -426,10 +369,6 @@ describe("cellFault, bringing back more than went out", () => {
 });
 
 describe("cellFault, counted in bottles", () => {
-  // Reported from the sheet: two bottles out and three back. The millilitre
-  // check passes it (three at 20 % is 420 ml against the 1 400 that left) and
-  // it is still impossible. Bottles are countable things and the count holds on
-  // its own.
   const shelf = { sealed: 5, open: {} };
   const twoOut = cellTotals([stored({ units: -2 })]);
 
@@ -456,8 +395,6 @@ describe("cellFault, counted in bottles", () => {
   });
 
   it("still catches an overshoot in millilitres before counting vessels", () => {
-    // Two out, two home, but home fuller than they left, which is a different
-    // impossibility and deserves its own sentence.
     const twoOutOpen = cellTotals([stored({ level: 20, open: { 20: -2 } })]);
     expect(cellFault(vodka, { sealed: 0, open: { 20: 2 } }, saved(twoOutOpen), back(80), 2)).toBe(
       "moreThanWentOut",

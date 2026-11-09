@@ -1,19 +1,5 @@
 "use client";
 
-// One levfaktura's record (/invoices/[id]), laid out as an utlägg's is
-// (expenses/[id]): one card read top to bottom, the same in every state. The
-// status and the actions, the facts in ruled columns, what the forwarder
-// wrote, the fördelning and who signed it, the kontering once there is one,
-// and the history. What changes as the invoice moves on is the main button
-// and which sections have something in them, never the shape of the page.
-//
-// The work is done elsewhere and comes back here, as an utlägg's editing and
-// kontering do: the unit fördelar on ./allocate, the treasury konterar on
-// ./book. Two acts happen on the record itself because they are one press
-// each: another unit signing its share, and sending the konterade invoice to
-// Fortnox. The quiet actions (Byt enhet, Ändra fördelningen, Ångra attest,
-// Begär ändring, Tillbaka till inkorgen) are under "Mer", and Ändra kontering
-// is on the kontering itself, as an utlägg's Ändra is on its verifikation.
 import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -67,15 +53,11 @@ export function InvoiceRecordClient({
 }: {
   data: WorkspaceData;
   backHref: string;
-  /** Only for a reader who may send it to Fortnox, so the button can say why
-   *  it cannot yet. Null for everyone else. */
   fortnox: FortnoxStatus | null;
 }) {
   const { invoice } = data;
   const title = useInvoiceTitle();
   const booked = invoice.status === "BOOKED" || invoice.status === "EXPORTED";
-  // The reference, unless it is the title already, then who sent it in, and
-  // the supplier once the treasury has settled it.
   const subtitle = [
     invoice.description && invoice.reference,
     booked ? invoice.supplierName : (invoice.mail?.fromName ?? invoice.receivedByName),
@@ -156,8 +138,6 @@ function InvoiceRecord(
             {...props}
             sendBlocked={uncertain}
             onMove={() => setMoving(!moving)}
-            // Sent back to the Inkorg, it is not an invoice any more, so
-            // there is no record left to look at.
             onGone={() => router.push(backHref)}
           />
         </div>
@@ -194,7 +174,6 @@ function InvoiceRecord(
   );
 }
 
-/** Who it waits on, beside the status, when that is somebody else. */
 function WaitingOn({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.record");
   if (
@@ -217,11 +196,7 @@ function WaitingOn({ invoice }: { invoice: SupplierInvoiceView }) {
   return <span className="text-sm text-muted">{t("waitingFor", { units: units.join(", ") })}</span>;
 }
 
-/**
- * What is worth a look before it goes to Fortnox, the way an utlägg's
- * bokföring warns. None of it stops the sending, except a Fortnox connection
- * the section does not have.
- */
+/** Warnings before sending to Fortnox. None blocks, except a missing Fortnox connection. */
 function SendNotice({
   invoice,
   fortnox,
@@ -260,19 +235,12 @@ type Action = {
   key: string;
   label: string;
   icon?: React.ReactNode;
-  /** A link (fördela, kontera) rather than a button. */
   href?: string;
   onClick?: () => void;
-  /** Why it cannot be done now, on hover. A dead button with no reason on it
-   *  reads as a fault. */
   disabledReason?: string;
   danger?: boolean;
 };
 
-/**
- * The invoice's actions, as an utlägg's (ExpenseActions): the one the status
- * is waiting for as the button, the rest behind "Mer".
- */
 function RecordActions({
   invoice,
   can,
@@ -282,7 +250,6 @@ function RecordActions({
   onGone,
 }: WorkspaceProps & {
   fortnox: FortnoxStatus | null;
-  /** An earlier sending whose outcome is not known yet. */
   sendBlocked: boolean;
   onMove: () => void;
   onGone: () => void;
@@ -313,8 +280,7 @@ function RecordActions({
     if (ok) await tr.run({ action, comment: ok.comment || undefined });
   }
 
-  // Another unit saying its share is not theirs: back to the unit that
-  // proposed the split, with every signature taken off.
+  // Back to the unit that proposed the split, with every signature removed.
   async function notOurs() {
     const ok = await confirm({
       title: tAttest("notOurs"),
@@ -341,14 +307,11 @@ function RecordActions({
       message: tAction("confirm.redistribute"),
       confirmLabel: tAction("redistribute"),
     });
-    // Reopened, the split is the unit's to make again, on its page.
     if (ok && (await tr.run({ action: "redistribute" })))
       router.push(`/invoices/${invoice.id}/allocate`);
   }
 
-  // Sending to Fortnox, asked first: a supplier invoice made there cannot be
-  // taken back from here. A bankgiro the register does not know is said in
-  // the question, which is then the confirmation the export needs for it.
+  // Asked first: a supplier invoice made in Fortnox cannot be taken back from here. An unknown bankgiro is named in the question.
   async function send() {
     const mismatch = invoice.register ? giroMismatch(invoice, invoice.register) : null;
     const ok = await confirm({
@@ -435,7 +398,6 @@ function RecordActions({
     ] as (Action | false)[]
   ).filter((a): a is Action => a !== false);
 
-  // Sending it back is never what the page is waiting for, so it never leads.
   const [primary, ...rest] = [
     ...actions.filter((a) => !a.danger),
     ...actions.filter((a) => a.danger),
@@ -443,9 +405,7 @@ function RecordActions({
   const busy = tr.busy || back.busy || sender.busy;
   if (!primary) return null;
 
-  // The main action leads only when it is the invoice's next step. One that
-  // is only ever quiet (moving it, sending it back) stays in the menu even
-  // alone, so the header never offers it as the thing to do.
+  // Only the next step leads; quiet actions stay in the menu even alone.
   const quiet = (a: Action) =>
     ["redistribute", "withdraw", "move", "send_back", "not_ours", "return"].includes(a.key);
   const lead = quiet(primary) ? null : primary;
@@ -501,7 +461,6 @@ function RecordActions({
   );
 }
 
-/** Giving it to another unit, opened from the menu. */
 function MoveSection({
   invoice,
   resultUnits,
@@ -534,12 +493,6 @@ function MoveSection({
   );
 }
 
-/**
- * The three facts every reader comes for, in ruled columns under the status,
- * the same three in every state: how much, by when, and whose. The first two
- * are the unit's to say when it fördelar the invoice, and are a dash until
- * then.
- */
 function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.field");
   const tRecord = useTranslations("invoices.record");
@@ -566,8 +519,6 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
   );
 }
 
-/** The fördelning, as an utlägg's (AllocationSection): a row per cost centre,
- *  its share, and who attested it or whose it is still to attest. */
 function SplitSection({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.record");
   const tK = useTranslations("invoices.kontering");
@@ -602,12 +553,6 @@ function SplitSection({ invoice }: { invoice: SupplierInvoiceView }) {
   );
 }
 
-/**
- * The kontering, once there is one, as an utlägg's verifikation: the supplier
- * invoice's head (who from, which number, when, how it is paid), then the
- * lines as a ledger prints them, ending on the leverantörsskuld. Fortnox's
- * number beside the title once it is there.
- */
 function BookingSection({ invoice, can }: WorkspaceProps) {
   const t = useTranslations("invoices.record");
   const tField = useTranslations("invoices.field");

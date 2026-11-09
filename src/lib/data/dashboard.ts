@@ -1,8 +1,3 @@
-// What Översikt reads besides the queue and the budget: what is late, what of
-// yours waits on others, what is coming up, and the invoices in your units.
-//
-// Each part reads only what its viewer may already reach on the page it links
-// to, gated by the same capability as that page.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -25,18 +20,12 @@ const plusDays = (iso: string, n: number) => isoDate(new Date(day(iso).getTime()
 const daysUntil = (from: string, to: string) =>
   Math.round((day(to).getTime() - day(from).getTime()) / DAY_MS);
 
-// ── Late, and waiting ─────────────────────────────────────────────────────
-
 /** An utlägg sent in and not attested for this long is stuck. */
 const STUCK_DAYS = 14;
 /** One waiting on your attest for this long has been forgotten by you. */
 const ATTEST_STALE_DAYS = 7;
 
-/**
- * Which of these utlägg were last sent in more than `olderThan` days ago, with
- * how many days. The latest SUBMITTED event is when, since an utlägg sent back
- * and sent again has started waiting over.
- */
+/** Utlägg last sent in over `olderThan` days ago, with the days. The latest SUBMITTED event counts (resent starts over). */
 async function staleSince(ids: string[], olderThan: number): Promise<Map<string, number>> {
   if (ids.length === 0) return new Map();
   const rows = await prisma.expenseEvent.groupBy({
@@ -55,23 +44,15 @@ async function staleSince(ids: string[], olderThan: number): Promise<Map<string,
   return out;
 }
 
-/** One of your own utlägg that has left you and not yet reached Fortnox. */
 export interface WaitingOwn {
   id: string;
   title: string;
   status: "PENDING_APPROVAL" | "APPROVED" | "BOOKED";
-  /** Days since it was last sent in. */
   days: number;
-  /** Waiting on attest longer than STUCK_DAYS. */
   stuck: boolean;
 }
 
-/**
- * Your own utlägg that wait on somebody else: on attest, or on the treasury to
- * kontera or bokföra them. The longest waiting first, since that is the one
- * worth asking about. Not limited to the räkenskapsår: one still moving is
- * still yours to follow, whatever year it was bought in.
- */
+/** Your own utlägg waiting on attest or on the treasury, longest first. Not limited to the räkenskapsår. */
 export async function getWaitingOnOthers(userId: string): Promise<WaitingOwn[]> {
   const rows = await prisma.expense.findMany({
     where: { submitterId: userId, status: { in: ["PENDING_APPROVAL", "APPROVED", "BOOKED"] } },
@@ -95,12 +76,10 @@ export async function getWaitingOnOthers(userId: string): Promise<WaitingOwn[]> 
     .sort((a, b) => b.days - a.days);
 }
 
-/** How many of these (the viewer's attest queue) have waited past a week. */
 export async function countStaleAttests(ids: string[]): Promise<number> {
   return (await staleSince(ids, ATTEST_STALE_DAYS)).size;
 }
 
-/** Invoices past their due date and still not in Fortnox, the oldest first. */
 export async function getOverdueInvoices(
   viewer: Viewer,
 ): Promise<{ id: string; title: string; days: number }[]> {
@@ -122,8 +101,6 @@ export async function getOverdueInvoices(
   }));
 }
 
-// ── Coming up ─────────────────────────────────────────────────────
-
 /** How far ahead the list looks. Contracts get longer: a renewal is planned. */
 const AHEAD_DAYS = 14;
 const CONTRACT_AHEAD_DAYS = 30;
@@ -134,8 +111,7 @@ export interface UpcomingItem {
   id: string;
   title: string;
   date: string;
-  /** Days from today. Worked out here so the server's render and the
-   *  browser's say the same thing. */
+  /** Days from today, computed here so server and browser render the same. */
   inDays: number;
 }
 
@@ -146,8 +122,7 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
   const caps = viewer.capabilities;
 
   const [deadlines, invoices, pickups, contracts, events] = await Promise.all([
-    // Your own out-of-pocket claims not yet sent, whose filing deadline falls
-    // in the window. The purchase date is the deadline less sixty days.
+    // Own unsent out-of-pocket claims whose filing deadline (purchase date + 60 days) is in the window.
     prisma.expense.findMany({
       where: {
         submitterId: viewer.id,
@@ -248,16 +223,13 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
     .map((i) => ({ ...i, inDays: daysUntil(now, i.date) }));
 }
 
-// ── Your units' invoices ──────────────────────────────────────────
-
 export interface UnitInvoice {
   id: string;
   title: string;
   status: SupplierInvoiceStatus;
 }
 
-/** The latest invoices in the result units you answer for. Empty for anyone
- *  who answers for none, the treasury included: theirs is the invoice list. */
+/** The latest invoices in the result units you answer for. Empty for anyone answering for none. */
 export async function getUnitInvoices(viewer: Viewer, take: number): Promise<UnitInvoice[]> {
   if (!canSeeInvoices(viewer.capabilities)) return [];
   const v = await invoiceViewerOf(viewer);

@@ -32,10 +32,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (d.dailyPriceOre !== undefined) data.dailyPriceOre = d.dailyPriceOre;
   if (d.replacementValueOre !== undefined) data.replacementValueOre = d.replacementValueOre;
 
-  // Nothing here reaches a contract that already quotes this item. A rental
-  // line copies the description and the values at the moment it is drawn (see
-  // the RentalLine model), so re-pricing a speaker today cannot re-price last
-  // spring's agreement.
+  // A rental line copies description and values when drawn (RentalLine), so re-pricing does not touch existing contracts.
   const updated = await orNotFound(
     () => prisma.rentalItem.update({ where: { id }, data, select: { id: true } }),
     "contract.itemNotFound",
@@ -57,10 +54,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   });
   if (!item) return fail(404, "contract.itemNotFound");
 
-  // Deleted even when a contract quoted it. A rental line copies the
-  // description and the values at the moment it is drawn, so the contract still
-  // says what it said, and the relation is SetNull, so all the line loses is
-  // the link back to this row.
+  // Deleted even when quoted: the line keeps its copy, and the relation is SetNull.
   await prisma.rentalItem.delete({ where: { id: item.id } });
   return new Response(null, { status: 204 });
 }

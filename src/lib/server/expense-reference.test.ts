@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claimReference } from "./expense-reference";
 
-// The year turning over, against a stand-in for the one query claimReference
-// makes. What is checked is which year it asks about and what it hands out.
-//
-// On UTC, like the production host. A developer's machine is usually on
-// Swedish time, where the bug this guards against cannot happen and the
-// midnight test below would pass either way.
+// The year turning over, against a stand-in for the query claimReference makes. Runs on UTC like production.
 process.env.TZ = "UTC";
 
 function txWith(last: string | null) {
@@ -28,8 +23,7 @@ describe("claimReference", () => {
   });
 
   it("is already in the new year at half past midnight Swedish time", async () => {
-    // 23:30 UTC on New Year's Eve is 00:30 on 1 January in Stockholm. The
-    // server's own clock still says 2026; the section's calendar does not.
+    // 23:30 UTC on New Year's Eve is 00:30 on 1 January in Stockholm.
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-12-31T23:30:00Z"));
     const { tx } = txWith(null);

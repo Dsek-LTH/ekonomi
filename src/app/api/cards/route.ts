@@ -1,6 +1,4 @@
-// Create a section card manually. Cards are normally auto-created on bank
-// import, but an admin may want to register one ahead of time (e.g. to assign a
-// holder before the first import). Admin only.
+// Create a section card manually (admin only), e.g. to assign a holder before the first import.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";

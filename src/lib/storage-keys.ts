@@ -1,7 +1,4 @@
-// Object keys for the bucket. Apart from lib/server/storage.ts because the
-// seed writes receipts too, and it cannot import a module that reads the
-// server's environment. One definition, so a seeded receipt sits exactly where
-// an uploaded one would.
+// Object keys for the bucket. Apart from lib/server/storage.ts because the seed cannot import server env.
 
 // Strip directories and unsafe characters from a user-supplied filename.
 export function safeName(filename: string): string {

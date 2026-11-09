@@ -1,46 +1,12 @@
-// Redovisningsbetyg: a number from 0 to 100 for how well a member does their
-// part of the money flow.
-//
-// It is the plain average of up to four sub-scores, each also 0 to 100:
-//
-//   As the one who bought something
-//   - promptness:  how long a purchase waits before it is sent for attest
-//   - firstTime:   how many go through attest without being sent back, or
-//                  having their date corrected at the kontering
-//
-//   As the resultatansvarig who attests
-//   - attestAccuracy: how many of their attests the treasury did not have to
-//                     send back afterwards, or correct the date on, because
-//                     something was wrong
-//   - attestSpeed:    how long an utlägg or a leverantörsfaktura waits on them
-//
-// A sub-score with too little to go on (fewer than MIN_COUNTED) is left out of
-// the average rather than guessed at. A member who never attests is scored on
-// what they submit alone, and the other way round.
-//
-// It is there to make doing your part on time something worth doing, so it
-// measures only what the member does and controls. Not the amount, not how
-// many, and not what other people's steps take.
-//
-// Its one rule that matters most: what has NOT been done counts too. A card
-// purchase nobody has redovisat, a draft left lying and an attest left waiting
-// are scored as though done today, so they cost more every day they wait.
-// Scoring only what was done would make never doing it look like a clean
-// record.
-//
-// The submit clock starts when the member could first have sent it. For an
-// eget utlägg or a milersättning that is the day of the purchase. A card
-// purchase cannot be sent until its bank row is in the app to match (the
-// treasury imports the statement by hand), so it starts on the later of the
-// purchase and the import. A slow import is the treasury's delay, not the
-// member's. The attest clock starts when the record reached the attester.
-//
-// No consequences hang on it. The treasury reads everyone's and a member their
-// own (canViewMemberScores, and docs/navigation.md for where it is shown).
+// Redovisningsbetyg: 0 to 100, the plain average of up to four 0 to 100 sub-scores: promptness and
+// firstTime (as submitter), attestAccuracy and attestSpeed (as attester). A sub-score with fewer than
+// MIN_COUNTED items is left out of the average. Not-yet-done items count as done today, so they cost
+// more every day they wait. The submit clock starts when the member could first send: the purchase
+// day, or for a card purchase the later of purchase and bank import. The attest clock starts when
+// the record reached the attester. Visibility: canViewMemberScores.
 import type { PaymentType } from "@/lib/domain/types";
 
-/** How far back the score looks, in days. Rolling, so a new year does not
- *  wipe out a habit, good or bad. */
+/** How far back the score looks, in days. Rolling. */
 export const SCORE_WINDOW_DAYS = 365;
 
 /** Older than this, an item weighs half: recent habits count for more. */
@@ -55,12 +21,10 @@ const ATTEST_GRACE_DAYS = 3;
 /** Fewer items than this and a sub-score is left out of the average. */
 export const MIN_COUNTED = 3;
 
-/** Every timed sub-score starts as if with one item at this, so the first
- *  slow one does not drop a member straight to the bottom. */
+/** Every timed sub-score starts as if with one item at this, so the first slow one does not drop a member to the bottom. */
 const PRIOR = { points: 80, weight: 1 };
 
-/** Every share starts as if with this many that went right, for the same
- *  reason: one sent back early on is not a 0. */
+/** Every share starts as if with this many that went right: one early send-back is not a 0. */
 const PRIOR_CLEAN = 2;
 
 /** Points along a line through (days, points), flat past either end. */
@@ -76,8 +40,7 @@ function along(curve: readonly (readonly [number, number])[], days: number): num
   return curve[curve.length - 1][1];
 }
 
-/** The points one purchase earns for the days it waited before it was sent.
- *  Full marks within a week, nothing past four months. */
+/** The points one purchase earns for the days it waited before it was sent. Full marks within a week, nothing past four months. */
 export const submitPoints = (days: number) =>
   along(
     [
@@ -90,8 +53,7 @@ export const submitPoints = (days: number) =>
     days,
   );
 
-/** The points one attest earns for the days the record waited on it. Full
- *  marks within three days, nothing past two months. */
+/** The points one attest earns for the days the record waited. Full marks within three days, nothing past two months. */
 export const attestPoints = (days: number) =>
   along(
     [
@@ -109,18 +71,13 @@ export interface ScoreExpense {
   id: string;
   title: string;
   paymentType: PaymentType;
-  /** YYYY-MM-DD the clock started (see the top of the file). Null when it has
-   *  not: a card purchase whose bank row is not in the app yet. */
+  /** YYYY-MM-DD the clock started (see the top of the file). Null for a card purchase whose bank row is not in the app yet. */
   startedOn: string | null;
-  /** YYYY-MM-DD it was first sent for attest. A recall and a resend do not
-   *  start it again. Null while it never has been. */
+  /** YYYY-MM-DD it was first sent for attest. A recall and a resend do not restart it. */
   submittedOn: string | null;
-  /** Sent back for changes at least once, or its date corrected at the
-   *  kontering (lib/domain/correction.ts), which is the same mistake caught
-   *  without the round trip. */
+  /** Sent back at least once, or its date corrected at the kontering (lib/domain/correction.ts). */
   returned: boolean;
-  /** Somebody has judged it: attested in full or sent back. Only these say
-   *  anything about going through first time. */
+  /** Judged: attested in full or sent back. */
   judged: boolean;
 }
 
@@ -134,20 +91,9 @@ export interface ScoreCardPurchase {
   startedOn: string;
 }
 
-/** What the record an attest was given on is. */
 export type AttestRecord = "expense" | "invoice";
 
-/**
- * One attest by the member, or one waiting on them.
- *
- * `outcome` is how it ended: `correct` once the record went on to be bokförd
- * (an utlägg) or sent to Fortnox (a faktura) with the signature still on it,
- * `returned` when the treasury sent it back after it was attested in full, or
- * corrected its date at the kontering,
- * `open` while neither has happened, or when the signature came off for a
- * reason that is not the attester's mistake (the submitter recalled it, or
- * another attester sent it back).
- */
+/** One attest by the member, or one waiting on them. `outcome`: `correct` once bokförd/sent to Fortnox with the signature on, `returned` when the treasury sent it back after full attest or corrected its date, `open` otherwise (including recalls and other attesters' send-backs). */
 export interface ScoreAttest {
   record: AttestRecord;
   id: string;
@@ -188,8 +134,7 @@ export interface SubScore {
 }
 
 export interface MemberScore {
-  /** 0 to 100: the average of the sub-scores that have a value. Null while
-   *  none has. */
+  /** 0 to 100: the average of the sub-scores that have a value. Null while none has. */
   score: number | null;
   parts: Record<SubScoreKey, SubScore>;
   /** Of the judged utlägg, how many went through without being sent back. */
@@ -255,8 +200,7 @@ export function memberScore(input: {
   for (const e of input.expenses) {
     if (!e.startedOn || !inWindow(e.startedOn)) continue;
     const days = daysBetween(e.startedOn, e.submittedOn ?? today);
-    // Not sent and still inside the grace days: nothing is late yet, and
-    // counting it at full marks would reward having just bought something.
+    // Not sent and still inside the grace days: nothing is late yet.
     if (!e.submittedOn && days <= SUBMIT_GRACE_DAYS) continue;
     items.push({
       kind: e.submittedOn ? "submitted" : "draft",
@@ -285,8 +229,7 @@ export function memberScore(input: {
   const judged = input.expenses.filter((e) => e.judged && e.startedOn && inWindow(e.startedOn));
   const firstTime = { clean: judged.filter((e) => !e.returned).length, of: judged.length };
 
-  // Attests: timed by when they were given, or for one waiting, from when it
-  // reached the member.
+  // Attests: timed by when they were given, or for one waiting, from when it reached the member.
   const attests: ScoreItem[] = [];
   const settled: ScoreAttest[] = [];
   for (const a of input.attests ?? []) {
@@ -342,8 +285,7 @@ export interface AttestEvent {
   actorId: string | null;
   /** YYYY-MM-DD. */
   on: string;
-  /** An ATTEST_WITHDRAWN that took every signature off (a faktura's split
-   *  changed), not only the actor's own. */
+  /** An ATTEST_WITHDRAWN that took every signature off (a faktura's split changed). */
   all?: boolean;
   /** A CORRECTED that counts against the attesters (isFaultedCorrection). */
   faulted?: boolean;
@@ -355,25 +297,7 @@ interface Signed {
   signedOn: string;
 }
 
-/**
- * Every attest on one record, by who gave it, from its events oldest first.
- *
- * A round starts when the record is put in front of the attesters: an utlägg
- * submitted, a faktura given to its unit or sent back to it. Each signature in
- * the round is settled by what ends it:
- *
- * - bokförd (utlägg) or sent to Fortnox (faktura): every signature `correct`
- * - sent back after it was attested in full: every signature `returned`, the
- *   treasury found something the attesters let through
- * - sent back before that, or recalled: `open`, nobody's mistake to count
- * - a signature taken back by its own attester: dropped, they caught it
- * - its date corrected at the kontering: every signature `returned`, as for a
- *   send-back. The correction can be written just before the BOOKED it rides
- *   with, or on a later amend after the round was already settled `correct`,
- *   so both orders are read.
- *
- * Whatever is still in the round at the end is `open`.
- */
+/** Every attest on one record, by who gave it, from its events oldest first. A round starts when the record is put in front of the attesters and ends with: bokförd/sent to Fortnox (all `correct`); sent back after full attest or date corrected at the kontering (all `returned`, the correction can come just before the BOOKED or in a later amend, so both orders are read); sent back earlier or recalled (`open`); a signature taken back by its own attester is dropped. */
 export function attestsFromEvents(
   record: AttestRecord,
   events: readonly AttestEvent[],
@@ -384,8 +308,7 @@ export function attestsFromEvents(
   let fullyAttested = false;
   // A faulted correction seen while the round is still open.
   let corrected = false;
-  // Where in `out` the last round settled `correct` starts, so a correction on
-  // a later amend can turn it round. Null once nothing is left to turn.
+  // Where in `out` the last round settled `correct` starts, so a later correction can turn it round.
   let lastCorrect: number | null = null;
 
   const settle = (outcome: ScoreAttest["outcome"]) => {
@@ -409,8 +332,7 @@ export function attestsFromEvents(
         if (e.actorId && !round.has(e.actorId)) {
           round.set(e.actorId, { readyOn: readyOn ?? e.on, signedOn: e.on });
         }
-        // A faktura goes from one unit to the next: whoever signs after this
-        // one could only start once it was signed.
+        // A faktura goes from one unit to the next: a later signer could only start once this one signed.
         if (record === "invoice") readyOn = e.on;
         break;
       case "ATTEST_WITHDRAWN":
@@ -427,8 +349,7 @@ export function attestsFromEvents(
         break;
       case "CHANGES_REQUESTED":
         settle(fullyAttested ? "returned" : "open");
-        // A faktura goes straight back to its unit. An utlägg waits for its
-        // submitter to send it again, which starts the next round.
+        // A faktura goes straight back to its unit. An utlägg waits for its submitter to send it again.
         readyOn = record === "invoice" ? e.on : null;
         break;
       case "RECALLED":

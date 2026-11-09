@@ -1,14 +1,7 @@
 "use client";
 
-// Ticking rows on a list to remind somebody about them: the box on each row,
-// the select-all over them, the bar with "Påminn" that rises at the foot of
-// the screen while any are ticked, and the dialog it opens. The same on every list that offers it (Utlägg, Attest, and
-// the bank feed), so each one says only which rows can be ticked and what they
-// are.
-//
-// The ticks are for the rows on screen. Paging or filtering leaves behind the
-// boxes it hides, rather than reminding somebody about a row nobody can see
-// any more.
+// Ticking rows on a list to remind somebody: row boxes, select-all, the "Påminn" bar and its dialog. The same
+// on every list that offers it. Ticks are for the rows on screen; paging or filtering leaves hidden boxes behind.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -49,8 +42,7 @@ export function useReminderPicks<T>({
   const [picked, setPicked] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
-  // The callers' functions are written inline, so they are new on every
-  // render. The rows are what actually changes.
+  // The callers' functions are inline, so new on every render. The rows are what changes.
   const choosable = useMemo(
     () => (enabled ? rows.filter(remindable).map(rowId) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,16 +65,12 @@ export function useReminderPicks<T>({
       ),
       className: "w-10 align-middle",
       hidden: !enabled,
-      // With the buttons at the foot of the card on a phone, as the budget
-      // list's compare box is: there is no checkbox column there to put it in.
+      // With the buttons at the foot of the card on a phone: there is no checkbox column there.
       mobile: "actions",
       cell: (row: T) => {
         const id = rowId(row);
         return choosable.includes(id) ? (
-          // `z-10` to sit above the row's link, which DataTable stretches over
-          // the whole row from the title cell. This cell comes before that one,
-          // so without it ticking the box opened the row instead. See the
-          // compare column in app/(app)/budget/budget-list-client.tsx.
+          // `z-10` to sit above the row's link, which DataTable stretches over the whole row (see budget-list-client.tsx).
           <Centred>
             <Checkbox
               className="z-10"
@@ -102,8 +90,7 @@ export function useReminderPicks<T>({
 
   return {
     column,
-    // Only while something is ticked: an inert "Påminn" on every visit would
-    // be a button for a question nobody asked. See SelectionBar.
+    // Only while something is ticked. See SelectionBar.
     bar: (
       <SelectionBar count={ticked.length} label={(count) => t("picked", { count })}>
         <Button variant="quiet" onClick={() => setPicked([])}>
@@ -122,13 +109,7 @@ export function useReminderPicks<T>({
   };
 }
 
-/**
- * A box in the middle of its cell, both ways. The checkbox is an inline-flex
- * label, so on its own it sits on the line's text baseline, with the room
- * under it a descender would take, and lands visibly above the middle of a
- * row whose other cells are centred. A block-level flex row is no line of
- * text, so there is no baseline to sit on.
- */
+/** A box centred in its cell both ways. A block-level flex row has no text baseline to sit on. */
 function Centred({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center justify-center">{children}</div>;
 }

@@ -1,6 +1,4 @@
-// Budget against utfall, per result unit and cost centre. The arithmetic only:
-// lib/data/budget-overview.ts fetches the figures and hands them in, so this
-// can be tested without a database.
+// Budget against utfall, per result unit and cost centre. Arithmetic only, so it tests without a database.
 import { effectiveKind, isResultAccount } from "./index";
 import { oreToSEK } from "@/lib/domain/money";
 
@@ -28,10 +26,7 @@ export interface OverviewUnit {
 
 const zero = (): BudgetFigure => ({ budget: 0, actual: 0 });
 
-/**
- * Add one account's net (debit - credit, öre) to a figure, on the side its
- * number puts it: income is a credit and reads positive, cost a debit.
- */
+/** Add one account's net (debit - credit, öre) on the side its number puts it: income is a credit and reads positive. */
 function add(
   target: { income: BudgetFigure; cost: BudgetFigure },
   account: string,
@@ -42,19 +37,14 @@ function add(
   else target.cost[field] += net;
 }
 
-/**
- * `planned` is the budget as `budgetComparison` returns it and `booked` the
- * ledger grouped per account and cost centre, both net öre (debit - credit).
- * `unitOf` names the result unit a cost-centre code belongs to.
- */
+/** `planned` is `budgetComparison`'s output, `booked` the ledger per account and cost centre (net öre, debit - credit). */
 export function buildOverview(
   planned: Iterable<[string, number]>,
   booked: { account: string; costCenterCode: string | null; debit: number; credit: number }[],
   unitOf: (code: string) => string | null,
   names: ReadonlyMap<string, string>,
 ): OverviewUnit[] {
-  // Summed in öre and converted once at the end, so rounding happens per
-  // figure rather than per ledger row.
+  // Summed in öre, converted once at the end.
   const byCode = new Map<string, OverviewCostCenter>();
   const row = (code: string) => {
     let cc = byCode.get(code);
@@ -70,8 +60,7 @@ export function buildOverview(
     add(row(code), account, net, "budget");
   }
   for (const g of booked) {
-    // The balance accounts are what the year leaves behind, not what it
-    // earned or spent, and no budget holds them.
+    // Balance accounts are not budgeted.
     if (!isResultAccount(g.account)) continue;
     add(row(g.costCenterCode ?? ""), g.account, g.debit - g.credit, "actual");
   }
@@ -82,8 +71,7 @@ export function buildOverview(
       f.budget = oreToSEK(f.budget);
       f.actual = oreToSEK(f.actual);
     }
-    // Nothing either way is a cost centre that only ever netted to zero, and a
-    // row of zeroes is not worth a line.
+    // A cost centre that netted to zero is not worth a line.
     if (![cc.income, cc.cost].some((f) => f.budget || f.actual)) continue;
     cc.name = names.get(cc.code) ?? null;
 
@@ -117,12 +105,8 @@ export function buildOverview(
 }
 
 /**
- * How a cost budget is keeping up with the year. `elapsed` is the share of the
- * year gone, 0 to 1. Null where there is no cost budget to keep up with.
- *
- * AHEAD is spending faster than the year is passing, by more than a tenth of
- * the budget: a little ahead is ordinary (a term starts with its biggest
- * event), and a tag that is always on says nothing.
+ * How a cost budget is keeping up with the year (`elapsed` is 0 to 1), null with no cost budget.
+ * AHEAD means spending faster than the year passes by more than a tenth of the budget.
  */
 export type Pace = "OVER" | "AHEAD" | "ON_TRACK";
 

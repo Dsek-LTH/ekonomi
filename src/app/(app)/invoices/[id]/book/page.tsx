@@ -8,10 +8,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("bookInvoice");
 
-// Kontera a levfaktura, as an utlägg's kontering is: the treasury completes it
-// from the PDF and Fortnox's supplier register and saves it. Sending it to
-// Fortnox is a separate act, on the record. Only once every share is attested
-// and until it is sent; otherwise the record says where it stands.
 export default async function InvoiceBookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePage(canBookkeep);

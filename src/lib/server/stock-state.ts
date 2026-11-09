@@ -1,15 +1,5 @@
-// Reading the shelf out of the log, in one place.
-//
-// The open bottles live in four columns (open80…open20) because a rung is a
-// column you can sum in the database, and every caller that wants to *think*
-// about them wants the `OpenBottles` record instead. Turning one into the other
-// is four lines, which is why it had been written out at eight call sites, and
-// why two of them had already drifted into selecting a column they then ignored.
-//
-// The same goes for the shelf itself. "Sum the log, ask `onHand` what that
-// means, refuse it if it is impossible" is not three steps a route should be
-// choosing between: it is the invariant this whole feature exists to hold, and
-// a route that gets it slightly wrong stores negative stock. It had five copies.
+// Reading the shelf out of the log, in one place: the open-bottle columns as an `OpenBottles` record, and
+// the sum-the-log, `onHand`, refuse-if-impossible invariant.
 import "server-only";
 
 import { impossible, onHand, type OnHand, type StockSubject } from "@/lib/stock/onhand";
@@ -40,13 +30,7 @@ type OpenColumns = {
   open20: number | null;
 };
 
-/**
- * The rung columns as an `OpenBottles` record.
- *
- * Typed as the total record rather than as `OpenBottles`, which is partial: a
- * column always has a value, so every rung is present here, and a caller
- * indexing one gets a number rather than a maybe.
- */
+/** The rung columns as a total `OpenBottles` record (every rung present). */
 export const openOf = (c: OpenColumns): Record<Level, number> => ({
   80: c.open80 ?? 0,
   60: c.open60 ?? 0,
@@ -69,8 +53,7 @@ const asHeld = (
 ): OnHand =>
   onHand(product, [
     {
-      // COUNT, because a sum of every delta *is* a statement of what is there,
-      // which is what a stocktake is. Not a claim about how it got there.
+      // COUNT: a sum of every delta is a statement of what is there, which is what a stocktake is.
       kind: "COUNT",
       units: sum.units ?? 0,
       open: openOf(sum),
@@ -78,13 +61,7 @@ const asHeld = (
     },
   ]);
 
-/**
- * What the log says this product holds.
- *
- * `withValue` also sums what the rows were worth, which the delivery and
- * withdrawal route needs to price what is leaving and nothing else does. It is
- * a column more to sum, so it is asked for rather than always fetched.
- */
+/** What the log says this product holds. `withValue` also sums what the rows were worth (only delivery and withdrawal need it). */
 export async function heldOnHand(
   db: StockReader,
   product: StockSubject & { id: string },
@@ -97,13 +74,7 @@ export async function heldOnHand(
   return asHeld(product, sums._sum);
 }
 
-/**
- * The same for several products at once, in one group-by.
- *
- * A product with no rows at all is absent from the group-by and present in the
- * answer, holding nothing, because "nothing on the shelf" is a fact about it
- * and a caller that had to check for a missing key would get that wrong.
- */
+/** The same for several products in one group-by. A product with no rows is present, holding nothing. */
 export async function heldOnHandMany(
   db: StockReader,
   products: readonly (StockSubject & { id: string })[],
@@ -119,22 +90,10 @@ export async function heldOnHandMany(
   return new Map(products.map((p) => [p.id, asHeld(p, sums.get(p.id) ?? empty)]));
 }
 
-/**
- * Thrown by the checks below, and caught by the routes, which turn it into a
- * 422. An Error rather than a returned code because it has to abort the
- * transaction it is found in: the write has already happened by then, and the
- * whole point is that it must not stand. See `impossible`.
- */
+/** Thrown by the checks below and turned into a 422 by the routes. An Error so it aborts the transaction it is found in. */
 export const NEGATIVE_STOCK = "stock.wouldGoNegative";
 
-/**
- * Refuse a shelf that has gone negative.
- *
- * Checked after the write rather than before it, and that is not laziness: a
- * row's effect is only knowable against every other row, so the cheapest
- * correct question is "having written this, is the shelf still possible", asked
- * inside the transaction that can still take it back.
- */
+/** Refuse a shelf that has gone negative. Checked after the write, inside the transaction that can still roll it back. */
 export async function assertPossible(
   db: StockReader,
   product: StockSubject & { id: string },

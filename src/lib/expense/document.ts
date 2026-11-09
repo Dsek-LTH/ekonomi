@@ -1,20 +1,6 @@
-// The utläggsräkning: turning an utlägg into the cover page that fronts its
-// underlag, and deciding when that page is drawn and when it is kept.
-//
-// Shaped after lib/income/document.ts, which does the same job for a day's
-// takings, and for the same reasons, down to the render/store split. What is
-// stored is the cover *alone*, and it stays alone everywhere but the export,
-// where the receipt is stapled behind it on the way to Fortnox. See
-// lib/server/pdf-merge.ts for why.
-//
-// A milersättning is the one utlägg with nothing to staple: there is no receipt
-// for driving your own car, so the journey it rests on is a section of this page
-// rather than a document of its own. It was a second PDF once, drawn from the
-// same row and repeating the same reference, submitter and total under a
-// different heading. See `buildJourney`.
-//
-// The engine is behind cover/typst.ts and reached only through `renderCover`,
-// so nothing in this file knows what typesets anything.
+// The utläggsräkning: the cover page fronting an utlägg's underlag, and when it is drawn or kept.
+// Only the cover is stored. The receipt is stapled behind it at export (lib/server/pdf-merge.ts).
+// A milersättning has no receipt, so its journey is a section of this page (`buildJourney`).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -32,11 +18,7 @@ import type {
 import { formatNumber, formatOreKr } from "@/lib/ui/format";
 import { oreToSEK } from "@/lib/domain/money";
 
-/**
- * Why an utlägg has no cover page. Each maps to a message key under
- * `errors.expense`, so a route can hand it straight to `fail()`, the same
- * contract lib/income/document.ts has with its own route.
- */
+/** Why an utlägg has no cover page. Each maps to a message key under `errors.expense`. */
 export type DocumentFailure =
   | { reason: "expenseNotFound" }
   | { reason: "renderFailed"; detail: string }
@@ -48,37 +30,21 @@ export type StoredDocument = { ok: true; key: string; filename: string };
 export type RenderResult = RenderedDocument | ({ ok: false } & DocumentFailure);
 export type StoreResult = StoredDocument | ({ ok: false } & DocumentFailure);
 
-/**
- * A reading, always with its tenth: "12 300,0 km".
- *
- * The distance beside it is a subtraction the reader is invited to do, and two
- * numbers written to different precisions is the one thing that would stop them
- * doing it, so the readings and the difference are all written the same way,
- * even where the tenth is a zero.
- */
+/** A reading, always with its tenth ("12 300,0 km"), so readings and their difference share a precision. */
 const km = (n: number): string => `${formatNumber(n, 1, 1)} km`;
 
-/** An absent value is said, not left blank. Matches `orDash` in the template. */
 const DASH = "-";
 
 const isoDate = (d: Date | null | undefined): string | null => (d ? isoDay(d) : null);
 
-/** How each payment type is worded on the page. Fixed Swedish, not a
- *  translation lookup: see the note on ExpenseCoverData. */
+/** Fixed Swedish, not a translation lookup (see ExpenseCoverData). */
 const PAYMENT_TYPE: Record<string, string> = {
   REIMBURSEMENT: "Privat utlägg",
   CARD: "Sektionskort",
   MILEAGE: "Milersättning",
 };
 
-/**
- * Everything the cover page needs, and nothing else.
- *
- * Written out rather than derived from the Prisma client's types, so that
- * `buildCoverData` can be called, and tested, with a plain object. Tying it
- * to a generated payload type would mean constructing one to assert on the
- * wording, which is the opposite of the point.
- */
+/** Everything the cover page needs. Plain data rather than Prisma types, so `buildCoverData` is testable with a plain object. */
 type ExpenseForCover = {
   reference: string | null;
   title: string;
@@ -112,26 +78,12 @@ type ExpenseForCover = {
   booking?: BookingNames | null;
 };
 
-/**
- * The journey behind a milersättning, or null where there is not one.
- *
- * This is the whole of what used to be a second document. A mileage claim has
- * no receipt, so the page that fronts the underlag *is* the underlag: the
- * readings go on the cover, under the same reference and the same submitter,
- * and Fortnox is handed one file instead of two saying the same things twice.
- *
- * A half-filled draft is stated in dashes rather than refused. Such a claim
- * cannot be submitted (`claimBlocker` sees to that), but it can be looked at,
- * and "-" is the honest word for a reading nobody has given.
- */
+/** The journey behind a milersättning, or null. A half-filled draft is stated in dashes rather than refused. */
 function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
   if (expense.paymentType !== "MILEAGE") return null;
   const distance = journeyKm(expense.odometerStart, expense.odometerEnd);
   return {
-    // Joined here rather than in the template, so the one decision about how a
-    // route reads is made in the file where every other wording decision is,
-    // and can be asserted on without a typesetter. The arrow is the same one the
-    // detail page draws, so the two say the journey the same way.
+    // Joined here so the wording is asserted without a typesetter. The arrow matches the detail page.
     route: namedStops(expense.journeyStops).join(" → ") || DASH,
     odometerStart: expense.odometerStart == null ? DASH : km(expense.odometerStart),
     odometerEnd: expense.odometerEnd == null ? DASH : km(expense.odometerEnd),
@@ -143,20 +95,8 @@ function buildJourney(expense: ExpenseForCover): ExpenseCoverJourney | null {
   };
 }
 
-/**
- * The dispens from the filing deadline, or null where there was none.
- *
- * How late the claim was is worked out here rather than left to the reader.
- * The page already carries the purchase date and now carries the day the
- * dispens was given, and a reader asked to subtract one from the other across
- * two blocks is a reader who will not. It is counted to the day of the dispens,
- * not to today: what the skattmästare decided about is how late it was when
- * they decided, and a document filed beside a voucher must not say something
- * different next year.
- *
- * "Köpet" or "resan", the same distinction the date label above makes. A
- * milersättning has no purchase.
- */
+/** The dispens from the filing deadline, or null. Lateness is counted to the day of the dispens,
+ * not to today, so the archived page never changes. "Köpet" or "resan" as the date label. */
 function buildWaiver(expense: ExpenseForCover): ExpenseCoverWaiver | null {
   const at = isoDate(expense.deadlineWaivedAt);
   if (!at || !expense.deadlineWaiverReason) return null;
@@ -182,19 +122,8 @@ function buildBooking(booking: BookingNames | null | undefined): ExpenseCoverBoo
   };
 }
 
-/**
- * An utlägg as the cover page states it.
- *
- * Pure, and exported for that reason: every decision the document makes about
- * wording is made here, and can be asserted on without a typesetter installed
- * anywhere. The engine only places what this returns.
- *
- * The total is the sum of the allocations rather than `grossAmount`. They are
- * the same number by the rule that every allocation must sum to it, but this
- * page is a statement about what was *attested*, and the attestations are per
- * allocation, so the figure at the bottom is the one the rows above it add up
- * to, whatever else the utlägg records.
- */
+/** An utlägg as the cover page states it. Pure: every wording decision is made here.
+ * The total is the sum of the allocations (what was attested), not `grossAmount`. */
 export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCoverData {
   return {
     // A booked utlägg always has a reference (it is assigned at submission), so
@@ -202,10 +131,7 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
     reference: expense.reference ?? "-",
     title: expense.title,
     purchaseDate: isoDate(expense.purchaseDate),
-    // What that date *is*, which is not the same question for all three types.
-    // A milersättning has no receipt, so "Kvittodatum" over the day it was
-    // driven would be naming a document that does not exist on a page that is
-    // filed as evidence.
+    // A milersättning has no receipt, so "Kvittodatum" would name a document that does not exist.
     dateLabel: expense.paymentType === "MILEAGE" ? "Resdag" : "Kvittodatum",
     paymentType: PAYMENT_TYPE[expense.paymentType] ?? expense.paymentType,
     created: isoDate(today)!,
@@ -218,14 +144,11 @@ export function buildCoverData(expense: ExpenseForCover, today: Date): ExpenseCo
       { decimals: 2 },
     ),
     allocations: expense.allocations.map((a) => ({
-      // The code alone, which is what the cost centre is called in Fortnox and
-      // in the budget.
+      // The code alone: what the cost centre is called in Fortnox and the budget.
       costCenter: a.costCenter.code,
       amount: formatOreKr(a.amount, { decimals: 2 }),
       comment: a.comment,
-      // Null rather than a placeholder: what an unattested slice reads as is
-      // the page's decision, not this function's, and the template says it in
-      // one place for every field that can be missing.
+      // Null rather than a placeholder: the template words every missing field in one place.
       approvedBy: a.approvedBy?.name ?? null,
       approvedAt: isoDate(a.approvedAt),
     })),
@@ -240,13 +163,7 @@ export function coverFilename(reference: string | null, expenseId: string): stri
   return `utlaggsrakning-${reference ?? expenseId}.pdf`;
 }
 
-/**
- * Draw the cover page for an utlägg, keeping nothing.
- *
- * What the document route answers with while the utlägg is still moving. Once
- * it is booked the stored bytes are served instead. See `storeExpenseDocument`
- * and the route.
- */
+/** Draw the cover page, keeping nothing. Served while the utlägg is moving; once booked the stored bytes are. */
 export async function renderExpenseDocument(expenseId: string): Promise<RenderResult> {
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
@@ -265,9 +182,7 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
       deadlineWaivedBy: { select: { name: true } },
       submitter: { select: { name: true, studentId: true } },
       allocations: {
-        // By cost-centre code, so two renders of the same utlägg put the rows
-        // in the same order. A document that substantiates a voucher should
-        // not depend on the order the database happened to return.
+        // By cost-centre code, so two renders put the rows in the same order.
         orderBy: [{ costCenter: { code: "asc" } }, { id: "asc" }],
         select: {
           amount: true,
@@ -288,8 +203,6 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
         {
           ...expense,
           booking,
-          // Decimal(9,1) columns, and `buildCoverData` is written over plain
-          // data so it can be tested with a plain object.
           odometerStart: expense.odometerStart == null ? null : Number(expense.odometerStart),
           odometerEnd: expense.odometerEnd == null ? null : Number(expense.odometerEnd),
         },
@@ -304,14 +217,8 @@ export async function renderExpenseDocument(expenseId: string): Promise<RenderRe
   }
 }
 
-/**
- * Draw the cover page and keep it, at booking.
- *
- * Idempotent, and that is the point rather than an optimisation: the cover
- * names who attested each slice and when, so re-rendering it later would
- * produce a *different* document from the one already exported to Fortnox. An
- * utlägg that has one keeps it, and only a reopen clears it. See the schema.
- */
+/** Draw the cover and keep it, at booking. Idempotent by necessity: re-rendering would differ
+ * from the one already exported to Fortnox. Only a reopen clears it. */
 export async function storeExpenseDocument(expenseId: string): Promise<StoreResult> {
   const existing = await prisma.expense.findUnique({
     where: { id: expenseId },

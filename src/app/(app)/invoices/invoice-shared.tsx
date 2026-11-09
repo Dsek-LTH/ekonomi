@@ -1,8 +1,5 @@
 "use client";
 
-// What the pages of a levfaktura share: the record ([id]/record-client), the
-// fördelning ([id]/allocate) and the kontering (./book-view). The props they
-// are given, the actions they take, the documents beside them and the history.
 import { useTranslations } from "next-intl";
 import { Notice } from "@/components/ui/notice";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -22,7 +19,6 @@ import { PersonName } from "@/components/ui/avatar";
 import { LABEL } from "@/components/record-card";
 import { underlagCaption } from "@/lib/expense/document-url";
 
-/** The bar along the card's foot, held at the bottom of the screen. */
 export function ActionBar({ children }: { children: React.ReactNode }) {
   return (
     <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-b-panel border-t border-border bg-background px-inset py-3">
@@ -31,7 +27,6 @@ export function ActionBar({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** The invoice's documents, for the document panel beside its pages. */
 export const invoiceDocuments = (invoice: SupplierInvoiceView) =>
   invoice.documents.map((d) => ({
     src: `/api/supplier-invoice-documents/${d.id}`,
@@ -40,20 +35,11 @@ export const invoiceDocuments = (invoice: SupplierInvoiceView) =>
     label: invoice.documents.length > 1 ? d.filename : undefined,
   }));
 
-/**
- * The attest page, then the invoice's documents behind it, as an utlägg's
- * panel stands its utläggsräkning before its underlag (lib/expense/
- * document-url.ts): the order they are stapled in for Fortnox, captioned.
- *
- * Not on the fördelning, where the split the page states is still being
- * written. And not on an invoice with no documents, whose empty panel is
- * there to say so.
- */
+/** The attest page, then the documents, in the order they are stapled for Fortnox. Not on the fördelning. */
 export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
   const t = useTranslations("receipt");
   if (invoice.documents.length === 0) return [];
-  // A new URL whenever what the page says may have changed, so the panel
-  // draws it again rather than keeping the copy from before a signature.
+  // New URL whenever the page may have changed, so the panel redraws.
   const version = [
     invoice.status,
     invoice.updatedAt,
@@ -76,26 +62,16 @@ export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
 
 export interface WorkspaceProps {
   invoice: SupplierInvoiceView;
-  /** Decided on the server. See invoiceCapabilities. */
   can: InvoiceCapabilities;
-  /** Who the viewer may attest for, so the button can say whether pressing it
-   *  signs the invoice or only sends it to somebody who can. */
   reach: AttestReach;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
-  /** Fortnox's projects, for the kontering. Empty for anyone else. */
   projects: ProjectRecord[];
   resultUnits: { id: string; name: string }[];
-  /**
-   * Called after an action, with the status it left the invoice in, or
-   * RETURNED when it went back to the Inkorg and there is no invoice left.
-   * Without it the page refreshes in place, which is wrong only for that.
-   */
+  /** Called with the resulting status, or RETURNED when it went back to the Inkorg. */
   onDone?: (status: SupplierInvoiceStatus | "RETURNED") => void;
 }
 
-/** The comment it was sent back with, where the person it went back to looks
- *  first. */
 export function ReturnedNotice({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.detail");
   if (invoice.status !== "CHANGES_REQUESTED") return null;
@@ -108,8 +84,6 @@ export function ReturnedNotice({ invoice }: { invoice: SupplierInvoiceView }) {
     </Notice>
   );
 }
-
-// ── Actions ───────────────────────────────────────────────────────
 
 export function useTransition(invoiceId: string, onDone?: WorkspaceProps["onDone"]) {
   const tAction = useTranslations("invoices.action");
@@ -125,11 +99,7 @@ export function useTransition(invoiceId: string, onDone?: WorkspaceProps["onDone
   return { ...m, run };
 }
 
-/**
- * Sending the invoice back to the Inkorg, with the reason asked for first. It
- * stops being an invoice (see the return route), so the page it was on has
- * nothing left to show, which onDone answers.
- */
+/** Sends the invoice back to the Inkorg (it stops being an invoice), reason asked first. */
 export function useReturnToInbox(invoiceId: string, onDone?: WorkspaceProps["onDone"]) {
   const tAction = useTranslations("invoices.action");
   const confirm = useConfirm();
@@ -152,7 +122,6 @@ export function useReturnToInbox(invoiceId: string, onDone?: WorkspaceProps["onD
   return { run, busy: m.busy };
 }
 
-// As an utlägg's history colours them (expenses/[id]/detail-sections.tsx).
 const EVENT_TONE: Partial<Record<SupplierInvoiceView["events"][number]["type"], string>> = {
   APPROVED: "text-blue",
   COST_CENTER_APPROVED: "text-blue",

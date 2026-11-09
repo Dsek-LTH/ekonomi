@@ -1,9 +1,5 @@
-// The signed-in member's own profile picture. Only ever their own: there is no
-// id in the path, so nobody can set or remove somebody else's.
-//
-// The crop happens in the browser (profile/avatar-dialog.tsx), which sends the
-// square it cut. The server still decodes and re-encodes it, so what is stored
-// is always a 256px WebP with no metadata, whatever was sent.
+// The member's own picture only: no id in the path. The server re-encodes the crop,
+// so what is stored is always a 256px WebP without metadata.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";

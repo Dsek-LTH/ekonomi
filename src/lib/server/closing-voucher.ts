@@ -12,13 +12,8 @@ export type ResolvedVoucher =
   | { ok: false; res: NextResponse };
 
 /**
- * The voucher `/api/closing/[year]/vouchers/[voucher]` names, provided it is
- * still the version `seenHash` describes.
- *
- * A 409 when it is not: the voucher was changed in Fortnox, or its number given
- * to a different one, between the page loading and the button being pressed.
- * Recording the write anyway would put somebody's name to a voucher they never
- * saw.
+ * The voucher `/api/closing/[year]/vouchers/[voucher]` names, provided it is still the version `seenHash`
+ * describes. A 409 otherwise (changed in Fortnox meanwhile), so a write is never recorded against an unseen voucher.
  */
 export async function resolveVoucher(
   params: { year: string; voucher: string },

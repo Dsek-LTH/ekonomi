@@ -1,16 +1,6 @@
 "use client";
 
-// The read-only parts of the expense detail page: everything that renders what
-// the expense *is*. The interactive parts (actions, transaction picker) live
-// with the state they need, in detail-client.tsx.
-//
-// The page is laid out like the document it stands for. An utlägg is an
-// invoice the section owes or has paid, so the card reads like one: the total
-// at the top, the facts in a ruled strip under it, the cost distribution as
-// line items with the sum ruled off, the voucher, and the history in small
-// print at the foot. One card rather than a stack of them: stacked cards made
-// every part look equally important and put a band of page between facts that
-// belong together.
+// The read-only parts of the expense detail page. The interactive parts live with their state in detail-client.tsx.
 import { useTranslations } from "next-intl";
 import { namedStops } from "@/lib/mileage/claim";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -32,18 +22,7 @@ import {
   VoucherTable,
 } from "@/components/record-card";
 
-/**
- * The head of the card: where the utlägg stands, and what you can do about it.
- *
- * The page header above stays identity only (title, reference, submitter). The
- * status opens the card on the left. The actions take the top right corner,
- * where the eye goes for what to do next and where they sit on every other
- * card in the app, and they belong to the card because what you can do to a
- * thing belongs to the thing. See components/page-shell.tsx.
- *
- * On a phone the actions wrap under the status and take the full row, which is
- * what ExpenseActions is built to do below sm.
- */
+/** The head of the card: where the utlägg stands and the actions (top right, wrapping under the status on a phone). See components/page-shell.tsx. */
 export function ExpenseSummary({
   expense,
   actions,
@@ -59,16 +38,7 @@ export function ExpenseSummary({
   );
 }
 
-/**
- * The three facts every reader comes for, in ruled columns under the status:
- * the amount, the date, and how it was paid.
- *
- * The rules are the grid's gap showing the border colour through, so they run
- * between cells in both directions however the row wraps. Three columns from
- * sm. On a phone three would leave each about 90px, too little for an amount
- * and a payment tag, so the amount takes the first row on its own and the
- * other two share the second.
- */
+/** The amount, date and payment type in ruled columns. The rules are the grid's gap; on a phone the amount takes the first row. */
 export function FactStrip({ expense }: { expense: Expense }) {
   const t = useTranslations("expenses.detail");
   const { date } = useFormat();
@@ -77,10 +47,7 @@ export function FactStrip({ expense }: { expense: Expense }) {
       <StripCell label={t("amount")} className="col-span-2 sm:col-span-1">
         <Amount value={expense.grossAmount} size="md" signed />
       </StripCell>
-      {/* A milersättning has no purchase date. What it has is the day it was
-          driven, which is what the field holds and what the filing deadline
-          runs from. Calling it "Kvittodatum" would name a document it does not
-          have. */}
+      {/* A milersättning has no purchase date: the field holds the day it was driven, which the filing deadline runs from. */}
       <StripCell label={expense.paymentType === "MILEAGE" ? t("journeyDate") : t("purchaseDate")}>
         {date(expense.purchaseDate)}
       </StripCell>
@@ -91,12 +58,7 @@ export function FactStrip({ expense }: { expense: Expense }) {
   );
 }
 
-/**
- * Everything else about the purchase, one label and value per line: the
- * journey a milersättning was for, and a dispens from the filing deadline.
- * Only the ones this utlägg has. The bank row of a card purchase is a section
- * of its own; see BankSection in detail-client.tsx.
- */
+/** Everything else about the purchase, one label and value per line. The bank row of a card purchase is BankSection in detail-client.tsx. */
 export function NotesSection({ expense }: { expense: Expense }) {
   const t = useTranslations("expenses.detail");
   const { date } = useFormat();
@@ -130,27 +92,15 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/**
- * The journey, said again in the page's own language beside the typeset
- * utläggsräkning, because the panel can be folded away, and an attester
- * deciding whether to approve should not have to open a PDF to see what they
- * are approving.
- *
- * The subtraction is set out rather than only its answer: two odometer readings
- * and the distance between them is a figure a reader can check, which is the
- * whole reason the readings are what gets recorded.
- */
+/** The journey in the page's own language, since the panel can be folded away. The subtraction is set out so a reader can check it. */
 function JourneyFacts({ journey }: { journey: NonNullable<Expense["mileage"]> }) {
   const t = useTranslations("mileage");
   const reading = (km: number | null) => (km == null ? "-" : formatNumber(km, 1, 1));
-  // Only the stops that name a place. A draft saved with a blank row in the
-  // middle would otherwise draw an arrow pointing at nothing.
+  // Only stops that name a place, or a blank row would draw an arrow pointing at nothing.
   const stops = namedStops(journey.stops);
 
   return (
     <>
-      {/* Every stop, not just the ends: a route through the wholesaler is what
-          makes a longer distance make sense. */}
       <Fact label={t("route.label")}>
         {stops.length === 0 ? (
           "-"
@@ -208,15 +158,8 @@ export type AllocationRowActions = {
   busy: boolean;
 };
 
-/**
- * The cost distribution, as AllocationTable draws one.
- *
- * With `rowActions`, a row the viewer could sign carries its own "Attestera",
- * and a row they signed its own "Dra tillbaka". That is for the skattmästare,
- * who may attest any row but should usually sign only the units they answer
- * for and leave the rest to whoever does. Given only when there is more than
- * one row: with one, the header's buttons are the same act.
- */
+/** The cost distribution. With `rowActions` each row carries its own Attestera / Dra tillbaka, for the skattmästare
+ * who should sign only their own units. Given only with more than one row. */
 export function AllocationSection({
   allocations,
   rowActions: r,
@@ -227,8 +170,6 @@ export function AllocationSection({
   const t = useTranslations("expenses.detail");
   const name = (a: Expense["allocations"][number]) => `${a.costCenterCode} - ${a.costCenterName}`;
 
-  // Laid out like the bank row's "Ta bort": what the row says on the left,
-  // the button that acts on it at the end.
   const withButton = (
     a: Expense["allocations"][number],
     status: React.ReactNode,
@@ -279,23 +220,8 @@ export function AllocationSection({
   );
 }
 
-/**
- * The kontering: the voucher the utlägg was booked as.
- *
- * Laid out the way a ledger prints one, a column per thing: account number,
- * account name, cost centre, debit, credit. They used to share one cell
- * ("5460 Förbrukningsinventarier - INFU", with the line's description under
- * it), which made every row a sentence to read rather than a row to scan.
- *
- * A line's own description is shown only where it says something the voucher's
- * does not. Booked from an utlägg, almost every line repeats the voucher text
- * word for word, and printing it under each row was most of the clutter.
- */
-/**
- * Who konterade the utlägg, and who amended the voucher since, from the
- * history. Which events count is bookingTrail's rule, the same one the
- * two-person rule counts by.
- */
+/** The kontering: the voucher the utlägg was booked as, a column per thing. A line's description is shown only where it differs from the voucher's. */
+/** Who konterade the utlägg and who amended the voucher since (bookingTrail's rule). */
 function bookingPeople(revisions: Expense["revisions"]) {
   const trail = bookingTrail(revisions.map((r) => ({ ...r, type: r.action })));
   if (!trail) return null;
@@ -326,8 +252,7 @@ export function VerificationSection({
       title={t("verification")}
       aside={
         verification.fortnoxLabel && (
-          // The Fortnox number beside the title, where a voucher's number sits
-          // on paper. What it is a number *of* is on the element for a pointer.
+          // The Fortnox number beside the title, where a voucher's number sits on paper.
           <span
             title={`${t("exportedToFortnox")} ${verification.fortnoxLabel}`}
             className="font-medium tabular-nums"
@@ -361,9 +286,6 @@ export function VerificationSection({
           credit: l.credit,
         }))}
       />
-      {/* Who konterade it, signed at the foot the way a paper voucher is. The
-          person who bokför it next is not to be the same one, and before this
-          it was only to be found in the history. */}
       {people && (
         <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-border px-inset pt-3 text-xs">
           <div className="flex items-baseline gap-2">
@@ -387,14 +309,7 @@ export function VerificationSection({
   );
 }
 
-/**
- * The history, as the small print at the foot of the document: one line per
- * event, in the order they were recorded, with a typed comment under its line.
- *
- * No timeline graphics. Who attested which line is already in the attest
- * column above, so the history only has to be complete, not loud. The two
- * events that decide something keep their colour on the word itself.
- */
+/** The history as small print: one line per event, a typed comment under its line. */
 const EVENT_TONE: Record<string, string> = {
   COST_CENTER_APPROVED: "text-blue",
   APPROVED: "text-blue",
@@ -408,9 +323,7 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
   const tField = useTranslations("expenses.field");
   const { dateTime } = useFormat();
 
-  // Two event types carry data rather than prose in `comment`. The fields an
-  // edit touched, and the voucher an export produced. Everything else wrote a
-  // comment someone typed, which is shown as it was written.
+  // Two event types carry data rather than prose in `comment`: the fields an edit touched, and the voucher an export produced.
   function comment(r: Expense["revisions"][number]): string | undefined {
     if (!r.comment) return undefined;
     if (r.action === "EDITED") {
@@ -425,8 +338,7 @@ export function TimelineSection({ revisions }: { revisions: Expense["revisions"]
     return r.comment;
   }
   return (
-    // Tinted one step down from the card and last in it, so it takes the card's
-    // bottom corners: a square band would stick out past the rounded edge.
+    // One step down from the card and last in it, so it takes the card's bottom corners.
     <section className="rounded-b-panel border-t border-border bg-canvas px-inset py-4">
       <h2 className={cn(LABEL, "mb-2")}>{t("history")}</h2>
       <ol className="space-y-1.5 text-xs">

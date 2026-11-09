@@ -1,11 +1,6 @@
-// Give a resultatenhet an income profile: the settings that let it take money
-// in: the key its reports are grouped by, the text its verifikationer carry,
-// and the cost centre they are booked against.
-//
-// The unit itself is not created here. There is one register of the section's
-// verksamheter (ResultUnit, under Inställningar → Resultatenheter) and this
-// adds the income half of a row already in it, rather than a second list beside
-// it, which is what IncomeCommittee was.
+// Give a resultatenhet an income profile (key its reports group by, verifikation text, cost centre).
+// The unit itself already exists as a ResultUnit.
+
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -29,13 +24,10 @@ export async function POST(req: Request) {
     include: { income: { select: { id: true } } },
   });
   if (!unit) return fail(404, "income.unitNotFound");
-  // One profile per unit: the whole point of the merge is that a verksamhet is
-  // one thing, so it cannot have two sets of income settings.
+  // One profile per unit.
   if (unit.income) return fail(409, "income.unitHasIncome", { values: { name: unit.name } });
 
-  // Derived from the name rather than typed: see incomeKeyFromName. A clash
-  // means two units whose names differ only in punctuation or diacritics, which
-  // is worth refusing rather than silently routing both to one key.
+  // Derived from the name (incomeKeyFromName). A clash means names differing only in punctuation or diacritics.
   const key = incomeKeyFromName(unit.name);
   if (!key) return fail(422, "income.keyFromName", { values: { name: unit.name } });
   const taken = await prisma.resultUnitIncome.findUnique({ where: { key } });

@@ -1,13 +1,5 @@
-// A document moving between the Inkorg and an invoice, and what its PDF says.
-// The one place that knows what that move involves, so making an invoice from
-// a document and adding a document to one cannot drift apart: the document is
-// claimed out of the Inkorg (still there is part of the condition, so two
-// people cannot take it at once) and it goes last among the invoice's
-// documents.
-//
-// Nothing is read on the way. The PDF's text is read when the unit opens the
-// fördelning (readInvoiceScan, readDocumentScan), which is the first time
-// anybody needs to know what it says.
+// A document moving between the Inkorg and an invoice, and what its PDF says. The document is claimed out of
+// the Inkorg (still being there is part of the condition) and goes last among the invoice's documents.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -41,13 +33,7 @@ export async function scanOf(doc: LooseDocument): Promise<InvoiceTextFields> {
   return readInvoicePdf(bytes, doc.mimeType);
 }
 
-/**
- * What an invoice's documents say, read now for any not read before and kept
- * on each, so it is read once. The first document to say a thing is the one
- * believed: that is the invoice, and the rest are its specification. Best
- * effort: a document that cannot be read gives nothing, and is tried again
- * next time.
- */
+/** What an invoice's documents say, read now for any not read before. The first document to say a thing is believed. Best effort. */
 export const readInvoiceScan = (invoiceId: string) => readScan({ invoiceId });
 
 /** The same for one document in a unit's Inkorg, before it is an invoice. */
@@ -85,10 +71,7 @@ async function readScan(where: { invoiceId: string } | { id: string }): Promise<
   return { fields, supplier: match(fields) };
 }
 
-/**
- * Put a document from the Inkorg on an invoice. Throws DocumentTaken when it
- * is no longer in the Inkorg, which the caller answers with a 409.
- */
+/** Put a document from the Inkorg on an invoice. Throws DocumentTaken when it is no longer in the Inkorg (caller answers 409). */
 export async function attachDocument(
   tx: TxClient,
   doc: { id: string },
@@ -103,8 +86,7 @@ export async function attachDocument(
     data: {
       invoiceId: invoice.id,
       position: (last._max.position ?? -1) + 1,
-      // On an invoice, the unit is the invoice's, and the reason it came back
-      // is history.
+      // On an invoice, the unit is the invoice's.
       resultUnitId: null,
       assignedById: null,
       assignedAt: null,

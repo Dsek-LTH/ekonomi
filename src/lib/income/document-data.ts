@@ -1,17 +1,7 @@
-// What an intäktsräkning says, as plain data for the typesetter.
-//
-// The contract between the app and lib/income/intakt.typ, and deliberately dull
-// in the same way as the expense cover's (lib/expense/cover/types.ts): strings,
-// already in Swedish and already formatted, so the template only places them.
-// That is also what makes the interesting half testable without a renderer:
-// which verksamhet a line is listed under, what the distribution table sums,
-// what a fee reads as.
-//
-// One document per day and source, matching the voucher it substantiates. Each
-// verksamhet that sold something gets a section of its own with its sum, its
-// products grouped by account under a heading with the account's sum, the
-// day's Zettle fees get one after them, and the distribution table is the
-// voucher's rows in words: one per account and cost centre.
+// What an intäktsräkning says, as plain data for the typesetter (lib/income/intakt.typ): strings
+// already in Swedish and formatted, like lib/expense/cover/types.ts. One document per day and
+// source, matching the voucher.
+
 import { formatNumber } from "@/lib/ui/format";
 import { byCodePoint, productRows } from "./product-groups";
 
@@ -106,11 +96,7 @@ const rowsOf = (lines: readonly DocumentSourceLine[]): DocumentRow[] =>
 
 const sum = (lines: readonly DocumentSourceLine[]) => lines.reduce((s, l) => s + l.total, 0);
 
-/**
- * A section's lines by account, in account order, each with its sum: the same
- * grouping as the sold-lines table on the review screen
- * (lib/income/sold-lines.ts), so the page and the screen read alike.
- */
+/** A section's lines by account with sums: the same grouping as lib/income/sold-lines.ts. */
 function accountsOf(lines: readonly DocumentSourceLine[]): DocumentAccount[] {
   const byAccount = new Map<string, DocumentSourceLine[]>();
   for (const line of lines) {
@@ -133,7 +119,7 @@ export function buildIncomeDocumentData(source: DocumentSource): IncomeDocumentD
   const sales = source.lines.filter((l) => l.kind === "SALE");
   const fees = source.lines.filter((l) => l.kind === "FEE");
 
-  // Verksamheter by name, in the order a reader would look one up.
+  // Verksamheter by name.
   const byUnit = new Map<string, DocumentSourceLine[]>();
   for (const line of sales) {
     const unit = line.unitName ?? "";
@@ -148,8 +134,7 @@ export function buildIncomeDocumentData(source: DocumentSource): IncomeDocumentD
       return { title: unit || "-", total: kr(sum(lines)), accounts: accountsOf(lines) };
     });
 
-  // The same grouping the voucher makes (lib/income/voucher.ts), so the table
-  // and the verifikation beside it list the same rows with the same figures.
+  // The same grouping as the voucher (lib/income/voucher.ts).
   const byRow = new Map<
     string,
     { account: string; name: string; costCenter: string; total: number }
@@ -159,12 +144,23 @@ export function buildIncomeDocumentData(source: DocumentSource): IncomeDocumentD
     const key = `${line.account}|${cc}`;
     const row = byRow.get(key);
     if (row) row.total += line.total;
-    else byRow.set(key, { account: line.account, name: line.accountName, costCenter: cc, total: line.total });
+    else
+      byRow.set(key, {
+        account: line.account,
+        name: line.accountName,
+        costCenter: cc,
+        total: line.total,
+      });
   }
   const distribution = [...byRow.values()]
     .filter((r) => r.total !== 0)
     .sort((a, b) => byCodePoint(a.account, b.account) || byCodePoint(a.costCenter, b.costCenter))
-    .map((r) => ({ account: r.account, name: r.name, costCenter: r.costCenter, amount: kr(r.total) }));
+    .map((r) => ({
+      account: r.account,
+      name: r.name,
+      costCenter: r.costCenter,
+      amount: kr(r.total),
+    }));
 
   return {
     paymentType: source.source === "SWISH" ? "Swish" : "Zettle",

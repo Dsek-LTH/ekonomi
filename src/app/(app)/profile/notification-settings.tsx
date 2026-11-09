@@ -1,12 +1,7 @@
 "use client";
 
-// Which emails this member gets. One box per kind, saved as it is ticked: a
-// form with its own Save button would leave a box that looks switched off and
-// is not, for as long as nobody presses it.
-//
-// The defaults come first and the opt-ins after, in the order
-// lib/domain/notifications.ts lists them. The weekly digest is not here because
-// it cannot be switched off; the note under the list says so instead.
+// Which emails this member gets. One box per kind, saved as ticked. The weekly digest cannot be switched off, so it is not here.
+
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -35,7 +30,7 @@ export function NotificationSettings({
       error: t("saveFailed"),
       refresh: false,
     });
-    // Put the box back the way the server still has it.
+    // Put the box back the way the server has it.
     if (ok === null) setOn((prev) => new Map(prev).set(kind, !enabled));
   };
 

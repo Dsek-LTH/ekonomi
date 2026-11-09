@@ -9,10 +9,6 @@ import { titled } from "@/lib/server/page-title";
 export const generateMetadata = titled("newExpense");
 
 export default async function NewExpensePage() {
-  // Says what it requires on its first line, like every other page. It used to
-  // resolve the id and then guard each loader with `userId ? … : fallback`,
-  // four branches for a state the layout's own `requireUser` has already ruled
-  // out, which read as a possibility this page handles and does not.
   const user = await requireUser();
 
   // A card purchase is only an option for members who hold a guild card,
@@ -22,7 +18,6 @@ export default async function NewExpensePage() {
     getBankTransactions({ cardHolderId: user.id }),
     userHoldsCard(user.id),
     getPayoutAccount(user.id),
-    // For the "have you handed this in already?" warning.
     getExpenseFingerprints(user.id),
   ]);
   return (

@@ -4,9 +4,7 @@ import { createContext, useContext, useState } from "react";
 import { cn } from "@/lib/ui/utils";
 import { initials as initialsOf } from "@/lib/ui/format";
 
-// A person, as a round mark: their profile picture, or their initials when
-// they have none. Sizes are a prop rather than a class from the caller because
-// cn() only joins, and two `size-` utilities are settled by emission order.
+// Size is a prop because cn() only joins, so two `size-` utilities are settled by emission order.
 const SIZES = {
   xs: "size-5 text-[9px]",
   sm: "size-7 text-[11px]",
@@ -23,14 +21,11 @@ function Avatar({
   className,
 }: {
   initials: string;
-  /** The picture. Left out, or failing to load, the initials are drawn. */
   src?: string;
   size?: AvatarSize;
   className?: string;
 }) {
-  // A picture that fails (removed a moment ago, storage down) falls back to
-  // the initials rather than the browser's broken-image glyph. Keyed on the
-  // src, so a new picture gets its own chance.
+  // A failing picture falls back to initials; keyed on src so a new picture gets a chance.
   const [failed, setFailed] = useState<string | null>(null);
   const shown = src && failed !== src;
   return (
@@ -51,11 +46,7 @@ function Avatar({
   );
 }
 
-/**
- * Which members have a picture, as id to version. Loaded once by the app
- * layout (getAvatarVersions), so a list can draw a face beside every name
- * without each query having to carry it. A member who is not in it has none.
- */
+/** Members with a picture, id to version. Loaded once by the app layout (getAvatarVersions). */
 const AvatarVersions = createContext<Record<string, number>>({});
 
 export function AvatarProvider({
@@ -75,7 +66,6 @@ function useAvatarSrc(userId: string | null | undefined): string | undefined {
   return v ? `/api/users/${userId}/avatar?v=${v}` : undefined;
 }
 
-/** A member's avatar by id and name: the picture if they have one. */
 export function UserAvatar({
   userId,
   name,
@@ -97,12 +87,6 @@ export function UserAvatar({
   );
 }
 
-/**
- * A name with the member's face before it, for a name inside a line of text: a
- * history row, a table cell, a subtitle. The picture is drawn only when they
- * have one, so a list of people without pictures reads exactly as plain names
- * did rather than as a column of grey initials.
- */
 export function PersonName({
   userId,
   name,

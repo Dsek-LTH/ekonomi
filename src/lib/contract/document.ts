@@ -1,15 +1,6 @@
-// The uthyrningsavtal: turning a contract row into the document both parties
-// sign, and putting it in the archive.
-//
-// Shaped after lib/expense/document.ts, down to the render/store split and the
-// failure union, because it does the same job for a different document. What is
-// stored is a GENERATED file, which is a rendering rather than evidence: draw it
-// again from the same row and the same bytes come back, so re-drawing replaces
-// rather than accumulates. What a counterparty actually signs comes back as a
-// SIGNED file, which nothing here can touch. See lib/contract/files.ts.
-//
-// The engine is behind rental/typst.ts and reached only through
-// `renderRentalContract`, so nothing in this file knows what typesets anything.
+// The uthyrningsavtal: turns a contract row into the document both parties sign and files
+// it in the archive (shaped after lib/expense/document.ts). A GENERATED file is a
+// rendering, so re-drawing replaces it; a SIGNED file is never touched (lib/contract/files.ts).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -22,11 +13,7 @@ import type { RentalContractData } from "./rental/types";
 import { isoDay } from "@/lib/domain/date";
 import { formatOreKr } from "@/lib/ui/format";
 
-/**
- * Why a contract has no document. Each maps to a message key under
- * `errors.contract`, so a route hands it straight to `fail()`, the same
- * contract lib/expense/document.ts has with its own routes.
- */
+/** Why a contract has no document. Each maps to a message key under `errors.contract`. */
 export type DocumentFailure =
   | { reason: "notFound" }
   | { reason: "rentalNotFound" }
@@ -39,18 +26,10 @@ export type RenderResult =
 export type StoreResult =
   { ok: true; fileId: string; filename: string } | ({ ok: false } & DocumentFailure);
 
-/** An ISO day, which is what a Swedish contract states a date as. Null in
- *  the live preview, where the period may not be chosen yet. */
+/** An ISO day. Null in the live preview, where the period may not be chosen yet. */
 const dayOrNull = (d: Date | null): string | null => (d ? isoDay(d) : null);
 
-/**
- * Everything the document needs, and nothing else.
- *
- * Written out rather than derived from the Prisma client's types, so that
- * `buildRentalData` can be called, and tested, with a plain object. Tying it to
- * a generated payload type would mean constructing one in order to assert on
- * the wording, which is the opposite of the point.
- */
+/** Everything the document needs, as a plain object so `buildRentalData` is testable without Prisma. */
 export type ContractForDocument = {
   title: string;
   counterparty: string;
@@ -62,7 +41,6 @@ export type ContractForDocument = {
   counterpartyPhone: string | null;
   createdAt: Date;
   rental: {
-    /** Null only from the live preview; see RentalContractData. */
     pickupAt: Date | null;
     returnAt: Date | null;
     purpose: string | null;
@@ -77,18 +55,10 @@ export type ContractForDocument = {
   };
 };
 
-/**
- * A contract row as the page states it. Pure, and the interesting half.
- *
- * Two decisions live here and are worth naming. The rent is the lines less the
- * discount, from the same function the form and the routes use, so the document
- * cannot state a figure that disagrees with the row. The replacement total is a
- * plain sum, because it says what is at stake and nobody negotiates it.
- */
+/** A contract row as the page states it. Pure. The rent comes from the shared pricing function so the document cannot disagree with the row. */
 export function buildRentalData(
   contract: ContractForDocument,
-  /** Who is letting the gear out. `SECTION` in every real call; a parameter so
-   *  the wording can be asserted on without importing the app's own identity. */
+  /** Who is letting the gear out. */
   lessorInfo: RentalContractData["lessor"],
 ): RentalContractData {
   const { rental } = contract;
@@ -99,9 +69,7 @@ export function buildRentalData(
   );
   const pricing = rentalPricing(rental.lines);
 
-  // "223 62 Lund", the way the second line of a Swedish address is set. Either
-  // half alone is still worth printing: a contract naming the town but not the
-  // postal code is more use than one naming neither.
+  // "223 62 Lund". Either half alone is still printed.
   const postalLine =
     [contract.counterpartyPostalCode, contract.counterpartyCity]
       .map((v) => v?.trim())
@@ -125,21 +93,17 @@ export function buildRentalData(
       const priced = linePricing(l);
       return {
         description: l.description,
-        // With its unit, because a bare number in a column beside three money
-        // columns reads as a fourth price.
+        // With its unit, so it does not read as a fourth price.
         quantity: `${l.quantity} st`,
         unitPrice: formatOreKr(l.unitPriceOre, { decimals: 2 }),
-        // Null where nothing came off, so the column can say nothing rather
-        // than "0 %" on every row of the ordinary rental.
+        // Null where nothing came off, so the column stays empty.
         discount: priced.discountPercent > 0 ? `${priced.discountPercent} %` : null,
         lineTotal: formatOreKr(priced.netOre, { decimals: 2 }),
         replacementValue: formatOreKr(l.replacementValueOre, { decimals: 2 }),
       };
     }),
     subtotal: formatOreKr(pricing.subtotalOre, { decimals: 2 }),
-    // Left out of the document entirely when nothing came off. See the field.
     discount: pricing.discountOre > 0 ? formatOreKr(pricing.discountOre, { decimals: 2 }) : null,
-    // Whether the table needs a discount column at all.
     anyDiscount: pricing.anyDiscount,
     price: formatOreKr(pricing.totalOre, { decimals: 2 }),
     totalReplacement: formatOreKr(totalReplacement, { decimals: 2 }),
@@ -149,7 +113,6 @@ export function buildRentalData(
   };
 }
 
-/** What the file is called in the archive and on the reader's disk. */
 const filenameFor = (contract: {
   counterparty: string;
   rental: { pickupAt: Date | null };
@@ -201,19 +164,7 @@ const forDocument = {
   },
 } as const;
 
-/**
- * Draw the document from a form that has not been saved, and may never be.
- *
- * The rental form shows this in the panel beside it, redrawn as the answers
- * change, so somebody filling one in is looking at the contract rather than at
- * a description of one. There is no row to read: the draft *is* the input.
- *
- * It goes through `buildRentalData` like everything else, which is the point.
- * A preview built by its own path would be a second opinion about what the
- * document says, and the one thing a preview must never be is wrong about the
- * thing it is previewing. What differs is only that every field may be missing,
- * which the data shape already allows for.
- */
+/** Draw the document from an unsaved form, through `buildRentalData` so a preview cannot disagree with the real thing. Any field may be missing. */
 export async function renderRentalPreview(draft: RentalDraft): Promise<RenderResult> {
   const contract: ContractForDocument = {
     title: draft.title,
@@ -224,7 +175,6 @@ export async function renderRentalPreview(draft: RentalDraft): Promise<RenderRes
     counterpartyCity: draft.counterpartyCity,
     counterpartyEmail: draft.counterpartyEmail,
     counterpartyPhone: draft.counterpartyPhone,
-    // The day it would be drawn, which for an unsaved draft is today.
     createdAt: new Date(),
     rental: {
       pickupAt: draft.pickupAt,
@@ -251,8 +201,7 @@ export async function renderRentalPreview(draft: RentalDraft): Promise<RenderRes
   }
 }
 
-/** What a preview is drawn from: the form, with everything allowed to be
- *  missing because it is being filled in. */
+/** What a preview is drawn from: the form, any field may be missing. */
 export type RentalDraft = {
   title: string;
   counterparty: string;
@@ -269,8 +218,7 @@ export type RentalDraft = {
   lines: ContractForDocument["rental"]["lines"];
 };
 
-/** Draw the document without keeping it. What a stored contract's preview asks
- *  for. */
+/** Draw the document without keeping it. */
 export async function renderContractDocument(contractId: string): Promise<RenderResult> {
   const row = await prisma.contract.findUnique({
     where: { id: contractId },
@@ -278,10 +226,7 @@ export async function renderContractDocument(contractId: string): Promise<Render
   });
   if (!row) return { ok: false, reason: "notFound" };
   if (!row.rental) return { ok: false, reason: "rentalNotFound" };
-  // A rental is a CONTRACT row, so it always has an `agreement` with a
-  // counterparty; CreateRental requires it. `counterparty` is nullable on
-  // the model only for the OTHER-with-counterparty case, which a rental can
-  // never be, so this doubles as the check that narrows it below.
+  // A rental is a CONTRACT row, so it always has an `agreement` with a counterparty.
   if (!row.agreement || row.agreement.counterparty === null) {
     return { ok: false, reason: "rentalNotFound" };
   }
@@ -312,13 +257,7 @@ export async function renderContractDocument(contractId: string): Promise<Render
   }
 }
 
-/**
- * Draw it and put it in the archive, replacing the previous rendering.
- *
- * What a contract's own screen asks for. The stored file is the one that will
- * be sent for signature, so there is exactly one of them: two renderings in the
- * archive would be two documents with nothing saying which was the one signed.
- */
+/** Draw it and file it, replacing the previous rendering so exactly one exists to be sent for signature. */
 export async function storeContractDocument(
   contractId: string,
   actorId: string | null,
@@ -334,9 +273,7 @@ export async function storeContractDocument(
       bytes: Buffer.from(drawn.bytes),
       uploadedById: actorId,
     });
-    // The version the bytes were drawn under, so a list can say which contracts
-    // predate a change to the terms without opening each one. On AgreementDetails
-    // now, not Contract; a rental always has one.
+    // The version the bytes were drawn under, so a list can show which contracts predate a terms change.
     await prisma.contract.update({
       where: { id: contractId },
       data: { agreement: { update: { termsVersion: TERMS_VERSION } } },

@@ -9,7 +9,6 @@ import {
 export default function Loading() {
   return (
     <SkeletonPage width="content">
-      {/* The hero, then the payout account at the head of the left column. */}
       <Card>
         <CardBody>
           <SkeletonDetailList rows={3} />

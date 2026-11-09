@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { apiErrorAction, resolveApiError } from "./api-error";
 
-// A stand-in for next-intl's translator: knows the keys it is given, and
-// renders one by returning its value.
+// Stand-in for next-intl's translator.
 function translator(messages: Record<string, string>) {
   const t = ((key: string, values?: Record<string, string | number>) => {
     const raw = messages[key];
@@ -31,7 +30,6 @@ describe("apiErrorAction", () => {
   });
 
   it("offers nothing for a failure with nowhere to go", () => {
-    // The ordinary case: an error the reader fixes where they already are.
     expect(apiErrorAction(t, { error: "expense.costCenterRequired" })).toBeNull();
     expect(apiErrorAction(t, {})).toBeNull();
     expect(apiErrorAction(t, null)).toBeNull();

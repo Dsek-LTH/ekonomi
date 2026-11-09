@@ -13,29 +13,14 @@ import type { FortnoxStatus, PaymentType } from "@/lib/domain/types";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useProgressRouter } from "@/components/shell/route-progress";
 
-// Everything the detail page can do to an utlägg, in the page header.
-//
-// It used to be a card at the bottom of the right-hand column: a heading and a
-// stack of full-width buttons for what is usually two or three actions, taking
-// the height the receipt beside it needed to be read. Here the action the
-// status is actually waiting for is a labelled button, the rest sit behind
-// "Mer", and the column belongs to the receipt alone.
-//
-// Labelled rather than icons: "Begär ändring", "Återöppna" and "Ångra export"
-// have no glyph anyone would recognise, and each of them is irreversible on
-// someone else's books. An aria-label answers a screen reader, not the
-// bookkeeper hovering to find out which icon un-exports a verifikation.
+// Everything the detail page can do to an utlägg, in the page header. The action the status waits for is a labelled button, the rest sit behind "Mer".
+// Labelled rather than icons: each is irreversible on someone else's books and has no recognisable glyph.
 
-/** The comment-carrying transitions. Each one lands on the person who filed the
- *  utlägg, so the server requires a reason and the dialog collects it.
- *
- *  `waive_deadline` is here for a second reason as well: the dispens is a
- *  decision the section has to be able to read back years later, and the reason
- *  is printed on the utläggsräkning. */
+/** The comment-carrying transitions: each lands on the person who filed the utlägg, so the dialog collects a reason.
+ * `waive_deadline`'s reason is printed on the utläggsräkning. */
 type Explained = "request_changes" | "return_approved" | "unexport" | "waive_deadline";
 
-/** Which label opens the dialog for each of them. Was a nested ternary that had
- *  to grow a branch per action; this grows a line. */
+/** Which label opens the dialog for each of them. */
 const EXPLAINED_TITLE: Record<Explained, string> = {
   request_changes: "requestChanges",
   return_approved: "reopen",
@@ -43,13 +28,7 @@ const EXPLAINED_TITLE: Record<Explained, string> = {
   waive_deadline: "waiveDeadline",
 };
 
-/**
- * Exporting needs two separate Fortnox things, and the route checks both: the
- * section's service connection (409 without it) and the person's own Fortnox
- * login, which is short-lived by design (401 without it). Only the first was
- * being tested here, so with the section connected and your own login expired
- * the button looked ready and failed on click.
- */
+/** Exporting needs the section's service connection (409 without it) and the person's own short-lived Fortnox login (401 without it). */
 const canExportNow = (fortnox: FortnoxStatus) => fortnox.connected && Boolean(fortnox.session);
 
 type Action = {
@@ -60,8 +39,7 @@ type Action = {
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
-  /** Why it is disabled, on hover and for a screen reader. A dead button with
-   *  no reason on it reads as a fault. */
+  /** Why it is disabled, on hover and for a screen reader. */
   disabledReason?: string;
   danger?: boolean;
 };
@@ -109,9 +87,7 @@ export function ExpenseActions({
   const confirm = useConfirm();
   const router = useProgressRouter();
 
-  // Ask for the reason, then make the transition with it. The warning about
-  // Fortnox still holding the verifikation belongs here, in the last moment
-  // before it happens, rather than as standing text next to a button.
+  // Ask for the reason, then make the transition. The Fortnox warning belongs here, in the last moment.
   async function explain(action: Explained) {
     const answer = await confirm({
       title: t(EXPLAINED_TITLE[action]),
@@ -128,9 +104,7 @@ export function ExpenseActions({
     await onTransition(action, answer.comment);
   }
 
-  // Ordered by which one the utlägg is waiting for: the first available becomes
-  // the button, the rest go in the menu. Editing is last because it's always
-  // possible on an open utlägg. It's the fallback when nothing else is.
+  // Ordered by which one the utlägg is waiting for: the first available becomes the button, the rest go in the menu. Editing is the fallback.
   const actions: Action[] = (
     [
       can.canBook && {
@@ -138,9 +112,7 @@ export function ExpenseActions({
         label: t("book"),
         href: `/expenses/${expenseId}/book`,
       },
-      // Bokföring, done here: this page is where the voucher is looked over,
-      // and this is the last step. Dead when it could not go through, with the
-      // reason on the button rather than in a notice over the page.
+      // Bokföring, done here: dead when it could not go through, with the reason on the button.
       can.canExport &&
         (() => {
           const reason = !canExportNow(fortnox)
@@ -156,9 +128,7 @@ export function ExpenseActions({
             disabledReason: reason ?? undefined,
           };
         })(),
-      // Ahead of "Skicka in", because on a late utlägg it is what stands between
-      // the two: nobody can submit until the dispens is given, and the person
-      // reading this page is the only one who can give it.
+      // Ahead of "Skicka in": on a late utlägg nobody can submit until the dispens is given.
       can.canWaiveDeadline && {
         key: "waive_deadline",
         label: t("waiveDeadline"),
@@ -172,8 +142,7 @@ export function ExpenseActions({
       },
       can.canApprove && {
         key: "approve",
-        // "Attestera alla (2)" beside the rows' own buttons, so it is clear
-        // this one signs every row and not just one of them.
+        // Beside the rows' own buttons, so it is clear this one signs every row.
         label: approveAll ? t("approveAll", { count: approveAll }) : t("approve"),
         icon: <IconCheck className="size-4" />,
         onClick: onApprove,
@@ -200,9 +169,7 @@ export function ExpenseActions({
         icon: <IconUndo className="size-4" />,
         onClick: onWithdrawAttest,
       },
-      // The submitter's own, and never offered beside the attester's: one is
-      // taking back a signature, the other the whole claim, and the two are
-      // available to different people at different moments.
+      // The submitter's own, never beside the attester's: one takes back a signature, the other the whole claim.
       can.canRecall && {
         key: "recall",
         label: t("recall"),
@@ -215,9 +182,7 @@ export function ExpenseActions({
         icon: <IconUndo className="size-4" />,
         onClick: onRevokeDeadlineWaiver,
       },
-      // Behind the actions that move the utlägg itself, and ahead of editing: it
-      // is for somebody else's turn, so it leads only when nothing else here is
-      // the viewer's to do.
+      // For somebody else's turn, so it leads only when nothing else here is the viewer's to do.
       can.canRemind && {
         key: "remind",
         label: t("remind"),
@@ -245,22 +210,13 @@ export function ExpenseActions({
 
   if (!primary) return null;
 
-  // Only buttons here. What's stopping an action lives in ExpenseActionNotice,
-  // below the header. See there for why.
+  // Only buttons here. What stops an action is in ExpenseActionNotice.
   return (
-    // On a phone this row is the whole width of the card header, and the two
-    // buttons used to share it as equals, a filled "Skicka in" and a filled
-    // "Mer", wrapped onto their own line and taking 250 of 361px between them.
-    // Two primaries is one too many: what the page is waiting for should have
-    // the width, and everything else should have as little of it as it can
-    // manage. So the first fills the row and the second is its glyph.
+    // On a phone two primaries are one too many: the first fills the row and the second is its glyph.
     <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
       <div className="flex w-full items-center gap-2.5 sm:w-auto sm:flex-wrap">
         {primary.disabledReason ? (
-          // A disabled button takes no pointer events (ui/button.tsx), so the
-          // wrapper is what is hovered. Not a link either way: a link cannot
-          // be disabled, and this one would have led to a page that can do
-          // nothing.
+          // A disabled button takes no pointer events (ui/button.tsx), so the wrapper is hovered. Not a link: a link cannot be disabled.
           <Tooltip label={primary.disabledReason} align="start" className="flex-1 sm:flex-none">
             <Button disabled className="w-full">
               {primary.icon}
@@ -274,9 +230,7 @@ export function ExpenseActions({
             {primary.label}
           </ButtonLink>
         ) : (
-          // The spinner goes on the primary action and nowhere else in this
-          // row: it is the one that started the request, and the rest are
-          // merely disabled while it runs.
+          // The spinner goes on the primary action only.
           <Button
             loading={busy}
             disabled={primary.disabled}
@@ -294,8 +248,7 @@ export function ExpenseActions({
             variant="secondary"
             disabled={busy}
             compact
-            // Drawn only where the word is not: on a wide screen "Mer" says it
-            // better than three dots, and both would be saying it twice.
+            // Drawn only where the word is not.
             icon={<IconDots className="size-4 sm:hidden" />}
             className="shrink-0"
           >
@@ -303,16 +256,12 @@ export function ExpenseActions({
               // Fragment, not a div: role="menu" expects its menuitems as
               // children, and a wrapper element between them breaks that.
               <Fragment key={a.key}>
-                {/* A rule above the destructive action, but only when there is
-                    something above it to divide. Alone in the menu, delete was
-                    opening with a horizontal line ruled across nothing. */}
+                {/* A rule only when there is something above to divide. */}
                 {a.danger && i > 0 && <MenuSeparator />}
                 <MenuItem
                   disabled={busy || a.disabled}
                   onClick={() => (a.href ? router.push(a.href) : a.onClick?.())}
-                  // Colour only, no hover background of its own: MenuItem
-                  // already sets one, and `cn` joins rather than merges, so two
-                  // hover backgrounds would be settled by stylesheet order.
+                  // Colour only: MenuItem sets a hover background and `cn` joins rather than merges.
                   className={a.danger ? "text-danger" : undefined}
                 >
                   {a.icon}
@@ -328,15 +277,7 @@ export function ExpenseActions({
   );
 }
 
-// Why the utlägg can't go anywhere yet, above the cards it's about.
-//
-// It began as small print under the buttons, which was the wrong place twice
-// over: it was a whole sentence set right-aligned at max-w-xs, wrapping under
-// whichever button happened to be primary and stretching a header that aligns
-// on its baseline, and when a blocker exists the submit button isn't rendered
-// at all, so it was explaining the absence of a button that wasn't there.
-// It isn't button chrome. It's the state of the utlägg, so it reads as a line
-// about the page, at the top of the page.
+// Why the utlägg can't go anywhere yet, above the cards it's about. It is the state of the utlägg, not button chrome.
 export function ExpenseActionNotice({
   can,
   fortnox,
@@ -344,28 +285,17 @@ export function ExpenseActionNotice({
 }: {
   can: ExpenseCapabilities;
   fortnox: FortnoxStatus;
-  /** Only so the filing-deadline sentence can name what it is about, a
-   *  milersättning has no receipt to call old. See SubmitBlockerNote. */
+  /** So the filing-deadline sentence can name what it is about (a milersättning has no receipt). */
   paymentType?: PaymentType;
 }) {
   const t = useTranslations("expenses.detail");
 
-  // The section's connection missing is said here as well as on the dead
-  // button: it is set up once under Bokföring, by somebody else, and is worth
-  // a line on the page. A lapsed login of the reader's own is routine and is
-  // said only on the button (see ExpenseActions).
+  // The section's connection missing is said here as well as on the button (set up once, by somebody else).
+  // A lapsed personal login is said only on the button.
   const fortnoxNote = can.canExport && !fortnox.connected ? t("fortnoxNotConnected") : null;
 
-  // The other side of the same sentence. Where the submitter is told their
-  // utlägg is too old to send, whoever can do something about it is told there
-  // is a decision here for them to make, because nothing else on the page would
-  // say so.
-  //
-  // And it replaces the blocker rather than joining it. The skattmästare is an
-  // admin, so they see the submitter's own hint too, and that hint ends "hör av
-  // dig till skattmästaren", which is nobody's idea of help when you are the
-  // skattmästare. The two sentences are about the same fact, so only the one
-  // written for this reader is shown.
+  // Where the submitter is told the utlägg is too old to send, whoever can grant a dispens is told here.
+  // It replaces the blocker, whose hint ends "hör av dig till skattmästaren".
   const waiveNote = can.canWaiveDeadline;
   const blocker = waiveNote && can.submitBlocker === "tooLate" ? null : can.submitBlocker;
 
@@ -373,8 +303,6 @@ export function ExpenseActionNotice({
 
   return (
     <Notice>
-      {/* Its own component rather than a line of text: one blocker sends the
-          submitter to another page, and the sentence carries the link there. */}
       {blocker && <SubmitBlockerNote blocker={blocker} paymentType={paymentType} />}
       {waiveNote && <p>{t("deadlineWaiverPending")}</p>}
       {fortnoxNote && <p>{fortnoxNote}</p>}

@@ -9,7 +9,6 @@ describe("normaliseTag", () => {
   });
 
   it("collapses inner whitespace rather than removing it", () => {
-    // A tag is a label somebody reads, so "gamla iDét" stays two words.
     expect(normaliseTag("gamla   iDét")).toBe("gamla idét");
   });
 
@@ -29,7 +28,6 @@ describe("normaliseTags", () => {
   });
 
   it("keeps the order they were typed in", () => {
-    // Not sorted: the first one is usually the one that mattered.
     expect(normaliseTags(["tält", "ljud", "nollning"])).toEqual(["tält", "ljud", "nollning"]);
   });
 

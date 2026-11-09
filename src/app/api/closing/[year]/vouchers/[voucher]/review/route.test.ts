@@ -1,15 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Recording a bokslut review.
-//
-// What is pinned here is what makes a review worth anything: it lands in the
-// reviewer's own pass and no other, nobody outside the two passes can make
-// one, and it is refused when the voucher is no longer the one the screen was
-// showing. Mocked at the session, the database and the fingerprint lookup.
-
 const h = vi.hoisted(() => ({
   capabilities: ["AUDIT_REVIEW", "BOOKKEEPING_VIEW"] as string[],
-  /** What the voucher's fingerprint is now, or null for no such voucher. */
   now: { series: "A", contentHash: "h1" } as { series: string; contentHash: string } | null,
   create: vi.fn(),
 }));

@@ -1,16 +1,6 @@
-// Barcodes: whether one is real, and the section's own for a product that has
-// none.
-//
-// Every EAN and GTIN ends in a check digit worked out from the others, which is
-// what lets a till catch a misread. It catches a made-up number just as well:
-// nine in ten of them do not add up. A barcode typed in is held to it, so a
-// product cannot be filed under "12345678" to get past the field, which is
-// what happened to a keg that had no barcode at all.
-//
-// For that keg there is an honest way instead: the product is marked as having
-// none, and is given a code of the section's own. GS1 sets aside the codes that
-// begin with 2 for exactly this, a shop's own goods, so one can never be the
-// barcode of a real product. They begin "20" here and count up.
+// Barcodes: GTIN check digits, and the section's own codes for products without one.
+// GS1 reserves codes starting with 2 for a shop's own goods, so these ("20" prefix, counting up)
+// never clash with a real product.
 
 /** Digits in the lengths GS1 issues: EAN-8, UPC-A, EAN-13, GTIN-14. */
 const LENGTHS = new Set([8, 12, 13, 14]);

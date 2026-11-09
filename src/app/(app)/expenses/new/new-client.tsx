@@ -52,14 +52,8 @@ import { AllocationEditor, makeRow } from "@/components/allocation-editor";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import type { AllocationRow } from "@/components/allocation-editor";
 
-/**
- * Which way the money goes.
- *
- * A question of its own rather than a minus in front of the amount, because a
- * phone's number pad has no minus key and never will (see
- * components/ui/amount-input.tsx). Every figure in the form is a magnitude and
- * this says what they mean, once, for the whole claim.
- */
+/** Which way the money goes. A question of its own because a phone's number pad has no minus key (components/ui/amount-input.tsx).
+ * Every figure in the form is a magnitude. */
 type Direction = "out" | "return";
 
 /** A choice card for how the purchase was paid. Locked cards are shown muted. */
@@ -82,16 +76,8 @@ type WizardDraft = {
   matchId: string | null;
 };
 
-/**
- * Where a half-filled new utlägg waits.
- *
- * Versioned, so a draft written before this screen asked for something it now
- * needs is left where it is rather than loaded into a form that no longer has a
- * place to put it.
- *
- * The "utlagg" prefix is the project's old name, kept on purpose. Renaming it
- * would drop every draft already saved in a browser.
- */
+/** Where a half-filled new utlägg waits. Versioned, so an outdated draft is left rather than loaded.
+ * The "utlagg" prefix is the project's old name, kept so saved drafts survive. */
 const DRAFT_KEY = "utlagg:new-expense:v1";
 
 // Shared by both "New expense" and "Edit expense": the same wizard, only
@@ -121,7 +107,6 @@ export default function NewExpenseClient({
   const tCommon = useTranslations("common");
   const fiscalYear = useFiscalYear();
   const { date } = useFormat();
-  // The description opens focused. See the field on the first step.
   const selectOnce = useSelectOnce();
   const searchParams = useSearchParams();
   const notify = useNotify();
@@ -137,14 +122,7 @@ export default function NewExpenseClient({
     const id = searchParams.get("txn");
     return id ? bankTransactions.find((t) => t.id === id) : undefined;
   })();
-  /**
-   * Everything the wizard is holding that the server has not been told about.
-   *
-   * One object rather than four pieces of state, because it is one thing: what
-   * has been filled in so far. That is also what makes it storable, so a new
-   * utlägg survives the tab being closed and the phone locking itself in the
-   * queue at ICA. See below, and lib/ui/use-local-draft.ts.
-   */
+  /** Everything the wizard holds that the server has not been told about: one storable object (lib/ui/use-local-draft.ts). */
   const startingDraft: WizardDraft = existing
     ? {
         form: {
@@ -155,10 +133,7 @@ export default function NewExpenseClient({
           gross: String(Math.abs(existing.grossAmount)),
         },
         direction: existing.grossAmount < 0 ? "return" : "out",
-        // The cost centre starts unpicked on a new utlägg. Choosing one is the
-        // submitter's call, and defaulting to whichever happens to sort first
-        // invites a wrong one going through unnoticed. submitBlocker refuses to
-        // submit until each row has one.
+        // Unpicked on a new utlägg: defaulting to the first would let a wrong one through. submitBlocker requires a pick.
         allocations: existing.allocations.length
           ? existing.allocations.map((a) =>
               makeRow(a.costCenterCode, String(Math.abs(a.amount)), a.comment ?? ""),
@@ -175,31 +150,15 @@ export default function NewExpenseClient({
               gross: String(Math.abs(presetTxn.amount)),
             }
           : { title: "", purchaseDate: "", gross: "" },
-        // A card purchase is money leaving; a credit on the card is one coming
-        // back. The transaction says which, so the wizard does not have to ask.
+        // A card purchase is money leaving, a credit on the card is money coming back. The transaction says which.
         direction: presetTxn && presetTxn.amount > 0 ? "return" : "out",
         allocations: [makeRow("", presetTxn ? String(Math.abs(presetTxn.amount)) : "")],
         paymentType: holdsCard ? "CARD" : "REIMBURSEMENT",
         matchId: presetTxn ? presetTxn.id : null,
       };
 
-  /**
-   * Kept in this browser until the utlägg exists on the server.
-   *
-   * Only for a new one. An utlägg being edited is already the server's, and a
-   * local copy that outlived somebody else's change would put a stale figure
-   * back on the screen, which is worse than the lost draft it would be saving.
-   *
-   * A card purchase started from a bank transaction gets a key of its own, so
-   * the half-filled claim for one payment cannot be restored on top of another.
-   * The version in the key is what makes an old draft, written before this
-   * screen asked for something it now needs, simply not load.
-   *
-   * The picked receipt is kept too, under the same key, but in IndexedDB
-   * rather than here: a file is a Blob and localStorage holds strings. See
-   * lib/ui/kept-file.ts. The two halves are written and forgotten together, so
-   * what the wizard is holding survives a reload whole or not at all.
-   */
+  /** Kept in this browser until the utlägg exists on the server. Only for a new one: a local copy of an edited utlägg could put a stale figure back.
+   * A card purchase started from a bank transaction gets its own key. The picked receipt is kept too, in IndexedDB (lib/ui/kept-file.ts), since a Blob is not a string. */
   const draftKey = presetTxn ? `${DRAFT_KEY}:${presetTxn.id}` : DRAFT_KEY;
   const [draft, setDraft, , forgetDraft] = useLocalDraft<WizardDraft>(
     draftKey,
@@ -208,27 +167,9 @@ export default function NewExpenseClient({
   );
   const { form, direction, allocations, paymentType, matchId } = draft;
 
-  /**
-   * What is being claimed, asked once instead of twice.
-   *
-   * The direction and the payment type used to be two groups of option cards
-   * with three fields between them, one at the top of this step and one at the
-   * bottom. They are the same question: a return is money coming back, and the
-   * only way that happens is a refund landing on the card it was paid from, so
-   * "retur" already forced CARD and left the group below it with one answer.
-   * Three combinations exist, and this asks for one of them.
-   *
-   * It also has to come first, which is why the split was a bug and not only a
-   * repetition. The payment type decides whether the 60-day deadline applies,
-   * whether a payout account is needed, and whether the wizard has a Matcha
-   * step at all. Asked at the bottom, it meant typing a four-month-old date for
-   * a card purchase and being told, by a field three groups above the answer,
-   * that the claim was too old to file. Continue was dead until you scrolled
-   * down and changed something the form had already guessed for you.
-   *
-   * The pair is still what the draft stores. This is a reading of it, so a
-   * draft written before the two groups were merged still loads.
-   */
+  /** What is being claimed, asked once: direction and payment type are one question with three answers (a return is a refund on the card it was paid from).
+   * It comes first because the payment type decides the 60-day deadline, the payout account and the Matcha step.
+   * The draft still stores the pair, so older drafts load. */
   type Claim = "card" | "cardReturn" | "own";
   const CLAIMS: Record<Claim, { direction: Direction; paymentType: PaymentType }> = {
     card: { direction: "out", paymentType: "CARD" },
@@ -238,24 +179,10 @@ export default function NewExpenseClient({
   const claim: Claim =
     paymentType === "CARD" ? (direction === "return" ? "cardReturn" : "card") : "own";
 
-  /**
-   * Which of the three are on offer.
-   *
-   * The card ones only to somebody who holds one, plus an utlägg already filed
-   * as a card purchase, which keeps its own answer visible even if the card has
-   * since changed hands. Opened from a particular purchase there is no choice at
-   * all: that money has already left the section's account, and the transaction
-   * itself says which way it went.
-   */
-  // `existing` as well as the current answer: somebody who no longer holds the
-  // card, editing an utlägg filed as a card purchase, must be able to switch
-  // away and back. On the current answer alone, switching to "eget utlägg"
-  // would close the door behind them.
+  /** Which of the three are on offer. Card ones only to somebody who holds a card, plus an utlägg already filed as one. Opened from a purchase there is no choice. */
+  // `existing` as well as the current answer, so someone who lost the card can switch away and back.
   const cardAllowed = holdsCard || paymentType === "CARD" || existing?.paymentType === "CARD";
-  // Opened from one purchase there is no choice to make, but all three still
-  // show: seeing which of them this is beats being told only that it's fixed.
-  // `presetTxn` always holds a card (it came from that card's own bank feed),
-  // so this never disagrees with `cardAllowed` about there being three to show.
+  // Opened from one purchase all three still show. `presetTxn` always holds a card, so this agrees with `cardAllowed`.
   const claimOptions: Claim[] =
     presetTxn || cardAllowed ? (["card", "cardReturn", "own"] as Claim[]) : (["own"] as Claim[]);
   const locked = Boolean(presetTxn);
@@ -264,11 +191,7 @@ export default function NewExpenseClient({
     setDraft((d) => ({
       ...d,
       ...CLAIMS[next],
-      // A match belongs to a card purchase and to nothing else (see
-      // isMatchable). Carrying one across to an eget utlägg would have the
-      // section paying for the purchase twice, and the PATCH route drops it
-      // anyway; dropping it here is what keeps the screen saying the same thing
-      // the server will.
+      // A match belongs to a card purchase only (isMatchable): carrying it to an eget utlägg would pay twice. The PATCH route drops it too.
       matchId: CLAIMS[next].paymentType === "CARD" ? d.matchId : null,
     }));
 
@@ -278,68 +201,41 @@ export default function NewExpenseClient({
   const setAllocations = (value: AllocationRow[]) => patchDraft("allocations", value);
   const setMatchId = (value: string | null) => patchDraft("matchId", value);
 
-  // One busy scope for the whole wizard: saving and submitting, and the
-  // receipt upload inside them, block the same footer.
+  // One busy scope for saving, submitting and the receipt upload inside them.
   const { pending, mutate } = useMutation();
   const saving = pending === "save";
   const saveLabel = editing ? t("save") : t("saveDraft");
-  // Which of the two exits is running. `saving` can't tell them apart, since both
-  // write the same draft through the same key first, and a spinner on both
-  // buttons at once would claim the app is doing twice the work it is. Cleared
-  // only on failure: on success the page is leaving, and a button that goes
-  // idle while you're still looking at the old screen reads as nothing having
-  // happened.
+  // Which of the two exits is running (`saving` can't tell them apart). Cleared only on failure: on success the page is leaving.
   const [exit, setExit] = useState<"draft" | "submit" | null>(null);
 
-  // The utlägg's own id, once there is a row for it. Null all the way through a
-  // new utlägg until the moment it is saved. See `persist`. The id and not the
-  // reference: an utlägg has no reference until it is submitted (see
-  // lib/domain/reference.ts), and every route this page calls is keyed on the id.
+  // The utlägg's own id once there is a row, null until saved (see `persist`). The id, not the reference: there is none until submit.
   const [draftId, setDraftId] = useState<string | null>(existing?.id ?? null);
-  // The documents already in the archive, oldest first. Only an utlägg being
-  // edited starts with any. Removing one calls the server right away (see
-  // `removeUploadedReceipt`): it is already stored, so "remove" is a real act
-  // rather than a change waiting to be saved, the same as pulling a match off.
+  // The documents already in the archive, oldest first (edit only). Removing one calls the server at once (`removeUploadedReceipt`).
   const [uploadedReceipts, setUploadedReceipts] = useState<ReceiptSummary[]>(
     existing?.receipts ?? [],
   );
 
-  // Documents as picked, before any is anywhere but this browser. Dropping a
-  // file used to create the utlägg and upload on the spot, which meant walking
-  // away from a half-filled wizard left a bare row and a stored file behind,
-  // and every abandoned attempt was something a bookkeeper later had to look at
-  // and dismiss. Now each one waits here and goes up with the save, so leaving
-  // the page leaves nothing. Several rather than one: some receipts only
-  // substantiate a purchase alongside a second, complementary document, and a
-  // single pick or drop can bring them all (see `multiple` on the panel).
+  // Documents as picked, held in this browser until the save so an abandoned wizard leaves no row or file behind.
+  // Several, since a receipt may need a complementary document (`multiple` on the panel).
   const [pendingFiles, setPendingFiles] = useState<
     { id: string; file: File; previewUrl: string }[]
   >([]);
-  // The documents in the order the reader put them, by key: a stored one's
-  // receipt id, a waiting one's local id. Only what has been moved is in here
-  // in any meaningful sense; anything missing goes after it, in the order it
-  // arrived (see `documents` below), so adding a file needs no bookkeeping.
+  // The documents in the reader's order, by key (stored receipt id or waiting local id). Anything missing goes after, in arrival order.
   const [order, setOrder] = useState<string[]>([]);
 
-  // Kept current without being a dependency, so the unmount cleanup below
-  // sees every preview URL ever created under this draft rather than only
-  // the ones present when the effect last ran.
+  // Kept current without being a dependency, so the unmount cleanup sees every preview URL created under this draft.
   const pendingFilesRef = useRef(pendingFiles);
   useEffect(() => {
     pendingFilesRef.current = pendingFiles;
   });
-  // Every preview URL still outstanding when the page goes, or this draft is
-  // abandoned for another; each is otherwise revoked the moment it stops
-  // being shown (`removePendingFile`, `writeReceipts`).
+  // Every preview URL still outstanding when the page goes or the draft is abandoned.
   useEffect(() => {
     return () => {
       for (const p of pendingFilesRef.current) URL.revokeObjectURL(p.previewUrl);
     };
   }, [draftKey]);
 
-  // A HEIC is made a JPEG before it is shown (see lib/ui/heic), which takes a
-  // moment. The panel shows its spinner meanwhile, and the files go through
-  // one at a time so a quick JPEG picked with a HEIC does not overtake it.
+  // A HEIC is made a JPEG before it is shown (lib/ui/heic), so files go through one at a time to keep their order.
   const [converting, setConverting] = useState(0);
   const addQueue = useRef(Promise.resolve());
 
@@ -356,11 +252,7 @@ export default function NewExpenseClient({
     const id = uid();
     const previewUrl = URL.createObjectURL(file);
     setPendingFiles((files) => [...files, { id, file, previewUrl }]);
-    // Kept for a reload, on the same terms as what is typed: only for a new
-    // claim, since an utlägg being edited is the server's and a local copy
-    // outliving somebody else's change is the thing `useLocalDraft` refuses to
-    // do. Not awaited; a file that failed to be kept is one that has to be
-    // picked again after a reload, which is where this started.
+    // Kept for a reload, only for a new claim (see `useLocalDraft`). Not awaited: a file that failed to be kept is picked again after a reload.
     if (!existing) void keepFile(draftKey, id, file);
   }
 
@@ -373,8 +265,7 @@ export default function NewExpenseClient({
     if (!existing) void dropKeptFile(draftKey, id);
   }
 
-  // Already in the archive: removing it is immediate, not deferred to the
-  // next save, the same as `removeMatch` elsewhere on this page.
+  // Already in the archive: removing is immediate, as `removeMatch`.
   async function removeUploadedReceipt(id: string) {
     const ok = await mutate(`/api/receipts/${id}`, {
       key: "save",
@@ -386,14 +277,7 @@ export default function NewExpenseClient({
     setUploadedReceipts((rs) => rs.filter((r) => r.id !== id));
   }
 
-  /**
-   * The files picked before the last reload, put back.
-   *
-   * Once, on mount, and merged rather than replacing whatever a fast reader
-   * has already picked again in the meantime: a file already picked in this
-   * session is newer than anything stored, and the panel is already showing
-   * it.
-   */
+  /** The files picked before the last reload, put back once on mount and merged with anything already picked this session. */
   useEffect(() => {
     if (existing) return;
     let live = true;
@@ -416,16 +300,10 @@ export default function NewExpenseClient({
     };
   }, [draftKey, existing]);
 
-  // Whether there is at least one document, which is the only form of the
-  // question this page ever asks. Every gate here (continue, save, submit)
-  // wants "has the reader produced one", not "is one in the archive". Those
-  // were the same thing while the upload happened on drop; they aren't now.
+  // Whether there is at least one document, waiting or stored: every gate here asks that.
   const hasReceipt = uploadedReceipts.length > 0 || pendingFiles.length > 0;
 
-  // Every document, stored and waiting, in the reader's order: the ones they
-  // have placed by `order`, the rest after them, stored first and then
-  // waiting, each in the order it arrived. A reader who has just added a
-  // second document expects to find it behind the first, not in front of it.
+  // Every document in the reader's order: placed by `order`, the rest after, stored first then waiting.
   const docs = useMemo(() => {
     const all = [
       ...uploadedReceipts.map((r) => ({ kind: "uploaded" as const, key: r.id, receipt: r })),
@@ -438,15 +316,9 @@ export default function NewExpenseClient({
       .map(({ d }) => d);
   }, [uploadedReceipts, pendingFiles, order]);
 
-  // Put every waiting document in the archive. Part of saving now, so it can
-  // fail the save: an utlägg whose document didn't make it is not saved but
-  // half saved, and the next attempt tries the upload again against the row
-  // that by then already exists. Stops at the first failure, the same as a
-  // single-file upload used to: the ones before it are already stored (and
-  // dropped from `pendingFiles`), and a retry only has to send the rest.
+  // Put every waiting document in the archive, as part of saving. Stops at the first failure, a retry sends the rest.
   async function writeReceipts(id: string): Promise<boolean> {
-    // In the order shown, so the new ones are appended in that order, and the
-    // receipt id each waiting file became, for the order saved after them.
+    // In the order shown, collecting the receipt id each waiting file became.
     const storedAs = new Map<string, string>();
     for (const doc of docs) {
       if (doc.kind !== "pending") continue;
@@ -465,14 +337,10 @@ export default function NewExpenseClient({
       setOrder((o) => o.map((k) => (k === pending.id ? receipt.id : k)));
       URL.revokeObjectURL(pending.previewUrl);
       setPendingFiles((files) => files.filter((f) => f.id !== pending.id));
-      // And the browser's copy is spent: the file is somewhere it can be read
-      // back from, and restoring it over a later claim would attach the wrong
-      // document to it.
+      // The browser's copy is spent: restoring it over a later claim would attach the wrong document.
       void dropKeptFile(draftKey, pending.id);
     }
-    // Then the order, for the whole set. A new file lands last on the server
-    // whatever the reader did with it here, and a stored one moved on this
-    // form has only moved here until this is sent.
+    // Then the order for the whole set: a new file lands last on the server whatever the reader did here.
     if (docs.length > 1) {
       const ids = docs.map((d) => (d.kind === "pending" ? storedAs.get(d.key)! : d.key));
       const ok = await mutate(`/api/expenses/${id}/receipts/order`, {
@@ -487,40 +355,23 @@ export default function NewExpenseClient({
     return true;
   }
 
-  /**
-   * What the figures in the form mean, as a signed number.
-   *
-   * The form holds magnitudes and the toggle holds the direction; every reader
-   * below this line wants the two put together, because that is what an utlägg
-   * is worth and what the database stores. The one multiplication lives here so
-   * no screen has to remember to do it.
-   *
-   * High up, and deliberately: the matching below needs it, and reading
-   * `parseSEK(form.gross)` there instead is what broke returns. A magnitude and
-   * a signed amount are the same number for a purchase, so the mistake was
-   * invisible on the only path anybody took.
-   */
+  /** The figures as a signed number (the form holds magnitudes, the toggle the direction). The one multiplication lives here;
+   * the matching below needs it signed (`parseSEK(form.gross)` broke returns). */
   const sign = direction === "return" ? -1 : 1;
   const magnitude = parseSEK(form.gross);
   const grossSEK = sign * magnitude;
 
-  // Which card rows could settle this, best first. The rule is in
-  // lib/domain/matching.ts, where it can be tested; see `matchCandidates` for
-  // why `grossSEK` and not the form's own figure.
+  // Which card rows could settle this, best first (lib/domain/matching.ts; see `matchCandidates` for `grossSEK`).
   const candidates = useMemo(
     () => matchCandidates(bankTransactions, grossSEK, matchId, form.purchaseDate),
     [bankTransactions, grossSEK, matchId, form.purchaseDate],
   );
 
-  // A match only counts while it still cancels the amount out. Editing the
-  // amount afterwards silently invalidates it, and the server rejects it too.
+  // A match only counts while it still cancels the amount; the server rejects a stale one too.
   const matchedTxn = bankTransactions.find((t) => t.id === matchId);
   const matchDone = !!matchedTxn && cancelsOut(matchedTxn.amount, grossSEK);
 
-  // Where exactly one card purchase fits, it is the answer, so it is picked
-  // for you: the section folds to that one line, with a way to change it. Also
-  // when the amount changes under a match that no longer fits and another now
-  // does. Never over a match that still fits, which someone may have chosen.
+  // Exactly one fitting card purchase is picked for you, also when the amount changes under a match that no longer fits. Never over one that still fits.
   const onlyFit = useMemo(() => {
     const fits = candidates.filter((c) => c.selectable);
     return fits.length === 1 ? fits[0].txn.id : null;
@@ -544,38 +395,21 @@ export default function NewExpenseClient({
         d.allocations.length === 1 ? [{ ...d.allocations[0], amount: gross }] : d.allocations,
     }));
   }
-  // The date field is a mask, so it can be left half-typed ("2026", "2026-07").
-  // Empty is a draft in progress; a partial date is an error to point at.
+  // The date field is a mask: empty is a draft in progress, a partial date is an error.
   const dateComplete = isCompleteDate(form.purchaseDate);
   const dateIncomplete = form.purchaseDate !== "" && !dateComplete;
-  // Nothing has been bought tomorrow. Almost always a mistyped year, so it's
-  // pointed at here rather than left for the server to refuse on save.
+  // A future day is almost always a mistyped year.
   const dateInFuture = isFutureDate(form.purchaseDate);
-  // Outside the year picked in the header, where the utlägg would be missing
-  // from the list it was made from. Not for a date the utlägg already had,
-  // which the route lets stand as well.
+  // Outside the year picked in the header, unless the utlägg already had that date.
   const dateOutsideYear =
     form.purchaseDate !== (existing?.purchaseDate ?? "") &&
     outsideFiscalYear(fiscalYear, form.purchaseDate);
-  // Past the 60-day deadline for an eget utlägg. Depends on the payment type,
-  // which is picked further down this same step, so switching to "Eget utlägg"
-  // lights this up on an old receipt then and there.
-  //
-  // A warning, not an error, and it stops nothing on this form. It used to stop
-  // everything: the wizard would neither continue nor save, so a late receipt
-  // could not be written down at all. That was right while a late claim could
-  // never be paid, and wrong the moment a dispens existed, because a dispens is
-  // granted against a claim, and there was no way to bring one into being for
-  // the skattmästare to look at.
-  //
-  // Sending it is still refused, by `blocker` below and by the transition route
-  // behind it. What the submitter can now do is finish the utlägg and leave it
-  // as a draft, which is the thing a dispens is asked for.
+  // Past the 60-day deadline for an eget utlägg. Depends on the payment type, picked further down.
+  // A warning that stops nothing here: a dispens is granted against an existing claim, so a late one must be saveable.
+  // Sending is still refused (`blocker`, transition route).
   const dateTooLate = isLateReimbursement(form.purchaseDate, paymentType);
 
-  // The same receipt handed in twice: the same amount, near the same day, among
-  // the submitter's own. Warned about, never refused; see lib/domain/duplicates.
-  // Once the date is whole, so a half-typed one does not flash a match.
+  // The same receipt handed in twice (lib/domain/duplicates): warned about, never refused. Only once the date is whole.
   const duplicates = useMemo(
     () =>
       dateComplete
@@ -587,15 +421,8 @@ export default function NewExpenseClient({
         : [],
     [ownExpenses, grossSEK, form.purchaseDate, draftId, dateComplete],
   );
-  // What to say about it, in the order the reader should try things: the rule,
-  // then the cheap fix, then the expensive one.
-  //
-  // The cheap fix is only offered to somebody it is open to. "Var det
-  // sektionskortet du använde?" is a question with no answer for a member who
-  // holds no card, and pointing them at a picker that does not offer CARD is
-  // worse than saying nothing: it reads as though they have missed something.
-  // `cardAllowed` is the same condition the picker itself is built from, so the
-  // sentence and the options it describes cannot come apart.
+  // The hint in the order to try things: the rule, the cheap fix, the expensive one.
+  // The cheap fix is offered only to someone who can use it (`cardAllowed`, as the picker).
   const tooLateHint = [
     t("dateTooLate", { days: REIMBURSEMENT_DEADLINE_DAYS }),
     cardAllowed ? t("dateTooLateCard") : null,
@@ -611,12 +438,8 @@ export default function NewExpenseClient({
     value: sign * parseSEK(a.amount),
   }));
 
-  // Saving a draft is allowed with fields still empty, but not with a partial
-  // date, which would be stored as 1 January of the year typed so far, and not
-  // with one that hasn't happened yet, which the server refuses anyway. And not
-  // before the receipt: an utlägg is a claim about a purchase, and the receipt
-  // is what makes it one. It no longer has to be uploaded by then: a file
-  // waiting in the browser counts, and goes up as part of the save.
+  // Saving a draft is allowed with fields empty, but not a partial date (stored as 1 January) or a future one,
+  // and not before a receipt (a file waiting in the browser counts).
   const canPersist =
     form.title.trim() !== "" &&
     !dateIncomplete &&
@@ -636,10 +459,7 @@ export default function NewExpenseClient({
     // "match it first" hint rather than letting submit fail at the server.
     matchedTransactionId: matchDone ? (matchId ?? undefined) : undefined,
     submitterHasPayout: Boolean(payoutClearing && payoutAccount),
-    // False, and it cannot be anything else here: a dispens is granted against
-    // an utlägg that already exists, by somebody who is not the person filling
-    // this in. Somebody whose claim is too old sees the deadline here and asks
-    // the skattmästare, and the dispens shows up on the detail page.
+    // False here: a dispens is granted against an existing utlägg, by somebody else (the skattmästare).
     deadlineWaived: false,
     allocations: signedAllocations.map((a) => ({
       amount: a.value,
@@ -647,35 +467,22 @@ export default function NewExpenseClient({
     })),
   });
 
-  // Everything this wizard writes, in the order it has to happen: the utlägg
-  // itself, then its receipt, then the reviewed fields, then the bank match for
-  // a card purchase. Nothing before this, since a wizard that was opened and left
-  // alone has written nothing at all.
-  //
-  // Returns the utlägg's id rather than a bare success, because on a first save
-  // the caller has no other way to know it: `draftId` is set here, and state
-  // set inside a handler isn't readable from the rest of that same handler.
+  // Everything this wizard writes, in order: the utlägg, its receipt, the reviewed fields, then the bank match for a card purchase.
+  // Returns the id because state set in a handler isn't readable from the rest of that handler.
   async function persist(): Promise<string | null> {
     let id = draftId;
     if (!id) {
-      // Typed on the way out as well as back: `CreateExpense` is the schema the
-      // route validates against, so a field renamed on one side stops compiling
-      // on the other.
+      // Typed against `CreateExpense`, the schema the route validates, so a rename stops compiling.
       const create: CreateExpense = {
         paymentType,
         title: "",
-        // Only ever with the card purchase it belongs to. The type is locked
-        // to CARD whenever there is a presetTxn, so this reads as belt and
-        // braces. It is the same rule the route refuses on (isMatchable),
-        // written where the body is built rather than left implied by a
-        // condition three hundred lines up.
+        // Only with the card purchase it belongs to (the route refuses otherwise, isMatchable).
         matchedTransactionId: isMatchable(paymentType) ? (presetTxn?.id ?? null) : null,
       };
       const created = await mutate<{ id: string }>("/api/expenses", {
         key: "save",
         body: create,
         error: t("createFailed"),
-        // Nothing on screen shows it yet. The steps after this one do.
         refresh: false,
       });
       if (!created) return null;
@@ -683,11 +490,7 @@ export default function NewExpenseClient({
       setDraftId(id);
     }
     if (!(await writeReceipts(id))) return null;
-    // Öre, both of them. The gross and the rows that have to sum to it cross
-    // the wire in the same unit as each other and as the columns they land in.
-    // The rows used to go as kronor, which made a figure a hundred times too
-    // small look like a distribution that didn't balance. `PatchExpense` is
-    // what now says so in a form the compiler reads.
+    // Öre, both gross and rows (`PatchExpense`).
     const patch: PatchExpense = {
       title: form.title,
       purchaseDate: form.purchaseDate || null,
@@ -717,18 +520,11 @@ export default function NewExpenseClient({
 
   // Both exits from the wizard save first, then land on the expense itself.
   function done(id: string) {
-    // The utlägg exists on the server now, so the copy in this browser is spent
-    // and must not be restored over it the next time somebody starts a new one.
-    // `forget` rather than `clear`: the form is still on the screen for the
-    // frame before the page changes, and blanking it there reads as work lost.
+    // The utlägg exists on the server, so the browser copy is spent. `forget` rather than `clear`, so the form is not blanked before the page changes.
     forgetDraft();
-    // The receipt half of the same copy. `writeReceipts` has usually dropped
-    // every file it uploaded already; this covers the exits where there was
-    // nothing to upload, an utlägg saved with its documents still to come.
+    // The receipt half of the same copy, for exits with nothing to upload.
     void dropKeptFiles(draftKey);
-    // Replaces the wizard's history entry rather than pushing past it: the
-    // form has been submitted, and Back leading into a spent one is not a way
-    // back to anything. See useReturnTo.
+    // Replaces the wizard's history entry so Back does not lead into a spent form (useReturnTo).
     returnTo(`/expenses/${id}`);
   }
 
@@ -770,11 +566,7 @@ export default function NewExpenseClient({
       : t("editTitleDraft");
   const back = existing ? `/expenses/${existing.id}` : "/expenses";
 
-  // Every document the panel has to show, in the reader's order (see `docs`).
-  // Captioned the same way a saved utlägg's
-  // are (see underlagCaption): a submitter should not learn a new word for
-  // the same thing between filling this in and reading it back on the
-  // detail page, and the merged PDF Fortnox gets uses the same numbering.
+  // Every document the panel shows, in the reader's order, captioned as a saved utlägg's (underlagCaption).
   const receiptFiles = docs.map((d) =>
     d.kind === "uploaded"
       ? {
@@ -793,8 +585,7 @@ export default function NewExpenseClient({
     label: underlagCaption(tReceipt("underlagLabel"), i, receiptFiles.length, d.filename),
   }));
 
-  // What still has to be filled in before this can be sent, by name, for the
-  // action bar. In the order the page asks for them.
+  // What still has to be filled in before this can be sent, by name, in the order the page asks.
   const missing = [
     !hasReceipt && t("missing.receipt"),
     !form.title.trim() && t("missing.title"),
@@ -805,8 +596,7 @@ export default function NewExpenseClient({
     paymentType === "CARD" && !matchDone && t("missing.match"),
   ].filter((m): m is string => Boolean(m));
 
-  // Whose attest it goes to, for the action bar: the result units its cost
-  // centres belong to.
+  // Whose attest it goes to: the result units its cost centres belong to.
   const resultUnits = [
     ...new Set(
       allocations
@@ -823,23 +613,11 @@ export default function NewExpenseClient({
 
   return (
     <PageShell title={title} back={back} width="content">
-      {/* The panel takes documents as well as showing them: with none
-          uploaded yet it stands open beside the form as the dropzone, which
-          is why this wizard has no upload step of its own. Once one is
-          showing, the floating button adds another rather than replacing it
-          (`addLabel`): some receipts only substantiate a purchase alongside a
-          second, complementary document, and the wording says so.
-
-          `multiple`, so those documents can be picked or dropped together.
-          The panel hands them to `addFile` one at a time, in order, so each
-          is kept, shown and uploaded exactly as a single pick is. */}
       <ReceiptPanelSource
         documents={documents}
         onFile={addFile}
         uploading={saving || converting > 0}
         multiple
-        // The thumbnails along the panel's foot: the one place the documents
-        // are put in order and taken off. See components/receipt/document-strip.
         arrange={{
           keys: docs.map((d) => d.key),
           onReorder: setOrder,
@@ -855,60 +633,15 @@ export default function NewExpenseClient({
       />
 
       <div className="space-y-6">
-        {/* One card, no headings: the fields say what they are, and a
-            heading over every two of them was height spent saying it again. */}
         <Card>
           <CardBody className="space-y-3">
-            {/* The first thing asked for, so the first thing focused: this
-                step opens with the receipt beside it and one question to
-                answer, and reaching for the mouse to answer it is a step
-                nobody needs. Selected as well as focused, which only matters
-                when an existing utlägg is being edited, because then the title is
-                already there and typing should replace it. */}
-            {/* Before anything else, because it is the question everything
-                below it depends on: what the figures mean, whether the 60-day
-                deadline applies, whether a payout account is wanted, and
-                whether this wizard has a Matcha step at all.
-
-                One group, not two. The direction and the payment type were
-                asked separately, at the top and the bottom of this same card,
-                and they are one question with three answers. Split, the date
-                three fields down was being judged against a payment type
-                nobody had reached yet: a four-month-old card purchase came up
-                as "too old to file" and Continue stayed dead until you scrolled
-                past the fördelning to change it.
-
-                Not asked at all where there is one answer. Somebody with no
-                card can only be laying out their own money, and a lone card
-                nobody chose reads as a group that is broken. */}
             {claimOptions.length > 1 && (
               <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
-                {/* A container query, not a viewport one, because the width
-                    these three have is not the window's. The receipt panel is
-                    ~520px of it and the nav rail another 64, so at 941px with
-                    the panel open this column is about 320px: `sm:grid-cols-3`
-                    was true and there were three 100px cards in it. `@xl` is
-                    the column being wide enough for three, whatever the window
-                    is doing and whether the panel is open or shut.
-
-                    42rem, not the 36 that three cards technically fit in: at 36
-                    each one is 184px wide and "Sektionskort, retur" is most of
-                    that. Stacked is never broken, only taller, so the threshold
-                    is where three read comfortably rather than where they last
-                    fit.
-
-                    The same trick the fördelning below already uses. */}
+                {/* Container query, not viewport: the receipt panel and nav rail eat the width. `@xl` is where three cards read comfortably. */}
                 <div className="@container">
                   <div className="grid gap-3 @2xl:grid-cols-3">
                     {claimOptions.map((c) => {
-                      // The icon in its own colour, which is the same mark the
-                      // list will show this claim with afterwards. Learning it
-                      // here is the point: choosing (or, locked, simply seeing)
-                      // is the one moment they are side by side with their
-                      // meanings spelled out.
-                      //
-                      // `min-w-0` on the label, so a long one wraps inside the
-                      // card rather than pushing the icon out of it.
+                      // The icon in its own colour, the same mark the list shows afterwards. `min-w-0` on the label so a long one wraps inside the card.
                       const content = (
                         <>
                           <span className="flex items-start gap-2">
@@ -925,10 +658,7 @@ export default function NewExpenseClient({
                           </span>
                         </>
                       );
-                      // Opened from one purchase there is nothing to press:
-                      // the money already left that way, and the other two
-                      // cards are shown, muted, only so the reader can see
-                      // what this one wasn't.
+                      // Opened from one purchase there is nothing to press: the other cards are shown muted only so the reader sees what this one wasn't.
                       return locked ? (
                         <div key={c} className={optionCard(claim === c, true)}>
                           {content}
@@ -952,10 +682,7 @@ export default function NewExpenseClient({
 
             <Field label={t("description")} requirement="required">
               <Input
-                // Not on a phone. There it opens no keyboard (iOS will not
-                // raise one without a tap) and only puts a caret in a field the
-                // receipt panel is covering, while the page reads as somebody
-                // typing and puts the receipt button away.
+                // Not on a phone: iOS raises no keyboard without a tap, and a caret would sit in a field the receipt panel covers.
                 autoFocus={!phone}
                 onFocus={selectOnce}
                 value={form.title}
@@ -963,11 +690,6 @@ export default function NewExpenseClient({
               />
             </Field>
 
-            {/* Two up at every width, not only from sm. A date and an amount
-                are short fields, ten characters and eight, and a column of
-                full-width boxes on a phone makes a four-field form look like a
-                long one and pushes the fördelning below the fold. `gap-3`
-                rather than `gap-5` while they are sharing 329px. */}
             <div className="grid grid-cols-2 gap-3 sm:gap-5">
               <Field
                 label={t("purchaseDate")}
@@ -983,10 +705,7 @@ export default function NewExpenseClient({
                           })
                         : undefined
                 }
-                // A hint rather than an error: the date is a real day and the
-                // form accepts it. What it cannot do is be sent without a
-                // dispens, and marking the field invalid would be saying the
-                // submitter typed something wrong when they typed the truth.
+                // A hint rather than an error: the date is real, it just cannot be sent without a dispens.
                 hint={dateTooLate ? tooLateHint : undefined}
               >
                 <DateInput
@@ -996,21 +715,7 @@ export default function NewExpenseClient({
                   onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
                 />
               </Field>
-              {/* The keypad, the guard and the separator all live in
-                  AmountInput now, including the sign button, which is the only
-                  way to reach a negative amount on a phone: no mobile numeric
-                  keypad has a minus key. A return is the same utlägg with the
-                  sign flipped, so it is a case this field has to allow. */}
-              {/* FieldGroup, not Field: the label carries a control of its
-                  own, and a <label> forwards a click anywhere in its box to
-                  the first labelable element inside it, which here would be
-                  one of the two direction buttons.
-
-                  The direction rides the label's line rather than standing
-                  above the box, so this cell is exactly as tall as the date
-                  beside it. Which way the money goes is not a minus typed into
-                  the figure: no phone number pad has the key, and a word says
-                  it where a character has to be noticed. */}
+              {/* FieldGroup, not Field: a <label> forwards clicks to the first labelable element, which would be a direction button. */}
               <Field label={t("amount")} requirement="required">
                 <AmountInput
                   value={form.gross}
@@ -1064,9 +769,6 @@ export default function NewExpenseClient({
           </CardBody>
         </Card>
 
-        {/* A card purchase is settled by the bank row it was, so which one is
-            the last thing asked. It was a step of its own; it is a section of
-            the same page now, and only there for a card. */}
         {paymentType === "CARD" && (
           <Card>
             <CardBody className="space-y-3">

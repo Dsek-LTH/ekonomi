@@ -1,7 +1,4 @@
-// A member's bank details, for the treasury looking them up outside of any one
-// utlägg. Gated on `canBookkeep`, the same capability that already shows these
-// digits on the booking screen: the boundary does not move, only where it
-// can be reached from.
+// A member's bank details for the treasury, gated on `canBookkeep` (the capability that already shows them on the booking screen).
 import { NextResponse } from "next/server";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { getPayoutAccount } from "@/lib/data/users";

@@ -3,9 +3,6 @@ import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { normaliseImage, normalisedName } from "./images";
 
-// Bytes in, bytes out, no storage and no database, so this belongs with the
-// rest of the unit tests despite living under server/.
-
 const W = 60;
 const H = 60;
 
@@ -30,9 +27,7 @@ const topLeft = async (buf: Buffer) =>
   sharp(buf).ensureAlpha().extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
 
 describe("normaliseImage", () => {
-  // The bug this exists to stop: JPEG has no alpha channel, so a see-through
-  // receipt encoded as one is composited onto sharp's default background and
-  // comes back out of the archive on solid black.
+  // JPEG has no alpha channel: a see-through receipt encoded as one comes out on solid black.
   it("keeps a see-through receipt see-through", async () => {
     const out = await normaliseImage(await png(0));
 
@@ -46,9 +41,7 @@ describe("normaliseImage", () => {
     ).toBe(false);
   });
 
-  // An alpha channel is not transparency. Screenshots are PNGs with a fully
-  // opaque alpha channel, and storing those as PNG would cost several times the
-  // JPEG for nothing, which is why the check reads pixels, not metadata.
+  // An alpha channel is not transparency (screenshots are PNGs with an opaque one), so the check reads pixels.
   it("still stores an opaque image as JPEG, alpha channel or not", async () => {
     const out = await normaliseImage(await png(255));
 
@@ -60,9 +53,7 @@ describe("normaliseImage", () => {
     ).toBe("jpeg");
   });
 
-  // An iPhone photo. sharp's own libvips reads its header and then cannot
-  // decode HEVC, so this came back "unreadable" before libheif took it over.
-  // The fixture is an 80x60 red rectangle, written by macOS's `sips`.
+  // An iPhone photo: libvips cannot decode HEVC, so libheif does. The fixture is an 80x60 red rectangle from macOS `sips`.
   it("decodes a HEIC photo", async () => {
     const out = await normaliseImage(readFileSync(new URL("./images.test.heic", import.meta.url)));
 

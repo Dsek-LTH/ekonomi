@@ -1,17 +1,8 @@
 "use client";
 
-// Which cost centres an utlägg is charged to, and how much to each.
-//
-// The voucher table's look (components/voucher-editor.tsx), because it is the
-// same kind of thing: rows of a code and an amount that have to add up. A
-// header, cells without boxes of their own, the total under the amounts and a
-// chip saying whether it meets. On a phone a table of three columns does not
-// fit, so there each row is a card instead, with the same total and chip under
-// them.
-//
-// Almost every utlägg goes to one cost centre. It is the same table then, one
-// row, but its amount is the utlägg's own and is not asked: there is nothing to
-// add up, so the foot holds only the way to split it.
+// Which cost centres an utlägg is charged to, and how much to each. Same look as the voucher table
+// (components/voucher-editor.tsx); each row is a card on a phone. With one row its amount is the utlägg's own
+// and not asked.
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -43,14 +34,12 @@ interface Props {
   onChange: (rows: AllocationRow[]) => void;
 }
 
-// The table's columns, from the container's 2xl up: cost centre, comment,
-// amount, and the narrow one the cross sits in.
+// The table's columns, from the container's 2xl up.
 const COLS = "@2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_9rem_2.25rem]";
 
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
-  // Only ever the row `add` just made. Rows restored from a draft, and the one
-  // a new utlägg opens with, are not focused, nothing was clicked to get them.
+  // Only ever the row `add` just made.
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const total = value.reduce((s, r) => s + parseSEK(r.amount), 0);
   // Zero means nothing to distribute yet.
@@ -58,9 +47,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   const left = grossAmount - total;
   const single = value.length <= 1;
 
-  // One row is the whole utlägg. Its amount is not asked, so it is kept equal
-  // to the gross here, whichever form this sits in: the ordinary one also does
-  // this itself, the milersättning one does not.
+  // One row is the whole utlägg: its amount is kept equal to the gross.
   const only = single ? value[0] : undefined;
   useEffect(() => {
     if (!only) return;
@@ -77,9 +64,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
     onChange(value.filter((r) => r.id !== id));
   }
 
-  // A new row starts unpicked. The cost centre is always chosen deliberately,
-  // so that is where the focus goes: the button that made the row sits below
-  // it, and without this you land past every field you just asked for.
+  // A new row starts unpicked, so focus goes to the cost centre.
   function add() {
     const row = makeRow("");
     setFocusRowId(row.id);
@@ -102,8 +87,6 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   return (
     <div className="@container">
       <div className="space-y-2 @2xl:space-y-0 @2xl:overflow-hidden @2xl:rounded-control @2xl:border @2xl:border-border">
-        {/* The header, from 2xl only. On a phone each card's fields say what
-            they are through their placeholders. */}
         <div
           className={cn(
             "hidden divide-x divide-border border-b border-border bg-surface text-xs font-medium text-muted @2xl:grid",
@@ -144,10 +127,6 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                 onChange={(e) => update(row.id, { comment: e.target.value })}
                 className={comment}
               />
-              {/* A magnitude, like every figure in this form: which way the
-                  whole claim goes is the utlägg's own question, asked once at
-                  the top, and a row is a part of it. Alone, the row is the
-                  whole of it, so the figure is shown and not asked. */}
               {single ? (
                 <span
                   aria-label={t("amountPlaceholder")}
@@ -172,10 +151,6 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                 />
               )}
             </div>
-            {/* On a phone, the cross on the card's corner, as on the receipt
-                thumbnails. In the table, its own narrow column at the end of
-                the row, as in the voucher table, shown on the row in hand. A
-                lone row has none: there is nothing to remove it to. */}
             <span className="contents @2xl:flex @2xl:items-center @2xl:justify-center">
               {!single && (
                 <button
@@ -196,9 +171,6 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
           </div>
         ))}
 
-        {/* The foot: add a row, whether it meets, and the total under the
-            amounts, where the voucher table keeps its sums. With one row only
-            the way to split: it meets by being the whole. */}
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-2 pt-1",
@@ -210,9 +182,6 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
             <Button
               variant="link"
               type="button"
-              // Into two: the first row keeps the whole amount until somebody
-              // changes it, and the new one is where the next cost centre goes,
-              // empty until somebody says how much.
               onClick={add}
               disabled={single ? costCenters.length < 2 : value.length >= costCenters.length}
               className="text-sm"
@@ -240,11 +209,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
   );
 }
 
-/**
- * Whether the rows meet the amount, in the voucher table's chip shape
- * (BalanceChip in voucher-editor.tsx): green when they do, the difference in
- * red when they don't, said as what is left or what is too much.
- */
+/** Whether the rows meet the amount, in the shape of BalanceChip (voucher-editor.tsx). */
 function BalanceChip({
   balanced,
   left,
@@ -257,7 +222,7 @@ function BalanceChip({
   const t = useTranslations("allocation");
   const chip =
     "inline-flex items-center gap-1.5 rounded-control px-2.5 py-0.5 text-xs font-medium tabular-nums";
-  // Nothing to meet yet: not a fault of the rows, so not red.
+  // Nothing to meet yet: not red.
   if (gross === 0)
     return <span className={cn(chip, "bg-surface text-muted")}>{t("noAmount")}</span>;
   if (balanced)

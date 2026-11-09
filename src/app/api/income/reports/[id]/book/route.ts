@@ -1,21 +1,8 @@
-// Book a day's takings: store the intäktsräkning, then write the verifikation.
-//
-// The voucher is derived from the day's lines: one row per account and cost
-// centre, then the clearing account (lib/income/voucher.ts). Or, when somebody
-// has written the kontering by hand, those rows, saved on the report with a
-// fingerprint of the lines they were written against
-// (lib/income/manual-voucher.ts). A hand-written kontering whose lines have
-// changed since is refused, so it can never outlive a correction unnoticed.
-//
-// Storing the document happens here, and only here. A draft is rendered on
-// demand and kept by nobody; the moment a day is booked, the PDF becomes the
-// evidence behind a figure in the ledger and has to be the same bytes forever
-// (lib/income/document.ts).
-//
-// The order matters. The PDF is stored *before* the verifikation exists,
-// because a stored object with no voucher pointing at it is rubbish that a
-// sweep can collect, whereas a voucher with no document is a booked figure with
-// nothing substantiating it.
+// Book a day's takings: store the intäktsräkning, then write the verifikation. The voucher is
+// derived from the lines (lib/income/voucher.ts) or a hand-written kontering whose lines are
+// unchanged (lib/income/manual-voucher.ts). The PDF is stored before the verifikation, since an
+// orphan object is collectable but a voucher without a document is unsubstantiated.
+
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -59,13 +46,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
       values: { status: { key: `income.status.${report.status}` } },
     });
   }
-  // A reopened day from before the per-day voucher. Reopening one is refused
-  // (lib/income/lifecycle.ts), so this is a guard, not a path.
+  // A reopened pre-per-day-voucher day: reopening is refused (lib/income/lifecycle.ts), so a guard.
   if (isLegacyReport(report) || report.source === "ZETTLE_FEE") {
     return fail(409, "income.reopenLegacy");
   }
-  // Some of this day's money is already booked here. The partial unique index
-  // would refuse a second verifikation anyway; this says it as a sentence.
+  // Some of this day's money is already booked here (the unique index would refuse; this says it).
   if (report.duplicateOfId) return fail(409, "income.alreadyBookedHere");
 
   const settings = await loadBookkeepingSettings();
@@ -82,8 +67,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   // ── The voucher, decided before anything is stored or written ──
 
-  // A sale nobody has given a verksamhet. Only possible when the routing table
-  // changed under a fetch, but booking it would be takings that are nobody's.
+  // A sale nobody gave a verksamhet (the routing table changed under a fetch).
   if (report.lines.some((l) => l.kind === "SALE" && !l.resultUnitId && l.total !== 0)) {
     return fail(422, "income.unplacedLines");
   }
@@ -101,8 +85,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     accountName: (n: string) => accountName.get(n) ?? "",
   };
 
-  // A kontering written by hand is booked as written, provided the lines are
-  // still the ones it was written against. Otherwise the rows the lines give.
+  // A hand-written kontering is booked as written if its lines are unchanged, else the lines' rows.
   const manual = report.manualVoucher as ManualVoucherRow[] | null;
   let lines: (IncomeVoucherLine & { project?: string | null; description?: string | null })[];
   let centreIds: string[];
@@ -150,21 +133,19 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   } else {
     const blocker = incomeVoucherBlocker(input);
     if (blocker) {
-      // A fee line with no account is the fee setting left unchosen, which is
-      // fixed in the settings rather than on the day, so it says which setting.
+      // A fee line with no account is the fee setting left unchosen: name the setting.
       if (blocker === "noAccount" && report.lines.some((l) => l.kind === "FEE" && !l.account)) {
         return fail(409, "settings.zettleFeeAccountUnset");
       }
       return fail(422, `income.${blocker}`);
     }
     lines = buildDayVoucherLines(input);
-    centreIds = report.lines.flatMap((l) => (l.total !== 0 && l.costCenterId ? [l.costCenterId] : []));
+    centreIds = report.lines.flatMap((l) =>
+      l.total !== 0 && l.costCenterId ? [l.costCenterId] : [],
+    );
   }
 
-  // Every cost centre the voucher names has to still exist and be in use. An
-  // archived one would have the whole voucher refused by Fortnox at export,
-  // long after this said it was booked. Refused here instead, where it can
-  // still be changed.
+  // Every cost centre named must still exist and be in use, or Fortnox refuses the voucher at export.
   const centres = await prisma.costCenter.findMany({
     where: { id: { in: [...new Set(centreIds)] } },
     select: { id: true, code: true, source: true, active: true },
@@ -176,10 +157,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const imbalance = voucherBlocker(lines);
   if (imbalance) return fail(422, `voucher.${imbalance}`);
 
-  // A local cost centre never reaches Fortnox as one, so its code goes into
-  // the row text, the same as on an utlägg's voucher (lib/domain/cost-center-tag).
-  // Written now rather than only at export, so the verifikation reads here
-  // exactly as it will over there.
+  // A local cost centre never reaches Fortnox as one, so its code goes into the row text (lib/domain/cost-center-tag).
   const centreById = new Map(centres.map((c) => [c.id, c]));
   const rowText = (costCenterId: string | null, text?: string | null) => {
     const cc = costCenterId ? centreById.get(costCenterId) : undefined;
@@ -188,9 +166,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   // ── The document ──
 
-  // Booking is approving. The day has been reviewed against its intäktsräkning
-  // by the person booking it, so the stored document is attested by them and
-  // the day records them as its reviewer (below).
+  // Booking is approving: the booker attests the stored document and is recorded as reviewer.
   const user = await loadUser(g.actor.id);
   if (!user) return fail(401, "auth.signedOut");
 

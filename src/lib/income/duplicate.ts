@@ -1,24 +1,7 @@
-// The fail-safe against booking the same day's takings into Fortnox twice.
-//
-// The app already refuses to book the same source, committee and day twice:
-// a partial unique index over booked reports, checked again at import so it
-// reads as a sentence rather than as a constraint violation (lib/income/
-// batch.ts). That guard only knows what *this* database has done. It says
-// nothing about a day that was exported from an older install, from the intakt
-// CLI this replaced, or from a database that has since been reset, and those
-// vouchers are in Fortnox all the same.
-//
-// So Fortnox itself is asked. A day's takings are identifiable over there by
-// two things and no more: the transaction date, and the payment method the
-// voucher's description starts with (see incomeVoucherCoversDay). Same series,
-// same date, same method means some of that day's money is already booked,
-// whoever booked it.
-//
-// Read with the SERVICE token rather than the bookkeeper's personal one. A
-// check that only ran for people who happen to have logged into Fortnox in the
-// last few hours would be worth very little as a fail-safe, and reading needs
-// no attribution, unlike writing a voucher, which is why exports still use the
-// personal token.
+// Fail-safe against booking the same day's takings into Fortnox twice, e.g. from an older install
+// or a reset database. Same series, date and method (see incomeVoucherCoversDay) means it is
+// booked. Read with the SERVICE token so the check does not depend on who logged in recently.
+
 import "server-only";
 
 import {
@@ -33,28 +16,16 @@ import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import { incomeVoucherCoversDay, incomeVoucherKey, incomeVoucherSeries } from "./voucher";
 import type { IncomeSource } from "@/lib/domain/types";
 
-/**
- * Why the check did not run. Both are ordinary states, running without
- * Fortnox is supported, but they are different ordinary states: not being
- * connected is a decision, a failed call is an outage, and only the second is
- * worth putting in front of anyone.
- */
+/** Why the check did not run: not connected is a decision, a failed call is an outage. */
 type IncomeCheckSkip = "notConnected" | "seriesUnset" | "failed";
 
 export interface FortnoxIncomeVouchers {
   /** False means nothing was compared. Treat every day as unknown, not free. */
   checked: boolean;
   skipped: IncomeCheckSkip | null;
-  /**
-   * The voucher already booking some of this source's money on this day, its
-   * label, e.g. "IR-142", or null. See incomeVoucherCoversDay for what counts.
-   */
+  /** The voucher already booking some of this source's money on this day, e.g. "IR-142", or null. */
   forDay: (date: string, source: IncomeSource) => string | null;
-  /**
-   * The voucher with exactly this date and description (see incomeVoucherKey),
-   * or null. For a report booked before the per-day voucher, whose sibling
-   * verksamheter' vouchers on the same day are other money, not this.
-   */
+  /** The voucher with exactly this date and description (`incomeVoucherKey`), or null. For reports booked before the per-day voucher. */
   exact: (date: string, description: string) => string | null;
   /** The series that was searched, for the message that names it. */
   series: string | null;
@@ -68,23 +39,14 @@ const empty = (skipped: IncomeCheckSkip, series: string | null): FortnoxIncomeVo
   series,
 });
 
-/**
- * What Fortnox already has in the income series between two dates, inclusive.
- *
- * Never throws. Every caller of this is doing something else, importing a
- * range or exporting a day, and a check that cannot run must not take that
- * down with it; `checked: false` is the honest answer, and the callers say so
- * rather than implying the day is clear.
- */
+/** What Fortnox already has in the income series between two dates. Never throws: `checked: false` means it could not run. */
 export async function fortnoxIncomeVouchers(
   from: string,
   to: string,
 ): Promise<FortnoxIncomeVouchers> {
   const conn = await getConnection();
   if (!conn) return empty("notConnected", null);
-  // The series income is filed under, which is a setting of its own. See
-  // incomeVoucherSeries. Read here rather than assumed, because looking in the
-  // wrong series answers "nothing booked" for a day that is.
+  // Read the income series here: the wrong series would answer "nothing booked".
   const settings = await loadBookkeepingSettings();
   const series = incomeVoucherSeries(settings, conn.voucherSeries);
   // No series chosen, so there is nowhere to look. Said, not taken as "clear".
@@ -93,11 +55,8 @@ export async function fortnoxIncomeVouchers(
   try {
     const token = await getServiceToken();
 
-    // Fortnox answers from one financial year at a time, so a range that
-    // straddles a year-end is asked for once per year it touches. A range that
-    // lands in no year at all, a date before the books begin, is asked for
-    // without one, which lets Fortnox answer from the current year rather than
-    // returning nothing at all.
+    // Fortnox answers per financial year, so ask once per year touched, and without a year when
+    // the range falls in none.
     const years = financialYearsFor(await listFinancialYears(token), from, to);
     const queries =
       years.length > 0 ? years.map((y) => ({ from, to, financialYearId: y.id })) : [{ from, to }];
@@ -105,8 +64,7 @@ export async function fortnoxIncomeVouchers(
     const byDate = new Map<string, { label: string; description: string }[]>();
     for (const query of queries) {
       for (const v of await listVouchers(token, query)) {
-        // Other series are other work, utlägg go to their own, and a
-        // description that matches one of ours there is a coincidence.
+        // Other series (utlägg) are not ours.
         if (v.series !== series) continue;
         const list = byDate.get(v.date) ?? [];
         list.push({ label: `${v.series}-${v.number}`, description: v.description });

@@ -1,14 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Renaming a result unit, and the thing about it that is easy to get wrong
-// twice: resultatansvar is held by *name*. User.resultUnits is a String[], not
-// a foreign key, so a rename that touches only this row leaves every
-// resultatansvarig answering for a string that no longer resolves. Their attest
-// queue empties, nothing is logged, and nothing anywhere says why.
-//
-// It was got wrong once already: the delete handler guards this carefully and
-// the rename did not. So the carrying-over is pinned here rather than left to
-// whoever reads the route next.
+// Resultatansvar is held by name (User.resultUnits is a String[]), so a rename must carry it over or attest queues silently empty.
 
 const h = vi.hoisted(() => ({
   unit: null as { id: string; name: string } | null,
@@ -76,9 +68,7 @@ describe("PATCH /api/result-units/[id]", () => {
       data: { name: "Källarmästeriet KM" },
     });
 
-    // The array rewrite is the whole point of the handler. Asserted through the
-    // tagged template's own arguments: the values arrive as bound parameters,
-    // never interpolated into the statement.
+    // Asserted through the tagged template's arguments: values are bound parameters, never interpolated.
     expect(h.executeRaw).toHaveBeenCalledTimes(1);
     const [strings, ...values] = h.executeRaw.mock.calls[0];
     expect(strings.join("?")).toContain("array_replace");
@@ -86,8 +76,7 @@ describe("PATCH /api/result-units/[id]", () => {
   });
 
   it("does nothing at all when the name has not actually changed", async () => {
-    // Not merely harmless to skip: rewriting every holder's array for a no-op
-    // is a table-wide write nobody asked for.
+    // A no-op rename must not rewrite every holder's array.
     const res = await patch("Källarmästeriet");
     expect(res.status).toBe(200);
     expect(h.update).not.toHaveBeenCalled();

@@ -1,9 +1,6 @@
-// POST /api/users/[id]/test-email: send one member a test mail.
-//
-// For checking, in production, that mail reaches somebody and looks right
-// there: a mail of the chosen kind built from their real data, "[Test]" in the
-// subject, sent through the outbox like any other. It shows up in the log
-// marked with who sent it. See lib/server/test-email.ts.
+// POST /api/users/[id]/test-email: send one member a test mail of the chosen kind, built from their
+// real data, "[Test]" in the subject, through the outbox (lib/server/test-email.ts).
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -28,8 +25,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!recipient) return fail(404, "user.notFound");
 
   const result = await sendTestEmail(parsed.data.kind, recipient, g.actor);
-  // Nothing real to build it from: no utlägg, no card transactions, or a
-  // digest with nothing in it, which would not be sent either.
+  // Nothing real to build it from (no utlägg, no card transactions, or an empty digest).
   if (!result.ok) return fail(409, `email.${result.error}`, { values: { name: recipient.name } });
   deliverSoon();
   return NextResponse.json({ id: result.id, subject: result.subject }, { status: 201 });

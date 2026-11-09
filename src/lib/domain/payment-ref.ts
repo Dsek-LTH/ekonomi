@@ -1,26 +1,20 @@
-// Comparing what an invoice says to pay to with what the supplier register
-// says. The check that stands between a forged invoice and the section's money:
-// "same supplier, new bankgiro" is how invoice fraud is done.
-//
-// Pure. The register is Fortnox's, read by the export route.
+// Comparing what an invoice says to pay to with what the supplier register says: the check between a
+// forged invoice ("same supplier, new bankgiro") and the section's money. Pure; the register is Fortnox's.
 
-/** A bankgiro or plusgiro as digits only, so "5050-1055" and "50501055" are the
- *  same number. Null for nothing. */
+/** A bankgiro or plusgiro as digits only, so "5050-1055" and "50501055" match. Null for nothing. */
 export const giroDigits = (giro: string | null | undefined): string | null => {
   const d = (giro ?? "").replace(/\D/g, "");
   return d || null;
 };
 
-export type GiroMismatch =
-  | null
-  /** The invoice names a bankgiro or plusgiro the register does not have. */
-  | { kind: "differs"; field: "bankgiro" | "plusgiro"; invoice: string; register: string | null };
+export type GiroMismatch = null | {
+  kind: "differs";
+  field: "bankgiro" | "plusgiro";
+  invoice: string;
+  register: string | null;
+};
 
-/**
- * Whether the invoice asks to be paid somewhere the supplier register does not
- * know. Only a number the invoice prints is checked: an invoice with neither
- * is paid to whatever the register has, which is the safe way round.
- */
+/** Whether the invoice asks to be paid somewhere the register does not know. An invoice printing neither number is paid to what the register has. */
 export function giroMismatch(
   invoice: { bankgiro: string | null; plusgiro: string | null },
   register: { bankgiro: string | null; plusgiro: string | null },
@@ -34,8 +28,7 @@ export function giroMismatch(
   return null;
 }
 
-/** An org number as digits only. A VAT number ("SE556677889901") is the org
- *  number inside a country code and a trailing 01, and is taken as that. */
+/** An org number as digits only. A VAT number ("SE556677889901") is the org number inside a country code and a trailing 01. */
 const orgNoDigits = (orgNo: string | null | undefined): string | null => {
   const raw = (orgNo ?? "").trim();
   let d = raw.replace(/\D/g, "");
@@ -43,15 +36,7 @@ const orgNoDigits = (orgNo: string | null | undefined): string | null => {
   return d || null;
 };
 
-/**
- * The supplier in the register an invoice is from, by what it prints: the org
- * number first, then the bankgiro, then the plusgiro. An active supplier wins
- * over a retired one with the same number. Null when nothing matches, which is
- * an unknown supplier and not a guess.
- *
- * A giro match is a match on where the money goes, so it is only as good as
- * the giro. The export still checks it against the register (giroMismatch).
- */
+/** The supplier in the register an invoice is from: org number, then bankgiro, then plusgiro; an active supplier wins over a retired one. Null when nothing matches. A giro match is only as good as the giro (the export checks giroMismatch). */
 export function matchSupplier<
   S extends {
     orgNo: string | null;

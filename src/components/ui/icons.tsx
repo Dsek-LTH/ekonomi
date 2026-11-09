@@ -27,9 +27,6 @@ export const IconGrid = (p: P) => (
   </Svg>
 );
 
-// The two shapes a list can be drawn in, for the view toggle
-// (components/ui/view-toggle.tsx). Pictures of the layouts themselves: a
-// master-detail split and a table, because the toggle carries no words.
 export const IconViewTable = (p: P) => (
   <Svg {...p}>
     <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -44,8 +41,6 @@ export const IconReceipt = (p: P) => (
   </Svg>
 );
 
-// A levfaktura: a sheet with a folded corner and a total at its foot, so it
-// does not read as the utlägg's torn-off receipt beside it on the rail.
 export const IconInvoice = (p: P) => (
   <Svg {...p}>
     <path d="M14 3H6v18h12V7l-4-4Z" />
@@ -60,14 +55,6 @@ export const IconCard = (p: P) => (
   </Svg>
 );
 
-// Eget utlägg: one person, whose own money it was.
-//
-// A wallet and a banknote were both tried first and both are a rounded
-// rectangle, which at 18px is the card above with the details rubbed off. That
-// is the wrong failure: the icon is what carries this when the colour cannot
-// (a printed page, a reader who sees no hue), so its silhouette has to differ
-// from the other two before its detail does. A head and shoulders, a
-// rectangle and a car share no outline at any size.
 export const IconPerson = (p: P) => (
   <Svg {...p}>
     <circle cx="12" cy="8" r="3.5" />
@@ -75,8 +62,6 @@ export const IconPerson = (p: P) => (
   </Svg>
 );
 
-// Milersättning, the settings screen for it, and nothing else so far. A car
-// from the side: the bonnet line, the body, and the two wheels sitting on it.
 export const IconCar = (p: P) => (
   <Svg {...p}>
     <path d="M4 16.5v-4l1.8-4.2A2 2 0 0 1 7.6 7h8.8a2 2 0 0 1 1.8 1.3L20 12.5v4" />
@@ -111,10 +96,6 @@ export const IconUndo = (p: P) => (
   </Svg>
 );
 
-// Two arcs chasing each other round a circle, pull from Fortnox, again. The
-// arcs stop at 140° each so the gaps stay open at 18px; the arrowheads sit
-// astride the stroke rather than capping it, which is what keeps this from
-// reading as a plain ring. Spin it (`animate-spin`) while a sync is running.
 export const IconSync = (p: P) => (
   <Svg {...p}>
     <path d="M4.48 9.26A8 8 0 0 1 19.52 9.26" />
@@ -131,10 +112,6 @@ export const IconBook = (p: P) => (
   </Svg>
 );
 
-// Bookkeeping as a category rather than the ledger itself: two columns of
-// entries either side of a centre rule, the shape debit and kredit share
-// before either has a word on it. Distinct from IconBook, which is the one
-// ledger the group's first link opens.
 export const IconLedger = (p: P) => (
   <Svg {...p}>
     <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -142,8 +119,6 @@ export const IconLedger = (p: P) => (
   </Svg>
 );
 
-// Income: a coin with an arrow coming in. The counterpart to IconReceipt,
-// which is money going the other way.
 export const IconIncome = (p: P) => (
   <Svg {...p}>
     <circle cx="12" cy="14" r="7" />
@@ -152,8 +127,6 @@ export const IconIncome = (p: P) => (
   </Svg>
 );
 
-// A crate of bottles: the stock, and the one thing in the nav that is a
-// physical object rather than a document.
 export const IconBox = (p: P) => (
   <Svg {...p}>
     <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" />
@@ -161,9 +134,6 @@ export const IconBox = (p: P) => (
   </Svg>
 );
 
-// A barcode between the corners of a viewfinder. The scanning control, whether
-// or not there is a camera behind it. The same button also takes a code typed
-// in, or fired at the field by a handheld reader.
 export const IconScan = (p: P) => (
   <Svg {...p}>
     <path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4H7M17 4h2.5A1.5 1.5 0 0 1 21 5.5V8M21 16v2.5a1.5 1.5 0 0 1-1.5 1.5H17M7 20H4.5A1.5 1.5 0 0 1 3 18.5V16" />
@@ -171,9 +141,6 @@ export const IconScan = (p: P) => (
   </Svg>
 );
 
-// Switching between the cameras a machine has: the lens, and the turn that puts
-// the other one behind it. Drawn as a lens rather than a camera body because at
-// 18px a body with arrows inside it is a smudge, and the arrows need the room.
 export const IconCameraFlip = (p: P) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="3.5" />
@@ -184,8 +151,6 @@ export const IconCameraFlip = (p: P) => (
   </Svg>
 );
 
-// An event: a night with a date, which is the only thing that identifies
-// one. The dot is the day it is.
 export const IconCalendar = (p: P) => (
   <Svg {...p}>
     <path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v12a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z" />
@@ -193,15 +158,12 @@ export const IconCalendar = (p: P) => (
   </Svg>
 );
 
-// The log: rows in date order, which is all it ever is.
 export const IconList = (p: P) => (
   <Svg {...p}>
     <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
   </Svg>
 );
 
-// The admin group: a box put away rather than a row on a log. IconList stays
-// on Avtal, the list actually inside it.
 export const IconArchive = (p: P) => (
   <Svg {...p}>
     <rect x="3" y="3" width="18" height="5" rx="1.5" />
@@ -210,9 +172,6 @@ export const IconArchive = (p: P) => (
   </Svg>
 );
 
-// A sheet with a signature on it: the avtal archive, and the one icon in the
-// set that has to say "document somebody put their name to" rather than merely
-// "document". The squiggle is what distinguishes it from IconList.
 export const IconContract = (p: P) => (
   <Svg {...p}>
     <path d="M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
@@ -221,8 +180,6 @@ export const IconContract = (p: P) => (
   </Svg>
 );
 
-// A key, for the rental group: what actually changes hands when gear goes out
-// the door, rather than the paperwork (IconContract) that says it may.
 export const IconKey = (p: P) => (
   <Svg {...p}>
     <circle cx="7" cy="12" r="4" />
@@ -243,27 +200,19 @@ export const IconUpload = (p: P) => (
   </Svg>
 );
 
-// An elbow: down out of the line above, then right into this one. It says that
-// a row belongs to the thing over it: a product's variant stepped in under its
-// name, a budget line under its account number. A drawing of \variantpil in
-// intakt/assets/intakt.tex, so the sold-lines table and the intäktsräkning
-// beside it mark a grouped row the same way.
+// An elbow marking a grouped row; matches \variantpil in intakt/assets/intakt.tex.
 export const IconElbow = (p: P) => (
   <Svg {...p}>
     <path d="M8 5v9h9m-3-3 3 3-3 3" />
   </Svg>
 );
 
-// The mirror of IconUpload: bringing something in rather than sending it out,
-// a period fetched from Zettle or Swish.
 export const IconDownload = (p: P) => (
   <Svg {...p}>
     <path d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14" />
   </Svg>
 );
 
-// Safari's own share button, drawn the way it is on the phone, so the install
-// hint can point at the button the reader is meant to look for.
 export const IconShare = (p: P) => (
   <Svg {...p}>
     <path d="M12 3v12m0-12-4 4m4-4 4 4" />
@@ -278,8 +227,6 @@ export const IconLink = (p: P) => (
   </Svg>
 );
 
-// A link that leaves the app. The arrow out of the box, which is the one mark
-// people already read as "this opens somewhere else".
 export const IconExternal = (p: P) => (
   <Svg {...p}>
     <path d="M14 5h5v5" />
@@ -313,9 +260,6 @@ export const IconSearch = (p: P) => (
   </Svg>
 );
 
-// Sliders rather than a funnel. A funnel says "narrow this down", which is the
-// same thing, but the sliders say it while also looking adjustable, and this
-// one opens a sheet you set things in rather than applying anything itself.
 export const IconFilter = (p: P) => (
   <Svg {...p}>
     <path d="M4 7h16M4 12h16M4 17h16" />
@@ -325,8 +269,6 @@ export const IconFilter = (p: P) => (
   </Svg>
 );
 
-// The overflow mark: what a menu of "everything else" is called when there is
-// no room to call it anything.
 export const IconDots = (p: P) => (
   <Svg {...p}>
     <circle cx="5" cy="12" r="1.4" />
@@ -335,9 +277,6 @@ export const IconDots = (p: P) => (
   </Svg>
 );
 
-// Swapping one thing for another, the stock sheet's "byt produkt". Two arrows
-// passing, rather than a circular refresh: nothing here is being reloaded, one
-// row is becoming a different product.
 export const IconSwap = (p: P) => (
   <Svg {...p}>
     <path d="M4 8h13l-3.2-3.2M20 16H7l3.2 3.2" />
@@ -357,7 +296,6 @@ export const IconPencil = (p: P) => (
   </Svg>
 );
 
-// Two sheets, the back one offset, the copy action.
 export const IconCopy = (p: P) => (
   <Svg {...p}>
     <rect x="9" y="9" width="12" height="12" rx="2" />
@@ -365,7 +303,6 @@ export const IconCopy = (p: P) => (
   </Svg>
 );
 
-// Shackle down, closed: the state "locked", and the action "lock this".
 export const IconLock = (p: P) => (
   <Svg {...p}>
     <rect x="4" y="10.5" width="16" height="10.5" rx="2" />
@@ -373,10 +310,6 @@ export const IconLock = (p: P) => (
   </Svg>
 );
 
-// The same body, but the shackle has swung free: it keeps only its left leg and
-// the loop tilts up and away to the right, ending clear of the body. A shackle
-// that merely stops short reads as the closed one at 18px. The whole silhouette
-// has to differ, not one leg's length.
 export const IconLockOpen = (p: P) => (
   <Svg {...p}>
     <rect x="4" y="10.5" width="16" height="10.5" rx="2" />
@@ -384,10 +317,6 @@ export const IconLockOpen = (p: P) => (
   </Svg>
 );
 
-// A shield, for Roller & behörigheter. Not a lock: a lock is a state something
-// is in (a budget is locked, a voucher is not) and this is standing authority
-// rather than a thing that has been shut. The tick inside says the same as the
-// grid the page is mostly made of.
 export const IconShield = (p: P) => (
   <Svg {...p}>
     <path d="M12 3l7.5 3v5.5c0 4.3-3 8.2-7.5 9.5-4.5-1.3-7.5-5.2-7.5-9.5V6L12 3Z" />
@@ -414,8 +343,6 @@ export const IconChart = (p: P) => (
   </Svg>
 );
 
-// A sheet ruled into a header row and a figures column: the budget is the plan
-// you fill in, where IconChart is the outcome that came out of it.
 export const IconBudget = (p: P) => (
   <Svg {...p}>
     <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -423,8 +350,6 @@ export const IconBudget = (p: P) => (
   </Svg>
 );
 
-// Two bars of different heights on one baseline: the same measure taken twice.
-// IconChart is a series over time; this is one thing held against another.
 export const IconCompare = (p: P) => (
   <Svg {...p}>
     <path d="M3 21h18" />
@@ -473,8 +398,6 @@ export const IconMoon = (p: P) => (
   </Svg>
 );
 
-// A second figure standing behind the first: a list of people, where
-// IconPerson is one of them.
 export const IconUsers = (p: P) => (
   <Svg {...p}>
     <circle cx="9.5" cy="8" r="3.4" />
@@ -484,8 +407,6 @@ export const IconUsers = (p: P) => (
   </Svg>
 );
 
-// One node with two branching under it: a result unit is the parent its cost
-// centres hang off, matched by code prefix.
 export const IconHierarchy = (p: P) => (
   <Svg {...p}>
     <rect x="9" y="3" width="6" height="5" rx="1.5" />

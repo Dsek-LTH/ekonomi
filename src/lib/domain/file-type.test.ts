@@ -26,8 +26,7 @@ describe("sniffReceiptType", () => {
     expect(sniffReceiptType(PDF)).toBe("application/pdf");
   });
 
-  // The point of the whole module: the upload's declared Content-Type is a
-  // claim, and these are the bytes that would otherwise be stored under it.
+  // The declared Content-Type is a claim; these are the bytes that would be stored under it.
   it("refuses a file that only claims to be one", () => {
     expect(sniffReceiptType(head("<html><script>"))).toBeNull();
     expect(sniffReceiptType(head("<?xml version=", "'1.0'?><svg"))).toBeNull();
@@ -40,13 +39,12 @@ describe("sniffReceiptType", () => {
     expect(sniffReceiptType(head("<html>%PDF-"))).toBeNull();
   });
 
-  // A RIFF container can hold audio just as easily; the form type is the part
-  // that says WebP.
+  // A RIFF container can hold audio too: the form type says WebP.
   it("refuses RIFF that isn't WebP", () => {
     expect(sniffReceiptType(head("RIFF", [0x24, 0, 0, 0], "WAVE"))).toBeNull();
   });
 
-  // Same container as HEIC, different brand, an MP4 is not a receipt.
+  // Same container as HEIC, different brand.
   it("refuses an ISO base-media file that isn't a still image", () => {
     expect(sniffReceiptType(head([0, 0, 0, 0x18], "ftyp", "mp42"))).toBeNull();
     expect(sniffReceiptType(head([0, 0, 0, 0x18], "ftyp", "isom"))).toBeNull();

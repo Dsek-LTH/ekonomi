@@ -1,12 +1,5 @@
-// A flat grid of labelled facts, for reading a record inside a card.
-//
-// No border of its own: here the card is the frame, so the facts sit straight
-// on it. A small label over each value, two across where the column is wide
-// enough.
-//
-// A container query rather than a viewport breakpoint, because this page sits
-// beside a document panel that can be dragged, so its width changes while the
-// viewport does not.
+// A flat grid of labelled facts for reading a record inside a card (no border: the card is the frame).
+// Container query, not viewport: this page sits beside a draggable document panel.
 export function Facts({ children }: { children: React.ReactNode }) {
   return (
     <div className="@container">

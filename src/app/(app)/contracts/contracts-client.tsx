@@ -47,21 +47,13 @@ export function ContractsClient({
     [t],
   );
 
-  // "Nothing here at all" and "nothing matching what you asked for" read
-  // differently, and with the filtering done in Postgres the row count cannot
-  // tell them apart on its own. The same question the utlägg list asks.
+  // "Nothing at all" vs "nothing matching": filtering is in Postgres, so the row count cannot tell them apart.
   const narrowed = Boolean(
     controls.query || controls.picks.length || controls.dateFrom || controls.dateTo || controls.tab,
   );
 
-  // How a contract's period reads in one cell. Four cases rather than a range
-  // with dashes standing in for the missing halves: an archived contract often
-  // states one end or neither, and "- 2027-06-30" makes a reader work out which
-  // end is missing.
-  //
-  // A lean document (PROTOCOL/OTHER) has no period to state, only the one
-  // date it was filed under, so the same cell reads that instead: it is the
-  // same question, "when is this", the column already asks.
+  // How a contract's period reads in one cell: four cases (an archived contract often states one end or neither). A lean
+  // document (PROTOCOL/OTHER) shows the date it was filed under instead.
   const validity = useCallback(
     (c: ContractSummary): string => {
       if (c.kind !== "CONTRACT") return c.date ? date(c.date) : t("validity.none");
@@ -98,8 +90,7 @@ export function ContractsClient({
       {
         key: "validity",
         header: t("col.validity"),
-        // Off the phone card: it is the longest thing on the row and the
-        // status pill beside it already says whether the contract still runs.
+        // Off the phone card: longest on the row, and the status pill already says whether it still runs.
         mobile: "hide",
         cell: (c) => <span className="whitespace-nowrap text-muted">{validity(c)}</span>,
       },
@@ -113,8 +104,7 @@ export function ContractsClient({
           ) : (
             <span className="flex flex-wrap gap-1">
               {c.tags.map((tag) => (
-                // A neutral Tag rather than a Chip: a Chip is a control you
-                // toggle, and these are labels. Clicking one filters nothing.
+                // A neutral Tag, not a Chip (a Chip is a toggle control).
                 <Tag key={tag}>{tag}</Tag>
               ))}
             </span>
@@ -125,9 +115,7 @@ export function ContractsClient({
         header: t("col.status"),
         mobile: "status",
         cell: (c) => {
-          // Derived against the page's one `today`, so every row on the screen
-          // is judged on the same day. Null for PROTOCOL/OTHER, which carry
-          // no status at all: filed or it doesn't exist.
+          // Derived against the page's one `today`. Null for PROTOCOL/OTHER, which carry no status.
           const status = displayStatus(c, today);
           if (status === null) return <span className="text-muted">-</span>;
           return <Tag tone={CONTRACT_STATUS_TONE[status]}>{t(`status.${status}`)}</Tag>;
@@ -138,8 +126,7 @@ export function ContractsClient({
         header: t("col.files"),
         align: "right",
         mobile: "meta",
-        // A filed contract with no document yet is a real state, and saying so
-        // is more use than an empty cell.
+        // A filed contract with no document yet is a real state.
         cell: (c) => <span className="text-muted">{t("fileCount", { count: c.fileCount })}</span>,
       },
     ],

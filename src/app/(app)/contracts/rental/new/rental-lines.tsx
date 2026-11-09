@@ -1,24 +1,8 @@
 "use client";
 
-// The gear on an uthyrningsavtal, as the lines of an invoice.
-//
-// A real table now, styled the way every other line-item grid in this app is
-// (the voucher editor, the budget sheet): a header row over tight, bordered
-// cells rather than a stack of little forms. A renter reading the drawn
-// contract sees the same columns in the same order, so the form and the
-// document are one thing seen twice rather than two.
-//
-// TableScroll, not a responsive stack that reflows below some width: this
-// editor sits beside a contract panel that can be dragged, so its width
-// changes while the viewport does not move at all, and a table that folds
-// itself into cards at a breakpoint would be folding and unfolding as the
-// panel moves. A sheet scrolls sideways inside its own card instead, which is
-// also what keeps a narrow embed from chaining a sideways swipe to the
-// browser's own back gesture. See components/ui/table-scroll.tsx.
-//
-// No VAT column. The section is momsbefriad, so a line for it would be a row of
-// zeroes on every contract, and a document that reports 0 % moms invites the
-// question of whether somebody forgot to fill it in.
+// The gear on an uthyrningsavtal, as the lines of an invoice: same columns in the same order as the drawn contract.
+// TableScroll, not a reflowing stack: this editor sits beside a draggable panel, so its width changes without the
+// viewport (components/ui/table-scroll.tsx). No VAT column: the section is momsbefriad.
 import { Fragment, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { amountFieldProps } from "@/components/ui/amount-input";
@@ -59,16 +43,8 @@ export const makeLine = (): LineRow => ({
 });
 
 /**
- * What the line's discount comes to as a whole percentage, which is the only
- * shape the row, the create route and the document actually store (see
- * RentalLine.discountPercent in the schema, and the note there on why: it
- * survives the quantity changing, where a fixed amount could not).
- *
- * A kr discount is converted against the line's *current* gross, so it
- * behaves the way a percentage already does when a line is edited: "50 kr
- * off" at 500 kr is the 10 % it was typed as, and stays 10 % if the
- * quantity later changes, the same as if 10 % had been typed directly.
- * Retyping is what moves it back to a fixed 50 kr at the new gross.
+ * The line's discount as a whole percentage, the only shape stored (see RentalLine.discountPercent). A kr discount is
+ * converted against the line's current gross and then behaves like a percentage when the quantity changes.
  */
 export function effectiveDiscountPercent(r: LineRow, toOre: (s: string) => number): number {
   if (r.discountUnit === "percent") return Number(r.discount) || 0;
@@ -77,8 +53,7 @@ export function effectiveDiscountPercent(r: LineRow, toOre: (s: string) => numbe
   return Math.round((toOre(r.discount) / gross) * 100);
 }
 
-/** What a row is worth, from the strings it holds. The same function the create
- *  route and the document use, so the amount shown is the amount charged. */
+/** What a row is worth, from the strings it holds; the same function as the create route and the document. */
 const pricedRow = (r: LineRow, toOre: (s: string) => number) =>
   linePricing({
     quantity: Number(r.quantity) || 0,
@@ -86,26 +61,14 @@ const pricedRow = (r: LineRow, toOre: (s: string) => number) =>
     discountPercent: effectiveDiscountPercent(r, toOre),
   });
 
-/**
- * A row nobody has put anything in: no item picked and no description typed.
- * Quantity, price and discount play no part in this, so a row somebody has
- * only touched by typing a quantity is still blank. The same rule
- * new-rental-client.tsx's own `filled` used to compute independently,
- * sharing it here is what lets the spare-row topping-up below and the
- * caller's own filtering agree by construction rather than by two people
- * remembering to change both.
- */
+/** A row nobody has put anything in: no item picked and no description typed (quantity, price and discount do not count). */
 export const isBlankLineRow = (r: LineRow) => !r.itemId && !r.description.trim();
 
 const headerCell = "px-2 py-2.5 text-right font-medium";
 const cellInput =
   "block h-10 w-full bg-transparent px-2 text-right text-sm tabular-nums placeholder:text-muted focus-inset";
 const cellCombo = "h-10 gap-1 bg-transparent px-2 focus-inset";
-// A sheet reads as a spreadsheet, and a spreadsheet cell doesn't grow a
-// pair of arrows the moment a number lands in it. Chrome/Safari draw their
-// own on `type="number"` regardless of any CSS `appearance`, which is what
-// the two pseudo-elements below are for; Firefox honours `appearance` on
-// the input itself.
+// No spinner arrows on number inputs: Chrome/Safari draw their own regardless of `appearance` (hence the pseudo-elements).
 const noSpinner =
   "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
@@ -113,15 +76,10 @@ export function RentalLines({
   items,
   value,
   onChange,
-  /** How much of each catalogue item is free, or undefined before the dates
-   *  are set. Drawn on the option itself, so the choice is made with it in
-   *  view rather than corrected afterwards. */
+  /** How much of each catalogue item is free, or undefined before the dates are set. Drawn on the option itself. */
   freeFor,
   toOre,
-  /** How many empty rows the sheet keeps topped up, so there is always
-   *  somewhere to write the next line without reaching for an "add row"
-   *  button. See lib/ui/blank-rows.ts, which is what actually keeps the
-   *  count. */
+  /** How many empty rows the sheet keeps topped up. See lib/ui/blank-rows.ts. */
   blankRows = 1,
 }: {
   items: RentalItemOption[];
@@ -134,8 +92,7 @@ export function RentalLines({
 }) {
   const t = useTranslations("contracts.rental");
 
-  // Keep exactly `blankRows` empty rows stocked. See withBlankRows for why
-  // this counts rows anywhere in the list rather than only trailing ones.
+  // Keep exactly `blankRows` empty rows stocked (see withBlankRows).
   const stocked = withBlankRows(value, blankRows, isBlankLineRow, makeLine);
   useEffect(() => {
     if (stocked) onChange(stocked);
@@ -162,14 +119,8 @@ export function RentalLines({
   };
 
   /**
-   * Whether the two catalogue-sourced figures can still be typed into by
-   * hand. With no catalogue at all there's nothing for them to come from, so
-   * both stay free text as before. Once there is one, `pick` is what fills
-   * them, and retyping over what it wrote would let a line quietly disagree
-   * with the item it's supposedly the price of. The one exception is a price
-   * the catalogue itself doesn't set (RentalItem.dailyPriceOre null,
-   * "priced case by case"): `pick` leaves that blank on purpose, and a blank
-   * field nobody can type into would never get a price at all.
+   * Whether the two catalogue-sourced figures can be typed into. With no catalogue they are free text; with one, `pick`
+   * fills them, except a price the catalogue leaves null ("priced case by case"), which must stay typeable.
    */
   const priceEditable = (r: LineRow): boolean => {
     if (items.length === 0) return true;
@@ -178,12 +129,7 @@ export function RentalLines({
   };
   const replacementEditable = items.length === 0;
 
-  /**
-   * Switches a line between typing the discount as a percentage and as a kr
-   * amount, converting what's already there so the discount itself doesn't
-   * change, only how it's written. Against the line's current gross, the
-   * same conversion `effectiveDiscountPercent` runs the other way.
-   */
+  /** Switches a line between typing the discount as a percentage and as kr, converting so the discount itself does not change. */
   const toggleDiscountUnit = (r: LineRow) => {
     const gross = Math.round((Number(r.quantity) || 0) * toOre(r.unitPrice));
     if (r.discount.trim() === "") {
@@ -220,10 +166,7 @@ export function RentalLines({
           {value.map((row) => {
             const priced = pricedRow(row, toOre);
             const note = priced.discountOre > 0 || short(row);
-            // A spare row has nothing to remove, the same rule the
-            // voucher sheet follows: removing "nothing" is not a thing to
-            // offer, and the row disappears on its own the moment
-            // something else fills the spares back up to `blankRows`.
+            // A spare row has nothing to remove; it disappears when something else refills the spares.
             const removable = !isBlankLineRow(row);
             return (
               <Fragment key={row.id}>
@@ -253,10 +196,7 @@ export function RentalLines({
                       <input
                         size={1}
                         value={row.description}
-                        // Typing over the description unlinks the catalogue
-                        // row: the line is no longer the item it was drawn
-                        // from, and keeping the id would claim a provenance
-                        // it has lost.
+                        // Typing over the description unlinks the catalogue row (the line is no longer that item).
                         onChange={(e) =>
                           update(row.id, {
                             description: e.target.value,
@@ -304,13 +244,7 @@ export function RentalLines({
                     )}
                   </td>
                   <td className="p-0 align-middle">
-                    {/* Either unit is stored as a percentage in the end
-                        (see effectiveDiscountPercent, and the comment on
-                        RentalLine.discountPercent in the schema for why):
-                        this is only which way it's typed. The toggle
-                        converts what's already there rather than relabel
-                        it, so switching units doesn't change the
-                        discount. */}
+                    {/* Either unit is stored as a percentage (effectiveDiscountPercent); this is only how it is typed. The toggle converts rather than relabels. */}
                     <div className="flex h-10 items-center">
                       {row.discountUnit === "percent" ? (
                         <input
@@ -344,9 +278,6 @@ export function RentalLines({
                       </button>
                     </div>
                   </td>
-                  {/* Worked out, not typed. The one figure on the row that
-                      says what this line actually costs, which is what a
-                      reader is scanning the column for. */}
                   <td
                     className={cn(
                       "px-2 text-right align-middle text-sm tabular-nums",
@@ -391,11 +322,7 @@ export function RentalLines({
                     )}
                   </td>
                 </tr>
-                {/* What the discount struck off, or that the catalogue can't
-                    cover the quantity, said on the row it belongs to. A
-                    second row rather than a second line inside a cell: a
-                    table's cells hold one fact each, and a note is a
-                    different fact from the ones either side of it. */}
+                {/* A second row, not a second line in a cell: cells hold one fact each. */}
                 {note && (
                   <tr key={`${row.id}-note`} className="bg-surface/60">
                     <td colSpan={7} className="space-y-0.5 px-2 py-1 text-xs">

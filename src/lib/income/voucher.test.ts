@@ -19,7 +19,11 @@ const names: Record<string, string> = {
   "6570": "Bankkostnader",
 };
 
-const line = (account: string, costCenterId: string | null, total: number): DayVoucherInputLine => ({
+const line = (
+  account: string,
+  costCenterId: string | null,
+  total: number,
+): DayVoucherInputLine => ({
   account,
   costCenterId,
   total,
@@ -46,13 +50,11 @@ describe("incomeVoucherBlocker", () => {
     expect(incomeVoucherBlocker(input([line("3000", "cafe", 0)]))).toBe("noDistributions");
   });
 
-  // The rule the per-line cost centre exists for: a row reaching Fortnox with
-  // no cost centre is takings no verksamhet's result will ever show.
   it("refuses a line with no cost centre, revenue or fee alike", () => {
     expect(incomeVoucherBlocker(input([line("3000", null, 100)]))).toBe("noCostCenter");
-    expect(
-      incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("6570", null, -30)])),
-    ).toBe("noCostCenter");
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("6570", null, -30)]))).toBe(
+      "noCostCenter",
+    );
   });
 
   it("does not hold a zero line's missing cost centre against the day", () => {
@@ -62,9 +64,9 @@ describe("incomeVoucherBlocker", () => {
   });
 
   it("refuses a fee line with no fee account chosen", () => {
-    expect(
-      incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("", "fee", -30)])),
-    ).toBe("noAccount");
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 1000), line("", "fee", -30)]))).toBe(
+      "noAccount",
+    );
   });
 
   it("refuses a day whose stored total has drifted from its lines", () => {
@@ -74,9 +76,9 @@ describe("incomeVoucherBlocker", () => {
   });
 
   it("refuses one with no clearing account configured", () => {
-    expect(
-      incomeVoucherBlocker(input([line("3000", "cafe", 100)], { clearingAccount: " " })),
-    ).toBe("noClearingAccount");
+    expect(incomeVoucherBlocker(input([line("3000", "cafe", 100)], { clearingAccount: " " }))).toBe(
+      "noClearingAccount",
+    );
   });
 });
 
@@ -174,19 +176,12 @@ describe("incomeVoucherCoversDay", () => {
 
 describe("incomeVoucherKey", () => {
   it("recognises the same day written differently", () => {
-    // What the duplicate check compares. A voucher already in Fortnox was
-    // written by whatever wrote it (an older install, the CLI this replaced),
-    // so the match cannot depend on spacing or case.
     expect(incomeVoucherKey("2026-01-02", "Swish - Café")).toBe(
       incomeVoucherKey("2026-01-02", "  swish -  café "),
     );
   });
 
   it("matches a day booked under the old IR prefix against one without it", () => {
-    // The fail-safe the prefix removal turns on. Fortnox holds vouchers written
-    // both ways, and a report booked before the change still carries the old
-    // text locally, which is what the export re-checks with. Every pairing has
-    // to land on the same key or a day gets booked twice.
     const plain = incomeVoucherKey("2026-01-02", "Swish - Café");
     expect(incomeVoucherKey("2026-01-02", "IR Swish - Café")).toBe(plain);
     expect(incomeVoucherKey("2026-01-02", "ir  swish - café")).toBe(plain);
@@ -196,8 +191,6 @@ describe("incomeVoucherKey", () => {
   });
 
   it("only strips IR where it is the prefix, not where it starts a name", () => {
-    // "IR" is two letters a verksamhet may well begin with. Stripping it
-    // anywhere but the front would collapse two different days into one.
     expect(incomeVoucherKey("2026-01-02", "Swish - Irrblosset")).not.toBe(
       incomeVoucherKey("2026-01-02", "Swish - rblosset"),
     );
@@ -217,8 +210,6 @@ describe("incomeVoucherKey", () => {
 
 describe("incomeVoucherSeries", () => {
   it("is the connection's series when income has no opinion", () => {
-    // What every income voucher was written to before the setting existed, and
-    // what an install that upgrades and sets nothing keeps doing.
     expect(incomeVoucherSeries(null, "A")).toBe("A");
     expect(incomeVoucherSeries({ incomeVoucherSeries: null }, "A")).toBe("A");
   });

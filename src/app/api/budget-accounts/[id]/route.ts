@@ -15,8 +15,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
   const data: Record<string, unknown> = {};
-  // Changing the code re-resolves against the chart and pulls the name with it,
-  // so the two can't disagree. The name isn't editable on its own any more.
+  // Changing the code re-resolves against the chart and pulls the name with it, so the two can't disagree.
   if (body.accountCode !== undefined) {
     const check = await resolveBudgetAccount(body.accountCode);
     if (!check.ok) return fail(422, check.error, { values: check.values });

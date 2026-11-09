@@ -1,15 +1,7 @@
-// A stocktake that should have been a delivery, made one.
-//
-// Bottles bought in and booked as a stocktake that "found" them come onto the
-// shelf at the shelf's average, which on an unvalued shelf is nothing, and
-// never reach the restaurangrapport's bought-in volume, since only a purchase
-// does. This puts that right without rewriting what was recorded: a purchase
-// of what the count found, on the same day, priced from the product, ordered
-// just before the count. Replayed, the count then agrees with the log, stays
-// as the evidence that somebody counted, and the bottles carry what they cost.
-//
-// POST /api/stock/entries/:id/to-purchase, where :id is any row of the day's
-// stocktake of the product (the cellar list shows a day's count as one row).
+// A stocktake that should have been a delivery, made one: adds a purchase of what the count found,
+// same day, priced from the product, ordered just before the count. Replayed, the count then agrees
+// with the log. `:id` is any row of the day's stocktake of the product.
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
@@ -37,12 +29,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     select: { id: true, costPriceOre: true },
   });
   if (!product) return fail(404, "stock.productNotFound");
-  // A purchase is booked at what the product costs. Without a price it would
-  // come in at nothing, which is the very thing being put right.
+  // Booked at the product's cost; without a price it would come in at nothing.
   if (product.costPriceOre == null) return fail(422, "stock.costRequired");
 
-  // The day's count: one row per rung. Only the sealed one can be a delivery,
-  // since a purchase arrives sealed, and only what it found more of.
+  // The day's count, one row per rung. Only the sealed one, and only what it found more of.
   const day = await prisma.stockEntry.findMany({
     where: { productId: product.id, kind: "COUNT", occurredAt: entry.occurredAt },
     select: { level: true, units: true, createdAt: true },
@@ -59,8 +49,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         units: found,
         unitCostOre: product.costPriceOre,
         occurredAt: entry.occurredAt,
-        // A moment before the count, so the log reads it first: the bottles
-        // arrive, and then the count finds what the books now expect.
+        // A moment before the count, so the log reads the arrival first.
         createdAt: new Date(first.getTime() - 1),
         actorId: g.actor.id,
         note: NOTE,

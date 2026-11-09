@@ -8,41 +8,15 @@ import { Card } from "./card";
 import { IconChevronDown, IconList } from "./icons";
 import { Modal, ModalHeader } from "./modal";
 
-/**
- * Where the panel stops being a full-width list and becomes a column beside the
- * detail, which is to say the breakpoint its screen stands the two side by
- * side at. Written out as literal classes rather than built from the key:
- * Tailwind reads these out of the source as text and never sees a template
- * string.
- */
+/** The breakpoint where the panel becomes a column beside the detail. Literal classes: Tailwind reads source as text. */
 const BANDS = {
   lg: { column: "lg:w-64", below: "(max-width: 1023px)" },
   xl: { column: "xl:w-56", below: "(max-width: 1279px)" },
 } as const;
 
-/** Told to close by a row that has just been picked. See `SidebarItem`. */
 const PickedCtx = createContext<(() => void) | null>(null);
 
-// The master column of a master-detail screen (the result unit list under
-// Inställningar, the cost-centre list in a budget): a fixed-width
-// panel of selectable rows, sections and inline footers.
-//
-// Above the breakpoint it is that column, sticky beside the detail, and the two
-// are on screen together. Below it the screens used to stack (panel on top,
-// detail under) and that is where it went wrong: the budget's panel is 786px
-// of compare, search, list and add-row, so changing cost centre meant scrolling
-// back up past all of it and then down again. The income queue had already
-// noticed and capped its own list at `max-h-80`, which spends less of the screen
-// on the same errand rather than fixing it.
-//
-// So below the breakpoint the panel is a bar and a dialog: the bar says what is
-// selected and stays pinned while you work, and it opens the panel's own
-// contents unchanged. Nothing is dropped or reshaped. The grouped list keeps
-// its headings, its figures and its per-group actions, because it is the same
-// tree either way.
-//
-// A screen that gives no `bar` keeps the old stacking, which is right for a
-// panel short enough to sit above its detail.
+// The master column of a master-detail screen. Above the breakpoint it is a sticky column; below it, given a `bar`, it is a pinned bar that opens the same contents in a dialog. Without `bar` it stacks.
 export function SidebarPanel({
   children,
   className,
@@ -55,29 +29,11 @@ export function SidebarPanel({
 }: {
   children: React.ReactNode;
   className?: string;
-  /** The card inside the panel, for a panel that has to fit a fixed height and
-   *  hand what is left to one of its children (the budget's list, from lg). */
   cardClassName?: string;
-  /** The breakpoint this screen stands its detail beside the panel at. */
   at?: keyof typeof BANDS;
-  /**
-   * What the collapsed bar says, normally the selected row's own line. Given
-   * this, the panel collapses below the breakpoint; without it, it stacks.
-   */
   bar?: React.ReactNode;
-  /** What the dialog is announced and headed as. Required alongside `bar`. */
   sheetLabel?: string;
-  /**
-   * The bar at every width, never the column. For a screen whose detail needs
-   * the width more than the list needs to be in view: the income review,
-   * where the list is a queue gone through one day at a time and the column
-   * squeezed the day's lines beside the document panel.
-   */
   always?: boolean;
-  /**
-   * Beside the bar, inside the same card: controls that act on the selection
-   * without opening the list, such as stepping to the next row.
-   */
   barAside?: React.ReactNode;
 }) {
   const band = BANDS[at];
@@ -87,17 +43,8 @@ export function SidebarPanel({
   if (bar && collapsed) {
     return (
       <>
-        {/* `top-app-bar` under the phone's app bar; from md the frame is fixed and
-            the main column is the scrollport, so the bar sticks to the top of
-            that instead. z-10 to stay under the app bar's own 20.
-
-            `bg-canvas` on the wrapper, not just the Card inside it. The Card is
-            opaque but rounded, and a rounded box pinned over a scrolling list
-            is transparent at its four corner arcs: the rows underneath slid
-            through them, which reads as the bar being slightly see-through
-            rather than as the geometry it is. Canvas is the page's own colour
-            (body, globals.css), so the arcs go on showing exactly what they
-            show when nothing is scrolling. */}
+        {/* top-app-bar under the phone's app bar; from md the main column is the scrollport. z-10 stays under the app bar's 20.
+        bg-canvas on the wrapper: the Card's rounded corners are transparent over a scrolling list. */}
         <div className="sticky top-app-bar z-10 bg-canvas">
           <Card className="flex items-stretch overflow-hidden">
             <button
@@ -119,10 +66,6 @@ export function SidebarPanel({
         {open && (
           <Modal label={sheetLabel ?? ""} onClose={() => setOpen(false)} className="max-w-md">
             <ModalHeader title={sheetLabel ?? ""} />
-            {/* The panel's own tree, unwrapped: it already brings its rules,
-                its headings and its own inner scroller, and a ModalBody's
-                padding around it would inset a list that is meant to reach the
-                dialog's edges. */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <PickedCtx.Provider value={() => setOpen(false)}>{children}</PickedCtx.Provider>
             </div>
@@ -133,25 +76,13 @@ export function SidebarPanel({
   }
 
   return (
-    // Until the breakpoint the master-detail screens stack, so the panel is a
-    // full-width list above the detail rather than a 16rem column beside it.
     <aside className={cn("w-full shrink-0", band.column, className)}>
-      {/* A Card, not a lookalike: this panel stands beside the detail card on
-          a master-detail screen, and it used to be the same shape with no
-          elevation, which read as the list being a level behind. */}
       <Card className={cn("overflow-hidden", cardClassName)}>{children}</Card>
     </aside>
   );
 }
 
-// One selectable row. Selection is the accent wash; everything else is left to
-// `children`, which is usually a title line plus a muted detail line.
-//
-// The rest of the button's props pass through, the same way Card's do. A row
-// that is also a drop target (the income queue, which takes sold lines dragged
-// onto another verksamhet's day) needs its own handlers, and wrapping it in a
-// div to carry them would put the drop zone somewhere other than the thing that
-// looks like the target.
+// One selectable row. The rest of the button's props pass through (a row can be a drop target).
 export function SidebarItem({
   active,
   onClick,
@@ -159,10 +90,7 @@ export function SidebarItem({
   children,
   ...rest
 }: React.ComponentProps<"button"> & { active: boolean }) {
-  // Picking a row is the one thing that means "done with the list", so inside
-  // the collapsed panel's dialog it closes it. Only this: the search box, the
-  // comparison picker and a group's own "+" are all things you do *in* the
-  // list, and a dialog that shut on the first keystroke would be unusable.
+  // Picking a row closes the collapsed panel's dialog. Search, comparison and a group's "+" must not.
   const picked = useContext(PickedCtx);
 
   return (
@@ -176,8 +104,6 @@ export function SidebarItem({
       aria-current={active ? "true" : undefined}
       className={cn(
         "w-full px-4 py-2.5 text-left text-sm",
-        // The fill and an ink bar at the start, so the picked row is not
-        // told from a hovered one by a step of grey alone.
         active
           ? "bg-accent-soft text-accent shadow-[inset_2px_0_0_var(--color-accent)]"
           : "hover:bg-hover",
@@ -189,11 +115,7 @@ export function SidebarItem({
   );
 }
 
-// A section heading between groups of items.
-//
-// `action` is for a control that belongs to the group rather than to any one row
-// in it. The income queue puts "new report for this day" beside the date, which
-// is the only place where the day it would be for is already stated.
+// A section heading between groups. `action` belongs to the group, not to a row.
 export function SidebarGroupLabel({
   children,
   action,
@@ -203,8 +125,7 @@ export function SidebarGroupLabel({
 }) {
   return (
     <p className="flex items-center justify-between gap-2 bg-surface px-4 py-1.5 text-xs font-medium text-muted">
-      {/* Only clipped when it is sharing the row: a heading on its own wraps,
-          which is what a long result-unit name in a 16rem column needs. */}
+      {/* Only clipped when sharing the row: a heading on its own wraps. */}
       <span className={cn(Boolean(action) && "min-w-0 truncate")}>{children}</span>
       {action}
     </p>

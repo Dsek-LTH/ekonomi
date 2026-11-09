@@ -28,11 +28,8 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
 
-  // Which size a product needs follows from its kind, which is why the schema
-  // cannot say it. A spirit that never had its bottle size set is a product
-  // whose levels mean nothing (40 % of what?) and a can with no volume leaves
-  // itself out of the restaurangrapport's litres. Both are settled when the
-  // product is made rather than discovered by the first person holding a crate.
+  // The needed size follows from the kind, which the schema cannot say: a spirit without bottle size
+  // has meaningless levels, a can without volume drops out of the restaurangrapport's litres.
   if (body.kind === "VOLUME" && !body.nominalMl) {
     return fail(422, "stock.calibrationNoVolume");
   }
@@ -40,12 +37,8 @@ export async function POST(req: Request) {
     return fail(422, "stock.sizeRequired");
   }
 
-  // Said in words, and about a particular product. A bare "that did not save"
-  // leaves somebody holding a tin with nowhere to go; naming the owner, and
-  // saying when the owner is retired rather than in use, turns the refusal
-  // into an instruction.
-  // A barcode, or the product said outright to have none, in which case it
-  // gets one of the section's own (lib/stock/barcode.ts).
+  // Names the owner (and whether retired) so the refusal is an instruction. A barcode, or none:
+  // then it gets one of the section's own (lib/stock/barcode.ts).
   if (!body.noBarcode && !body.ean) return fail(422, "stock.eanRequired");
   if (!body.noBarcode && typedInternalCode(body.ean)) return fail(422, "stock.internalCodeTyped");
   const ean = body.noBarcode ? await nextInternalCode() : body.ean!;
@@ -66,15 +59,13 @@ export async function POST(req: Request) {
         costPriceOre: body.costPriceOre ?? null,
         shelfLifeMonths: body.shelfLifeMonths ?? null,
         systembolagetId: body.systembolagetId ?? null,
-        // Cleaned by the schema; the fallback is only the field being left out,
-        // which a product with nothing to label itself is entitled to do.
+        // Cleaned by the schema; the fallback is only for a missing field.
         tags: body.tags ?? [],
       },
       select: { id: true },
     })
     .catch((err: unknown) => {
-      // The same collision, arriving between the check above and this line.
-      // Vanishingly rare and still worth answering properly.
+      // The same collision, arriving between the check and the write.
       if (isCollision(err)) return null;
       throw err;
     });

@@ -19,15 +19,13 @@ describe("rateOn", () => {
   });
 
   it("does not apply a rate that has not started yet", () => {
-    // A claim filed in 2026 is worth the 2026 rate even though the table
-    // already knows what 2027 will be.
+    // A claim filed in 2026 is worth the 2026 rate even though 2027 is already in the table.
     expect(rateOn(rates, "2026-12-31")?.orePerKm).toBe(250);
     expect(rateOn(rates, "2027-01-01")?.orePerKm).toBe(265);
   });
 
   it("says nothing rather than inventing a rate for a day before the first", () => {
-    // Not a fallback constant: a trip nobody can value must be refused, not
-    // quietly paid out at whatever the code happened to hold.
+    // No fallback constant: a trip nobody can value must be refused.
     expect(rateOn(rates, "2018-06-01")).toBeNull();
     expect(rateOn([], "2026-08-27")).toBeNull();
   });

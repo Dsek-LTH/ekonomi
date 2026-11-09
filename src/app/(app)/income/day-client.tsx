@@ -1,19 +1,5 @@
 "use client";
 
-// One day of takings: its own page, the way an utlägg and a levfaktura have
-// theirs, opened from the list.
-//
-// One layout in every state. A header card says where the day is and carries
-// its next step as the main button, the rest under Mer: Kontera on a day
-// waiting to be konterad, Granska och bokför on a konterad one (by somebody
-// other than whoever konterade it, the same two-person rule as an utlägg).
-// Under it, while the day can still change, what to look at, the sold lines
-// where it is corrected, and the voucher it will be konterad as. Once
-// konterad, the verifikation as it stands and the lines it came from, read
-// only. The intäktsräkning is in the shell's document panel beside it all.
-//
-// Every action goes back to the list, as on a levfaktura: there is no queue to
-// step through here, and the days that need nobody are handled in bulk there.
 import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -64,20 +50,15 @@ export default function DayClient({
   reviewerName,
 }: {
   report: IncomeReportRow;
-  /** The verifikation as konterad, once it is. */
   voucherRows: IncomeVoucherRow[] | null;
   settings: IncomeSettingsRow;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
   projects: ProjectRecord[];
   moveTargets: IncomeMoveTarget[];
-  /** May kontera, and granska and bokföra. */
   canBook: boolean;
-  /** May undo: unexport, reopen, delete a konterad day. */
   canManage: boolean;
-  /** The reader wrote this day's kontering and is not exempt from the rule. */
   ownBooking: boolean;
-  /** Who konterar as, named on the voucher and the document. */
   reviewerName: string;
 }) {
   const t = useTranslations("income");
@@ -94,8 +75,6 @@ export default function DayClient({
   const voucher = dayVoucher({ report, settings, accounts, costCenters, projects });
   const findings = lineFindings(report, costCenters);
   const back = (status = report.status) => router.push(incomeListHref(slug, tabOf(status)));
-
-  // ── Actions ──
 
   async function kontera() {
     const done = await mutate(`/api/income/reports/${report.id}/book`, {
@@ -192,8 +171,6 @@ export default function DayClient({
       setAssigning(false);
     }
   }
-
-  // ── The header's actions: the next step leads, the rest under Mer ──
 
   type Action = {
     key: string;

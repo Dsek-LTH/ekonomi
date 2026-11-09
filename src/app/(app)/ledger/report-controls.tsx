@@ -1,17 +1,7 @@
 "use client";
 
-// The report's controls, in two pieces that answer two different questions.
-//
-// ReportParameters is what the report is *of*, asked one thing per row in the
-// order you'd ask them out loud: which report, over what time, for which cost
-// centre, grouped how, compared against what. Each row is a band of its own, so
-// the panel reads downwards as a list of decisions rather than sideways as a
-// wall of pickers.
-//
-// ReportBar is what you do *with* the result once it's on screen: find a row,
-// change which columns show, so it lives with the table, stays pinned to the
-// top while you scroll, and takes over showing what the report is of once the
-// panel above has scrolled out of sight.
+// ReportParameters is what the report is *of* (one decision per row); ReportBar is what you do with the result
+// (find a row, pick columns), pinned above the table.
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Combobox, MultiCombobox, type ComboOption } from "@/components/ui/combobox";
@@ -24,18 +14,10 @@ import { cn } from "@/lib/ui/utils";
 import type { BudgetOption, ComparisonMode, QueryState, ResultColumn } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
 
-// The picker value for the rows carrying no cost centre. The query spells that
-// bucket "", which a picker cannot hold as a value, since it reads as empty.
-// "Every cost centre" is not an option at all any more: it is picking none,
-// which the trigger shows as its placeholder and the clear button returns to.
+// The picker value for rows carrying no cost centre. The query spells that bucket "", which a picker cannot hold.
 const CC_NONE = "__NONE__";
 
-/**
- * The cost centres as picker options, led by the two that are not one cost
- * centre but a side of the line: rows carrying none, and rows carrying any.
- * "Med kostnadsställe" is the query's own `*` (see lib/ledger/cost-center-
- * filter.ts), which a picker can hold as it is.
- */
+/** The cost centres as picker options, led by "no cost centre" and "any" (the query's own `*`, lib/ledger/cost-center-filter.ts). */
 function costCenterOptions(
   costCenters: { code: string; name: string }[],
   noneLabel: string,
@@ -47,18 +29,13 @@ function costCenterOptions(
     ...costCenters.map((c, i) => ({
       value: c.code,
       label: `${c.code} - ${c.name}`,
-      // The two buckets above are sides of the line; these are the cost
-      // centres themselves, and the rule says the list changes kind here.
+      // The two buckets above are sides of the line; these are the cost centres themselves.
       dividerBefore: i === 0,
     })),
   ];
 }
 
-// One decision, labelled. The label is what makes a control readable on its
-// own. Five bare pickers in a row all look like the same filter.
-// A <span>, not a <label>: every control below is a button or a listbox that
-// carries its own aria-label, and a <label> with nothing to point at is an
-// empty promise to a screen reader.
+// One decision, labelled. A <span>, not a <label>: every control below carries its own aria-label.
 function Field({
   label,
   className,
@@ -76,17 +53,10 @@ function Field({
   );
 }
 
-// The pills are shorter than a Combobox trigger (h-8, see components/ui/field
-// .tsx), and a row that mixes the two heights reads as misaligned however it is
-// aligned. Every control in the panel is therefore field-height.
+// Pills are shorter than a Combobox trigger (h-8, components/ui/field.tsx), so every control in the panel is field-height.
 const PILLS = "[&>button]:h-11 sm:[&>button]:h-8";
 
-// One row of the panel. Hairline above, none on the first. The rows are the
-// structure, so they get the rule rather than the whole panel getting padding.
-//
-// From lg the panel is a column to the left of the report (see ledger-client),
-// too narrow for fields side by side, so each row stacks its fields and every
-// one takes the column's width.
+// One row of the panel, hairline above except the first. From lg the panel is a narrow column left of the report, so fields stack.
 function Row({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:[&>*]:w-full">
@@ -104,14 +74,9 @@ interface PeriodChoice {
 }
 
 /**
- * One end of the period, as a date typed or picked.
- *
- * What is typed is held here and only handed on once it is a whole date that
- * exists: the report refetches on every change to the query, and it is the
- * slowest request in the app, so "2026-0" on the way to "2026-03-15" must not
- * be one. Left half-typed, it goes back to the date the report is actually
- * showing. The server clamps the period into the financial year and reports
- * back what it used, which arrives here as a new `value`.
+ * One end of the period, as a date typed or picked. Typed text is only handed on once it is a whole, existing date:
+ * the report refetches on every query change and is the slowest request. Half-typed reverts to the date shown.
+ * The server clamps the period into the financial year and reports back what it used, arriving as a new `value`.
  */
 function PeriodDate({
   value,
@@ -123,9 +88,7 @@ function PeriodDate({
   "aria-label": string;
 }) {
   const [draft, setDraft] = useState(value ?? "");
-  // When the report answers with a different date (clamped into the year, or
-  // a new year picked), the field follows it. Adjusted during render rather
-  // than in an effect, so there is no frame showing the stale one.
+  // When the report answers with a different date (clamped, or a new year), the field follows; adjusted during render to avoid a stale frame.
   const [shown, setShown] = useState(value);
   if (value !== shown) {
     setShown(value);
@@ -151,11 +114,7 @@ function PeriodDate({
   );
 }
 
-/**
- * The period within the header's year, and the cost centres: what both panels ask
- * first, in the same order. One component, so the report and the charts cannot
- * come to ask it differently.
- */
+/** The period within the header's year, and the cost centres: what both panels ask first, as one component so they cannot diverge. */
 function PeriodRows({
   query,
   onQuery,
@@ -174,10 +133,6 @@ function PeriodRows({
   return (
     <>
       <Row>
-        {/* No year here: it is the header's räkenskapsår, for this page and
-            every other (see docs/navigation.md). The period is within it. */}
-        {/* Above the dates it names. A preset sets them; typing in them makes
-            the range the reader's own, and the picker says so. */}
         {period && (
           <Field label={t("period")} className="w-full sm:w-56">
             <Combobox
@@ -190,10 +145,6 @@ function PeriodRows({
             />
           </Field>
         )}
-        {/* From and To as one range, side by side with a dash between, at
-            every width, including the panel's narrow column from lg, where every
-            other field takes a row of its own. Dates, not months: a report can
-            be taken over any span of days, the way Fortnox takes one. */}
         <div className="flex min-w-0 items-end gap-2">
           <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
             <PeriodDate
@@ -205,7 +156,6 @@ function PeriodRows({
               aria-label={t("from")}
             />
           </Field>
-          {/* The height of a control, so the dash sits level with the two. */}
           <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
             -
           </span>
@@ -241,15 +191,8 @@ function PeriodRows({
 }
 
 /**
- * Which budget a comparison is against, for both panels.
- *
- * Every budget is offered, not only the ones for the year being reported on.
- * Holding this year's outcome against what was budgeted two years ago is a
- * fair question to ask.
- *
- * Hidden only when there is nothing to choose: one budget, and it is already
- * the one being compared against. A lone budget belonging to some other year
- * is not that case. It is the one you would have to reach for by hand.
+ * Which budget a comparison is against, for both panels. Every budget is offered, not only the report year's.
+ * Hidden only when one budget exists and it is already the one compared against.
  */
 function BudgetPicker({
   query,
@@ -266,12 +209,8 @@ function BudgetPicker({
     <Field label={t("budget")} className="w-full sm:w-64">
       <Combobox
         size="sm"
-        // Date (or year) first, then the budget's own name, budgetLabel, the
-        // same one the compare pickers use, because three screens spelling a
-        // budget three ways is three things to keep in step. Leading with the
-        // date is what tells two years' "Ursprunglig" apart and what makes
-        // picking one from another year a deliberate act rather than a slip;
-        // typing "2024" narrows to that year, since the search reads the label.
+        // Date (or year) first, then budgetLabel (shared with the compare pickers), so same-named budgets of
+        // different years are told apart and typing "2024" narrows to that year.
         options={budgets.map((b) => ({ value: b.id, label: budgetLabel(b) }))}
         value={query.budget ?? ""}
         onChange={(v) => onQuery({ budget: v })}
@@ -284,12 +223,7 @@ function BudgetPicker({
   );
 }
 
-/**
- * How fresh the figures are, at the foot of the parameters. It used to trail
- * the page's description under the title, where it read as part of a sentence
- * about what the page is. It is a fact about the year being reported on, which
- * is what the panel above it chooses, so it sits with that.
- */
+/** How fresh the figures are, at the foot of the parameters (a fact about the year being reported on). */
 function SyncedNote({ synced }: { synced?: string | null }) {
   if (!synced) return null;
   return <p className="border-t border-border px-inset py-2.5 text-xs text-muted">{synced}</p>;
@@ -342,14 +276,9 @@ export function ReportParameters({
 
       <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
-      {/* Which figures stand beside each account. Result report only: the
-          balance report's columns are fixed (opening, period, closing). */}
       {query.kind === "RESULT" && (
         <Row>
           <Field label={t("columns")}>
-            {/* Plain boxes, every option in sight: five is few enough to read
-                at a glance, and a dropdown hid which ones were on behind a
-                "3 valda". */}
             <div role="group" aria-label={t("columns")} className="flex flex-col gap-2 pt-0.5">
               {RESULT_COLUMNS.map((c) => {
                 const label = t(`columnOption.${c}`);
@@ -358,9 +287,7 @@ export function ReportParameters({
                     key={c}
                     label={label}
                     checked={columns.includes(c)}
-                    // The last ticked box stays ticked: a report of no figures
-                    // is not a report, and a table that quietly showed the
-                    // period anyway would disagree with the boxes above it.
+                    // The last ticked box stays ticked: a report of no figures is not a report.
                     onChange={() => {
                       if (columns.includes(c) && columns.length === 1) return;
                       onColumns(
@@ -383,10 +310,8 @@ export function ReportParameters({
             className={PILLS}
             options={[
               { value: "NONE", label: t("none") },
-              // The result report takes last year as columns of its own (see
-              // Kolumner above), so here it is only the budget. The balance
-              // report has no such columns and keeps last year here. Balance
-              // accounts aren't budgeted, so the budget isn't offered there.
+              // The result report takes last year as its own columns (Kolumner), so only the budget is offered here.
+              // The balance report has no such columns and keeps last year; its accounts aren't budgeted.
               ...(query.kind === "BALANCE"
                 ? [{ value: "PRIOR", label: t("priorYear") }]
                 : [{ value: "BUDGET", label: t("budget") }]),
@@ -395,9 +320,6 @@ export function ReportParameters({
             onChange={(v) => onQuery({ compare: v as ComparisonMode })}
           />
         </Field>
-        {/* With the comparison it is the difference against, and only while
-            there is one: a toggle with nothing to take a difference of would
-            be present and inert. */}
         {query.compare !== "NONE" && (
           <Checkbox
             label={t("difference")}
@@ -419,30 +341,10 @@ export function ReportParameters({
 }
 
 /**
- * The parameters, as the charts need them.
- *
- * A card of its own rather than the report's, because most of the report's
- * panel says nothing to a chart and a control that is present and inert is
- * worse than one that is absent. What is left out, and why:
- *
- *   report kind    A balansrapport is a position rather than a period, so there
- *                    is nothing here to draw and the switch to these charts is
- *                    not offered for one. Everything on this card is therefore
- *                    about a result report already.
- *   grouping       Summed or per cost centre is how the *table* stacks its
- *                    rows, and it follows from the cost-centre filter rather
- *                    than being chosen. /api/ledger/trend never reads it: the charts break
- *                    the period down per cost centre whatever it says, because
- *                    that is what two of the five are about.
- *   prior year     The one comparison these charts do not draw. Only a budget
- *                    gives them anything, the pace line on the cumulative
- *                    chart and the marks on the ranking, so the three-way
- *                    choice becomes the one question that has an answer here.
- *
- * What it writes is the same `QueryState` the report panel writes, deliberately.
- * The two views describe one period, and a second copy of the year and the
- * period would be two things to keep in step and a screen that changed its mind
- * about what it was showing when you switched.
+ * The parameters, as the charts need them: a card of its own, since most of the report's panel says nothing to a chart.
+ * Left out: report kind (a balansrapport has nothing to draw, so the charts are not offered), grouping (the charts
+ * break down per cost centre regardless; /api/ledger/trend never reads it) and prior year (only a budget gives the
+ * pace line and ranking marks anything to draw). Writes the same `QueryState` as the report panel, as one period.
  */
 export function ChartParameters({
   query,
@@ -469,12 +371,6 @@ export function ChartParameters({
       <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
       <Row>
-        {/* Two answers where the report offers three, because a budget is the
-            only comparison these charts have anywhere to put. It is the same
-            setting the report's comparison holds, so turning it on here does
-            replace a prior-year column over there. That is not a side effect to
-            hide: it is one report, and you have just changed what it is
-            compared against. */}
         <Field label={t("charts.pacing")}>
           <SegmentedControl
             className={PILLS}

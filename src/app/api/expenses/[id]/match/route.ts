@@ -1,6 +1,4 @@
-// Set or clear the bank-transaction match on a CARD expense. Only allowed
-// while the expense is still pre-submission (DRAFT /
-// CHANGES_REQUESTED). The [id] param is the expense id.
+// Set or clear the bank-transaction match on a CARD expense, while it is pre-submission (DRAFT / CHANGES_REQUESTED).
 import { prisma } from "@/lib/server/db";
 import { isQuietDraftEdit, isSubmittable } from "@/lib/domain/status";
 import { fail, gate } from "@/lib/api/guard";
@@ -26,14 +24,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) return fail(404, "expense.notFound");
 
-  // Out of scope is not found, as everywhere else. A 403 here would confirm
-  // that this utlägg exists, which is the one thing the view rule is meant to
-  // withhold.
+  // Out of scope is not found: a 403 would confirm the utlägg exists.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
 
-  // The match is part of the utlägg's own figures, so it follows the edit rule
-  // rather than the view rule.
+  // The match is part of the utlägg's figures, so it follows the edit rule rather than the view rule.
   if (!canEditExpense(g.actor, expense)) return fail(403, "expense.noEditAccess");
   if (!isSubmittable(expense.status)) {
     return fail(409, "expense.matchLocked");
@@ -42,22 +37,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return fail(422, "expense.matchCardOnly");
   }
 
-  // A transaction id, or null to unmatch. The schema insists it is one of the
-  // two, so the third case this used to carry (a body that named neither, and
-  // its own 422) cannot arrive.
   const transactionId = body.transactionId;
 
-  // Already the answer: the wizard sends the match it already holds on every
-  // save, whether or not this step is the one that changed it, and re-writing
-  // the same id was logging a MATCHED nobody caused, right beside the one the
-  // create step (or an earlier save) had already written.
+  // Already the answer: the wizard re-sends the match on every save, and re-writing it would log a MATCHED nobody caused.
   if (transactionId === expense.matchedTransactionId) {
     return new Response(null, { status: 204 });
   }
 
   if (transactionId !== null) {
-    // Validate the transaction exists, belongs to the submitter's own section
-    // card, and isn't already taken by another expense.
+    // The transaction must exist, belong to the submitter's own section card, and not be taken by another expense.
     const txn = await prisma.bankTransaction.findUnique({
       where: { id: transactionId },
       include: {
@@ -74,7 +62,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         values: { reference: expenseLabel(txn.matchedExpense) },
       });
     }
-    // Both in öre, so this is an exact comparison.
     if (expense.grossAmount === null) {
       return fail(422, "expense.amountBeforeMatch");
     }

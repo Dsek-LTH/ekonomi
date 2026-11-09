@@ -1,28 +1,6 @@
-// Moving between the cells of a sheet with the keyboard.
-//
-// Pure geometry: a grid of cell names, and the four questions a key press asks
-// of it. What is next, what is previous, what is above, what is below. Nothing
-// here knows what a cell contains or how it is drawn. The caller passes a
-// predicate saying which cells can currently take the caret, and gets a name
-// back.
-//
-// Deliberately separate from the budget sheet's `use-cell-edit`, which answers
-// a different question. That one is select-versus-edit: whether a keypress
-// belongs to the cell or to the text inside it, and it leaves movement entirely
-// to the browser's own focus order. This one is movement, for a grid where the
-// browser's order is not the one a person wants: a table row holds a link and
-// a remove button as well as its figures, and tabbing through those between
-// every pair of numbers is not how anybody fills in a sheet.
-//
-// Two rules worth stating because they are easy to get wrong:
-//
-// A cell that cannot take focus is skipped, not stopped at. A locked rung in
-// the middle of a column, or a column a phone is not showing, is a hole rather
-// than the end.
-//
-// And a direction that runs out returns nothing rather than wrapping. Wrapping
-// belongs to `nextCell`, which is a sequence; an arrow is a direction, and the
-// edge of a grid is where it stops.
+// Keyboard movement between sheet cells: pure geometry over a grid of cell names, with a predicate for which cells can
+// take the caret. Cells that cannot are skipped (holes), and a direction that runs out returns nothing instead of
+// wrapping (only `nextCell`, a sequence, wraps).
 
 /** A cell's name, or nothing where the grid has no cell. */
 export type Cell = string | null;
@@ -37,14 +15,7 @@ export function findCell(grid: Grid, key: string): [number, number] | null {
   return null;
 }
 
-/**
- * The next cell reading the way the sheet is written: across, then down.
- *
- * What Tab does. Running off the end of a row continues on the next one, which
- * is what makes it a sequence rather than a direction, and running off the end
- * of the grid returns nothing, so the caller can let the key fall through and
- * leave rather than trapping focus.
- */
+/** The next cell reading across, then down (what Tab does). Nothing at the end of the grid, so the key can fall through. */
 export function nextCell(
   grid: Grid,
   key: string,
@@ -71,12 +42,7 @@ export function nextCell(
   }
 }
 
-/**
- * The next cell in a direction, which is what an arrow means.
- *
- * Keeps going past cells that cannot take the caret, and stops at the edge of
- * the grid rather than continuing on the other side.
- */
+/** The next cell in a direction (an arrow). Skips cells that cannot take the caret and stops at the grid edge. */
 export function stepCell(
   grid: Grid,
   key: string,
@@ -97,13 +63,8 @@ export function stepCell(
 }
 
 /**
- * Whether the caret has run out of text in this direction.
- *
- * The one thing that lets left and right move between cells at all: inside a
- * box those keys belong to the text, and a cell may hold a sum somebody is part
- * way through typing. At the edge of it there is nothing left to move over, so
- * the next press leaves. A selection is never at an edge: something is
- * highlighted, and the arrow collapses it.
+ * Whether the caret has run out of text in this direction, so left/right may leave the cell.
+ * A selection is never at an edge (the arrow collapses it).
  */
 export function atTextEdge(
   el: { selectionStart: number | null; selectionEnd: number | null; value: string },

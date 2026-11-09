@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { daySections, soldSections, unplacedPrefix, type DayLine, type SectionLine } from "./sold-lines";
+import {
+  daySections,
+  soldSections,
+  unplacedPrefix,
+  type DayLine,
+  type SectionLine,
+} from "./sold-lines";
 
 const line = (over: Partial<SectionLine> = {}): SectionLine => ({
   name: "Cola",
@@ -108,7 +114,12 @@ describe("daySections", () => {
     const got = daySections([
       sale({ resultUnitId: "sex", unitName: "Sexmästeriet", total: 40 }),
       sale({ kind: "FEE", resultUnitId: null, unitName: null, account: "6570", total: -2 }),
-      sale({ name: "s9 - Okänd", resultUnitId: "skatt", unitName: "Skattmästeriet", unmatched: true }),
+      sale({
+        name: "s9 - Okänd",
+        resultUnitId: "skatt",
+        unitName: "Skattmästeriet",
+        unmatched: true,
+      }),
       sale({ total: 13 }),
       sale({ name: "Lost", resultUnitId: null, unitName: null, unmatched: true }),
     ]);
@@ -118,8 +129,6 @@ describe("daySections", () => {
       ["unit", "Sexmästeriet", 40],
       ["fees", null, -2],
     ]);
-    // Each block carries its own lines, for setting a cost centre on all of
-    // them at once from the heading.
     expect(got[2].lines.map((l) => l.total)).toEqual([40]);
     expect(got[0].lines).toHaveLength(2);
     // Unmatched lines are pulled under the prefix they were rung up with.

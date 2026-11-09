@@ -1,19 +1,12 @@
-// The variables sheet: named values/expressions referenceable from any cell.
-// Its two editable columns are gated cells, so they select and edit exactly like
-// a cost-centre sheet (Enter edits; Tab moves natively).
-//
-// Variables are a flat namespace, matched across budgets on the name alone, so
-// when a comparison is on this shows the other side's value beside each, and,
-// below, the ones only the other side defines. A budget whose MEDLEMMAR the
-// section has grown out of is worth seeing.
+// The variables sheet: named values and expressions usable from any cell. Variables are a
+// flat namespace matched across budgets by name, so a comparison shows the other side's
+// value and the ones only it defines. Editable columns are gated cells (Enter edits).
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { IconButton } from "@/components/ui/icon-button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { IconTrash } from "@/components/ui/icons";
-// Variables are not money: MEDLEMMAR is a headcount, a policy figure may be a
-// share, so they are printed as the numbers they are rather than converted
-// from öre. See `fmtScalar` in budget-helpers.
+// Not money: a headcount or a share is printed as is, not converted from öre (`fmtScalar`).
 import { fmtScalar } from "./budget-helpers";
 import { useCellEdit } from "./use-cell-edit";
 import type { Comparison } from "./use-comparison";
@@ -126,8 +119,6 @@ export function VariablesSheet({
               );
             })}
 
-            {/* Defined over there and not here. Read-only: pulling one across is a
-              decision about this budget, not a display detail. */}
             {ghosts.map((v) => (
               <tr key={`ghost-${v.name}`} className="border-b border-border/60 text-muted">
                 <td className="border-r border-border/60 px-3 py-1.5 font-mono text-xs">

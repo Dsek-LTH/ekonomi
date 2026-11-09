@@ -1,9 +1,4 @@
-// Where `notFound()` lands inside the app: a budget id that no longer exists,
-// a mistyped path under /expenses.
-//
-// Inside `(app)` so it keeps the sidebar: not finding one thing is not a reason
-// to lose the way to everything else. Next's stock 404 had no shell, no
-// language and no link back.
+// Where `notFound()` lands inside the app. Inside `(app)` so it keeps the sidebar.
 
 import { getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/button";

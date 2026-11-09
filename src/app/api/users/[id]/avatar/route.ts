@@ -1,9 +1,6 @@
-// A member's profile picture, for anyone signed in: it is drawn beside their
-// name wherever the name is, and every signed-in member can see names.
-//
-// The URL carries the picture's version (`?v=`, see components/ui/user-avatar),
-// and a new picture is a new version, so a response can be kept for a year.
-// Private, so a shared cache never holds one.
+// A member's profile picture, for anyone signed in. The URL carries the version (`?v=`, see
+// components/ui/user-avatar), so a response is cached for a year, private so no shared cache holds one.
+
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
 import { getObjectStream } from "@/lib/server/storage";

@@ -1,16 +1,5 @@
 "use client";
 
-// One result unit's sales, as a row of Inställningar → Försäljning.
-//
-// It used to be the third section of the unit's dialog under Resultatenheter,
-// which meant setting up income took a dialog per unit on one page and the
-// accounts on another, and nothing said what was still missing. Now every unit
-// is a row here: whether it sells, and how, beside the accounts its takings are
-// booked against.
-//
-// Everything a unit needs in order to take money in. The key its reports are
-// grouped by is not among these: it is derived from the name when the profile
-// is created and never changed, and nobody here needs to read it.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -36,7 +25,6 @@ export function UnitSales({
 }: {
   unit: ResultUnit;
   costCenters: CostCenter[];
-  /** Where sales matching no prefix go. Set once for the whole page. */
   isFallback: boolean;
   pending: string | null;
   mutate: Mutate;
@@ -48,15 +36,9 @@ export function UnitSales({
   const confirm = useConfirm();
 
   const income = unit.income;
-  // Open from the start when the unit sells and has nothing to sell yet: that
-  // is the one state on this page that is waiting for somebody.
   const [open, setOpen] = useState(Boolean(income && income.prefixes.length === 0));
   const [productDraft, setProductDraft] = useState<{ code: string; account: string } | null>(null);
 
-  // Only the unit's own cost centres: its sales are attested by its own
-  // resultatansvariga, which another unit's cost centre would hand to someone
-  // else. The one already chosen stays offered if it no longer matches (a
-  // prefix removed since), so the picker shows it rather than going blank.
   const ownCodes = new Set(unit.costCenters.map((c) => c.code));
   const chosen = new Set([
     income?.defaultCostCenterId,
@@ -69,12 +51,9 @@ export function UnitSales({
   async function enableIncome() {
     const ok = await mutate("/api/income/units", {
       key: `income-new-${unit.id}`,
-      // The verifikationstext starts as the unit's own name. It is what the
-      // voucher will say, and that is a better start than blank.
       body: { resultUnitId: unit.id, description: unit.resultUnit },
       error: t("saveFailed"),
     });
-    // Straight on to its products: a unit that sells nothing yet is not done.
     if (ok) setOpen(true);
   }
 
@@ -179,8 +158,6 @@ export function UnitSales({
             <FieldGroup label={tIncome("description")} hint={tIncome("descriptionHint")}>
               <Input
                 size="sm"
-                // Uncontrolled: it commits on blur rather than on every
-                // keystroke.
                 defaultValue={income.description}
                 aria-label={tIncome("description")}
                 onBlur={(e) =>
@@ -206,8 +183,6 @@ export function UnitSales({
             </FieldGroup>
           </div>
 
-          {/* Which goods are this unit's: a small table of "starts with" and
-              the account it is booked to, the add row as its last line. */}
           <FieldGroup label={tIncome("productPrefixes")} hint={tIncome("productHint")}>
             <ul className="rounded-control border border-border">
               {income.prefixes.map((p) => (
@@ -220,13 +195,8 @@ export function UnitSales({
                     <span className="font-mono tabular-nums">{p.account}</span>
                     {p.accountName && <span className="text-muted"> - {p.accountName}</span>}
                   </span>
-                  {/* An account the chart has never heard of is a voucher
-                      Fortnox will reject, but only at export, so it is worth
-                      saying here. */}
+                  {/* An account the chart has never heard of is a voucher Fortnox will reject, but only at export, so it is worth saying here. */}
                   {!p.accountName && <Tag tone="warning">{tIncome("unknownAccount")}</Tag>}
-                  {/* Where this prefix's sales book, when it is not the
-                      verksamhet's default: a pub prefix to the pub's cost
-                      centre. Copied onto each sold line at import. */}
                   <span className="w-36 shrink-0">
                     <Combobox
                       size="sm"

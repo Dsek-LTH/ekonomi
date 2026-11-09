@@ -1,5 +1,4 @@
-// Removing a day. Where its lines book is corrected line by line (./lines);
-// the report itself has nothing left to edit.
+// Removing a day. Line corrections are in ./lines.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -8,16 +7,7 @@ import { deleteIncomeReport } from "@/lib/income/lifecycle";
 import { prisma } from "@/lib/server/db";
 import { lifecycleFailure } from "./lifecycle-failure";
 
-/**
- * Remove a day: the report, its sold lines and its verifikation.
- *
- * Behind the treasury roles rather than bookkeeping access, and refused while
- * the day is exported, see lib/income/lifecycle.ts, which is where both rules
- * and the reasons for them live.
- *
- * With one exception: a draft. It is the working set of a fetch, which the
- * next fetch replaces anyway, so bookkeeping may clear one away.
- */
+/** Remove a day. Treasury roles, refused while exported (lib/income/lifecycle.ts). Bookkeeping may clear a draft. */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 

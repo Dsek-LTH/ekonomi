@@ -1,14 +1,6 @@
-// Spreadsheet select-vs-edit for a budget sheet, independent of what the sheet
-// actually renders. A cell is "selected" when focused and stays read-only until
-// Enter / F2 / double-click / typing puts it into edit mode.
-//
-// Movement is entirely the browser's own: Tab and Shift-Tab walk the natural
-// focus order, arrow keys move the caret inside a cell. Nothing here intercepts
-// them.
-//
-// Spread the returned props onto the element wrapping the sheet's table(s). Only
-// the [data-cell] inputs (those rendered with `gated: true`) have the two
-// modes; anything else (add-row inputs, comment boxes) is left alone.
+// Spreadsheet select-vs-edit for a budget sheet. A [data-cell] input (`gated: true`) is
+// selected on focus and read-only until Enter, F2, double-click or typing. Movement is the
+// browser's own (Tab, arrows). Spread the returned props onto the element wrapping the tables.
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/ui/utils";
 
@@ -20,14 +12,9 @@ interface CellEditProps {
 }
 
 export function useCellEdit(className?: string): CellEditProps {
-  // Edit mode is only ever read as a class: `.is-editing` restores the caret and
-  // the selection highlight that a merely-selected cell suppresses.
   const [editing, setEditing] = useState(false);
 
-  // Enter edit mode on an already-focused cell. The caret placement is what makes
-  // the two modes legible: "end"/"here" leave a collapsed (blinking) insertion
-  // point, so the cell reads as editing; "replace" selects everything so a typed
-  // character overwrites the cell.
+  // "end"/"here" leave a collapsed caret (reads as editing); "replace" selects all so typing overwrites.
   function beginEdit(input: HTMLInputElement, caret: "end" | "here" | "replace") {
     setEditing(true);
     if (caret === "replace") {
@@ -44,14 +31,12 @@ export function useCellEdit(className?: string): CellEditProps {
     const input = t as HTMLInputElement;
 
     if (editing) {
-      // Leaving the cell drops back to selected; the input's own blur commits.
       if (e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
         input.blur();
         setEditing(false);
       } else if (e.key === "Tab" || e.key === "Escape") setEditing(false); // Tab moves natively; Escape reverts
-      // Everything else (arrows, Home/End, text) belongs to the input.
       return;
     }
 
@@ -76,8 +61,7 @@ export function useCellEdit(className?: string): CellEditProps {
     onFocusCapture: () => setEditing(false),
     onDoubleClick: (e: MouseEvent) => {
       const t = e.target as HTMLElement;
-      // Collapse the browser's word-selection to where it was clicked, so a
-      // double-click leaves a blinking caret at that spot rather than a highlight.
+      // Collapse the word-selection so a double-click leaves a caret.
       if (t.dataset.cell) beginEdit(t as HTMLInputElement, "here");
     },
   };

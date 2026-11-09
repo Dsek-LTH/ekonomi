@@ -1,9 +1,6 @@
-// Fetch a date range from Zettle, sales and fees together, and store it as one
-// draft report per day.
-//
-// Swish is not here: it arrives as an uploaded CSV rather than a JSON body, so
-// it has its own route (./swish). Everything after the fetch is shared, see
-// lib/income/batch.ts.
+// Fetch a date range from Zettle (sales and fees) and store one draft report per day. Swish has its
+// own route (./swish). Everything after the fetch is shared, see lib/income/batch.ts.
+
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -32,24 +29,19 @@ export async function POST(req: Request) {
   const source = "ZETTLE";
 
   if (to < from) return fail(422, "income.rangeBackwards");
-  // Every day fetched becomes a report, so the whole range is in the year
-  // picked in the header. Both ends in it is all of it in it.
+  // Every fetched day becomes a report, so the whole range must be in the year picked in the header.
   const offYear = (await denyOutsideFiscalYear(from)) ?? (await denyOutsideFiscalYear(to));
   if (offYear) return offYear;
 
-  // Checked before the service is asked, so a setup problem is said as one
-  // rather than after a term of purchases has come back with nowhere to go.
+  // Checked before the service is asked, so a setup problem is said as one.
   const routing = await loadRoutingTable();
   if (!routing.ok) return fail(409, `income.${routing.blocker}`);
 
-  // Asked once for the whole range, before anything is stored: a day Fortnox
-  // already holds a voucher for comes in flagged. Never throws: `checked` is
-  // how it says it could not look (lib/income/duplicate.ts).
+  // Asked once for the whole range before anything is stored. Never throws: `checked` says if it could not look.
   const existing = await fortnoxIncomeVouchers(from, to);
 
   try {
-    // Both halves of the day, because they are one voucher: the fees come out
-    // of the same clearing account the sales go into.
+    // Both halves of the day, since they are one voucher.
     const [sales, fees, feeRoute] = await Promise.all([
       fetchZettleSales(from, to),
       fetchZettleFees(from, to),
@@ -66,7 +58,7 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (e) {
-    // Not set up is a configuration answer, not a failure: said as itself.
+    // Not set up is a configuration answer, not a failure.
     if (e instanceof ZettleNotConfiguredError) return fail(503, "income.zettleUnavailable");
     if (e instanceof ZettleError) {
       console.error(`[zettle] fetching ${source} ${from}..${to} failed`, e);

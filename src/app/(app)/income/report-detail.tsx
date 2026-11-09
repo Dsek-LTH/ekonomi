@@ -1,10 +1,5 @@
 "use client";
 
-// The self-contained cards of the review screen's middle column.
-//
-// None of them knows anything about the queue beside it or the sales table
-// above it. Each is one day and what may be done to it, so each takes what it
-// needs and nothing else.
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -30,18 +25,7 @@ type Translator = (key: string, values?: Record<string, string | number>) => str
 
 const figure = (kr: number) => (kr ? formatNumber(kr, 2, 2) : "");
 
-/**
- * What to check on this day before approving it.
- *
- * Every day is reviewed against its intäktsräkning, so the review should start
- * with whatever about this one is out of the ordinary: that it may already be
- * booked, here or in Fortnox, that it holds sales the routing could not place,
- * that a line has no cost centre or an archived one, or that a cost centre is
- * local and will reach Fortnox only as text. Each said once, in words.
- *
- * A day with none of those still says so. "Nothing stood out" is itself what
- * the reviewer is being asked to confirm against the document beside it.
- */
+/** What to check on this day before approving it: whatever is out of the ordinary (already booked, unplaced sales, missing or archived cost centre, local cost centre reaching Fortnox as text). "Nothing stood out" is said too. */
 export function ReviewFindings({
   report,
   findings,
@@ -83,7 +67,6 @@ export function ReviewFindings({
   return <Notice>{said}</Notice>;
 }
 
-/** A row as PUT ../voucher takes it, öre. */
 export interface ManualVoucherLine {
   account: string;
   accountName: string;
@@ -94,17 +77,7 @@ export interface ManualVoucherLine {
   credit: number;
 }
 
-/**
- * The voucher this day will be posted as, the button that approves and posts
- * it, and the way to write the kontering by hand.
- *
- * Read-only until "Ändra kontering". Then the same editor an utlägg is booked
- * in, with the clearing row locked at the day's total. Saving stores the rows
- * on the server (PUT ../voucher), so nothing edited lives only in this
- * browser. A saved kontering whose lines have changed since says so and blocks
- * booking until it is saved again or reset. The editing state is this card's
- * own and the card is keyed by the day, so moving to another day drops it.
- */
+/** The voucher this day will be posted as, the approve-and-post button, and hand-editing. Read-only until "Ändra kontering"; saving stores the rows server-side (PUT ../voucher); a saved kontering whose lines changed blocks booking until saved again or reset. */
 export function VoucherCard({
   report,
   voucher,
@@ -124,16 +97,12 @@ export function VoucherCard({
   accounts: AccountRecord[];
   costCenters: CostCenter[];
   projects: ProjectRecord[];
-  /** Given, the card carries the button that books the day. The day's own
-   *  page has it in its header instead, as an utlägg's record does. */
+  /** Given, the card carries the button that books the day (the day's own page has it in its header). */
   onBook?: () => void;
   booking?: boolean;
-  /** Save a hand-written kontering. Resolves true when it was saved. */
   onSave: (lines: ManualVoucherLine[]) => Promise<boolean>;
-  /** Back to the rows the lines give. */
   onReset: () => void;
   saving: boolean;
-  /** Who approving records as the reviewer, and the document as attesting. */
   reviewerName: string;
   t: Translator;
 }) {
@@ -154,7 +123,6 @@ export function VoucherCard({
       }
     : undefined;
 
-  /** Start editing from what would be booked now, minus the clearing row. */
   function startEditing() {
     const source = report.manual
       ? report.manual.rows
@@ -316,12 +284,8 @@ export function VoucherCard({
       </div>
 
       <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-        {/* Approving puts a name on the day and on its document, so the name
-            is said beside the button that does it. */}
         <span className="text-xs text-muted">{t("review.konteradAs", { name: reviewerName })}</span>
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Why the button is dead, in words, rather than a dead button and
-              nothing on the screen admitting why. */}
           {voucher.blocker && (
             <span className="text-xs text-warning">
               {t(`blocker.${voucher.blocker}`, { account: voucher.clearing })}

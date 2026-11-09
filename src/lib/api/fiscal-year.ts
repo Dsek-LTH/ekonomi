@@ -1,7 +1,5 @@
-// The räkenskapsår as a rule on what a route will write: something new is made
-// in the year the reader has picked in the header, so it lands in the list it
-// was made from. The forms say so first (outsideFiscalYear in
-// lib/ui/fiscal-year.ts); this is where it holds. See docs/navigation.md.
+// Rule on what a route will write: something new is made in the year picked in the header. The forms warn first
+// (outsideFiscalYear in lib/ui/fiscal-year.ts); this is where it holds. See docs/navigation.md.
 import "server-only";
 
 import type { NextResponse } from "next/server";
@@ -10,11 +8,7 @@ import { getFiscalYear } from "@/lib/server/fiscal-year";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 import { isoDay } from "@/lib/domain/date";
 
-/**
- * A 422 for a date outside the picked year, or null when it is in it. Null as
- * well for no date, and before any year has been synced, when there is no
- * year to keep to.
- */
+/** A 422 for a date outside the picked year, or null (also null for no date, or before any year is synced). */
 export async function denyOutsideFiscalYear(
   date: string | Date | null | undefined,
 ): Promise<NextResponse | null> {
@@ -25,10 +19,7 @@ export async function denyOutsideFiscalYear(
   return fail(422, "fiscalYear.outside", { values: { year: fiscalYearLabel(year!) } });
 }
 
-/**
- * The same for a budget, which is kept by calendar year rather than by date:
- * the year the picked räkenskapsår starts in, as the Budget list reads it.
- */
+/** The same for a budget, kept by calendar year: the year the picked räkenskapsår starts in. */
 export async function denyBudgetOutsideFiscalYear(
   budgetYear: number,
 ): Promise<NextResponse | null> {

@@ -8,16 +8,8 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("rentalItems");
 
-// Under Uthyrning rather than under Inställningar, which is where this started
-// and was the wrong side of a line this app already draws. Inställningar → Lager
-// holds "konton och inställningar för lagerbokföringen" and nothing else, while
-// the products themselves live in /stock, because a catalogue of the section's
-// things is not configuration of the app. The same is true here.
-//
-// RENTAL_MANAGE, the same capability as drawing a contract: the people who
-// write uthyrningsavtal are the ones who know what a speaker costs to replace.
-// Not CONTRACT_MANAGE, which would hand the catalogue to whoever files
-// sponsoravtal and withhold it from whoever runs uthyrningen.
+// Under Uthyrning, not Inställningar (a catalogue of the section's things is not app configuration). RENTAL_MANAGE, not
+// CONTRACT_MANAGE, which would hand the catalogue to whoever files sponsoravtal.
 export default async function AdminRentalItemsPage() {
   await requirePage(canManageRentals);
   const t = await getTranslations("contracts.items");

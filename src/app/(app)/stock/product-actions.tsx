@@ -1,18 +1,6 @@
 "use client";
 
-// The movements that belong to a product rather than to a night.
-//
-// A delivery, a stocktake and a write-off are all stock movements and all end
-// up in the same log as everything else, but they are not what this feature is
-// used for. They happen a few times a term, they are done sitting down with an
-// invoice or standing at a shelf with a clipboard, and they ask questions the
-// in/out flow never asks. Leaving them in that dialog made the common act pick
-// its way past options it never wanted, so they moved here, onto the product
-// they are about.
-//
-// All of them write through the same route as everything else. Nothing here is
-// a special kind of stock movement; it is the same log, reached from where the
-// question is asked.
+// Movements that belong to a product rather than a night (delivery, stocktake, write-off). They write through the same route and log as everything else.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -32,14 +20,7 @@ const int = (s: string): number => {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
 };
 
-/**
- * A delivery.
- *
- * Sealed units and a date, and that is the whole form. What it is worth is the
- * product's own price times the count (see lib/stock/value.ts) so the one
- * thing this says out loud is what the shelf is about to be worth, or that it
- * will be worth nothing because nobody has priced the product.
- */
+/** A delivery: sealed units and a date. Says what the shelf is about to be worth (price times count, lib/stock/value.ts), or nothing if the product is unpriced. */
 export function PurchaseDialog({
   product,
   onClose,
@@ -57,7 +38,7 @@ export function PurchaseDialog({
   const [note, setNote] = useState("");
 
   const count = int(units);
-  // Why the save button is dead, in the words of the errand. See ModalFooter.
+  // Why the save button is dead (see ModalFooter).
   const blocker = count <= 0 ? t("fault.purchaseNothing") : null;
 
   async function save() {
@@ -129,16 +110,8 @@ export function PurchaseDialog({
 }
 
 /**
- * A stocktake.
- *
- * You say what is actually there, not how far it is from what the system
- * thought, which is arithmetic nobody should be doing standing at a shelf. The
- * route subtracts what it expected and writes the difference, so the log records
- * the correction rather than the count.
- *
- * The expected figures are shown beside each field, because a stocktake whose
- * expectations are hidden is one people copy the system's numbers into.
- * Deliberately not pre-filled for the same reason.
+ * A stocktake: you say what is actually there, and the route subtracts what it expected and writes the difference.
+ * Expected figures are shown beside each field but deliberately not pre-filled, or people copy them.
  */
 export function StocktakeDialog({
   product,
@@ -147,11 +120,7 @@ export function StocktakeDialog({
 }: {
   product: StockLevelDto;
   onClose: () => void;
-  /**
-   * Leave the count for a purchase of this many. Offered when the count finds
-   * more sealed than the log, which is far more often a delivery somebody is
-   * booking in the wrong place than bottles the cellar had lost.
-   */
+  /** Leave the count for a purchase of this many: offered when the count finds more sealed than the log, usually a misplaced delivery. */
   onPurchaseInstead?: (units: number) => void;
 }) {
   const t = useTranslations("stock");
@@ -231,9 +200,7 @@ export function StocktakeDialog({
           <DateInput value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </Field>
 
-        {/* A count that agrees with the log is still worth recording. It is
-            evidence somebody looked, but it writes no movement, so say so
-            rather than let the button look broken. */}
+        {/* A count that agrees with the log writes no movement, so say so rather than let the button look broken. */}
         <Notice tone={anyDifference ? "warning" : "info"}>
           {anyDifference
             ? t("stocktake.difference", {
@@ -242,11 +209,7 @@ export function StocktakeDialog({
             : t("stocktake.agrees")}
         </Notice>
 
-        {/* More sealed than the log: was it bought? A stocktake that "finds"
-            a delivery books it at the shelf's average, often nothing, and
-            leaves it out of the restaurangrapport's bought-in volume. Asked
-            here, with the way to the right form one press away, rather than
-            discovered later as a shelf worth nothing. */}
+        {/* More sealed than the log: a stocktake "finding" a delivery books it at the shelf's average and leaves it out of the restaurangrapport's bought-in volume. */}
         {diffSealed > 0 && onPurchaseInstead && (
           <Notice>
             <p>{t("stocktake.wasBought", { count: diffSealed })}</p>
@@ -262,9 +225,7 @@ export function StocktakeDialog({
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
-      {/* No `blocker`: the notice a few lines up already says why a count that
-          agrees with the log has nothing to save, and saying it twice on one
-          screen is worse than saying it once where it belongs. */}
+      {/* No `blocker`: the notice above already says why there is nothing to save. */}
       <ModalFooter>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="secondary" onClick={onClose}>
@@ -280,23 +241,10 @@ export function StocktakeDialog({
 }
 
 /**
- * A write-off: what broke or went out of date in the cellar.
- *
- * The other half of a spill, and a different kind in the log for the one reason
- * that matters. A spill at a pub is stock the checkout already took off the
- * shelf, so it moves nothing and is booked on the night it happened. This never
- * left the cellar, so it comes off the shelf here, at the moving average, the
- * same way a checkout does. See the StockEntryKind enum in the schema.
- *
- * One rung at a time, because that is what an accident is. A dropped bottle
- * loses everything left in it, so the rung it came off is the whole of what it
- * cost, and two rungs at once would be two accidents wearing one row. A can has
- * no ladder and is never asked.
- *
- * What it will not do is second-guess which bottle broke. The store's usual
- * rule is that open bottles leave before sealed ones, and it has no business
- * here: the sealed one on the top shelf is the one that fell. See `shortfall`
- * in lib/stock/levels.ts, which is what the route checks this against.
+ * A write-off: what broke or went out of date in the cellar. Unlike a pub spill (already taken off by the checkout)
+ * it comes off the shelf here, at the moving average (see StockEntryKind in the schema).
+ * One rung at a time: a dropped bottle loses everything left in it. Which bottle broke is not second-guessed
+ * (the sealed one may be what fell), see `shortfall` in lib/stock/levels.ts.
  */
 export function SpoilageDialog({
   product,
@@ -317,7 +265,7 @@ export function SpoilageDialog({
   const onShelf =
     level === 0 ? product.onHand.units : bottlesAt(product.onHand.open, level as Level);
 
-  // Why the save button is dead, in the words of the errand. See ModalFooter.
+  // Why the save button is dead (see ModalFooter).
   const blocker =
     count <= 0
       ? t("fault.nothingSpilled")
@@ -325,11 +273,8 @@ export function SpoilageDialog({
         ? t("fault.moreThanOnShelf", { count: onShelf })
         : null;
 
-  // What the shelf loses. Sealed stock carries the whole value of the product
-  // (see lib/stock/value.ts), so an opened bottle is worth nothing to write
-  // down: its cost left the books the moment it was opened. Approximate,
-  // because the route prices the row at the average it finds when it writes it,
-  // and this is the same average read a moment earlier.
+  // What the shelf loses: sealed stock carries the product's whole value (lib/stock/value.ts), so an opened bottle writes down nothing.
+  // Approximate, since the route prices at the average it finds when it writes.
   const unitOre = product.onHand.units > 0 ? product.onHand.valueOre / product.onHand.units : 0;
   const writeDownOre = level === 0 ? Math.round(unitOre * count) : 0;
 
@@ -339,8 +284,7 @@ export function SpoilageDialog({
       kind: "SPOILAGE",
       occurredAt,
       level: level as 0 | 80 | 60 | 40 | 20,
-      // Negative, because the shelf is what this takes from. The route holds
-      // the same rule and refuses the row if the sign and the kind disagree.
+      // Negative, because the shelf is what this takes from. The route refuses the row if sign and kind disagree.
       units: level === 0 ? -count : 0,
       open: level === 0 ? undefined : { [String(level)]: -count },
       note: note.trim() || undefined,
@@ -404,9 +348,7 @@ export function SpoilageDialog({
             <Notice tone="info">{t("spoilage.noValue")}</Notice>
           ))}
 
-        {/* Said out loud rather than left to be discovered, because the two
-            words mean the same thing to somebody holding a broken bottle and
-            the log has to keep them apart. */}
+        {/* The two words mean the same to someone holding a broken bottle, and the log keeps them apart. */}
         <Notice tone="warning">{t("spoilage.atEvent")}</Notice>
 
         <Field label={t("field.note")} hint={t("spoilage.noteHint")} requirement="optional">

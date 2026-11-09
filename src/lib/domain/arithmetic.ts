@@ -1,24 +1,8 @@
-// A sum somebody typed into a field that wants a number.
-//
-// Shared by the stock counts (ten crates of twenty-four, plus thirty loose)
-// and the voucher's debit and credit cells (a receipt's two lines, or 25 % of
-// one). Working it out in your head and typing the answer is how the wrong
-// figure ends up on the page, so the field takes the sum and adds it up.
-//
-// Parsed rather than evaluated. `eval` and `new Function` would do this in a
-// line and would also run whatever else was typed into a field that is
-// sometimes filled in from a barcode scanner. There is no version of that worth
-// the line it saves. What is here understands four operators, brackets and
-// nothing whatsoever else.
+// A sum somebody typed into a field that wants a number (stock counts, voucher debit/credit cells).
+// Parsed, never `eval`ed: the field is sometimes filled from a barcode scanner. Understands four
+// operators and brackets only.
 
-/**
- * Add up a typed sum.
- *
- * A recursive descent over `+ - * / ( )` and numbers, which is the whole
- * grammar. Anything it cannot read (a stray bracket, an operator with nothing
- * after it, a decimal point on its own) comes back as null rather than as a
- * number that happens to fall out of a half-parse.
- */
+/** Add up a typed sum with a recursive descent over `+ - * / ( )` and numbers. Anything unreadable gives null, not a half-parse. */
 export function evaluate(text: string): number | null {
   const src = text.replace(/\s+/g, "").replace(/,/g, ".");
   if (src === "") return null;
@@ -35,8 +19,7 @@ export function evaluate(text: string): number | null {
   }
 
   function factor(): number | null {
-    // Unary signs, so `-4` and `+4` read as themselves rather than as an
-    // operator with nothing on its left.
+    // Unary signs, so `-4` and `+4` read as themselves.
     if (peek() === "-") {
       at++;
       const v = factor();
@@ -63,8 +46,7 @@ export function evaluate(text: string): number | null {
       const op = src[at++];
       const right = factor();
       if (right === null) return null;
-      // Division by nothing is not a quantity, and NaN would sail through every
-      // comparison below as false.
+      // Division by nothing is not a quantity, and NaN would pass every comparison below as false.
       if (op === "/" && right === 0) return null;
       left = op === "*" ? left * right : left / right;
     }

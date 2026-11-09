@@ -1,18 +1,7 @@
 "use client";
 
-// The uthyrning half of a contract, as two cards that behave differently.
-//
-// Utrustning is what the *agreement* says: the gear and what it comes to. It is
-// changed on the edit page until the signed copy is uploaded, and frozen after,
-// because the renter has put their name to a document by then.
-//
-// Uthämtning och återlämning is what actually *happened*: the gear's condition
-// going out and coming back, and when it was accepted. That stays editable
-// forever, because it is a record of events rather than a term of the deal.
-//
-// They were one card, with the dates, the signatures and the rent listed above
-// the table as well. That put three subjects under one heading and the period
-// on the page twice. The facts are on the status card now (status-strip.tsx).
+// The uthyrning half of a contract, as two cards. Utrustning is what the agreement says (editable until the signed copy
+// is uploaded). Uthämtning och återlämning is what happened (condition out and back, acceptance), editable forever.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -43,10 +32,7 @@ export function RentalLinesCard({ rental }: { rental: RentalDetailRow }) {
     <Card>
       <CardHeader title={t("rental.lines")} />
       <CardBody className="space-y-5">
-        {/* The lines as the contract states them, in the columns the document
-            uses. The discount column is drawn only where something was
-            discounted: a column of dashes on the ordinary rental is a question
-            asked of every reader and answered for none. */}
+        {/* The discount column is drawn only where something was discounted. */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -89,9 +75,6 @@ export function RentalLinesCard({ rental }: { rental: RentalDetailRow }) {
           </table>
         </div>
 
-        {/* What the lines come to, set like the foot of an invoice under the
-            column it is the sum of: the same block the rental form draws under
-            its sheet, so the two read alike. */}
         <div className="flex justify-end">
           <div className="w-full max-w-xs space-y-2.5">
             {discounted && (
@@ -152,8 +135,7 @@ export function RentalRecordCard({
   const [conditionOut, setConditionOut] = useState(rental.conditionOut ?? "");
   const [conditionIn, setConditionIn] = useState(rental.conditionIn ?? "");
 
-  // An emptied field clears the column; a half-typed date is left alone, which
-  // is what `undefined` means to the patch schema.
+  // An emptied field clears the column; a half-typed date is left alone (`undefined` to the patch schema).
   const dateField = (v: string) => (v === "" ? null : isCompleteDate(v) ? v : undefined);
 
   async function settle() {
@@ -170,8 +152,7 @@ export function RentalRecordCard({
     });
   }
 
-  // Whether the gear has been accepted, under the heading, because it is the
-  // one line of this card somebody glances at without meaning to change it.
+  // Acceptance sits under the heading: the one line glanced at without meaning to change it.
   const checked = rental.checkedAt
     ? rental.checkedBy
       ? t("rental.checkedBy", { name: rental.checkedBy })
@@ -191,10 +172,7 @@ export function RentalRecordCard({
           ) : undefined
         }
       />
-      {/* The two condition notes lead. They are the half that actually
-          settles a damage claim: without the first one, "it is broken" is an
-          observation, and with it, it is a difference. See the villkor in
-          rental/terms.ts. */}
+      {/* The condition notes lead: they settle a damage claim (see rental/terms.ts). */}
       {canManage ? (
         <CardBody className="@container space-y-4">
           <Field

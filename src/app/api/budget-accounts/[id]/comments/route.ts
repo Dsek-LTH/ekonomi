@@ -15,10 +15,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const body_ = parsed.data.body;
   if (!body_) return fail(422, "budget.commentEmpty");
 
-  // Comments deliberately don't go through `allowBudgetWrite`. They stay open on
-  // a locked budget, but that is also the guard every other budget route gets
-  // its existence check from. Without it an account id that isn't there becomes
-  // a foreign-key error and a 500 instead of a 404.
+  // Comments stay open on a locked budget, so they skip `allowBudgetWrite`; this check keeps a missing account a 404, not a foreign-key 500.
   const account = await prisma.budgetAccount.findUnique({
     where: { id: accountId },
     select: { id: true },

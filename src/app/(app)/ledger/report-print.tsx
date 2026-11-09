@@ -1,12 +1,7 @@
 "use client";
 
-// The report as it comes out of the printer, in Fortnox's form: the header with
-// where the figures came from, then the report laid out by print-layout.
-//
-// Only on paper (`hidden print:block`). The screen keeps its own table, which
-// is built for searching and drilling into rows. What prints is still exactly
-// what is on screen: the same filtered report, and the same columns the
-// settings and the chips above the table turned on.
+// The report on paper in Fortnox's form (`hidden print:block`): header, then print-layout's lines. Same filtered report and
+// columns as the screen.
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -16,11 +11,9 @@ import type { LedgerReport, ResultColumn, ViewOptions } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
 import { formatNumber } from "@/lib/ui/format";
 
-// Fortnox's figures: two decimals, a space between thousands, no currency
-// (the header says SEK once).
+// Fortnox's figures: two decimals, a space between thousands, no currency (the header says SEK once).
 const num = (v: number | null) => (v == null ? "" : formatNumber(v, 2, 2));
 
-/** "2026-10-06, 21:47", the moment the print was asked for. */
 function stamp(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -53,10 +46,8 @@ export function ReportPrint({
 }: {
   report: LedgerReport;
   view: ViewOptions;
-  /** The result report's figure columns, as on screen. */
   columns: readonly ResultColumn[];
   showComparison: boolean;
-  /** Which comparison is on show, for the column headings. */
   comparison: "PRIOR" | "BUDGET" | "NONE";
   companyName: string | null;
   orgNumber: string | null;
@@ -103,8 +94,7 @@ export function ReportPrint({
     diff: prior ? t("printout.diffPrior") : t("printout.diffBudget"),
   };
 
-  // The figure a line is read by: the period on a result report, the closing
-  // balance on a balance one. What the deviation and the share are taken of.
+  // The figure a line is read by: period on a result report, closing balance on a balance one.
   const value = (f: Figures) => (isBalance ? (f.closing ?? 0) : f.amount);
   const cell = (c: Column, f: Figures) => {
     switch (c) {
@@ -250,7 +240,6 @@ export function ReportPrint({
           const id = g.costCenterCode ?? "none";
           return (
             <tbody key={id} className="break-inside-auto">
-              {/* Per cost centre, each its own report under its own name. */}
               {report.group === "SPECIFIED" && (
                 <tr>
                   <td colSpan={2 + columns.length} className="pt-4 text-[11pt] font-semibold">
@@ -264,7 +253,6 @@ export function ReportPrint({
             </tbody>
           );
         })}
-        {/* Several cost centres: one line for all of them together. */}
         {multiple && (
           <tbody>
             {row(

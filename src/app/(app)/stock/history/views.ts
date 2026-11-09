@@ -1,18 +1,10 @@
-// Lagrets historik: what happened to the stock over a period, as the movements
-// one by one or as the sums and charts of them. Two views of one page, because
-// they answer one question for the same people, the treasury looking back, and
-// read the same log. They were two tabs, the log and the statistics.
-//
-// The period is shared: switching view keeps `from` and `to`, so "the value
-// fell in October" goes straight to the movements that made it fall. Each
-// view's own narrowing (products and kinds for the movements, drink types and
-// tags for the sums) is its own and is left behind.
+// Lagrets historik: the movements or the statistics, two views of one page over the same log.
+// The period (`from`, `to`) is shared when switching view, each view's own narrowing is left behind.
 
 export type HistoryView = "movements" | "stats";
 
 export const HISTORY_PATH = "/stock/history";
 
-/** Where a view of the history is, for the given period. */
 export function historyHref(view: HistoryView, from?: string, to?: string): string {
   const p = new URLSearchParams();
   if (view === "stats") p.set("view", "stats");

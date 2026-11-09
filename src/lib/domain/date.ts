@@ -1,45 +1,22 @@
-// A date the app is willing to store: complete to the day, and a day that
-// exists.
-//
-// The date fields are masked text, not a native picker, so a half-typed date is
-// a real state the form can be left in. "2026" or "2026-07" both sit there
-// looking plausible. `new Date` reads them without complaint, as 1 January and
-// 1 July, so accepting one stores a date nobody typed. Everything that takes a
-// typed date checks it here first.
+// A date the app is willing to store: complete to the day, and a day that exists. Date fields are
+// masked text, so "2026" or "2026-07" can be left in the form and `new Date` would read them as 1 Jan / 1 Jul.
 export function isCompleteDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  // The regex only proves the shape; round-tripping proves the day is real, so
-  // "2026-02-30" doesn't roll over into March.
+  // The regex proves the shape; round-tripping proves the day is real ("2026-02-30" must not roll into March).
   const d = new Date(`${value}T00:00:00Z`);
   return !isNaN(d.getTime()) && isoDay(d) === value;
 }
 
-/** The UTC calendar day of an instant, as `YYYY-MM-DD`. For a `@db.Date`
- *  column, which Prisma hands back as midnight UTC. */
+/** The UTC calendar day of an instant, as `YYYY-MM-DD`, for a `@db.Date` column (midnight UTC). */
 export const isoDay = (d: Date): string => d.toISOString().slice(0, 10);
 
-/**
- * An ISO day as the instant that names it, or null when there is no day.
- *
- * Midnight UTC, deliberately, and never the server's own timezone. A `@db.Date`
- * column stores a day rather than a moment, so the instant handed to it only
- * has to land on the right calendar square; built from a host set to UTC in
- * Swedish summer time, a local-midnight Date lands on the square before.
- *
- * The same construction lib/data/list-query.ts uses for a range's ends. Named
- * here because writing a single date column wants it too, and the two must
- * agree about which day they mean.
- */
+/** An ISO day as the instant that names it, or null. Midnight UTC, never the server's timezone: a local-midnight Date lands on the day before in Swedish summer time. Same construction as lib/data/list-query.ts. */
 export function isoToDate(day: string | null | undefined): Date | null {
   return day ? new Date(`${day}T00:00:00.000Z`) : null;
 }
 
-// Today, as the section counts days. Deliberately not the server's own day: the
-// app runs on a host set to UTC, and between midnight and 02:00 Swedish summer
-// time that host still says yesterday, long enough for a late-night purchase to
-// be refused as being in the future. Everyone typing a date here is reading it
-// off a Swedish receipt, so Stockholm is the calendar that decides.
-// sv-SE prints exactly the YYYY-MM-DD the date fields already carry.
+// Today as the section counts days: Stockholm, not the host's UTC (which says yesterday until 02:00
+// summer time and would refuse a late-night purchase as future). sv-SE prints YYYY-MM-DD.
 export const stockholmDay = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",
   year: "numeric",
@@ -51,40 +28,25 @@ export function today(): string {
   return stockholmDay.format(new Date());
 }
 
-// A purchase that hasn't happened yet. Nothing can be bought tomorrow, so a
-// date past today is a typo (a wrong year, most often) rather than a claim,
-// caught here before it reaches an attester or the books.
-//
-// Both sides are the same YYYY-MM-DD string, which sorts the way it dates, so
-// the comparison is the whole check. An incomplete date is not "in the future":
-// it's the other error, and `isCompleteDate` is what names it.
+// A purchase that hasn't happened yet: a date past today is a typo. YYYY-MM-DD strings sort as they
+// date. An incomplete date is not "in the future", `isCompleteDate` names that error.
 export function isFutureDate(value: string, now: string = today()): boolean {
   return isCompleteDate(value) && value > now;
 }
 
-// Whole days between a date and today: 0 for today, 1 for yesterday, negative
-// for a day still to come. Both ends are calendar days read at UTC midnight, so
-// the subtraction is exact. A clock-change weekend can't shave an hour off it
-// and turn day 61 back into day 60.
+// Whole days between a date and today: 0 today, negative for a future day. Both read at UTC midnight,
+// so a clock-change weekend cannot turn day 61 into day 60.
 export function daysAgo(value: string, now: string = today()): number {
   const then = Date.parse(`${value}T00:00:00Z`);
   const day = Date.parse(`${now}T00:00:00Z`);
   return Math.round((day - then) / 86_400_000);
 }
 
-// A date so many whole months later, clamped to a day that exists.
-//
-// Adding nine months to 31 May cannot land on 31 February, and the answer
-// everybody means by it is the last day of the month it lands in. JavaScript's
-// own Date rolls that forward into March instead, quietly, which would put a
-// best-before three days later than the one anybody would have written down.
-//
-// Read at UTC midnight like the rest of this file, so no clock change can move
-// the result by a day.
+// A date so many whole months later, clamped to a day that exists (31 May + 9 months is not 31
+// February; JavaScript's Date would roll into March). Read at UTC midnight.
 export function addMonths(value: string, months: number): string {
   const [y, m, d] = value.split("-").map(Number);
-  // Month 0 is January here, so the arithmetic is on a 0-based index and the
-  // year carries itself.
+  // Month 0 is January here.
   const target = new Date(Date.UTC(y, m - 1 + months, 1));
   // Day 0 of the following month is the last day of this one.
   const lastDay = new Date(
@@ -94,9 +56,8 @@ export function addMonths(value: string, months: number): string {
   return isoDay(target);
 }
 
-// The ISO week a day falls in, as "2026-W41": Monday to Sunday, and the year is
-// the one its Thursday is in, so 2027-01-01 (a Friday) is still in 2026-W53.
-// What the weekly digest counts in, so a week gets one however often it runs.
+// The ISO week a day falls in, as "2026-W41": Monday to Sunday, the year is the one its Thursday is
+// in (2027-01-01 is still 2026-W53). What the weekly digest counts in.
 export function isoWeek(day: string): string {
   const d = new Date(`${day}T00:00:00Z`);
   // Thursday decides the year a week belongs to.

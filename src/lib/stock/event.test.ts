@@ -23,8 +23,6 @@ describe("movementVolume", () => {
   });
 
   it("counts a spirit in millilitres, so a part-used bottle is not a whole one", () => {
-    // The reason spirits are not counted in bottles: one bottle out and one
-    // bottle back is zero difference, and 420 ml of vodka is missing.
     expect(movementVolume(vodka, move({ units: -1 }))).toBe(-700);
     expect(movementVolume(vodka, move({ units: 0, open: { 40: 1 } }))).toBe(280);
   });
@@ -36,9 +34,6 @@ describe("movementVolume", () => {
   });
 
   it("does care which way the signs point", () => {
-    // It used to fold by magnitude, which was safe while a checkout was always
-    // stored negative. The event sheet writes a checkout the other way round to
-    // unwind one, so direction is now the whole of what distinguishes them.
     expect(movementVolume(cans, move({ units: 120 }))).toBe(
       -movementVolume(cans, move({ units: -120 })),
     );
@@ -55,8 +50,6 @@ describe("spillVolume", () => {
   });
 
   it("costs a dropped open bottle everything that was left in it", () => {
-    // Which is the point of storing the rung: dropping a 40 % bottle loses
-    // 280 ml, not a bottle and not a guess.
     expect(spillVolume(vodka, move({ kind: "WASTE", spilledQty: 1, level: 40 }))).toBe(280);
     expect(spillVolume(vodka, move({ kind: "WASTE", spilledQty: 2, level: 20 }))).toBe(280);
   });
@@ -78,8 +71,6 @@ describe("tagTotals", () => {
   });
 
   it("adds up two takeouts of one night", () => {
-    // The case a date cannot answer: a pub that ran past midnight, restocked
-    // at one in the morning. Both belong to the event, so both count.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -120 }),
       move({ kind: "CHECKOUT", units: -48 }),
@@ -99,8 +90,6 @@ describe("tagTotals", () => {
   });
 
   it("charges a dropped open bottle to the night at what was left in it", () => {
-    // Two bottles out, one dropped while 40 % full. Nothing came home, so the
-    // night used 700 + 280 and lost the other 280 to the floor.
     const totals = tagTotals(vodka, [
       move({ kind: "CHECKOUT", units: -2 }),
       move({ kind: "WASTE", spilledQty: 1, level: 40 }),
@@ -113,9 +102,6 @@ describe("tagTotals", () => {
   });
 
   it("lets a checkout be taken back", () => {
-    // Somebody typed 1 200 into the out cell and meant 120. The correction is a
-    // checkout pointing the other way, and the column has to fall by it rather
-    // than climb, which is the whole reason this folds by direction.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -1200 }),
       move({ kind: "CHECKOUT", units: 1080 }),
@@ -136,8 +122,6 @@ describe("tagTotals", () => {
   });
 
   it("leaves a delivery and a stocktake out of it", () => {
-    // Neither belongs to a night, and neither may reach the arithmetic even if
-    // something ever events one.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -120 }),
       move({ kind: "PURCHASE", units: 240 }),
@@ -151,8 +135,6 @@ describe("tagTotals", () => {
   });
 
   it("floors at nothing rather than reporting a negative sale", () => {
-    // More home than ever left is a correction somebody made by hand, not a
-    // night that sold minus four cans.
     const totals = tagTotals(cans, [
       move({ kind: "CHECKOUT", units: -10 }),
       move({ kind: "RETURN", units: 14 }),

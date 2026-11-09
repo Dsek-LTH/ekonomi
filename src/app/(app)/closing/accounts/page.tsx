@@ -7,8 +7,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("closingAccounts");
 
-// The year's balance accounts, each marked as reconciled in Fortnox or not.
-// The reconciliation is Fortnox's job; this is the record that it was done.
+// The year's balance accounts, each marked reconciled in Fortnox or not (the record that it was done).
 export default async function ClosingAccountsPage() {
   const user = await requirePage(canViewBookkeeping);
   const year = await getOpenClosingYear();

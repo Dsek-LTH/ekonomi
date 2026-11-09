@@ -1,12 +1,6 @@
-// The editorial history of a locked budget, and the form that adds
-// to it. See BudgetChange in schema.prisma for what a change is, and
-// lib/budget/changes.ts for the rules. The form checks with the same function
-// the API does, so the button is disabled for exactly the reasons the server
-// would refuse.
-//
-// Everyone who can see the budget sees this view; only the treasurer sees the
-// form, and only while the budget is locked. The figures are already adjusted
-// wherever they appear. This is where it says who did it and why.
+// The editorial history of a locked budget and the form that adds to it (BudgetChange in
+// schema.prisma, rules in lib/budget/changes.ts). The form checks with the API's own
+// function. Everyone sees the history; only the treasurer sees the form, while locked.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -36,9 +30,8 @@ import { cn } from "@/lib/ui/utils";
 import { fmtSigned } from "./budget-helpers";
 import type { ApiFn, Budget, BudgetCC, BudgetChange } from "./budget-types";
 
-// One row of the form. The account is named by sheet + code rather than by id,
-// because a change may fund a post the sheet doesn't budget for yet, then there
-// is no id, and the API creates the account as part of the change.
+// One row of the form. The account is named by sheet + code, not id: a change may fund a post
+// the sheet does not budget yet, and the API creates the account.
 interface DraftRow {
   key: string;
   costCenterId: string;
@@ -62,15 +55,12 @@ export function ChangesSheet({
 }: {
   budget: Budget;
   budgetId: string;
-  /** The treasurer, on a locked budget. See canChangeLockedBudget. */
   canChange: boolean;
-  /** The synced BAS chart, for funding an account the sheet doesn't hold yet. */
   chart: AccountRecord[];
   api: ApiFn;
 }) {
   const t = useTranslations("budget.changes");
-  // Under `errors` because the API returns these same verdicts as error codes,
-  // and `resolveApiError` resolves them there. See lib/budget/changes.ts.
+  // Under `errors`: the API returns these verdicts as error codes (resolveApiError).
   const tError = useTranslations("errors.budget.changeError");
   const tSheet = useTranslations("budget.sheet");
   const tAlloc = useTranslations("allocation");
@@ -86,8 +76,7 @@ export function ChangesSheet({
 
   const sheets = budget.costCenters;
   const sheetById = new Map(sheets.map((cc) => [cc.id, cc]));
-  // Searchable rather than a plain select: a budget carries every cost centre
-  // the section has, and the code is what the treasurer knows one by.
+
   const sheetOptions = sheets.map((cc) => ({
     value: cc.id,
     label: cc.costCenter
@@ -96,15 +85,11 @@ export function ChangesSheet({
     short: cc.costCenter?.code ?? sheetName(cc, tSheet("unnamed")),
   }));
 
-  // Newest first: this is a log, and the last thing that happened is the thing
-  // being looked for. The running numbers count the other way, which is what
-  // makes it obvious that none are missing.
+  // Newest first, with running numbers counting the other way so a gap would show.
   const history = [...budget.changes].reverse();
   const active = budget.changes.filter((c) => c.revokedAt == null);
 
-  // The draft, resolved far enough to be checked: rows still being filled in
-  // are left out rather than counted as zero, so the
-  // running total doesn't lurch while someone is typing.
+  // The draft, resolved far enough to check: unfinished rows are left out, not counted as zero.
   const filled = rows.filter((r) => r.costCenterId && r.accountCode && r.amount.trim() !== "");
   const resolved: ResolvedEntry[] = filled.flatMap((r) => {
     const sheet = sheetById.get(r.costCenterId);
@@ -112,9 +97,7 @@ export function ChangesSheet({
     const existing = sheet.accounts.find((a) => a.accountCode === r.accountCode);
     return [
       {
-        // The id only has to be stable and unique within the draft. The API
-        // resolves the real one, and for an account that doesn't exist yet there
-        // isn't one to use.
+        // Only needs to be unique within the draft; the API resolves the real id.
         accountId: existing?.id ?? `${sheet.id}:${r.accountCode}`,
         amount: parseAmount(r.amount),
         kind: effectiveKind(r.accountCode),
@@ -168,9 +151,7 @@ export function ChangesSheet({
     await api(`/api/budget-changes/${change.id}`, "DELETE");
   }
 
-  // What all the changes in force have done to the guild's bottom line. A
-  // transfer contributes nothing here by construction. This is the deviation
-  // total, arrived at rather than asserted.
+  // What the changes in force have done to the bottom line (a transfer contributes nothing).
   const totalImpact = netResultImpact(
     active.flatMap((c) =>
       c.entries.flatMap((e) => {
@@ -205,7 +186,6 @@ export function ChangesSheet({
           }
         />
 
-        {/* What the two kinds are, said once, where the decision is made. */}
         <div className="px-inset py-4 text-sm text-muted">
           <p>
             {t.rich("explainer", {
@@ -250,9 +230,7 @@ export function ChangesSheet({
                           <Combobox
                             options={sheetOptions}
                             value={row.costCenterId}
-                            // The account code belongs to the sheet it was
-                            // picked in, so changing the sheet clears it rather
-                            // than carrying a code the new one may not hold.
+                            // The account code belongs to its sheet, so changing the sheet clears it.
                             onChange={(v) =>
                               setRow(row.key, {
                                 costCenterId: v,
@@ -276,8 +254,7 @@ export function ChangesSheet({
                             emptyText={chart.length ? t("noAccounts") : tSheet("emptyChart")}
                             aria-label={t("entry")}
                           />
-                          {/* Funding a post the sheet doesn't hold is allowed,
-                              but it is a thing to know you are doing. */}
+
                           {row.accountCode && sheet && !known && (
                             <p className="mt-1 text-xs text-warning">
                               {t("willBeAdded", {
@@ -324,9 +301,6 @@ export function ChangesSheet({
                 </Button>
               </FieldGroup>
 
-              {/* The running verdict: what this would do to the frame budget,
-                  and, when it can't be saved, the one reason why not, in the
-                  same words the API would answer with. */}
               <InsetPanel className="px-4 py-3 text-sm">
                 <p>
                   {t("effectOnFrame")}{" "}
@@ -381,9 +355,7 @@ export function ChangesSheet({
   );
 }
 
-// One change, as it stands in the history. A revoked one is shown in full and
-// struck through: it is part of what happened, and hiding it would leave a gap
-// in the numbering with nothing to explain it.
+// One change in the history. A revoked one is struck through, not hidden, so numbering has no gap.
 function ChangeCard({
   change,
   sheets,
@@ -479,9 +451,7 @@ function ChangeCard({
   );
 }
 
-// Where an entry's account sits, for the history table. Returns null for an
-// account the budget no longer holds, which the API refuses to let happen, but
-// the view is not the place to insist on it.
+// Where an entry's account sits. Null for an account the budget no longer holds.
 function findAccount(sheets: BudgetCC[], accountId: string) {
   for (const cc of sheets) {
     const account = cc.accounts.find((a) => a.id === accountId);
@@ -496,9 +466,7 @@ function findAccount(sheets: BudgetCC[], accountId: string) {
   return null;
 }
 
-// The accounts a row may name: the ones this sheet already budgets for first,
-// since that is nearly always what is meant, then the rest of the chart for the
-// case where a change funds something new.
+// Accounts a row may name: the sheet's own first, then the rest of the chart (to fund something new).
 function accountOptions(sheet: BudgetCC | undefined, chart: AccountRecord[], notOnSheet: string) {
   const own = (sheet?.accounts ?? []).map((a) => ({
     value: a.accountCode,

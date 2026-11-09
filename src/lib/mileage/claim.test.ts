@@ -30,16 +30,13 @@ describe("journeyKm", () => {
   });
 
   it("refuses a journey that does not go forward", () => {
-    // Equal readings are somebody who has not driven yet; a smaller end
-    // reading is a mistyped digit or the two fields the wrong way round.
-    // Neither is a distance, and taking an absolute value would quietly turn
-    // one into a claim.
+    // Equal readings (not driven yet) or a smaller end reading (typo or swapped fields) are not
+    // distances; an absolute value would turn one into a claim.
     expect(journeyKm(12300, 12300)).toBeNull();
     expect(journeyKm(12342, 12300)).toBeNull();
   });
 
   it("counts a reading of zero as a reading", () => {
-    // A trip meter that was just zeroed, and a car straight off the lot.
     expect(journeyKm(0, 42)).toBe(42);
   });
 });
@@ -60,9 +57,7 @@ describe("valueJourney", () => {
     const v = valueJourney(journey({ odometerEnd: null }), rates);
     expect(v.km).toBeNull();
     expect(v.ore).toBeNull();
-    // The rate is still known. The date alone decides it, and showing it is
-    // how the form says what a kilometre will be worth before the readings are
-    // in.
+    // The rate is still known from the date alone, so the form can show it before the readings are in.
     expect(v.orePerKm).toBe(250);
   });
 
@@ -83,8 +78,7 @@ describe("claimBlocker", () => {
   });
 
   it("names a journey that does not go forward as its own mistake", () => {
-    // Said apart from "fill the readings in": both are there, and what is
-    // wrong is which way round they are.
+    // Both are there; what is wrong is which way round.
     expect(claimBlocker(journey({ odometerEnd: 12300 }), rates)).toBe("notForward");
     expect(claimBlocker(journey({ odometerStart: 12400 }), rates)).toBe("notForward");
   });
@@ -95,8 +89,7 @@ describe("claimBlocker", () => {
   });
 
   it("asks where the journey went", () => {
-    // The readings say a car moved. Only the stops say the moving was the
-    // section's errand, which is what the claim is actually asserting.
+    // Readings say a car moved; only the stops say it was the section's errand.
     expect(claimBlocker(journey({ stops: [] }), rates)).toBe("noRoute");
     expect(claimBlocker(journey({ stops: ["Kårhuset, Lund"] }), rates)).toBe("noRoute");
   });
@@ -107,8 +100,7 @@ describe("claimBlocker", () => {
   });
 
   it("takes two stops as a journey, however many more there are", () => {
-    // Out and back is the same place twice, which is a route and not a
-    // duplicate. Four stops is the errand that called at two places on the way.
+    // Out and back is the same place twice, a route not a duplicate.
     expect(claimBlocker(journey({ stops: ["E-huset", "E-huset"] }), rates)).toBeNull();
     expect(
       claimBlocker(journey({ stops: ["E-huset", "Snabbgross", "Systembolaget", "Hem"] }), rates),
@@ -116,15 +108,13 @@ describe("claimBlocker", () => {
   });
 
   it("counts only the stops that name a place", () => {
-    // An editor leaves a blank row behind when somebody clears one. Two real
-    // places around it is still a journey; one is not.
+    // An editor leaves a blank row behind when one is cleared; two real places is still a journey, one is not.
     expect(claimBlocker(journey({ stops: ["E-huset", "", "Hem"] }), rates)).toBeNull();
     expect(claimBlocker(journey({ stops: ["E-huset", "", ""] }), rates)).toBe("noRoute");
   });
 
   it("reports what is fixed first", () => {
     expect(claimBlocker(journey({ odometerStart: null }), [])).toBe("noReadings");
-    // The stops come before the readings, matching the order of the form.
     expect(claimBlocker(journey({ stops: [], odometerStart: null }), [])).toBe("noRoute");
   });
 });

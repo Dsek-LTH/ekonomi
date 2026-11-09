@@ -1,41 +1,10 @@
 "use client";
 
-// One event, as a sheet.
-//
-// Three columns (ut, in, spill) and a row per product. A cell holds what the
-// night's column comes to: the out cell of a beer carried out twice says 168,
-// and typing 100 over it is how a mistake gets fixed. Leaving the cell writes
-// the difference to the log, which is still the only record there is.
-//
-// A grid of totals sitting on an append-only ledger, and it buys two things
-// worth the machinery. The arithmetic is visible where it is entered: `sold`
-// is on the same row as the three figures it comes from, and moves as they are
-// typed. And a mistake is fixable in the place it was made, rather than leaving
-// somebody to construct a compensating entry by hand.
-//
-// Nothing is confirmed. A cell commits when you leave it, the way the budget
-// sheet's do, and for the same reason: a sheet with a save button is a sheet
-// that can be half filled in and abandoned, and this one is filled in standing
-// in a cellar on a phone that locks itself. What is on the screen is what is in
-// the log, always, so there is no draft to lose and nothing to remember to
-// press. It also means the correction path and the entry path are one path,
-// which is the whole reason the cells hold totals.
-//
-// Written optimistically: apply, tell the server, re-read only if refused (see
-// `save`). A refresh per cell would be a round trip whose entire result
-// is a figure already on the screen, forty times over while somebody tabs down
-// a column.
-//
-// Two people in a cellar have two screens, so a cell carries the total it was
-// decided against and the server refuses it if the log has moved. See
-// lib/stock/cells.ts. Untouched cells are never sent and never copied into
-// state, so somebody else's work shows up here rather than being overwritten.
-//
-// On a phone the three columns become one at a time. Same sheet, same cells;
-// what changes is that a row is a product and a number rather than a product
-// and three. That matches the errand, since you are carrying crates one
-// direction at a time, and it is the only arrangement that keeps a row on one line without
-// asking anybody to drag a grid sideways in a cellar.
+// One event as a sheet: three columns (ut, in, spill) and a row per product. A cell holds the night's total for that column,
+// and leaving it writes the difference to the append-only log, so a mistake is fixed where it was made.
+// A cell carries the total it was decided against and the server refuses it if the log has moved (lib/stock/cells.ts),
+// so two phones in a cellar do not overwrite each other. Untouched cells are never sent.
+// On a phone the three columns become one at a time, which keeps a row on one line.
 import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -115,26 +84,12 @@ export default function EventClient({
   const notify = useNotify();
   const returnTo = useReturnTo();
 
-  // Only the cells somebody is typing in. Everything else reads from the event,
-  // so a cell nobody has touched shows what is booked, including what the
-  // other phone in the cellar booked, rather than a copy of it.
-  //
-  // Kept in localStorage, keyed by the event, until it is saved: a night is
-  // filled in over an evening on a phone that locks itself, and what has been
-  // typed and not yet sent is the one thing on this screen that exists nowhere
-  // else. Per event, so two events cannot read back each other's work.
+  // Only the cells somebody is typing in; everything else reads from the event. Kept in localStorage per event until saved, since it exists nowhere else.
   const [typed, setTyped, clearDraft] = useLocalDraft<Record<string, string>>(
     `stock:event:${event.id}:draft`,
     {},
   );
-  /**
-   * What this page has written since the server last told it anything.
-   *
-   * The optimistic path's memory: `booked` is the new figure for a cell and
-   * `shifted` is what the cellar owes for it. Both are thrown away and re-read
-   * the moment the server refuses something, because from then on the screen is
-   * ahead of the log and no longer knows by how much.
-   */
+  /** What this page has written since the server last told it anything: `booked` is a cell's new figure, `shifted` what the cellar owes for it. Re-read on a refusal. */
   const [booked, setBooked] = useState<Record<string, number>>({});
   const [shifted, setShifted] = useState<Record<string, { units: number; open: OpenBottles }>>({});
   const [added, setAdded] = useState<string[]>([]);
@@ -147,12 +102,10 @@ export default function EventClient({
   const [search, setSearch] = useState("");
   /** Which cell has the caret. A cell shows its working only while it does. */
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  /** The row whose product is being changed: its name is a picker until it is
-   *  chosen or the change is called off. */
+  /** The row whose product is being changed: its name is a picker until chosen or called off. */
   const [swapping, setSwapping] = useState<string | null>(null);
 
   /** Every cell's input, so the keyboard can move between them. */
-  // The caret's own layer: the map of cell → input, and the keys that move it.
   const { focusCell, register, handleKey } = useGridFocus();
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -180,18 +133,8 @@ export default function EventClient({
   }
 
   // ── What is on the sheet ──
-  //
-  // The products the night has already touched, in the order the event lists
-  // them, then whatever has been added since. Nothing is ever taken off by the
-  // sheet: a product with movements booked on it is part of what happened.
-  //
-  // "Added since" is two things, and it used to be one. `added` is this
-  // screen's own list, which a reload throws away, but the figures typed into
-  // those rows live in the draft and survive it. A product picked onto the
-  // sheet and filled in before the phone locked itself came back with no row
-  // at all: the counts were still in localStorage, still on their way to the
-  // log on the next save, and nowhere on the screen. So the draft names rows
-  // too, and anything typed is somewhere to be seen and corrected.
+  // The products the night already touched in the event's order, then those added since. The sheet never takes one off:
+  // a product with movements booked is part of what happened. The draft names added rows too, so anything typed shows after a reload.
   const drafted = Object.entries(typed)
     .filter(([, text]) => text.trim() !== "")
     .map(([key]) => key.split("|")[0]);
@@ -202,26 +145,11 @@ export default function EventClient({
     ),
   ];
 
-  /**
-   * The rows actually drawn, once the search has had its say.
-   *
-   * Narrowed for the eye only: `rows` above is still the whole night, so the
-   * figures, the locks and what gets written are unaffected by whatever is
-   * typed up here. A night that takes out thirty different things is a lot to
-   * scroll past when you are holding one of them.
-   */
+  /** The rows drawn, once the search has had its say. Narrowed for the eye only: `rows` is still the whole night. */
   const hunt = search.trim().toLowerCase();
   const found = hunt ? rows.filter((id) => byId.get(id)?.name.toLowerCase().includes(hunt)) : rows;
 
-  /**
-   * The drawn rows by drink type, in the order every stock screen keeps them,
-   * and otherwise as the night has them.
-   *
-   * Grouped because a night is read the way the cellar is stocked: the beer
-   * crates, then the wine, then the spirit shelf. A row added in the evening
-   * goes in with its kind rather than at the foot. The keyboard's grid is
-   * built from `shown`, so it walks the rows in the order they are drawn.
-   */
+  /** The drawn rows by drink type in the order every stock screen keeps them. The keyboard grid is built from `shown`, so it walks rows in drawn order. */
   const rank = (id: string): number => {
     const at = CATEGORIES.indexOf(byId.get(id)?.category as (typeof CATEGORIES)[number]);
     return at === -1 ? CATEGORIES.length : at;
@@ -249,12 +177,7 @@ export default function EventClient({
     return q.ok ? q.value : (base.get(key) ?? 0);
   };
 
-  /**
-   * Every cell as it currently reads, typing included.
-   *
-   * What the row's figures and the locks are worked out from, so a count typed
-   * into Ut unlocks In on the same keystroke rather than a round trip later.
-   */
+  /** Every cell as it currently reads, typing included, so a count typed into Ut unlocks In on the same keystroke. */
   const live = useMemo(() => {
     const map = new Map(base);
     for (const key of Object.keys(typed)) map.set(key, number(key));
@@ -263,13 +186,7 @@ export default function EventClient({
   }, [base, typed]);
 
   // ── Worked out once a render, not once a cell ──
-  //
-  // Both of these used to be recomputed inside `lockOn`, which every cell of
-  // the sheet asks, twice, once to draw itself and once to take its place in
-  // the keyboard's order. Forty products with a spirit's ladder each is well
-  // over a thousand folds of the same handful of numbers per keystroke, and the
-  // sheet felt it. They depend on the product and not on the cell, so they are
-  // worked out per product and looked up.
+  // They depend on the product, not the cell, and `lockOn` asks for every cell twice, so they are looked up per product.
   const shelves = new Map<string, BottleStock>();
   const nights = new Map<string, TagTotals>();
   for (const productId of rows) {
@@ -285,59 +202,24 @@ export default function EventClient({
   const nightOf = (product: StockLevelDto): TagTotals =>
     nights.get(product.id) ?? totalsFromCells(product, product.id, live);
 
-  /**
-   * How many of these the event had to take, when it started.
-   *
-   * Not what is on the shelf now, because the sheet has been changing that. Two
-   * bottles brought back at 60 % put a 60 % rung in the cellar, and offering
-   * them straight back to the same night is both confusing and pointless: out
-   * and back and out again comes to the same millilitres as out and never
-   * returned. So the ladder is measured against what the night found, and stays
-   * put while it is filled in. See `beforeTheNight`.
-   */
+  /** How many of these the event had to take when it started, not what is on the shelf now: the ladder is measured against what the night found (see `beforeTheNight`). */
   const available = (product: StockLevelDto, level: number): number =>
     beforeTheNight(shelfOf(product), base, product.id, level);
 
-  /**
-   * What a cell shows.
-   *
-   * The working while the caret is in it, the answer the rest of the time:
-   * `24*10+30` under the caret, `270` once you leave. Borrowed from the budget
-   * sheet's formula cells (budget/[budgetId]/use-budget-cells.tsx), and for the
-   * same reason: the sum is how somebody got there and the total is what they
-   * meant, and a cell keeping only one of them makes you choose between
-   * checking the arithmetic and reading the figure.
-   */
+  /** What a cell shows: the working (`24*10+30`) while focused, the answer otherwise (as in budget/[budgetId]/use-budget-cells.tsx). */
   const display = (key: string): string => {
     const raw = typed[key];
     if (raw === undefined) return bookedText(key);
     if (focusKey === key) return raw;
     if (raw.trim() === "") return "";
     const q = quantity(raw);
-    // A sum that does not add up yet stays as typed rather than resolving to
-    // something it does not say.
+    // A sum that does not add up yet stays as typed.
     return q.ok ? String(q.value) : raw;
   };
 
   // ── What cannot be typed in at all ──
-  //
-  // A lock and a fault answer different questions, and conflating them was a
-  // bug worth naming. A lock says *no figure could go here*: this vodka had no
-  // 60 % bottles when the night began, so no number in that box could ever be
-  // true. A fault says *that figure is too big*, three bottles home from a
-  // night that took two, which is a thing somebody typed and can retype.
-  //
-  // The In column used to lock the moment the night's returns caught up with
-  // what went out. Which meant typing one too many closed the box you were
-  // typing in, along with the rest of the column: the input unmounted under the
-  // caret. Overshooting is a fault now, and it says so in words while you keep
-  // the caret.
-  //
-  // Two things are never locked, whatever the arithmetic says. A cell with
-  // something already booked on it. Those bottles went out at 60 % and that is
-  // exactly why the rung reads empty, so the figure has to stay correctable.
-  // And a cell somebody is working in, because a box that vanishes mid-keystroke
-  // is never the right answer to anything.
+  // A lock says no figure could go here (this vodka had no 60 % bottles when the night began). A fault says that figure is too big, and the caret stays.
+  // Never locked: a cell with something already booked (the figure must stay correctable) or one being worked in.
   type Lock = "nothingOnShelf" | "nothingOut";
 
   function lockOn(product: StockLevelDto, kind: CellKind, level: number): Lock | null {
@@ -347,9 +229,7 @@ export default function EventClient({
     if (kind === "CHECKOUT") {
       return available(product, level) === 0 ? "nothingOnShelf" : null;
     }
-    // Nothing can come home, or be dropped, from a night that took nothing out
-    // at all. How much of it is still unaccounted for is a different question,
-    // and the answer to that one is a fault rather than a locked box.
+    // Nothing can come home or be dropped from a night that took nothing out. How much is unaccounted for is a fault, not a lock.
     return nightOf(product).out === 0 ? "nothingOut" : null;
   }
 
@@ -364,28 +244,14 @@ export default function EventClient({
     (key) => byId.has(refOf(key).productId) && number(key) !== (base.get(key) ?? 0),
   );
 
-  /**
-   * Why a cell cannot hold what somebody typed.
-   *
-   * `cellFault` is the server's own rule, so a cell is never sent that would be
-   * refused, and the reason appears on the row before anybody leaves the box.
-   *
-   * Keyed by the cell rather than the product, which matters for getting out of
-   * a mess: a product whose figures do not add up used to have every one of its
-   * cells refused, including the one you were clearing to fix it.
-   */
+  /** Why a cell cannot hold what was typed. `cellFault` is the server's own rule. Keyed by cell, not product, so the cell you clear to fix a mess is not itself refused. */
   const faults = new Map<string, string>();
   for (const key of changed) {
     const ref = refOf(key);
     const product = byId.get(ref.productId);
     if (!product) continue;
-    // `live`, not `base`: the night's arithmetic is about what the sheet says,
-    // and most of a sheet is unsaved for most of an evening. Judged against the
-    // log alone, eight beers typed into Ut had not gone out yet, so a spill of
-    // one was refused as more than went out, and clearing a row column by
-    // column faulted on whichever column was cleared first. The cellar half of
-    // the rule still reads `base`, because the shelf has moved for those rows
-    // and for no others. See SheetState in lib/stock/cells.ts.
+    // `live`, not `base`: the night's arithmetic is about what the sheet says, and most of a sheet is unsaved for most of an evening.
+    // The cellar half of the rule still reads `base`, since the shelf has moved for those rows only. See SheetState in lib/stock/cells.ts.
     const bad = cellFault(
       product,
       shelfOf(product),
@@ -409,21 +275,9 @@ export default function EventClient({
   }
 
   /**
-   * Write everything that has been typed, in one go.
-   *
-   * The whole sheet as a single request. The route takes an array of cells and
-   * applies them in one transaction (see api/stock/events/[id]/cells/route.ts), so
-   * a night either lands or it doesn't, rather than arriving as forty separate
-   * decisions.
-   *
-   * Every cell carries the figure it was decided against. That was cheap when a
-   * cell was sent the moment you left it; with a draft that may have been sitting
-   * on a phone since before the pub opened it is the whole safety of this
-   * screen. If the other phone in the cellar has moved a row since, the server refuses
-   * rather than letting one person's evening quietly replace the other's.
-   *
-   * Cells the rule already refuses are held back, not sent: the row says why,
-   * and a request whose answer is known is a round trip spent to be told off.
+   * Write everything typed as one request: the route applies the array of cells in one transaction (api/stock/events/[id]/cells/route.ts).
+   * Every cell carries the figure it was decided against, so the server refuses if another phone has moved the row.
+   * Cells the rule already refuses are held back, not sent.
    */
   async function save() {
     const cells = changed
@@ -435,7 +289,6 @@ export default function EventClient({
     if (cells.length === 0) return;
 
     const body: WriteStockCells = {
-      // The night's own date, the one in the page's subtitle.
       occurredAt: event.date,
       cells: cells.map((c) => ({
         productId: c.productId,
@@ -454,31 +307,21 @@ export default function EventClient({
     });
 
     if (!done) {
-      // Refused, most often by a cell somebody else has moved. The draft is kept:
-      // it is somebody's evening, and the answer to "the figures moved under
-      // you" is to show them the new ones and let them decide, not to throw
-      // away what they typed. Re-reading is what makes the next attempt carry
-      // the right `expected`.
+      // Refused, most often because another phone moved a cell. The draft is kept; re-reading makes the next attempt carry the right `expected`.
       setBooked({});
       setShifted({});
       router.refresh();
       return;
     }
 
-    // Saved. Everything this page was holding locally is now in the log, so the
-    // draft goes and the truth is re-read rather than reconstructed.
+    // Saved: the draft goes and the truth is re-read rather than reconstructed.
     setBooked({});
     setShifted({});
     clearDraft();
     router.refresh();
   }
 
-  /**
-   * Throw away everything typed and not saved.
-   *
-   * Asked first: the draft is the only copy of an evening's work, and this
-   * button stands next to the one that keeps it.
-   */
+  /** Throw away everything typed and not saved. Asked first: the draft is the only copy. */
   async function discard() {
     const ok = await confirm({
       title: t("event.sheet.discardTitle"),
@@ -490,20 +333,9 @@ export default function EventClient({
   }
 
   /**
-   * Undo the night.
-   *
-   * The question changes with what is booked on it, the way the product page's
-   * does. A duplicate made a minute ago is a name and nothing else; a pub that
-   * ran in March is every crate that went out, and undoing it puts them back on
-   * the shelf. A dialog that cried wolf over an empty event would be one people
-   * stop reading by the time it matters.
-   *
-   * The draft goes with it. It lives in localStorage under the event's id, and
-   * an event that no longer exists cannot be the thing anybody meant to type
-   * those figures into.
+   * Undo the night. The question changes with what is booked on it, as on the product page.
+   * The draft goes too (localStorage under the event's id).
    */
-  // Name and date are edited in place. A night entered under the wrong day is
-  // the ordinary mistake, and moving it moves everything booked on it.
   async function rename(raw: string) {
     const name = raw.trim();
     if (!name) {
@@ -539,8 +371,7 @@ export default function EventClient({
     );
     if (gone === null) return;
     clearDraft();
-    // Counted by the transaction rather than by the page: somebody else may
-    // have booked on the night between this screen loading and the button.
+    // Counted by the transaction, not the page: somebody else may have booked in between.
     notify.success(
       gone.entries > 0 ? t("event.removedWithLog", { count: gone.entries }) : t("event.removed"),
     );
@@ -548,14 +379,7 @@ export default function EventClient({
     returnTo("/stock/events");
   }
 
-  /**
-   * Take a product off the event: every cell of it back to nothing.
-   *
-   * Typed into the draft rather than written, like everything else on this
-   * sheet now, so a product with rows already booked keeps its line until the
-   * next save, showing the zeros that are about to be sent. A product that was
-   * only ever added on this screen has nothing to zero and simply goes.
-   */
+  /** Take a product off the event: typed into the draft as zeros, so a booked product keeps its line until the next save. One only added here simply goes. */
   function drop(productId: string) {
     const product = byId.get(productId);
     if (!product) return;
@@ -564,8 +388,7 @@ export default function EventClient({
       for (const kind of CELL_KINDS) {
         for (const level of sheetLines(product)) {
           const key = cellKey({ productId, kind, level });
-          // "" reads as a zero and books no row at all, which is the same
-          // thing this used to send, said in the sheet's own language.
+          // "" reads as a zero and books no row at all.
           if ((base.get(key) ?? 0) !== 0) next[key] = "";
           else delete next[key];
         }
@@ -576,36 +399,19 @@ export default function EventClient({
   }
 
   /**
-   * The same row, a different product.
-   *
-   * Picking the wrong beer off a shelf of forty is the commonest mistake there
-   * is on this sheet, and until now the only way back was to remove the row and
-   * type the evening's figures again. The counts were never the mistake, so
-   * they travel: what was out, what came home and what broke are carried over
-   * as they read, typed and saved alike.
-   *
-   * Saved figures travel by being zeroed on the old product and written on the
-   * new one, which the sheet already knows how to say. Both are ordinary cells
-   * in the next save, and the route applies them in one transaction. So the log
-   * ends up with the movement on the product it happened to, and StockChange
-   * records that it moved.
-   *
-   * Only between products of the same kind. A spirit's rungs have nowhere to go
-   * on a can, and silently dropping four of the five figures is not a swap. The
-   * picker offers no others.
+   * The same row, a different product: the counts were never the mistake, so what was out, home and broken carry over, typed and saved alike.
+   * Saved figures are zeroed on the old product and written on the new one (ordinary cells, one transaction).
+   * Only between products of the same kind: a spirit's rungs have nowhere to go on a can.
    */
   function swap(fromId: string, toId: string) {
     const from = byId.get(fromId);
     if (!from || fromId === toId || !byId.has(toId)) return;
 
-    // Read first, write second. What each cell reads comes from `typed` and
-    // `base` as this render has them, and reading it inside the updater would
-    // be reading one of the two out of the state React is handing back.
+    // Read first, write second: reading `typed` and `base` inside the updater would read them out of the state React hands back.
     const moves = CELL_KINDS.flatMap((kind) =>
       sheetLines(from).map((level) => ({
         fromKey: cellKey({ productId: fromId, kind, level }),
         toKey: cellKey({ productId: toId, kind, level }),
-        // The saved figure, or whatever has been typed over it.
         qty: number(cellKey({ productId: fromId, kind, level })),
       })),
     );
@@ -613,12 +419,10 @@ export default function EventClient({
     setTyped((prev) => {
       const next = { ...prev };
       for (const { fromKey, toKey, qty } of moves) {
-        // Clear the old one the way `drop` does: "" where a row is booked and
-        // has to be told to go, nothing at all where there never was one.
+        // Clear the old one as `drop` does: "" where a row is booked, nothing where there never was one.
         if ((base.get(fromKey) ?? 0) !== 0) next[fromKey] = "";
         else delete next[fromKey];
-        // The target is never already on the sheet, because the picker only
-        // offers products that are not, so there is nothing here to overwrite.
+        // The target is never already on the sheet (the picker only offers products that are not).
         if (qty > 0) next[toKey] = String(qty);
       }
       return next;
@@ -633,20 +437,12 @@ export default function EventClient({
   function add(productId: string) {
     if (!byId.has(productId)) return;
     setAdded((prev) => (prev.includes(productId) ? prev : [...prev, productId]));
-    // Straight into the first box it can take, so picking a product and saying
-    // how many of it is one movement rather than two. For a product new to the
-    // event that is Ut, because In and Spill are locked until something has gone
-    // out, since nothing can come back from a night that took nothing.
+    // Straight into the first box it can take: Ut for a new product, since In and Spill lock until something has gone out.
     setSeeking(productId);
   }
 
-  // Scanning a barcode onto the sheet, and inventing a product that isn't
-  // there yet. Shared with the delivery sheet, which does the same errand.
-  //
-  // A scan clears the search as well as adding the row: a sheet narrowed to
-  // something else would hide the row the scan just asked for, and the caret
-  // would have nowhere to land. A product invented in the dialog does not,
-  // because nobody typed a search to get there.
+  // Scanning a barcode onto the sheet and inventing a product, shared with the delivery sheet.
+  // A scan clears the search too, or a narrowed sheet would hide the row it just asked for.
   const { scan, invent, overlay } = useProductScan({
     unknownError: t("scan.unknown"),
     knownTags: tagsInUse(products),
@@ -662,40 +458,17 @@ export default function EventClient({
   });
 
   // ── The grid ──
-  //
-  // The same cell vocabulary as the voucher editor (components/voucher-editor
-  // .tsx), deliberately: they are the app's two spreadsheets, and a grid you tab
-  // through should not feel like a different tool depending on which one you
-  // opened. Ruled by `divide-*` on the rows rather than borders on every cell, a
-  // fixed layout so content can never widen a column, and a cell that is `p-0`
-  // around a bare full-height input. The box *is* the cell, which is what makes
-  // the focus ring land on the cell rather than inside it.
+  // Same cell vocabulary as the voucher editor (components/voucher-editor.tsx): `divide-*` rules, a fixed layout, and `p-0` cells around a bare
+  // full-height input so the focus ring lands on the cell.
   const headerCell = "px-2 py-2.5 text-center font-medium";
-  /**
-   * How many columns a full-width row spans: all of them from md, and on a
-   * phone the three that show (the product, the column being typed in, and
-   * what went). A span counts only cells that are displayed, so spanning the
-   * hidden two as well made the table invent two empty columns down its right
-   * edge to hold them.
-   */
+  /** How many columns a full-width row spans: all from md, the three that show on a phone. A span counts only displayed cells. */
   const span = phone ? 3 : CELL_KINDS.length + 2;
   const cellInput =
     "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
 
   /**
-   * The rows a product takes up.
-   *
-   * A can is one row. A spirit is its name and then its ladder, one row per
-   * rung, because bottles are not one quantity: five sealed and one at 40 %
-   * are two different things, and a ladder of rows is how a sheet has always
-   * said that. What shares a row is the rung, not a pairing; `Hel - Ut 1` and
-   * `Hel - In 0` are independent facts that happen to both be about unopened
-   * bottles, since a bottle leaves sealed and comes home at whatever it comes
-   * home at.
-   *
-   * All three columns are live on every row, spill included. Dropping a bottle
-   * is dropping a bottle, and the rung it came off is the whole of what it
-   * cost, because everything left in it goes on the floor.
+   * The rows a product takes up: a can is one row, a spirit its name then one row per rung of its ladder.
+   * All three columns are live on every row, spill included (a dropped bottle loses everything left in it).
    */
   const sheetLines = (product: StockLevelDto): number[] =>
     product.kind !== "VOLUME" ? [WHOLE] : [WHOLE, ...LEVELS];
@@ -704,18 +477,8 @@ export default function EventClient({
     level === WHOLE ? t("event.level.sealed") : t("event.level.rung", { level });
 
   // ── Walking the grid ──
-  //
-  // The shape the keyboard moves over: a row per line of the sheet (a can, or
-  // one rung of a spirit's ladder) and a column per direction. Locked cells
-  // are holes in it rather than entries, and so are rows a search has hidden,
-  // so nothing downstream has to remember to skip them.
-  //
-  // The moving itself is lib/ui/grid-nav.ts, which knows only the shape. It is
-  // not the budget sheet's `use-cell-edit`: that answers select-versus-edit and
-  // leaves movement to the browser's own focus order, which works there and
-  // does not here, because a row of this table holds a product link and a remove
-  // button as well as its figures, and tabbing through those between every pair
-  // of numbers is not how anybody fills in a sheet.
+  // A row per line of the sheet and a column per direction; locked cells and rows a search hid are holes. Movement is lib/ui/grid-nav.ts,
+  // not the budget sheet's `use-cell-edit`, since tabbing here would pass each row's product link and remove button.
   const grid: (string | null)[][] = [];
   for (const productId of shown) {
     const product = byId.get(productId);
@@ -730,25 +493,11 @@ export default function EventClient({
   }
 
   /**
-   * Put the caret in the first box a newly added product can take.
-   *
-   * Reached both ways in: picked from the row at the bottom, or scanned. Which
-   * box that is falls out of the grid rather than being chosen. For a product
-   * new to the event it is Ut, because In and Spill are locked until
-   * something has gone out; for one already on the sheet it is whichever column
-   * the phone is showing.
-   *
-   * In an effect because the row does not exist until the render after `add`,
-   * and a product invented from an unknown barcode does not exist until the
-   * server has been round and sent the list again. It clears itself the moment
-   * it lands, so nothing keeps stealing focus.
+   * Put the caret in the first box a newly added product can take: Ut for a product new to the event (In and Spill lock
+   * until something has gone out), else the column the phone shows. An effect, since the row appears a render after `add`.
    */
-  // The row it wants may appear after the add, and again when the server sends
-  // a product that was just created. See lib/ui/use-grid-focus.ts.
-  //
-  // The first cell that will take the caret, walking the product's rungs and
-  // then the three kinds: which of them exists depends on the product and on
-  // which column the phone is showing.
+  // The row may appear after the add and again when the server sends a just-created product. See lib/ui/use-grid-focus.ts.
+  // The first cell that will take the caret, walking the product's rungs then the three kinds.
   useSeekFocus(
     seeking,
     () => setSeeking(null),
@@ -773,11 +522,7 @@ export default function EventClient({
     });
 
   // ── A cell ──
-  //
-  // A function that returns an input, not a component. A component declared in
-  // here would be a new type on every render, and React unmounts and remounts a
-  // subtree whose type changed, which took the focus out of the box on the
-  // first keystroke, every time.
+  // A function returning an input, not a component: one declared here is a new type each render and would drop focus on the first keystroke.
   function cellFor(product: StockLevelDto, kind: CellKind, level: number) {
     const lock = lockOn(product, kind, level);
     if (lock) {
@@ -802,18 +547,15 @@ export default function EventClient({
         inputMode="numeric"
         className={cn(
           cellInput,
-          // A cell on its way to the log over a cell that merely holds working:
-          // what is about to be written matters more than how it was arrived at.
+          // A cell on its way to the log over one that merely holds working.
           changed ? "bg-warning-soft/60 font-medium" : working && "bg-accent-soft/40",
           pending === key && "text-muted",
         )}
         value={display(key)}
-        // The sum behind the figure, without having to click into it.
         title={working ? raw : undefined}
         placeholder="0"
         disabled={!canManage}
-        // Arriving seeds the cell with what it already says, so editing 120 to
-        // 100 is an edit rather than a retype.
+        // Arriving seeds the cell with what it says, so editing 120 to 100 is an edit.
         onFocus={(e) => {
           setFocusKey(key);
           setTyped((prev) =>
@@ -832,8 +574,7 @@ export default function EventClient({
     );
   }
 
-  // The night's date as people say it, weekday first: a pub is "fredagens",
-  // and 2026-10-17 had to be worked out.
+  // The night's date as people say it, weekday first.
   const longDate = new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "numeric",
@@ -857,8 +598,7 @@ export default function EventClient({
       }
       subtitle={
         canManage ? (
-          // The weekday stays in words beside the field: a pub is
-          // "fredagens", and 2026-10-17 had to be worked out.
+          // The weekday stays in words beside the field.
           <>
             <span className="capitalize">{weekday}</span>{" "}
             <EditableText
@@ -874,16 +614,9 @@ export default function EventClient({
       }
       back="/stock/events"
       width="wide"
-      // What applies to the whole night: how it is drawn, and the menu of what
-      // is done to the night itself rather than to its figures. The menu sat on
-      // the sheet's card, where it read as acting on the sheet. The toggle sat
-      // on a strip of its own above the sheet, alone on a row of empty header.
+      // What applies to the whole night: how it is drawn and the menu of what is done to the night itself.
       aside={
         <>
-          {/* Two readings of one night: where the figures ended up, and how
-              they got there. The second was a card under the sheet that only
-              mattered when something looked wrong, and pushed the sheet's foot
-              further down. */}
           <ViewToggle
             aria-label={t("event.view.label")}
             value={view}
@@ -941,7 +674,6 @@ export default function EventClient({
                 </Button>
               )}
             </div>
-            {/* On a phone, one column at a time. */}
             <div className="border-b border-border px-inset md:hidden">
               <FilterTabs
                 options={CELL_KINDS.map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
@@ -952,24 +684,16 @@ export default function EventClient({
               />
             </div>
 
-            {/* No CardBody: the sheet is ruled to the card's own edge, the way the
-            voucher editor is. A body would inset it by `px-inset` and the
-            outermost column rule would float in a gutter. */}
-            {/* The spare rows *are* how a product gets onto the sheet, so an
-            event with nothing on it still needs the table. Showing a note
-            in its place left a new night with no way in at all. */}
+            {/* No CardBody: the sheet is ruled to the card's own edge, as in the voucher editor. */}
+            {/* The spare rows are how a product gets onto the sheet, so an empty event still needs the table. */}
             {rows.length === 0 && !canManage ? (
               <div className="px-inset py-6">
                 <EmptyNote>{t("event.nothing")}</EmptyNote>
               </div>
             ) : (
-              /* Only ever sideways where there is something to scroll to. On a
-             phone the sheet is three columns (product, the one being typed,
-             and the total) and that fits: a grid you have to drag about in a
-             cellar is a grid nobody finishes. */
+              /* Scrolls sideways only where needed: on a phone the three columns fit. */
               <TableScroll minWidth="min-w-0 md:min-w-[36rem]">
-                {/* table-fixed: the header percentages decide the columns, so a
-                long product name can never push the number columns about. */}
+                {/* table-fixed: header percentages decide the columns, so a long name cannot push them. */}
                 <table className="w-full table-fixed border-collapse text-sm">
                   <thead>
                     <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
@@ -994,8 +718,6 @@ export default function EventClient({
 
                   {groups.map(([category, ids]) => (
                     <Fragment key={category}>
-                      {/* The drink type, as a ruled line across the sheet rather
-                      than a heading over a card of its own. */}
                       <tbody>
                         <tr className="border-b border-border bg-surface/60">
                           <td colSpan={span} className="px-3 py-1.5">
@@ -1020,17 +742,12 @@ export default function EventClient({
                             key={productId}
                             className="divide-y divide-border/40 border-b border-border last:border-0"
                           >
-                            {/* A spirit's own row carries its name and its total; the
-                        typing happens on the ladder below it. A can has no
-                        ladder, so its one row is both. */}
+                            {/* A spirit's own row carries its name and total, typing happens on the ladder below. A can's one row is both. */}
                             <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>
                               <td className="group px-2 py-1.5 align-middle">
                                 <div className="flex items-center justify-between gap-2">
                                   {swapping === productId ? (
-                                    // The row's name, while it is being changed. In
-                                    // place rather than in a dialog: what is being
-                                    // answered is "which product is this row", and the
-                                    // row is where that question is.
+                                    // The name while it is being changed, in place: the row is where "which product is this" is answered.
                                     <div className="flex min-w-0 flex-1 items-center gap-1">
                                       <div className="min-w-0 flex-1">
                                         <Combobox
@@ -1038,11 +755,7 @@ export default function EventClient({
                                           size="sm"
                                           value=""
                                           onChange={(toId) => swap(productId, toId)}
-                                          // Never one already on the sheet, since two
-                                          // rows for one product is what the unique index
-                                          // on a cell forbids, and never one counted
-                                          // differently: a spirit's rungs have nowhere
-                                          // to land on a can.
+                                          // Never one already on the sheet (unique index on a cell) or one counted differently (a spirit's rungs have nowhere to land on a can).
                                           options={products
                                             .filter(
                                               (p) =>
@@ -1066,10 +779,7 @@ export default function EventClient({
                                       </IconButton>
                                     </div>
                                   ) : (
-                                    // The name, and under it what the cellar holds.
-                                    // On one line they ran together, and a long name
-                                    // pushed the stock count onto a line of its own
-                                    // anyway, at a different place on every row.
+                                    // The name, and under it what the cellar holds, on separate lines so a long name does not shift the count.
                                     <span className="min-w-0">
                                       <Link
                                         href={`/stock/${productId}`}
@@ -1097,12 +807,7 @@ export default function EventClient({
                                       )}
                                     </span>
                                   )}
-                                  {/* What can be done to the row itself, as opposed to
-                              its figures. Two things, so a menu rather than two
-                              icons competing for the same corner, and icon
-                              only, because forty rows carrying a word each is a
-                              column of repeated text where the products should
-                              be. */}
+                                  {/* Row-level actions in a menu, icon only: forty rows with a word each would bury the products. */}
                                   {canManage && swapping !== productId && (
                                     <Menu
                                       label={t("event.sheet.rowActions")}
@@ -1116,11 +821,7 @@ export default function EventClient({
                                         <IconSwap className="size-4 shrink-0 text-muted" />
                                         {t("event.sheet.swap")}
                                       </MenuItem>
-                                      {/* Taking a product off the event entirely. It
-                                  removes its rows rather than zeroing them:
-                                  picking the wrong beer is not a movement of
-                                  nothing, it is no movement, and the log should
-                                  say so. */}
+                                      {/* Takes a product off the event entirely: removes its rows rather than zeroing them, since a wrong product is no movement. */}
                                       <MenuItem
                                         onClick={() => drop(productId)}
                                         className="text-danger hover:bg-danger-soft"
@@ -1153,10 +854,7 @@ export default function EventClient({
                             {isVolume &&
                               lines.map((level) => (
                                 <tr key={level} className="divide-x divide-border">
-                                  {/* The rung as the bottle it stands for, and how
-                              many of those the night found on the shelf. It
-                              was "↳ 80 % - 3", which left the 3 to be
-                              guessed at. */}
+                                  {/* The rung as the bottle it stands for, and how many of those the night found on the shelf. */}
                                   <td className="py-1 pl-4 pr-2 align-middle">
                                     <span className="flex items-center gap-1.5 text-xs text-muted">
                                       <Bottle level={level === WHOLE ? 100 : level} />
@@ -1188,10 +886,7 @@ export default function EventClient({
                     </Fragment>
                   ))}
 
-                  {/* Said inside the table rather than in place of it: the spare
-                  rows below are where you would go next, and hiding them to
-                  say "nothing matches" would hide the answer with the
-                  question. */}
+                  {/* Said inside the table so the spare rows below stay visible. */}
                   {shown.length === 0 && rows.length > 0 && (
                     <tbody>
                       <tr>
@@ -1206,23 +901,12 @@ export default function EventClient({
                     </tbody>
                   )}
 
-                  {/* The next line, the way a sheet always has one. Typing a name
-                  into it puts that product on the event, and a name nothing
-                  answers to offers to make it.
-
-                  One, not three. Three came from the voucher editor, where you
-                  type several lines one after another and a queue of spares
-                  saves you making room each time. Here the quick way in is the
-                  scanner, so the queue bought nothing and cost three pickers'
-                  worth of empty space at the foot of every sheet. */}
+                  {/* The next line: typing a name puts that product on the event, and an unknown name offers to make it. One spare row, since the scanner is the quick way in. */}
                   {canManage && (
                     <tbody>
                       <tr className="divide-x divide-border">
                         <td className="p-0 align-middle">
-                          {/* Picking by name. The scanner, the quicker way in,
-                          is on the toolbar beside the search: a code the
-                          event already has jumps to that product's row, so
-                          it finds as much as it adds. */}
+                          {/* Picking by name. The scanner is on the toolbar: a code the event already has jumps to its row. */}
                           <div className="flex items-center">
                             <div className="min-w-0 flex-1">
                               <Combobox

@@ -1,14 +1,6 @@
 "use client";
 
-// What the cellar has been worth, stacked by drink type.
-//
-// Hand-drawn SVG rather than a charting library, for the reason every other
-// component here is hand-drawn: one shelf of five series does not need 40 kB of
-// abstraction, and the app's own tokens are what make it look like the app.
-//
-// The form is a stacked area because the question is a magnitude over time that
-// is also made of parts: how much is on the shelf, and how much of it is beer.
-// A line per type would answer the second and lose the first.
+// Stacked area of the cellar's worth by drink type, hand-drawn SVG with the app's tokens rather than a chart library.
 import { useId, useMemo } from "react";
 import { useTranslations } from "next-intl";
 
@@ -44,15 +36,13 @@ export function StockValueChart({
   const t = useTranslations("stock.stats");
   const clipId = useId();
 
-  // One of the two module constants in lib/ui/chart-geometry, never a computed
-  // one, so its identity is stable and the memos below can depend on it.
+  // One of the two module constants in lib/ui/chart-geometry, so its identity is stable for the memos.
   const geometry = useChartGeometry();
   const { W, H, PAD, labels: wantedLabels } = geometry;
   const PLOT = plotOf(geometry);
 
   const max = useMemo(() => Math.max(1, ...points.map((p) => p.totalOre)), [points]);
-  // From zero: a shelf is never worth less than nothing, so the axis this chart
-  // wants is the one-sided case of the shared ladder.
+  // From zero: a shelf is never worth less than nothing.
   const axis = useMemo(() => axisTicks(0, max), [max]);
   const top = axis[axis.length - 1];
 
@@ -60,17 +50,10 @@ export function StockValueChart({
     PAD.left + (points.length === 1 ? PLOT.w / 2 : (i / (points.length - 1)) * PLOT.w);
   const y = linearScale(0, top, geometry);
 
-  // "point", not "band": this is an area chart, so a day's value sits *at* a
-  // position rather than filling one, and the readout snaps to the nearest.
+  // "point", not "band": a day's value sits at a position, and the readout snaps to the nearest.
   const { ref: svgRef, at, track, clear } = usePointerIndex(points.length, geometry, "point");
 
-  /**
-   * One band per drink type, stacked from the bottom.
-   *
-   * Drawn as a closed path per band rather than as one path with a fill rule:
-   * each band needs its own colour, and its underside is the previous band's
-   * top, walked backwards.
-   */
+  /** One closed path per band, stacked from the bottom: each needs its own colour and its underside is the previous band's top, reversed. */
   const bands = useMemo(() => {
     const floors = points.map(() => 0);
     return CATEGORIES.map((category) => {
@@ -82,18 +65,13 @@ export function StockValueChart({
       for (let i = 0; i < floors.length; i++) floors[i] = tops[i];
       return { category, d, carries };
     });
-    // `x` and `y` read the geometry, so a change of coordinate space has to
-    // redraw the bands. `geometry` is in the list and is one of two module
-    // constants, so its identity is stable; the rule cannot see the dependency
-    // through the two closures.
+    // `x` and `y` read the geometry, so a change of coordinate space must redraw the bands. `geometry` is a stable module constant.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points, top, geometry]);
 
   const hovered = at == null ? null : points[at];
 
-  /** Evenly spaced label positions, both ends always among them. A date needs
-   *  about 90 units of the wide space and about 70 of the narrow one, which is
-   *  what each geometry's `labels` counts. */
+  /** Evenly spaced label positions, both ends included. A date needs about 90 units of the wide space and 70 of the narrow one. */
   const labels = useMemo(
     () => labelPositions(points.length, wantedLabels),
     [points.length, wantedLabels],
@@ -112,14 +90,12 @@ export function StockValueChart({
           onPointerLeave={clear}
         >
           <defs>
-            {/* The bands are clipped rather than trusted to stay inside: a
-                rounding at the top tick would otherwise paint over the axis. */}
+            {/* Clip the bands so a rounding at the top tick cannot paint over the axis. */}
             <clipPath id={clipId}>
               <rect x={PAD.left} y={PAD.top} width={PLOT.w} height={PLOT.h} />
             </clipPath>
           </defs>
 
-          {/* Recessive grid: it is there to be measured against, not read. */}
           <YGrid
             ticks={axis}
             y={y}
@@ -134,8 +110,7 @@ export function StockValueChart({
                   key={category}
                   d={d}
                   fill={DRINK_SERIES[category]}
-                  // The 2px gap that keeps two bands from reading as one shape,
-                  // painted in the card's own colour rather than left as a hole.
+                  // A 2px gap in the card's colour keeps two bands from reading as one shape.
                   stroke="var(--color-background)"
                   strokeWidth={2}
                   strokeLinejoin="round"
@@ -144,10 +119,6 @@ export function StockValueChart({
             )}
           </g>
 
-          {/* As many dates as fit, evenly spaced, ends included. A date needs
-              about 90px at this size, so five is what a 960-wide plot holds
-              without them touching; a label per point would be a smear, and the
-              day under the pointer is on the readout anyway. */}
           {labels.map((i) => (
             <text
               key={i}
@@ -173,9 +144,6 @@ export function StockValueChart({
           )}
         </svg>
 
-        {/* The readout, in HTML rather than SVG text: it is a small table, and a
-            table is what HTML is for. Positioned over the plot, on the side the
-            crosshair is not. */}
         {hovered && (
           <div
             className={cn(
@@ -207,8 +175,7 @@ export function StockValueChart({
         )}
       </div>
 
-      {/* Always present, because five bands cannot be told apart by colour
-          alone and should not have to be. */}
+      {/* Always present: five bands cannot be told apart by colour alone. */}
       <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
         {CATEGORIES.map((c) => (
           <span key={c} className="flex items-center gap-1.5 text-xs text-muted">

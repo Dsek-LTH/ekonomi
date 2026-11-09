@@ -1,16 +1,6 @@
-// When a verifikation may be written, and why not.
-//
-// The same shape as `submitBlocker` in ./status.ts, and for the same reason:
-// the booking screen has to know whether the "Bokför" button is live and the
-// route has to refuse a voucher that shouldn't exist, and those two are one
-// rule. They used to be two: the server counting in öre, the screen counting
-// in kronor with a `round2` to paper over the floats, which is exactly how a
-// button ends up live for a voucher the server then rejects.
-//
-// Amounts are öre, which is what makes "debet = kredit" an integer comparison
-// and not a tolerance. See ./money.ts: the database holds öre, the interface
-// shows kronor, and a rule about whether two sums are equal belongs on the side
-// where they can actually be equal.
+// When a verifikation may be written, and why not. Same shape as `submitBlocker` in ./status.ts: the
+// booking screen and the route share one rule. Amounts are öre so "debet = kredit" is an integer
+// comparison (./money.ts).
 
 /** One row of a verifikation. `account` is a BAS number; amounts are öre. */
 export interface VoucherLine {
@@ -19,25 +9,11 @@ export interface VoucherLine {
   credit: number;
 }
 
-/**
- * Why this voucher can't be written, or null when it can. Each value is a
- * message key under `errors.voucher`. The route returns it as its error code
- * and the screen shows the same sentence.
- */
+/** Why this voucher can't be written, or null. A message key under `errors.voucher`, used as the route's error code and the screen's sentence. */
 export type VoucherBlocker =
   "twoLines" | "accountRequired" | "amountRequired" | "negativeAmounts" | "unbalanced";
 
-/**
- * The two sides, and what stands between them. Öre.
- *
- * Balance is a narrower question than `voucherBlocker`, and worth asking on its
- * own: a voucher with a half-filled row, or one account still unpicked, can be
- * perfectly balanced. It simply cannot be *booked* yet. The booking screens
- * used to read "balanced" off the blocker, which conflated the two and put a
- * red "differs by 0,00 kr" under a voucher whose sides met exactly. What the
- * blocker says is whether it may be written; what this says is whether it adds
- * up, and the screens want both.
- */
+/** The two sides, and what stands between them, in öre. Balance is narrower than `voucherBlocker`: a half-filled voucher can balance yet not be bookable. */
 export function voucherBalance(lines: readonly VoucherLine[]): {
   debit: number;
   credit: number;
@@ -50,42 +26,24 @@ export function voucherBalance(lines: readonly VoucherLine[]): {
     debit,
     credit,
     difference: debit - credit,
-    // The zero check is what stops an empty voucher (0 = 0) counting as
-    // balanced. An untouched form would otherwise open on a green chip.
-    // Beyond that, balance is exact.
+    // The zero check stops an empty voucher (0 = 0) counting as balanced. Beyond that, balance is exact.
     balanced: debit !== 0 && debit === credit,
   };
 }
 
 export function voucherBlocker(lines: readonly VoucherLine[]): VoucherBlocker | null {
-  // Double entry: one row is not a verifikation, whatever it says.
   if (lines.length < 2) return "twoLines";
   if (lines.some((l) => !l.account.trim())) return "accountRequired";
-  // An account with nothing posted to it is not a row of anything. It reaches
-  // here because the editors only discard a row that is empty *all through*
-  // (isBlankVoucherRow): an account picked and then left, which is what a
-  // half-finished thought looks like, counts as typed and travels the whole way
-  // to Fortnox as a 0,00 line nobody meant to write.
-  //
-  // Ahead of the balance check on purpose: a voucher of nothing but these adds
-  // to 0 = 0, and "debet ≠ kredit" is a poor way to say "you left the amounts
-  // out" to someone looking at two sides that plainly match.
+  // An account with nothing posted is not a row: editors only discard rows empty all through
+  // (isBlankVoucherRow), so a picked-then-left account would reach Fortnox as a 0,00 line. Checked
+  // ahead of the balance check, since such a voucher adds to 0 = 0.
   if (lines.some((l) => l.debit === 0 && l.credit === 0)) return "amountRequired";
-  // A return is booked with the rows the other way round, not with a negative
-  // amount, so a negative here is always a mistake.
+  // A return is booked with the rows the other way round, so a negative here is always a mistake.
   if (lines.some((l) => l.debit < 0 || l.credit < 0)) return "negativeAmounts";
-  // Asked through the same function the chip uses, so the button and the chip
-  // cannot end up disagreeing about what balancing means.
+  // Asked through the same function the chip uses, so button and chip agree about balance.
   if (!voucherBalance(lines).balanced) return "unbalanced";
   return null;
 }
 
-/**
- * A revenue account: BAS class 3, 3000 to 3999.
- *
- * An utlägg is money going out, so none of its rows may land on an intäktskonto.
- * A cost posted there nets against the section's sales and hides both. The
- * income side books against exactly these accounts, so this is a rule about
- * utlägg and not part of `voucherBlocker`, which both sides share.
- */
+/** A revenue account: BAS class 3, 3000 to 3999. An utlägg's rows may not land there, since a cost posted there nets against sales and hides both. Not part of `voucherBlocker`, which both sides share. */
 export const isRevenueAccount = (account: string) => /^3\d{3}$/.test(account.trim());

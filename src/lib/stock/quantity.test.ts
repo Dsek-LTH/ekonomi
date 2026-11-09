@@ -8,8 +8,6 @@ describe("evaluate", () => {
   });
 
   it("does the arithmetic of a delivery", () => {
-    // The case it exists for: ten crates of twenty-four and the thirty loose
-    // ones on the pallet.
     expect(evaluate("24*10+30")).toBe(270);
   });
 
@@ -35,8 +33,6 @@ describe("evaluate", () => {
   });
 
   it("has no answer for something half typed", () => {
-    // Mid-keystroke states. They must not read as a number, or the field would
-    // jump about as somebody types.
     expect(evaluate("24*")).toBeNull();
     expect(evaluate("(24")).toBeNull();
     expect(evaluate("")).toBeNull();
@@ -45,17 +41,11 @@ describe("evaluate", () => {
   });
 
   it("refuses anything only partly read", () => {
-    // The dangerous shape: a parse that succeeds on a prefix and throws the
-    // rest away would turn "4)" into four.
     expect(evaluate("4)")).toBeNull();
     expect(evaluate("24*3)")).toBeNull();
   });
 
   it("closes a gap in a number rather than reading two", () => {
-    // Space is stripped before anything is read, which is what lets "24 * 3"
-    // work at all, and it means a stray space inside a number closes up. That
-    // is the right way round: somebody typing "2 40" meant 240, and the
-    // alternative is refusing "24 * 3".
     expect(evaluate("4 4")).toBe(44);
   });
 
@@ -65,8 +55,6 @@ describe("evaluate", () => {
   });
 
   it("does not run what it is given", () => {
-    // The reason this is parsed rather than evaluated: a field that is
-    // sometimes filled in from a scanner must not be a place to put code.
     expect(evaluate("alert(1)")).toBeNull();
     expect(evaluate("1;2")).toBeNull();
     expect(evaluate("process.exit")).toBeNull();
@@ -100,8 +88,6 @@ describe("quantity", () => {
   });
 
   it("holds at what there is, and says it did", () => {
-    // Twenty-two are out, so twenty-two is the most that can come home, and
-    // the screen gets to mention it rather than the number quietly changing.
     expect(quantity("30", 22)).toEqual({ value: 22, ok: true, capped: true });
     expect(quantity("22", 22)).toEqual({ value: 22, ok: true, capped: false });
     expect(quantity("24*2", 22)).toEqual({ value: 22, ok: true, capped: true });

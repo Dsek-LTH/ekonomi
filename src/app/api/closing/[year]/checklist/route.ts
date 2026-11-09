@@ -3,7 +3,6 @@ import { canBookkeep } from "@/lib/domain/permissions";
 import { getClosingYear } from "@/lib/data/closing";
 import { startChecklist } from "@/lib/data/closing-checklist";
 
-// Start a year's checklist: copy the template into it, as it stands today.
 export async function POST(_req: Request, ctx: { params: Promise<{ year: string }> }) {
   const g = await gate(canBookkeep);
   if (!g.ok) return g.res;

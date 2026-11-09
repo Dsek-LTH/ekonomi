@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseBankCsv } from "./bank-csv";
 
-// Every sample below is invented: the clearing and account numbers are zeroes
-// and the purchases are made up. A real bank export must never be checked in
-// (see .gitignore) and nothing here needs one.
+// Every sample is invented; a real bank export must never be checked in (see .gitignore).
 const HEADER = "Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp";
 const COMMENT = "* Transaktionsrapport Period 2026-01-01 - 2026-03-31 Skapad 2026-03-31 20:06 CEST";
 
-// One data row, with only the parts the parser reads worth varying. `date` sets
-// all three date columns at once; `transdag` overrides the purchase date alone,
-// which is how the bank writes a card purchase that settled a day or two later.
+// One data row. `date` sets all three date columns; `transdag` overrides the purchase date alone.
 const row = (opts: {
   n?: number;
   date?: string;
@@ -47,8 +43,7 @@ describe("parseBankCsv", () => {
   });
 
   it("dates a purchase by Transdag, not the day the bank settled it", () => {
-    // The receipt the member hands in says the 1st; the bank booked it on the
-    // 3rd. Matching the two only works if we keep the day of the purchase.
+    // The receipt says the 1st, the bank booked the 3rd: keep the day of the purchase.
     const result = parseBankCsv(
       file(
         row({
@@ -63,7 +58,7 @@ describe("parseBankCsv", () => {
   });
 
   it("falls back to Bokfdag on a row with no Transdag", () => {
-    // Fees and interest are booked without ever having been "made" anywhere.
+    // Fees and interest have no purchase day.
     const result = parseBankCsv(
       file(row({ date: "2026-03-03", transdag: "", referens: "BANKAVGIFT", amount: "-75.00" })),
     );
@@ -90,7 +85,6 @@ describe("parseBankCsv", () => {
   });
 
   it("keeps an incoming amount positive", () => {
-    // A refund arrives as money in, and only a return may settle against it.
     const result = parseBankCsv(file(row({ referens: "ÅTERBETALNING", amount: "149.50" })));
     expect(result.transactions[0].amount).toBe(14950);
   });
@@ -138,8 +132,7 @@ describe("parseBankCsv", () => {
   });
 
   it("gives two genuinely identical purchases distinct hashes", () => {
-    // Two coffees on the same card, same day, same price is an ordinary
-    // Tuesday. They must not collapse into one transaction on import.
+    // Identical same-day purchases must not collapse into one on import.
     const identical = row({ referens: "KAFFEBAREN LUND K1234", amount: "-49.00" });
     const result = parseBankCsv(file(identical, identical));
 
@@ -148,7 +141,7 @@ describe("parseBankCsv", () => {
   });
 
   it("produces the same hashes when the same file is imported twice", () => {
-    // This is what makes a re-import a no-op rather than a duplicate ledger.
+    // Makes a re-import a no-op.
     const text = file(
       row({ n: 1, referens: "KAFFEBAREN LUND K1234", amount: "-49.00" }),
       row({ n: 2, referens: "KAFFEBAREN LUND K1234", amount: "-49.00" }),

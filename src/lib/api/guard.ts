@@ -1,51 +1,17 @@
-// The gate every API route goes through. One shape, one place, so a handler
-// starts with what it is allowed to do rather than six lines of preamble:
+// The gate every API route goes through. Roles are read from the database, not the JWT (stamped at sign-in, never refreshed).
 //
 //     const g = await gate(canAccessSettings);
 //     if (!g.ok) return g.res;
-//     // ... g.actor.id, g.actor.roles
-//
-// Roles are read from the database, not from the session. The session is a JWT
-// stamped at sign-in (see auth.ts) and never refreshed, so a role taken away
-// this morning would still open doors until the person happened to sign out.
-// Authority is worth one indexed lookup per request.
 import { NextResponse } from "next/server";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
 import type { Capability, Role } from "@/lib/domain/types";
 
-// ── What a handler answers with ────────────────────────────────────
-//
-// On failure, always `fail()`. See below.
-//
-// On success, one of three, chosen by whether the caller has anything to learn:
-//
-//   201 + the created row   a POST that made something
-//   200 + a body            when the outcome itself is information the caller
-//                           reads. DELETE /api/cost-centers/[id] answers
-//                           `{ retired }`, because a cost centre in use is
-//                           retired rather than deleted and the screen says so
-//   204, no body            everything else: the write happened, there is
-//                           nothing to report, and the client refreshes
-//
-// `{ ok: true }` as a whole response body is not one of them. It says only what
-// the status code already said, and a handler that returns it is telling the
-// next reader there might be something in there worth checking.
+// Success responses: 201 + created row for a POST; 200 + a body only when the outcome is information (DELETE
+// cost-centers answers `{ retired }`); otherwise 204. Never `{ ok: true }`. Failures always use `fail()`.
 
 /**
- * Run a write that addresses a row by id, answering 404 if that row is not
- * there rather than letting the driver's "record not found" out as a 500.
- *
- * Prisma's `update` and `delete` raise P2025 when nothing matched. A handler
- * that has already established the row exists is still not safe from it. The
- * check and the write are two statements, and a row can be deleted between
- * them, and a handler that never checked gets a 500 for the ordinary case of a
- * stale link. Both are the same answer: the thing you named is not here.
- *
- *     const budget = await orNotFound(
- *       () => prisma.budget.update({ where: { id }, data }),
- *       "budget.notFound",
- *     );
- *     if (budget instanceof NextResponse) return budget;
+ * Run a write that addresses a row by id, answering 404 instead of a 500 when Prisma raises P2025 (the row was deleted
+ * between check and write, or the link is stale).
  */
 export async function orNotFound<T>(
   write: () => Promise<T>,
@@ -54,45 +20,28 @@ export async function orNotFound<T>(
   try {
     return await write();
   } catch (err) {
-    // The code is Prisma's public contract for it; duck-typed so this module
-    // does not have to import the generated client.
+    // Duck-typed so this module does not import the generated client.
     if ((err as { code?: unknown })?.code === "P2025") return fail(404, error);
     throw err;
   }
 }
 
-/** Who is acting, with the roles they hold right now. */
 /**
- * Who is acting, and what they may do. Both, because the two answer different
- * questions: `capabilities` is what every gate reads, and `roles` is what the
- * handful of genuinely relational rules still turn on: the attest rule's
- * vice-skattmästare and resultatansvarig clauses (lib/domain/permissions.ts).
+ * Who is acting. `capabilities` is what every gate reads; `roles` is for the relational attest rules
+ * (vice-skattmästare and resultatansvarig clauses in lib/domain/permissions.ts).
  */
-// `name` for the words a route writes on the actor's behalf, such as "Anna has
-// sent your utlägg back" in a notification. Never for a decision.
+// `name` is for words written on the actor's behalf (notifications), never for a decision.
 export type Actor = { id: string; name: string; roles: Role[]; capabilities: Capability[] };
 
 export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse };
 
-/**
- * A value substituted into an error message. A plain string or number goes in
- * as-is; `{ key }` is a message key that the client translates first, so an
- * enum inside a sentence ends up in the reader's language too.
- */
+/** A value substituted into an error message. `{ key }` is a message key the client translates first. */
 export type ErrorValue = string | number | { key: string };
 
 /**
- * An error response in the shape the client expects. `{ error }` is what
- * components/shell/use-mutation.ts reads to show a message.
- *
- * `error` carries a *code*, not prose: a key under the `errors` namespace in
- * messages/. The server has no locale (the reader's is a cookie on their
- * request, not a property of the handler), so the message is resolved on the
- * client. Anything that is not a known code falls through and is shown as-is,
- * which is what keeps pass-through text from Fortnox readable.
- *
- * `values` fills the code's ICU placeholders; `extra` carries the odd extra
- * flag some callers need (e.g. `needsFortnoxLogin`).
+ * An error response in the shape the client expects: `{ error }` is read by components/shell/use-mutation.ts. `error` is
+ * a code under the `errors` namespace in messages/, resolved on the client (the server has no locale); unknown codes
+ * show as-is (Fortnox pass-through). `values` fills ICU placeholders; `extra` carries flags like `needsFortnoxLogin`.
  */
 export const fail = (
   status: number,
@@ -105,10 +54,8 @@ export const fail = (
   );
 
 /**
- * Resolve the acting user and, when `can` is given, check their authority.
- * Called with no argument it means "any signed-in member", which is a real
- * policy and not the absence of one. Say it explicitly rather than leaving a
- * handler ungated.
+ * Resolve the acting user and, when `can` is given, check their authority. No argument means "any signed-in member",
+ * a real policy: say it explicitly rather than leaving a handler ungated.
  */
 export async function gate(
   can?: (caps: readonly Capability[]) => boolean,
@@ -117,10 +64,8 @@ export async function gate(
   const id = await resolveUserId();
   if (!id) return { ok: false, res: fail(401, "auth.signedOut") };
 
-  // Signed in against a user row that no longer exists: the session outlived
-  // the account, which is not a permission problem.
-  // `loadUser` is shared with the page-side gates in lib/server/current-user.ts
-  // and deduped per request, so gating twice costs one lookup.
+  // The session outlived the account: not a permission problem.
+  // `loadUser` is shared with the page gates (lib/server/current-user.ts) and deduped per request.
   const row = await loadUser(id);
   if (!row) return { ok: false, res: fail(401, "auth.signedOut") };
 

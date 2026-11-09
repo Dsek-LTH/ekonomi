@@ -4,11 +4,6 @@ import type { Capability, CostAllocation, Expense, ExpenseStatus, Role } from ".
 import { DEFAULT_ROLE_CAPABILITIES } from "@/lib/server/authority-defaults";
 import { today } from "./date";
 
-// What the detail page offers, and to whom. This used to be derived in the
-// browser from a hand-written second copy of the rules the API enforces; the
-// copies had drifted, and nothing could tell, because neither side was tested
-// against the other. It is one derivation now, on the server, and here.
-
 const alloc = (over: Partial<CostAllocation> = {}): CostAllocation => ({
   id: "a1",
   costCenterId: "cc1",
@@ -38,11 +33,7 @@ const expense = (over: Partial<Expense> = {}): Expense => ({
   ...over,
 });
 
-// A viewer holding these roles, with the capabilities those roles have on the
-// day the database is created (lib/server/authority-defaults.ts). Which roles
-// carry which capability is editable now, so a case below saying "the ordförande
-// cannot export" is a statement about the section's starting policy, which is
-// exactly what it always was, when that policy was a list in permissions.ts.
+// A viewer holding these roles, with the capabilities those roles have on the day the database is created (lib/server/authority-defaults.ts).
 const capsFor = (roles: Role[]): Capability[] => [
   ...new Set(
     DEFAULT_ROLE_CAPABILITIES.filter((r) => roles.includes(r.role)).map((r) => r.capability),
@@ -56,9 +47,7 @@ const viewer = (roles: Role[], id = "someone-else") => ({
 });
 
 describe("exporting to Fortnox", () => {
-  // The drift this file was written for. Exporting is a real Fortnox call made
-  // under the bookkeeper's own login, and the roles that *have* such a login
-  // are narrower than the roles with bookkeeping access in this app.
+  // Exporting is a Fortnox call under the bookkeeper's own login: narrower than bookkeeping access.
   const booked = expense({ status: "BOOKED" });
 
   it("is offered to the treasury, who can log in to Fortnox", () => {
@@ -68,9 +57,7 @@ describe("exporting to Fortnox", () => {
   });
 
   it("is not offered to the ordförande, who cannot", () => {
-    // They hold bookkeeping access and no Fortnox account. The button used to
-    // be there, and its first step would have asked them to sign in to
-    // something they have no way of signing in to.
+    // They hold bookkeeping access and no Fortnox account.
     expect(expenseCapabilities(booked, viewer(["ORDFORANDE"])).canExport).toBe(false);
   });
 
@@ -92,9 +79,7 @@ describe("editing", () => {
   });
 
   it("but not to a resultatansvarig who may merely see it", () => {
-    // Seeing an utlägg is not editing it. Offering "Redigera" here opened the
-    // whole wizard on somebody else's claim, only for the PATCH to refuse the
-    // save, which is the same rule as `canEditExpense` on the server.
+    // Seeing an utlägg is not editing it (`canEditExpense` on the server).
     expect(expenseCapabilities(draft, viewer(["RESULTATANSVARIG"])).canEdit).toBe(false);
   });
 
@@ -111,9 +96,7 @@ describe("attesting", () => {
   });
 
   it("is offered where the server said the viewer has authority", () => {
-    // `canAttest` is the one input the rules here do not re-derive: it is
-    // stamped per allocation by the loader, which is the only side that knows
-    // the viewer's result units.
+    // `canAttest` is stamped per allocation by the loader, which knows the viewer's result units.
     expect(expenseCapabilities(pending, viewer(["RESULTATANSVARIG"])).canApprove).toBe(true);
   });
 
@@ -154,19 +137,9 @@ describe("attesting", () => {
 });
 
 describe("submitting a milersättning", () => {
-  // The claim carries its journey rather than a receipt, so the receipt check
-  // does not apply to it and the journey check has to. This was the hole:
-  // `mileageBlocker` was never passed, so neither check ran and the detail page
-  // offered "Skicka in" on a claim the transition route would refuse.
-  //
-  // Driven today, not on the shared fixture's March date: a milersättning is
-  // out-of-pocket, so it has the 60-day filing deadline, which is a blocker of
-  // its own and, rightly, reported ahead of anything else. These cases are
-  // about the journey check, so the date is kept out of their way.
-
-  // The route, which every case below fills in: these are about the readings
-  // and the rate, and a missing route is its own blocker reported ahead of
-  // both. It has a case of its own further down.
+  // The claim carries its journey rather than a receipt, so the journey check has to run. Driven today,
+  // not on the shared fixture's March date: a milersättning has the 60-day deadline, reported ahead of
+  // anything else. The route is filled in everywhere, since a missing route is its own blocker.
   const JOURNEY = { stops: ["Kårhuset, Lund", "Snabbgross", "Kårhuset, Lund"] };
   const mileage = (over: Partial<Expense> = {}) =>
     expense({
@@ -225,11 +198,7 @@ describe("submitting a milersättning", () => {
   });
 
   it("is refused while the journey names fewer than two places", () => {
-    // The claim is priceable and the readings make a journey, so everything
-    // this used to look at is satisfied. What is missing is the half that says
-    // the driving was the section's errand, which the transition route refuses
-    // on. Offering "Skicka in" here would promise something the server will not
-    // do, which is the failure the readings check was added to stop.
+    // Priceable readings, so what is missing is the route, which the transition route refuses on.
     const journey = { odometerStart: 12300, odometerEnd: 12342, km: 42, orePerKm: 250 };
     expect(
       expenseCapabilities(mileage({ mileage: { ...journey, stops: [] } }), owner).submitBlocker,
@@ -238,7 +207,7 @@ describe("submitting a milersättning", () => {
       expenseCapabilities(mileage({ mileage: { ...journey, stops: ["Lund"] } }), owner)
         .submitBlocker,
     ).toBe("mileage");
-    // Blank rows are not places, however many of them an editor left behind.
+    // Blank rows are not places, however many an editor left behind.
     expect(
       expenseCapabilities(mileage({ mileage: { ...journey, stops: ["Lund", "  ", ""] } }), owner)
         .submitBlocker,
@@ -246,14 +215,12 @@ describe("submitting a milersättning", () => {
   });
 
   it("is never asked for a receipt", () => {
-    // The one thing a mileage claim must not be blocked on: it has no receipt
-    // and is not meant to have one.
+    // A mileage claim has no receipt and is not meant to.
     expect(expenseCapabilities(mileage(), owner).submitBlocker).not.toBe("receipt");
   });
 
   it("still has the filing deadline over it", () => {
-    // Out of the claimant's own pocket, so the same 60 days, and said ahead
-    // of the journey check, since past the deadline there is nothing to fix.
+    // Out of the claimant's own pocket, so the same 60 days, reported ahead of the journey check.
     expect(expenseCapabilities(mileage({ purchaseDate: "2020-01-01" }), owner).submitBlocker).toBe(
       "tooLate",
     );
@@ -261,17 +228,14 @@ describe("submitting a milersättning", () => {
 });
 
 describe("dispens från redovisningsfristen", () => {
-  // The skattmästare letting one late eget utlägg be filed anyway. Three
-  // conditions decide whether it is on offer, and each of them is the rule
-  // rather than a convenience. See the dispens columns on Expense.
+  // The skattmästare letting one late eget utlägg be filed anyway (dispens columns on Expense).
   const late = (over: Partial<Expense> = {}) =>
     expense({
       status: "DRAFT",
       submitterId: "member",
       paymentType: "REIMBURSEMENT",
       purchaseDate: "2020-01-01",
-      // The underlag, so these cases are about the deadline rather than about
-      // a missing receipt reported after it.
+      // The underlag, so these cases are about the deadline.
       receipts: [{ id: "r1", filename: "kvitto.jpg", mimeType: "image/jpeg" }],
       ...over,
     });
@@ -282,9 +246,7 @@ describe("dispens från redovisningsfristen", () => {
   };
 
   it("is the skattmästare's, and nobody else's", () => {
-    // ORDFORANDE is an admin here: full authority over other people's utlägg,
-    // and still not this. The chair attests and edits; departing from a rule
-    // the section set is the treasurer's, the same as locking a budget.
+    // ORDFORANDE is an admin here and still not this: departing from a rule is the treasurer's.
     expect(expenseCapabilities(late(), viewer(["SKATTMASTARE"])).canWaiveDeadline).toBe(true);
     expect(expenseCapabilities(late(), viewer(["ORDFORANDE"])).canWaiveDeadline).toBe(false);
     expect(expenseCapabilities(late(), viewer(["VICE_SKATTMASTARE"])).canWaiveDeadline).toBe(false);
@@ -294,8 +256,7 @@ describe("dispens från redovisningsfristen", () => {
   });
 
   it("is offered only before the utlägg goes for attest", () => {
-    // The deadline stops a late claim from *entering* the queue, so a dispens
-    // given afterwards would be permitting what has already happened.
+    // The deadline stops a late claim from entering the queue, so a later dispens would permit what already happened.
     const skattm = viewer(["SKATTMASTARE"]);
     for (const status of ["DRAFT", "CHANGES_REQUESTED"] as ExpenseStatus[]) {
       expect(expenseCapabilities(late({ status }), skattm).canWaiveDeadline).toBe(true);
@@ -311,14 +272,12 @@ describe("dispens från redovisningsfristen", () => {
   });
 
   it("is not offered on a claim that is in time", () => {
-    // A dispens on the record has to mean something. One granted on a claim
-    // nobody was stopping would leave a reason nobody can read back.
+    // A dispens on a claim nobody was stopping would leave a reason nobody can read back.
     const skattm = viewer(["SKATTMASTARE"]);
     expect(expenseCapabilities(late({ purchaseDate: today() }), skattm).canWaiveDeadline).toBe(
       false,
     );
-    // Nor on a sektionskort purchase, however old: the money is already the
-    // section's and the deadline was never over it.
+    // Nor on a sektionskort purchase: the deadline was never over it.
     expect(expenseCapabilities(late({ paymentType: "CARD" }), skattm).canWaiveDeadline).toBe(false);
   });
 
@@ -327,7 +286,6 @@ describe("dispens från redovisningsfristen", () => {
     const can = expenseCapabilities(late({ deadlineWaiver: granted }), skattm);
     expect(can.canWaiveDeadline).toBe(false);
     expect(can.canRevokeDeadlineWaiver).toBe(true);
-    // And to nobody else, however senior.
     expect(
       expenseCapabilities(late({ deadlineWaiver: granted }), viewer(["ORDFORANDE"]))
         .canRevokeDeadlineWaiver,
@@ -335,9 +293,7 @@ describe("dispens från redovisningsfristen", () => {
   });
 
   it("lifts the deadline for the submitter, and lifts nothing else", () => {
-    // The submitter never sees a button of their own here. What they see is the
-    // block lifting, at the same moment everybody else does. Everything below
-    // the deadline still has to be in order.
+    // The submitter sees only the block lifting, same as everybody else.
     const owner = viewer(["ORDINARIE"], "member");
     expect(expenseCapabilities(late(), owner).submitBlocker).toBe("tooLate");
 
@@ -378,8 +334,7 @@ describe("the panel as a whole", () => {
   it("says so when the only thing on offer is a secondary action", () => {
     const draft = expense({ status: "DRAFT", grossAmount: 0, receipts: [] });
     const can = expenseCapabilities(draft, viewer(["ORDINARIE"], "member"));
-    // Nothing to submit yet (no receipt, no amount) but it is still theirs
-    // to edit and to throw away.
+    // Nothing to submit yet but still theirs to edit and throw away.
     expect(can.hasPrimaryAction).toBe(false);
     expect(can.hasAnyAction).toBe(true);
   });
@@ -396,8 +351,7 @@ describe("statuses are covered, not assumed", () => {
   ];
 
   it("answers for every status without throwing", () => {
-    // A cheap guard on the enum: a status added to the domain and forgotten
-    // here shows up as a crash rather than as a quietly empty action panel.
+    // A guard on the enum: a status added and forgotten here crashes instead of showing an empty panel.
     for (const status of all) {
       const can = expenseCapabilities(expense({ status }), viewer(["SKATTMASTARE"]));
       expect(typeof can.hasAnyAction).toBe("boolean");
@@ -406,10 +360,7 @@ describe("statuses are covered, not assumed", () => {
 });
 
 describe("taking your own submission back", () => {
-  // The submitter's counterpart to withdrawing an attest, and a different act:
-  // that one takes back a signature, this takes back the claim. It exists for
-  // the correction no attester can make on somebody's behalf: an eget utlägg
-  // that turns out to have gone on the section card.
+  // The submitter's counterpart to withdrawing an attest: this takes back the claim, that a signature.
   const waiting = (over: Partial<Expense> = {}) =>
     expense({ status: "PENDING_APPROVAL", submitterId: "member", ...over });
 
@@ -418,21 +369,18 @@ describe("taking your own submission back", () => {
   });
 
   it("is offered to an admin, who may act on their behalf", () => {
-    // The same latitude they have to submit for somebody.
     expect(expenseCapabilities(waiting(), viewer(["SKATTMASTARE"], "other")).canRecall).toBe(true);
   });
 
   it("is not offered to anybody else", () => {
-    // A resultatansvarig sees the utlägg and may attest it. Neither makes the
-    // claim theirs to withdraw.
+    // A resultatansvarig may attest it, which does not make the claim theirs to withdraw.
     expect(expenseCapabilities(waiting(), viewer(["RESULTATANSVARIG"], "other")).canRecall).toBe(
       false,
     );
   });
 
   it("is not offered once it is actually attested", () => {
-    // Somebody agreed to it; undoing that is bookkeeping's call, not the
-    // submitter's. See `canReturn`.
+    // Undoing an attest is bookkeeping's call (`canReturn`).
     for (const status of ["APPROVED", "BOOKED", "EXPORTED"] as ExpenseStatus[]) {
       expect(expenseCapabilities(waiting({ status }), viewer([], "member")).canRecall).toBe(false);
     }
@@ -445,10 +393,7 @@ describe("taking your own submission back", () => {
   });
 
   it("is the only way to change one that is out for attest", () => {
-    // The pair that makes the rule usable: editing is closed while somebody is
-    // being asked to sign, and taking it back is what opens it again. Offering
-    // neither would strand the submitter; offering both would let a claim
-    // change under a reader.
+    // Editing is closed while somebody is being asked to sign, and taking it back reopens it.
     const can = expenseCapabilities(waiting(), viewer([], "member"));
     expect(can.canEdit).toBe(false);
     expect(can.canRecall).toBe(true);
@@ -461,8 +406,7 @@ describe("taking your own submission back", () => {
   });
 
   it("counts as something the panel can offer", () => {
-    // A claim waiting for attest has no primary action for its own submitter,
-    // without this the panel would have said there was nothing to do at all.
+    // A claim waiting for attest has no primary action for its own submitter.
     const can = expenseCapabilities(waiting(), viewer([], "member"));
     expect(can.hasAnyAction).toBe(true);
   });

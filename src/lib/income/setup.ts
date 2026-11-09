@@ -1,11 +1,5 @@
-// What is left to set up before income can be fetched and booked, as a list of
-// steps for the Intäkter pages to show up front.
-//
-// Each of these used to surface only as the refusal of the request that needed
-// it: a fetch answered "Inga verksamheter är uppsatta", and once that was fixed
-// the next fetch answered with the next missing piece. Asked here, before
-// anyone tries, the page can say everything that is left in one go, and all of
-// it is done in one place: Inställningar → Försäljning.
+// What is left to set up before income can be fetched and booked, shown up front on the Intäkter pages.
+
 import "server-only";
 
 import { incomeRoutingProblems, type IncomeConfigBlocker } from "@/lib/income/config";
@@ -25,8 +19,7 @@ export interface IncomeSetupStep {
   section: IncomeSetupSection;
   /** Refused by a fetch. The rest only stop booking, so fetching can go ahead. */
   blocksFetch: boolean;
-  /** Done in the app, so there is somewhere to send the reader. Zettle's
-   *  credentials are set in the server's environment, and only said. */
+  /** Done in the app, so there is somewhere to send the reader (Zettle's credentials are server environment). */
   inApp: boolean;
 }
 
@@ -38,8 +31,7 @@ export async function incomeSetupSteps(): Promise<IncomeSetupStep[]> {
   ]);
   const steps: IncomeSetupStep[] = [];
 
-  // Zettle's credentials. Only a Zettle fetch needs them, and a Swish export
-  // is read without, so this is said but does not stand in the way of a fetch.
+  // Zettle's credentials. Only a Zettle fetch needs them, so this does not block fetching.
   if (!zettleConfigured())
     steps.push({ key: "service", section: "service", blocksFetch: false, inApp: false });
 

@@ -1,12 +1,5 @@
 import { Skeleton, SkeletonPage, SkeletonSheet } from "@/components/ui/skeleton";
 
-// The heaviest page in the app (a whole budget with every cost centre, its
-// variables and its changes) so it is the one where the wait is most worth
-// drawing. It opens on the detail view: the header (the way back, the title
-// with the antagen date beside it, and the menu at its far end, see the page's
-// `aside`), the toolbar (the view switch, the comparison and the lock), then
-// the list of cost centres beside the first one's sheet, from lg, where the
-// page puts them side by side.
 export default function Loading() {
   return (
     <SkeletonPage

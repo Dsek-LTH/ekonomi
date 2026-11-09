@@ -9,11 +9,8 @@ export function LoginClient({
   error,
   devUsers,
 }: {
-  /** Where to land after signing in. Already checked to be a local path. */
   callbackUrl: string;
-  /** A key under `login.errors`, when the last attempt came back refused. */
   error: "denied" | "unknownUser" | "failed" | null;
-  /** Who the dev sign-in offers. Empty in production, where there is none. */
   devUsers: DevUser[];
 }) {
   const t = useTranslations("login");
@@ -23,9 +20,6 @@ export function LoginClient({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
-        {/* The mark stands on its own. It used to sit inside a 56px rounded
-            tile with a card shadow and a white text colour, none of which had
-            anything to render: an 80px symbol overflowing an empty box. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/symbol_rosa.svg" alt="D-sektionen" className="mx-auto mb-7 h-20 w-auto" />
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>

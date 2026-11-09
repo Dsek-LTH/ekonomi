@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// The Inkorg's rule for files: a document is only ever deleted from the
-// Inkorg. Taken off an invoice, it goes back there; an invoice sent back to
-// the Inkorg, its documents go back there too, saying why.
-
 const h = vi.hoisted(() => ({
   capabilities: ["INVOICE_TRIAGE"] as string[],
   doc: { id: "d1", invoiceId: null as string | null, objectKey: "k", filename: "f.pdf" },

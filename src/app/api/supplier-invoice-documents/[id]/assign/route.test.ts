@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Sending a document to a unit, with the due date triage read off it. Sent
-// again to the unit it is already with, only the due date changes.
-
 const h = vi.hoisted(() => ({
   update: vi.fn(),
   notify: vi.fn(),

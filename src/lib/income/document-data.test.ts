@@ -94,12 +94,17 @@ describe("buildIncomeDocumentData", () => {
     expect(data.attestation.studentId).toBe("-");
   });
 
-  // The same grouping as the review screen: each verksamhet's products under
-  // their account, each account with its sum.
   it("groups a section's products by account, each with its sum", () => {
     const data = day([
       line(),
-      line({ name: "Öl", account: "3011", accountName: "Öl", quantity: 1, unitPrice: 4000, total: 4000 }),
+      line({
+        name: "Öl",
+        account: "3011",
+        accountName: "Öl",
+        quantity: 1,
+        unitPrice: 4000,
+        total: 4000,
+      }),
       line({ name: "Bulle", unitPrice: 500, quantity: 1, total: 500 }),
     ]);
     expect(

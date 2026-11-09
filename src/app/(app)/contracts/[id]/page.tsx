@@ -13,9 +13,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const user = await requirePage(canViewRentals);
 
-  // Out of scope comes back as null and renders the same not-found as a
-  // contract that never existed. Deliberately: telling somebody a sponsoravtal
-  // is there but not for them is itself something they were not meant to learn.
+  // Out of scope renders the same not-found as a contract that never existed, so its existence does not leak.
   const contract = await getContract(id, contractScopeOf(user));
   if (!contract) notFound();
 

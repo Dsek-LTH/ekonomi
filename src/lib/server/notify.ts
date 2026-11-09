@@ -1,18 +1,6 @@
-// Telling people things by email: who, what it says, and getting it sent.
-//
-// Three steps, kept apart on purpose.
-//
-//   notify()          inside the transaction that made the change. Decides who
-//                     wants this kind, renders the mail, writes it to the
-//                     outbox. Rolls back with everything else, so a transition
-//                     that lost a race never mails anyone that it happened.
-//   deliverSoon()     after the response. Sends what is waiting.
-//   deliverPending()  the sender itself, also run by the cron sweep
-//                     (app/api/cron), which is what retries a relay that was
-//                     down.
-//
-// Never mailed: the person who did the thing. Telling somebody what they just
-// did is the clearest way to teach them that these mails can be ignored.
+// Telling people by email. `notify()` writes to the outbox inside the change's transaction (so a lost race
+// mails nobody), `deliverSoon()` sends after the response, `deliverPending()` is the sender (also run by
+// the cron sweep, which retries a down relay). The person who did the thing is never mailed.
 import "server-only";
 
 import { after } from "next/server";
@@ -25,16 +13,10 @@ import { wants } from "@/lib/domain/notifications";
 import type { Capability, NotificationKind, Role } from "@/lib/domain/types";
 import { renderHtml, renderText, type Email } from "@/lib/email/render";
 
-// ── Writing to the outbox ─────────────────────────────────────────
-
 /**
- * Write `email` to the outbox for each recipient who wants `kind`. Inactive
- * members and anyone in `exclude` (the actor, as a rule) are left out. Pass a
- * function to write each recipient their own, as the digest does.
- *
- * `dedupeKey`, when given, makes the mail at-most-once per key: a second
- * write with the same key is dropped, which is what keeps the weekly digest
- * to one per week however many times the job fires.
+ * Write `email` to the outbox for each recipient who wants `kind`, skipping inactive members and `exclude`
+ * (the actor). Pass a function to write each recipient their own. `dedupeKey` makes the mail at-most-once
+ * per key (keeps the weekly digest to one per week).
  */
 export async function notify(
   tx: TxClient,
@@ -58,9 +40,7 @@ export async function notify(
       notificationPrefs: { where: { kind }, select: { kind: true, enabled: true } },
     },
   });
-  // Drawn here, inside the transaction, but with nothing in it that touches
-  // the database: rendering is the CPU's work, and the rows it produces are
-  // the only write.
+  // Rendering touches no database, so it is safe inside the transaction.
   const rows = await Promise.all(
     people
       .filter((p) => wants(kind, new Map(p.notificationPrefs.map((n) => [n.kind, n.enabled]))))
@@ -81,12 +61,7 @@ export async function notify(
   return count;
 }
 
-/**
- * Put a mail that has stopped being retried back in the queue, with all its
- * tries returned. Its last error stays until a send succeeds, so the log still
- * says what went wrong. False when there is nothing to retry: no such mail, or
- * one already sent.
- */
+/** Put a mail that stopped being retried back in the queue. Its last error stays. False when there is nothing to retry. */
 export async function retryEmail(id: string): Promise<boolean> {
   const { count } = await prisma.outboundEmail.updateMany({
     where: { id, sentAt: null },
@@ -94,8 +69,6 @@ export async function retryEmail(id: string): Promise<boolean> {
   });
   return count > 0;
 }
-
-// ── Who ───────────────────────────────────────────────────────────
 
 /** The roles that currently hold `cap`, from the editable matrix. */
 async function rolesWith(cap: Capability): Promise<Role[]> {
@@ -115,15 +88,9 @@ export async function holdersOf(cap: Capability): Promise<string[]> {
 }
 
 /**
- * Who should be asked to attest these allocations: the resultatansvarig for
- * each one's result unit, the people canAttestAllocation names first.
- *
- * An admin may attest anything, and mailing every admin about every utlägg is
- * the clutter this whole feature is trying to avoid. So admins are asked only
- * for an allocation nobody else can attest: a unit with no resultatansvarig, a
- * cost centre outside every unit, or one whose only owner is the submitter.
- * The digest uses the same answer, so the two never disagree about whose
- * queue an utlägg is in.
+ * Who should be asked to attest these allocations: the resultatansvarig for each result unit. Admins only
+ * for an allocation nobody else can attest (no resultatansvarig, cost centre outside every unit, or the
+ * submitter is the only owner). The digest uses the same answer.
  */
 export async function attestersOf(
   allocations: readonly { costCenterCode: string }[],
@@ -158,15 +125,9 @@ export async function attestersOf(
   return [...ids];
 }
 
-// ── Sending ───────────────────────────────────────────────────────
-
-// A sender holds a row this long before another may take it over. Also the
-// least time between two tries at the same mail, so a relay that is down is
-// asked again every few minutes rather than once per request.
+// A sender holds a row this long before another may take it over, and it is the least time between tries.
 const LEASE_MS = 5 * 60_000;
-// Enough tries to ride out an afternoon's outage with the cron sweep running
-// every quarter of an hour. Past it the row stays, with its last error, for
-// somebody to read.
+// Enough tries to ride out an afternoon's outage with the cron sweep every quarter hour.
 export const MAX_ATTEMPTS = 12;
 const BATCH = 100;
 
@@ -187,8 +148,7 @@ export async function deliverPending(): Promise<{ sent: number; failed: number }
   let sent = 0;
   let failed = 0;
   for (const row of rows) {
-    // The lease: only the sender whose write matched the claim it read may
-    // send. Anyone who read the same row a moment later matches nothing.
+    // The lease: only the sender whose write matched the claim it read may send.
     const { count } = await prisma.outboundEmail.updateMany({
       where: { id: row.id, sentAt: null, claimedAt: row.claimedAt },
       data: { claimedAt: new Date(), attempts: { increment: 1 } },

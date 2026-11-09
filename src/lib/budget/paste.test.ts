@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { rebindCopiedRefs, rebindFormula } from "./paste";
 
-// What a copied block of rows should mean once it has been pasted: the copies
-// read each other, and everything they read from outside the block is left
-// pointing where it pointed.
 const copied = new Map([
   ["old1", "new1"],
   ["old2", "new2"],

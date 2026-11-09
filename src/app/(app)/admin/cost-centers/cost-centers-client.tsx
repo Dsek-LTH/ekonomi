@@ -1,11 +1,5 @@
 "use client";
 
-// Settings → Cost centers. One list. The Fortnox-owned ones are mirrored here
-// by the sync (which runs from Settings → Fortnox, with everything else fetched
-// from there) and are read-only, since the next sync would overwrite anything
-// changed here. The local ones are this app's own and fully editable. Which is
-// which is a mark on the code, not a column and a tab: it decides what you can
-// do to a row, not what kind of thing the row is.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -27,9 +21,6 @@ import { SHORT_NAME_MAX, suggestShortName } from "@/lib/domain/cost-center-short
 import type { CostCenter } from "@/lib/domain/types";
 import { ShortNamesDialog, type Suggestion } from "./short-names-dialog";
 
-// Retired cost centres stay in the list. Seeing that SEX02 exists but is
-// inactive is what explains why it isn't in the picker, but the default filter
-// is the active ones, since that is the list anyone is normally looking for.
 export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
   const t = useTranslations("admin.costCenters");
   const tCommon = useTranslations("common");
@@ -48,9 +39,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
   const [draft, setDraft] = useState({ code: "", name: "" });
   const [suggesting, setSuggesting] = useState(false);
 
-  // What the rule would set, for the cost centres with no short name yet. Only
-  // ever offered, see ShortNamesDialog. A section whose names do not start with
-  // their unit's gets none, and never sees the button.
   const suggestions = useMemo<Suggestion[]>(
     () =>
       costCenters.flatMap((cc) => {
@@ -90,8 +78,8 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     return data !== null;
   }
 
-  // Any row, Fortnox ones included: the short name is this app's own, so the
-  // next sync leaves it alone. Emptied, it goes back to the full name.
+  // Any row, Fortnox ones included: the short name is this app's own, so the next sync
+  // leaves it alone.
   async function saveShortName(cc: CostCenter, raw: string) {
     const shortName = raw.trim() || null;
     const data = await mutate("/api/cost-centers/short-names", {
@@ -106,8 +94,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     return data !== null;
   }
 
-  // Retiring is the reversible half of removing one: it drops out of the
-  // pickers while everything already booked against it keeps resolving.
   async function setActive(cc: CostCenter, active: boolean) {
     await mutate(`/api/cost-centers/${cc.id}`, {
       key: `active-${cc.id}`,
@@ -144,9 +130,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       searchable: true,
       mobile: "title",
       className: "w-40",
-      // The Fortnox mark says where it comes from, and so that it is not
-      // changed here. No mark is the local ones: the exception gets the badge
-      // only when it is the rule, and here Fortnox is the rule's source.
       cell: (c) => (
         <span className="inline-flex items-center gap-2">
           <Tag className="font-mono font-semibold">{c.code}</Tag>
@@ -168,8 +151,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       searchable: true,
       className: "font-medium",
       cell: (c) => (
-        // Only the local ones are ours to rename. A Fortnox name changed here
-        // would come back as it was on the next sync.
         <EditableText
           value={c.name}
           label={t("renameAria", { code: c.code })}
@@ -207,8 +188,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         c.resultUnit ? (
           <Tag>{c.resultUnit}</Tag>
         ) : (
-          // Nothing attests these but an administrator, so it's worth naming
-          // rather than leaving the cell blank.
           <span className="text-xs text-muted">{t("noResultUnit")}</span>
         ),
     },
@@ -231,11 +210,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
       align: "right",
       mobile: "actions",
       className: "w-14",
-      // Only the local ones are ours to change. A Fortnox row edited here would
-      // just come back as it was on the next sync, so it gets a lock saying
-      // where it is changed instead of buttons that would not stick. One menu
-      // rather than three buttons: three on some rows and none on the rest
-      // made the local ones look like a different table.
       cell: (c) =>
         c.source === "LOCAL" ? (
           <Menu
@@ -277,8 +251,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         rows={costCenters}
         controls={controls}
         tabs={tabs}
-        // The form for a new one opens under the toolbar, just below the
-        // button that asked for it and above the rows it will join.
         actionPanel={
           adding && (
             <FieldGroup
@@ -334,12 +306,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
             </FieldGroup>
           )
         }
-        // On the list's own toolbar, like every other list's create button.
-        // There is no card header: what the Fortnox mark means is in the page
-        // description, and a header holding only this button was a row spent
-        // on nothing.
-        // The suggestions only when there are any: for a section whose names
-        // do not follow the pattern, the button would only ever say "none".
         action={
           !adding && (
             <div className="flex flex-wrap items-center gap-2">

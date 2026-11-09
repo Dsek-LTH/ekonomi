@@ -1,12 +1,6 @@
-// Start a Fortnox OAuth2 flow: redirect the browser to Fortnox's consent
-// screen. Two modes, picked with ?mode=:
-//
-//   service (default): the org's read/sync connection. Admins only, and the
-//                       person must be a system administrator in Fortnox.
-//   user:               the caller's own short-lived login for bookkeeping.
-//
-// The mode, the anti-CSRF nonce and where to return afterwards all ride in one
-// httpOnly cookie; only the nonce goes to Fortnox as `state`.
+// Start a Fortnox OAuth2 flow (?mode=service, default: admin-only read/sync connection, needs a Fortnox
+// system administrator; ?mode=user: the caller's own short-lived bookkeeping login). Mode, nonce and
+// return path ride in one httpOnly cookie; only the nonce goes to Fortnox as `state`.
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";

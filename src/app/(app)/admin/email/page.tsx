@@ -8,9 +8,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("email");
 
-// Inställningar → E-post: every mail the app has sent, to whom, and what
-// became of it. A test mail is sent from a member's own dialog under
-// Användare, where the log narrows to them. See ./email-log.tsx.
 export default async function AdminEmailPage() {
   await requirePage(canAccessSettings);
   const t = await getTranslations("admin.email");

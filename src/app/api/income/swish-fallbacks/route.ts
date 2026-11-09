@@ -1,5 +1,4 @@
-// Swish amount fallbacks: what to assume when a payment's message says nothing
-// usable. Keyed by the amount, so writing one is an upsert rather than a create.
+// Swish amount fallbacks: what to assume when a payment's message says nothing usable. Keyed by amount, so an upsert.
 import { NextResponse } from "next/server";
 
 import { gate } from "@/lib/api/guard";
@@ -16,9 +15,7 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { amount, message } = parsed.data;
 
-  // One guess per amount, two would be ambiguous, which is why the amount is
-  // the primary key. Re-posting an existing one replaces the message, which is
-  // what "edit" does from the screen.
+  // One guess per amount (the primary key). Re-posting replaces the message.
   await prisma.swishAmountFallback.upsert({
     where: { amount },
     create: { amount, message },

@@ -8,11 +8,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("faq");
 
-// Where the example photos go, and what they may be called. The content names a
-// basename only (`valid-store`), so replacing a JPG with a PNG, or adding the
-// photo for an example that hasn't got one yet, is dropping a file in this
-// directory and nothing else. The page renders per request (the app layout is
-// force-dynamic), so a new file shows up on the next load without a deploy.
+// Example photos: the content names a basename only, so any extension in this directory works.
 const RECEIPT_DIR = "faq/receipts";
 const EXTENSIONS = ["jpg", "jpeg", "png", "webp", "avif"];
 
@@ -22,9 +18,7 @@ async function findPhoto(file: string): Promise<string | null> {
     try {
       await access(path.join(process.cwd(), "public", rel));
       return `/${rel}`;
-    } catch {
-      // Not this extension; try the next.
-    }
+    } catch {}
   }
   return null;
 }
@@ -42,9 +36,6 @@ export default async function FaqPage() {
   const locale = (await getLocale()) as Locale;
   const sections = await loadFaq(locale);
 
-  // Only the two example sections carry image blocks, but resolving over the
-  // whole tree means an illustration can be dropped into any answer later
-  // without this file having to learn about it.
   const resolved: FaqSection[] = await Promise.all(
     sections.map(async (section) => ({
       ...section,

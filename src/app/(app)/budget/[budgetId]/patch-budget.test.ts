@@ -9,12 +9,9 @@ import {
 } from "./patch-budget";
 import type { Account, Budget, LineItem } from "./budget-types";
 
-// These stand in for what a write says it did, so the screen doesn't have to go
-// and read the whole budget back to find out. The one worth holding to its
-// route is `withLineOrder`: the reorder endpoint moves a row between accounts
-// as well as within one, and if the two disagree the sheet shows an arrangement
-// the database doesn't have, until the next reload silently corrects it, which
-// is the worst way to find out.
+// Stand-ins for what a write says it did. `withLineOrder` must match the reorder endpoint
+// (which also moves rows between accounts), or the sheet shows an arrangement the database
+// lacks until reload.
 
 const line = (id: string): LineItem => ({
   id,
@@ -22,8 +19,7 @@ const line = (id: string): LineItem => ({
   expression: "0",
   sortOrder: 0,
   values: {},
-  // The "antal × á-pris" form, unused by every function under test: these move
-  // rows about and never look inside one.
+
   quantity: null,
   unitPrice: null,
 });
@@ -36,8 +32,7 @@ const account = (id: string, lineIds: string[]): Account => ({
   comments: [],
 });
 
-/** A budget of one sheet, holding the accounts given. Only the parts these
- *  functions touch are filled in, the rest is not theirs to know about. */
+/** A one-sheet budget holding the accounts given; only the parts these functions touch are filled in. */
 const budgetOf = (...accounts: Account[]): Budget =>
   ({ costCenters: [{ id: "sheet", accounts }] }) as unknown as Budget;
 
@@ -56,7 +51,6 @@ describe("withLineOrder", () => {
       "1",
     ]);
     expect(idsOf(b, "B")).toEqual(["3", "1"]);
-    // And the account it left keeps the order it had, minus the row.
     expect(idsOf(b, "A")).toEqual(["2"]);
   });
 
@@ -90,10 +84,7 @@ describe("the rest", () => {
   });
 
   it("places a created account by its number rather than at the end", () => {
-    // The sheet is ordered by account code on the server, so an account added
-    // in the middle of the chart has to land in the middle here too. Appending
-    // it left 3010 sitting under 5800 until a reload moved it, which reads as
-    // the app changing its mind about where the row goes.
+    // The sheet is ordered by account code on the server, so a mid-chart account lands mid-chart.
     const sheet = budgetOf(account("3010", []), account("5800", []));
     const added = withNewAccount(sheet, "sheet", account("4010", []));
     expect(added.costCenters[0].accounts.map((a) => a.accountCode)).toEqual([

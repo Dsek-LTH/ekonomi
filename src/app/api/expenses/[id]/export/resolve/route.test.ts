@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Resolving an export that ended without an answer. A person has looked in
-// Fortnox; this is where they say what they found. Both answers let go of the
-// lock, and "there is no voucher" is the one that, wrong, files it twice. So
-// what is pinned here is who may say it, when it may be said, and that it acts
+// Resolving an export that ended without an answer: who may say it, when, and that it acts
 // only on the very lock that was looked into.
 
 const h = vi.hoisted(() => ({
@@ -72,7 +69,6 @@ beforeEach(() => {
   h.event.mockResolvedValue({});
 });
 
-// The lock as it was looked into, which every write must restate.
 const theLock = {
   id: "e1",
   status: "BOOKED",

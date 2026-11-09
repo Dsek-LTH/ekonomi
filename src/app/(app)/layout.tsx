@@ -23,8 +23,7 @@ import { getNavCounts } from "@/lib/data/nav-counts";
 import { getFiscalYear, getFiscalYears } from "@/lib/server/fiscal-year";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
 
-// Always render against fresh DB data on a full load. Each page loads its own
-// data (Server Components); the layout only resolves the session user + chrome.
+// Always render against fresh DB data. Each page loads its own data; the layout resolves the user and chrome.
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({
@@ -32,18 +31,12 @@ export default async function AppLayout({
   modal,
 }: {
   children: React.ReactNode;
-  /** The `@modal` parallel slot: settings, intercepted. Null on every route
-   *  that isn't a client-side navigation into /admin. See @modal/default.tsx
-   *  and @modal/(.)admin. */
+  /** The `@modal` parallel slot: settings, intercepted. Null unless a client-side navigation into /admin. */
   modal: React.ReactNode;
 }) {
   const currentUser = await requireUser();
 
-  // The treasury books under their own Fortnox login, and that login is
-  // short-lived by design (see FortnoxStatus), so whether it still holds is
-  // something the frame carries for them, not something they go to /profile to
-  // find out after an export has already failed. One indexed lookup, and only
-  // for the handful of roles it can be true of.
+  // The treasury's Fortnox login is short-lived (see FortnoxStatus), so the frame carries whether it still holds.
   const booksInFortnox = canLogInToFortnox(currentUser.capabilities);
   const [
     holdsCard,
@@ -60,26 +53,17 @@ export default async function AppLayout({
     booksInFortnox ? getFortnoxSession(currentUser.id) : null,
     booksInFortnox ? getFortnoxCompany() : null,
     cookies(),
-    // The numbers beside the nav's links. Counts only, four of them, since
-    // this runs for every page. They refresh with the layout, which every
-    // write in the app does on its way out (see useMutation's refresh). In
-    // the header's year, as the lists they lead to are.
+    // Counts for the nav's links, in the header's year.
     getFiscalYear().then((year) => getNavCounts(currentUser, year)),
-    // The header's räkenskapsår: Fortnox's years and the one in force. The
-    // pages ask getFiscalYear for themselves, and it is cached per request,
-    // so they and this cannot disagree. See lib/server/fiscal-year.ts.
+    // The header's räkenskapsår (cached per request, see lib/server/fiscal-year.ts).
     getFiscalYears(),
     getFiscalYear(),
-    // Who has a profile picture, so a face can be drawn beside any name. See
-    // components/ui/avatar.tsx.
+    // Who has a profile picture (components/ui/avatar.tsx).
     getAvatarVersions(),
-    // Which guide steps the reader has been shown, so each comes up by
-    // itself only once. See components/shell/guide.tsx.
+    // Guide steps already shown (components/shell/guide.tsx).
     getSeenGuideSteps(currentUser.id),
   ]);
-  // Read here rather than in the client so the frame renders in its stored
-  // shape on the first paint instead of settling into it after hydration, a
-  // receipt flashing open at the wrong width.
+  // Read here so the frame renders in its stored shape on first paint.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
   const storedWidth = Number(cookieStore.get(RECEIPT_WIDTH_COOKIE)?.value);
   const receiptWidth =
@@ -91,29 +75,14 @@ export default async function AppLayout({
         <NotificationsProvider>
           <ConfirmProvider>
             <FortnoxAuthResult />
-            {/* Outside AppShell for the same reason as the banners: it is fixed
-              to the top of the viewport, not to the page column. It reads the
-              query string to know when a navigation has landed, hence the
-              boundary, nothing renders in the fallback, it is a 2px bar. */}
             <Suspense fallback={null}>
               <RouteProgressBar />
-              {/* Beside the bar because it watches the same thing, the URL
-                changing, and reads the query string to do it. See
-                components/shell/route-history. */}
               <RouteHistoryRecorder />
               <SettingsReopener />
             </Suspense>
-            {/* A fixed overlay, deliberately outside AppShell. Notifications
-              float over the page rather than pushing the content down. */}
             <NotificationBanners />
             <ReceiptPanelProvider defaultCollapsed={receiptCollapsed} defaultWidth={receiptWidth}>
-              {/* Around the shell, whose account menu starts a guide, and the
-              settings overlay, which a guide dims along with everything else. */}
               <GuideProvider seen={guides}>
-                {/* `fortnox` absent is "this reader has no Fortnox login of their
-                own", which is most of them, and the nav shows nothing at all.
-                Present with a null session is the treasury signed out. The
-                one state the sidebar exists to catch. */}
                 <AppShell
                   fortnox={
                     booksInFortnox
@@ -130,10 +99,6 @@ export default async function AppLayout({
                 >
                   {children}
                 </AppShell>
-                {/* Settings, floating over whichever of the above is underneath
-                it. A sibling of AppShell rather than something rendered
-                inside it: the app's own sidebar is exactly what this must
-                not touch. */}
                 {modal}
               </GuideProvider>
             </ReceiptPanelProvider>

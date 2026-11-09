@@ -1,15 +1,5 @@
-// The shape a ledger report has on the wire.
-//
-// Its own module because both ends need it and neither may own it. The server
-// builds these (lib/ledger/report.ts, which reaches for Prisma) and the ledger
-// screen renders them (app/(app)/ledger/, which runs in the browser), so the
-// definitions used to be written out twice, once on each side, identically and
-// with nothing holding them together. A field added to the server's copy left
-// the client's compiling perfectly against a shape the server had stopped
-// sending.
-//
-// Nothing here imports anything but the BAS vocabulary, so a client file can
-// take these without pulling the query layer along behind them.
+// The shape a ledger report has on the wire, shared by the server (report.ts) and the browser ledger screen.
+// Imports only the BAS vocabulary so client files do not pull in the query layer.
 import type { ReportKind } from "./bas";
 
 /** SUMMED sums the cost centres away; SPECIFIED groups by them. */

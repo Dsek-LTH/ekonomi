@@ -1,15 +1,7 @@
 "use client";
 
-// One dialog for both jobs: `counterparty` is null when adding and a row when
-// editing. Same shape as item-dialog.tsx, the gear catalogue's equivalent.
-//
-// Also opened from inside the two contract-creation forms, when somebody
-// types a name the directory doesn't have yet: the picker offers what was
-// typed as something to create (see components/ui/combobox.tsx's `onCreate`),
-// and this is the form that opens with it filled in, the same idiom the
-// stock sheet uses for a new product. `onSaved` is how that caller gets the
-// new row back to select it; the settings screen at counterparties-client.tsx
-// leaves it unset and relies on the page refreshing instead.
+// One dialog for both jobs: `counterparty` is null when adding and a row when editing. Also opened from the contract
+// forms to create from a typed name; `onSaved` returns the new row to select (the settings screen leaves it unset).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -25,7 +17,6 @@ export function CounterpartyDialog({
   onClose,
   onSaved,
 }: {
-  /** Null to add one. */
   counterparty: CounterpartyRow | null;
   /** Prefills the name when adding, for the "create from what was typed" flow. */
   initialName?: string;
@@ -149,8 +140,6 @@ export function CounterpartyDialog({
             </Field>
           </div>
 
-          {/* Both optional. Copied onto a contract when this row is picked,
-              the same as the address. */}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("email")}>
               <Input

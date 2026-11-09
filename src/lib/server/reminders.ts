@@ -1,18 +1,6 @@
-// Reminding whoever something is waiting on, by hand: an utlägg, or a card
-// purchase nobody has accounted for yet.
-//
-// Two steps, so the dialog can say who a reminder will reach before anybody
-// presses send:
-//
-//   planReminders()  which of the picked things can be reminded about, and who
-//                    each one would reach. Nothing written.
-//   sendReminders()  one mail per person, covering everything in the plan that
-//                    waits on them, and a line in each utlägg's history.
-//
-// Who is reached is the rule in lib/domain/reminders.ts: an utlägg's attesters
-// still to sign or its submitter, and a card purchase's holder. The sender is
-// never among them. Reminders are not something a member can switch off;
-// somebody chose to send this one.
+// Reminding whoever something is waiting on, by hand (an utlägg, or an unaccounted card purchase). Two steps:
+// `planReminders()` says who each reminder would reach (nothing written), `sendReminders()` sends one mail per
+// person and writes a line in each utlägg's history. Who is reached: lib/domain/reminders.ts. The sender is never one of them.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -45,8 +33,7 @@ export interface PlannedReminder {
   item: { expense: ReminderItem } | { txn: Txn };
 }
 
-/** Not waiting on anybody (signed, or already accounted for); or waiting on
- *  people of whom none is left to remind (all inactive, or only the sender). */
+/** Not waiting on anybody, or on people of whom none is left to remind. */
 export type SkippedReminder = ReminderPreview["skipped"][number];
 
 export interface ReminderPlan {
@@ -54,14 +41,7 @@ export interface ReminderPlan {
   skipped: SkippedReminder[];
 }
 
-/**
- * Who a reminder about each of these would reach, as `actor` sends it.
- *
- * Only what the sender could open is considered. Anything outside their scope
- * is left out entirely, the same "not found" it is everywhere else, so a
- * reminder cannot be used to learn that somebody else's utlägg or purchase
- * exists.
- */
+/** Who a reminder about each of these would reach, as `actor` sends it. Anything outside the sender's scope is left out, so a reminder cannot reveal that it exists. */
 export async function planReminders(
   actor: Actor,
   picked: { expenseIds: readonly string[]; transactionIds: readonly string[] },
@@ -75,7 +55,6 @@ export async function planReminders(
     skipped: [...expenses.skipped, ...txns.skipped],
   };
 
-  // Named in one query, once everybody's ids are known.
   const ids = new Set(plan.items.flatMap((i) => i.recipients.map((r) => r.id)));
   if (ids.size) {
     const people = await prisma.user.findMany({
@@ -125,9 +104,7 @@ async function planExpenses(actor: Actor, expenseIds: readonly string[]): Promis
 
     let ids: string[];
     if (target === "attesters") {
-      // Only the allocations still unsigned: a resultatansvarig who has signed
-      // their part is not reminded of the rest. The same people the SUBMITTED
-      // mail and the digest ask.
+      // Only the allocations still unsigned.
       const unsigned = e.allocations.filter((a) => !a.approvedById);
       ids = unsigned.length
         ? await attestersOf(
@@ -167,8 +144,7 @@ async function planTransactions(
   transactionIds: readonly string[],
 ): Promise<ReminderPlan> {
   if (transactionIds.length === 0) return { items: [], skipped: [] };
-  // The section's feed is bookkeeping's to read; anybody else sees only their
-  // own card, and has nobody but themselves to remind about it.
+  // The section's feed is bookkeeping's to read; anybody else sees only their own card.
   const txns = await prisma.bankTransaction.findMany({
     where: {
       id: { in: [...transactionIds] },
@@ -210,14 +186,8 @@ async function planTransactions(
 }
 
 /**
- * Send the reminders a plan describes: one mail to each person, about
- * everything in it that waits on them, and a REMINDER_SENT line in each
- * utlägg's history naming who it went to. A card purchase has no history of
- * its own to write to; its reminder is in the mail log (Inställningar →
- * E-post) and nowhere else.
- *
- * Returns how many people and things that was. The caller sends the outbox
- * afterwards (`deliverSoon`), as after any write.
+ * Send the reminders a plan describes: one mail per person, and a REMINDER_SENT line in each utlägg's
+ * history. A card purchase's reminder is only in the mail log. The caller runs `deliverSoon` afterwards.
  */
 export async function sendReminders(
   actor: Actor,

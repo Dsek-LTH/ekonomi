@@ -1,15 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Moving a night to another day.
-//
-// Tested at the route because the part that matters is not the rename but what
-// has to come with a new date: the rows booked on the night carry it as
-// `occurredAt`, the log is read in that order, and a row left on the old day
-// would be counted and priced as if the night had never moved.
-//
-// Mocked at the lowest layer, the way the entries test does it: the session and
-// the database. The gate, the schema and the response are the real thing.
-
 const h = vi.hoisted(() => ({
   capabilities: ["STOCK_MANAGE"] as string[],
   event: { id: "ev1" } as { id: string } | null,

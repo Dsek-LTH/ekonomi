@@ -1,6 +1,3 @@
-// The unit's "Inte vår" for a document in its Inkorg: back to triage, with
-// the reason, and the unit it came back from, so triage can say why it is
-// there again and give it to the right one.
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
@@ -8,7 +5,6 @@ import { parseBody } from "@/lib/api/parse";
 import { DeclineInvoiceDocument } from "@/lib/api/schemas/supplier-invoice";
 import { loadInboxDocumentFor } from "@/lib/api/supplier-invoice-access";
 
-// POST /api/supplier-invoice-documents/:id/decline: { reason }
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();

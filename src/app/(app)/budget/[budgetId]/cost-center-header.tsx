@@ -1,10 +1,6 @@
-// The bar above a cost-centre sheet: which cost centre this sheet is, and the
-// three things you can do to the sheet as a whole: repoint it, duplicate it,
-// drop it from the budget.
-//
-// A sheet need not be linked to a cost centre (see BudgetCostCenter in
-// schema.prisma). While it isn't, its name is a free-text label you can edit in
-// place, and the picker beside it is the thing that ends that state.
+// The bar above a cost-centre sheet: which cost centre it is, and repoint, duplicate or drop.
+// A sheet need not be linked (BudgetCostCenter in schema.prisma): its name is then an editable
+// label and the picker ends that state.
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -28,12 +24,10 @@ export function CostCenterHeader({
   onRemoved,
 }: {
   cc: BudgetCC;
-  /** Cost centres not already budgeted in this budget. */
   available: CostCenter[];
   canEdit: boolean;
   api: ApiFn;
   onClone: () => void;
-  /** Copy every account of this sheet, to be pasted into another one. */
   onCopyContents: () => void;
   onRemoved: () => void;
 }) {
@@ -55,19 +49,9 @@ export function CostCenterHeader({
   }
 
   return (
-    // Two rows below sm, one from sm up.
-    //
-    // It was a single `flex-wrap` row holding a 224px combobox, a text link and
-    // two icon buttons, on 361px of phone the combobox alone took the width, so
-    // the group wrapped into a ragged three or four lines and left the remove
-    // button sitting inline beside a text link. Which is the part that read
-    // wrong rather than merely looked untidy: a destructive action should not be
-    // one of a row of equals.
-    //
-    // So identity and the overflow menu share the top line, the picker takes the
-    // width it needs under them, and everything that acts on the sheet as a
-    // whole is in the menu, where "Ta bort" is below a rule instead of beside
-    // a link.
+    // Two rows below sm, one from sm up: identity and the menu share the top line, the picker
+    // sits under them, and everything acting on the whole sheet is in the menu so "Ta bort" is
+    // not one of a row of equals.
     <div className="mb-4 flex flex-col gap-3 rounded-panel border border-border bg-background px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {linked ? (
@@ -96,16 +80,11 @@ export function CostCenterHeader({
 
       {canEdit && (
         <div className="flex items-center gap-2">
-          {/* Searchable: a section has scores of cost centres, and the one you
-              want is found by typing its code far quicker than by scrolling.
-              It stays out of the menu because it is the field that ends the
-              unlinked state, which is the one thing a sheet in that state is
-              waiting for, and a field you set is not an action you pick. */}
+          {/* The picker is not in the menu: it is the field that ends the unlinked state. */}
           <Combobox
             options={[
               { value: "", label: t("unlinked") },
-              // The one it already points at stays in the list, so the current
-              // value has a label to render; the rest are the free ones.
+              // The current one stays in the list so its value has a label.
               ...(linked
                 ? [
                     {
@@ -129,21 +108,12 @@ export function CostCenterHeader({
             aria-label={t("linkToAria")}
             className="min-w-0 flex-1 sm:w-56 sm:flex-none"
           />
-          {/* Named rather than a bare glyph. The three things in here act on
-              the sheet as a whole (one of them removes it from the budget)
-              and a row of unlabelled icons is how somebody duplicates a sheet
-              meaning to copy its contents. */}
+
           <Menu label={t("sheetActions")} variant="secondary" align="end" className="shrink-0">
-            {/* Copying the contents, as against cloning the sheet: this one puts
-                every account on the clipboard to be pasted into a cost centre
-                that already exists. A row or a single account is copied from the
-                sheet itself with ⌘C, there is nothing to stand in for a whole
-                sheet, so it says so in words. */}
             {cc.accounts.length > 0 && (
               <MenuItem onClick={onCopyContents}>{t("copyContents")}</MenuItem>
             )}
-            {/* The copy lands unconnected. The cost centre this one holds is
-                taken, and which one the copy is for is the next thing to decide. */}
+
             <MenuItem onClick={onClone}>
               <IconCopy className="size-4" />
               {t("clone")}

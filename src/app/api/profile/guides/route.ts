@@ -4,9 +4,7 @@ import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PutSeenGuideSteps } from "@/lib/api/schemas/admin";
 
-// PUT /api/profile/guides: { steps }. Shown and skipped are the same answer:
-// either way the step does not come up by itself again. Running a guide a
-// second time from the menu adds nothing new.
+// PUT /api/profile/guides: { steps }. Shown and skipped are the same answer.
 export async function PUT(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;

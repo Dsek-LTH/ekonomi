@@ -7,13 +7,11 @@ import { titled } from "@/lib/server/page-title";
 export const generateMetadata = titled("budget");
 
 export default async function BudgetListPage() {
-  // Every signed-in member may read the budget (canAccessBudget). Editing is
-  // gated per write, in lib/budget/access.ts.
+  // Every signed-in member may read (canAccessBudget); writes are gated in lib/budget/access.ts.
   await requireUser();
 
   const [budgets, fiscal] = await Promise.all([getBudgetSummaries(), getFiscalYear()]);
-  // The year in the header, which is the list's year now: it used to be every
-  // budget there has ever been, newest first.
+
   return (
     <BudgetListClient
       budgets={budgets}

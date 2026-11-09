@@ -5,13 +5,8 @@ import { renderRentalContract } from "./typst";
 import { RENTAL_TERMS, TERMS_VERSION } from "./terms";
 import type { RentalContractData } from "./types";
 
-// The same bargain the cover's tests strike: these run everywhere with no skip
-// guard, because the typesetter is a dependency rather than something the
-// machine has to have.
-//
-// What the document *says* is tested in ../document.test.ts without going near
-// a renderer. These only ask whether the template still compiles into pages,
-// which is the failure a template edit actually causes.
+// These run everywhere with no skip guard (the typesetter is a dependency). Wording is
+// tested in ../document.test.ts; these only ask whether the template still compiles.
 
 const data: RentalContractData = {
   lessor: {
@@ -68,11 +63,7 @@ describe("renderRentalContract", () => {
   });
 
   it("survives everything the data allows to be missing", async () => {
-    // A draft with no contact details at all, for a private
-    // person with no organisation number and no address, charged the full
-    // subtotal with no discount row, and with no stated place or purpose. Every
-    // optional field absent at once, which is the shape most likely to blow up
-    // a template that assumed otherwise.
+    // A draft with every optional field absent at once, the shape most likely to blow up the template.
     const bytes = await renderRentalContract({
       ...data,
       counterparty: "Anna Andersson",

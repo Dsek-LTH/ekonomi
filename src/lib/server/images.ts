@@ -1,12 +1,5 @@
-// Server-side image normalisation for uploaded receipts. Phone photos arrive in
-// formats browsers can't always show (HEIC/HEIF) and at huge sizes; we convert
-// them to a web-friendly image and fix EXIF rotation. PDFs are not touched here.
-//
-// There is one stored size and no thumbnail. There used to be a second, 480px
-// encode written alongside it, and nothing ever asked for it. The viewer always
-// read the full-size object, and no list shows a preview. It cost an extra
-// encode on every upload and an extra object per receipt to produce something
-// nobody looked at.
+// Server-side image normalisation for uploaded receipts: HEIC/HEIF and huge photos become a web-friendly
+// image with EXIF rotation applied. PDFs are not touched here. One stored size, no thumbnail.
 import decodeHeic from "heic-decode";
 import sharp, { type Sharp } from "sharp";
 
@@ -32,20 +25,12 @@ const EXTENSION: Record<NormalisedMime, string> = {
 };
 
 /**
- * A way to start a sharp pipeline on the upload, one call per pipeline.
- *
- * An iPhone photo is HEIC, which is HEVC inside, and sharp's prebuilt libvips
- * cannot decode HEVC (patents keep it out; only AVIF's codec is built in). It
- * reads the header fine and fails on the pixels, so every HEIC upload came back
- * "unreadable". Those are decoded by libheif compiled to WebAssembly instead
- * and handed to sharp as raw pixels. libheif applies the container's rotation
- * itself, and the raw pixels carry no EXIF, so the `.rotate()` below is then a
- * no-op rather than a second turn.
+ * A way to start a sharp pipeline on the upload. sharp's libvips cannot decode HEVC, so HEIC (iPhone) is
+ * decoded by libheif in WebAssembly and handed over as raw pixels, which already carry the rotation
+ * (the `.rotate()` below is then a no-op).
  */
 async function open(input: Buffer): Promise<() => Sharp> {
-  // A HEIC libvips will not even read the header of (one holding more images
-  // than its limits allow, say) goes to libheif too. Anything else that throws
-  // here is not a HEIC, and decodeHeic says so by throwing in turn.
+  // A HEIC libvips cannot even read the header of goes to libheif too.
   const meta = await sharp(input)
     .metadata()
     .catch(() => null);
@@ -57,17 +42,7 @@ async function open(input: Buffer): Promise<() => Sharp> {
   return () => sharp(pixels, { raw: { width, height, channels: 4 } });
 }
 
-/**
- * Whether the image actually shows through anywhere.
- *
- * Two questions, and both have to be asked. `hasAlpha` is about the file's
- * channels, and a screenshot saved as PNG has an alpha channel whether or not a
- * single pixel uses it. Going by that alone would store every PNG receipt as a
- * PNG, which for a photographed receipt is several times the size of the JPEG
- * it should have been. `stats()` reads the pixels and answers whether any of
- * them is see-through, which is the question that matters; it is the expensive
- * one, so it is only asked when the cheap one has already said "maybe".
- */
+/** Whether the image actually shows through anywhere. `hasAlpha` alone is true for any PNG screenshot, so the costly `stats()` runs only when it says maybe. */
 async function isTransparent(load: () => Sharp): Promise<boolean> {
   const { hasAlpha } = await load().metadata();
   if (!hasAlpha) return false;
@@ -75,27 +50,18 @@ async function isTransparent(load: () => Sharp): Promise<boolean> {
   return !isOpaque;
 }
 
-// Turn an original image into a web-friendly one. Throws if the bytes aren't a
-// decodable image.
 export async function normaliseImage(input: Buffer): Promise<NormalisedImage> {
   const load = await open(input);
-  // `.rotate()` with no angle bakes in the EXIF orientation, then strips it, so
-  // the pixels are upright regardless of how the phone recorded them.
+  // `.rotate()` with no angle bakes in the EXIF orientation, then strips it.
   const base = load().rotate();
 
-  // JPEG has no alpha channel. Encoding a see-through image as one doesn't
-  // fail, it composites the image onto sharp's default background (black),
-  // so a receipt that looked right in the browser came back out of the archive
-  // as white text on a black page. Anything transparent is kept as PNG, which
-  // has the channel to keep. Everything else is still JPEG: it is the smaller
-  // format, and for a photograph of a paper receipt there is nothing to keep.
+  // JPEG would composite a transparent image onto black, so anything transparent stays PNG.
   const transparent = await isTransparent(load);
   const mimeType: NormalisedMime = transparent ? "image/png" : "image/jpeg";
 
   const encode = (pipeline: Sharp, quality: number) =>
     transparent
-      ? // No `palette`: it quantises to 256 colours, which is kind to a
-        // screenshot and ruinous to a photograph, and this branch gets both.
+      ? // No `palette`: it quantises to 256 colours, ruinous to a photograph.
         pipeline.png({ compressionLevel: 9 })
       : pipeline.jpeg({ quality, mozjpeg: true });
 
@@ -116,10 +82,7 @@ export function normalisedName(filename: string, mimeType: NormalisedMime): stri
 /** The side of a stored profile picture, in px. */
 const AVATAR_SIZE = 256;
 
-// A profile picture, from whatever the member cropped. The crop dialog already
-// sends a square, so `cover` only matters for a request that did not come from
-// it. WebP, since it is only ever shown in a browser, and at this size it is a
-// few kilobytes. Throws if the bytes aren't a decodable image.
+// A profile picture from the member's crop (already square). WebP, throws if the bytes aren't decodable.
 export async function avatarImage(input: Buffer): Promise<Buffer> {
   const load = await open(input);
   return load()

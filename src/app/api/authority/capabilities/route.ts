@@ -1,13 +1,6 @@
-// What one role may do (admin only).
-//
-// The finished capability set for a role, replacing whatever it held. Same shape
-// and same reasoning as the group grants next door: a row saved as a unit, and
-// the lockout check run against the outcome inside the transaction that made it.
-//
-// Nothing is re-derived here. Capabilities are resolved per request from this
-// table (lib/server/capabilities.ts) rather than stored on anybody's row, so the
-// next request after this one is already decided by the new grid. There is no
-// thousand-row rewrite to do, which is exactly why they are not stored.
+// The finished capability set for a role, replacing what it held (admin only). The lockout check runs against
+// the outcome inside the transaction. Capabilities are resolved per request from this table
+// (lib/server/capabilities.ts), so nothing is re-derived here.
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -22,8 +15,7 @@ export async function PUT(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { role, capabilities } = parsed.data;
 
-  // Refused, and rolled back, if it would leave nobody able to reach
-  // Inställningar. See changeAuthority.
+  // Rolled back if it would leave nobody able to reach Inställningar (changeAuthority).
   const done = await changeAuthority(async (tx) => {
     await tx.roleCapability.deleteMany({ where: { role } });
     if (capabilities.length > 0) {

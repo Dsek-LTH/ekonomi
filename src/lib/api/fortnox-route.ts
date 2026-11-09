@@ -1,19 +1,11 @@
-// The shell the Fortnox sync endpoints share: authority, then a live service
-// connection, then a token, and one place that turns a thrown FortnoxError
-// into a response instead of a 500.
-//
-// Kept apart from lib/fortnox/ on purpose: that module talks to Fortnox and
-// knows nothing about requests, which is what makes it usable from the CLI
-// (scripts/sync-fortnox.ts) and the scheduled job as well as from a route.
+// Shell shared by the Fortnox sync endpoints: authority, a live service connection, a token, and one place that turns
+// a FortnoxError into a response. Kept apart from lib/fortnox/, which the CLI and scheduled job also use.
 import { NextResponse } from "next/server";
 import { FortnoxError, getConnection, getServiceToken } from "@/lib/fortnox";
 import { fail, gate, type Actor } from "@/lib/api/guard";
 import type { Capability } from "@/lib/domain/types";
 
-/**
- * "Not connected" is a 409 rather than a 403: the caller has the right, the
- * organisation simply has no connection yet for them to use it through.
- */
+/** "Not connected" is a 409, not 403: the caller has the right, the organisation has no connection yet. */
 export async function denyNoFortnox(): Promise<NextResponse | null> {
   return (await getConnection()) ? null : fail(409, "fortnox.notConnected");
 }
@@ -21,15 +13,8 @@ export async function denyNoFortnox(): Promise<NextResponse | null> {
 type ServiceGate = { ok: true; actor: Actor; token: string } | { ok: false; res: NextResponse };
 
 /**
- * Gate a route that acts on Fortnox as the organisation, and hand it a service
- * token to act with:
- *
- *     const g = await gateFortnoxService(canAccessSettings, "Endast … kan synka");
- *     if (!g.ok) return g.res;
- *     try { … g.token … } catch (e) { return fortnoxFailure(e); }
- *
- * Routes whose work fetches its own token (syncLedger does) want `gate` plus
- * `denyNoFortnox` instead. There is no token for them to be handed.
+ * Gate a route that acts on Fortnox as the organisation and hand it a service token. Routes that fetch their own
+ * token (syncLedger) want `gate` plus `denyNoFortnox` instead.
  */
 export async function gateFortnoxService(
   can: (caps: readonly Capability[]) => boolean,
@@ -48,12 +33,7 @@ export async function gateFortnoxService(
   }
 }
 
-/**
- * A failed Fortnox call as a response. 403 gets its own message: it means the
- * connection lacks a scope, which is fixed by reconnecting rather than retrying,
- * and nothing the API says makes that clear. `forbidden` names the missing
- * scope where the caller knows which one it needs.
- */
+/** A failed Fortnox call as a response. 403 gets its own message: the connection lacks a scope, fixed by reconnecting. `forbidden` names the scope. */
 export function fortnoxFailure(
   e: unknown,
   opts: { forbidden?: string; fallback?: string } = {},

@@ -9,11 +9,7 @@ export function checkEnvironmentOrExit(): void {
   try {
     assertServerEnv();
   } catch (e) {
-    // Throwing is not enough on its own: Next catches it, logs an unhandled
-    // rejection and carries on listening, so the server stays up and answers
-    // 500 to everything. A container that is up but broken is one a TCP health
-    // check calls healthy, so exit instead. A non-zero exit is what makes the
-    // orchestrator report a failed deploy rather than a running one.
+    // Throwing is not enough: Next logs it and keeps listening (a TCP health check calls that healthy), so exit non-zero.
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);
   }

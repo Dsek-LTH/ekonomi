@@ -1,23 +1,9 @@
-// Parser for the budget interchange CSV: the format a past budget is brought
-// into the app as.
-//
-// One row per budget line, carrying the sheet and account it belongs under, so
-// the file is flat and the tree is rebuilt here:
-//
+// Parser for the budget interchange CSV: one row per budget line with its sheet and account keys
+// repeated, so the tree is rebuilt here.
 //   cost_center,cc_name,account,account_name,description,quantity,unit_price,amount
 //   SEX02,Sittningar,3015,Biljettförsäljning,T. sittningar,,,250000
-//   SEX02,Sittningar,3011,Alkoholförsäljning,Öl,1.44,48431.89,
-//
-// Flat on purpose: these budgets arrive as spreadsheets whose structure differs
-// from year to year, and no importer can be written once against all of them.
-// What can be written once is the target, and the cheapest target to produce
-// from an arbitrary layout is one row per line with its keys repeated.
-//
-// Amounts are kronor here (it is a file a person writes) and are converted to
-// the expression strings the budget stores. Either `amount` or the
-// `quantity`/`unit_price` pair is given, never both: that is the same rule the
-// schema states on BudgetLineItem, and stating it twice is how the file's
-// meaning survives the trip.
+// Amounts are kronor. Either `amount` or the `quantity`/`unit_price` pair is given, never both
+// (the rule BudgetLineItem states in the schema).
 import { amountToOre, sniffDelimiter, splitCsvLine } from "@/lib/domain/csv";
 
 interface ParsedBudgetLine {
@@ -40,7 +26,7 @@ interface ParsedBudgetSheet {
 }
 
 interface BudgetCsvProblem {
-  line: number; // 1-based line number in the file, so an error can be found
+  line: number;
   message: string;
 }
 
@@ -49,52 +35,26 @@ interface ParsedBudgetCsv {
   problems: BudgetCsvProblem[];
 }
 
-// The columns, by header name. Order in the file is free: a person assembling
-// one of these in Excel will move columns around, and there is no reason to
-// care as long as the headings survive.
+// The columns, by header name. Order in the file is free.
 const REQUIRED = ["cost_center", "account", "description"] as const;
 const OPTIONAL = ["cc_name", "account_name", "quantity", "unit_price", "amount"] as const;
 const KNOWN: readonly string[] = [...REQUIRED, ...OPTIONAL];
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "_");
 
-/**
- * An account code as the budget stores it.
- *
- * Spreadsheets keep account numbers as numbers, so a code arrives as "3015.0"
- * as often as "3015", and a code that is not a bare number is dropped from the
- * Utfall comparison later on, silently, because that report resolves an account
- * to a section with Number(code). So the trailing ".0" is stripped here rather
- * than left for the report to trip over.
- */
+/** An account code as the budget stores it. Spreadsheets give "3015.0", and the Utfall report resolves accounts with Number(code), so a non-bare number would be dropped silently: strip the ".0" here. */
 export function normalizeAccountCode(raw: string): string | null {
   const s = raw.trim().replace(/\.0+$/, "");
   return /^\d{3,6}$/.test(s) ? s : null;
 }
 
-/**
- * An amount of money as an expression string, in kronor.
- *
- * Goes through öre so that "1 234,50" and "1234.50" mean the same thing, and so
- * that the result is money-precise. The budget is compared against the ledger
- * in öre (lib/ledger/comparison.ts), and a figure carrying more decimals than
- * that is claiming a precision the comparison cannot honour.
- */
+/** An amount in kronor as an expression string. Goes through öre so "1 234,50" and "1234.50" agree; the budget is compared against the ledger in öre (lib/ledger/comparison.ts). */
 function amountExpression(raw: string): string | null {
   const ore = amountToOre(raw);
   return ore === null ? null : String(ore / 100);
 }
 
-/**
- * A plain factor as an expression string.
- *
- * Deliberately NOT rounded to öre, because neither half of the antal x á-pris
- * pair is necessarily money: Sexmästeriet's alcohol rows budget a cost as a
- * markup ratio times a base, 0.442143666 x 109538.80, and rounding that
- * quantity to two decimals moved one sheet by 345 kr. So this normalises the
- * decimal separator and checks the value is a real number, and otherwise leaves
- * the figure exactly as the file wrote it.
- */
+/** A plain factor as an expression string. NOT rounded to öre: antal and á-pris need not be money (a markup ratio 0.442143666 x 109538.80 moved one sheet by 345 kr when rounded). Only the decimal separator is normalised. */
 function factorExpression(raw: string): string | null {
   const s = raw.trim().replace(/\s/g, "");
   if (s === "") return null;
@@ -102,14 +62,7 @@ function factorExpression(raw: string): string | null {
   return Number.isFinite(Number(normalised)) ? normalised : null;
 }
 
-/**
- * Parse the interchange CSV.
- *
- * Never throws: a row that cannot be read is reported in `problems` with its
- * line number and left out, so an import can show what it could not take rather
- * than failing whole. The caller decides whether any problem at all is a reason
- * to refuse the file.
- */
+/** Parse the interchange CSV. Never throws: an unreadable row is reported in `problems` with its line number and left out. */
 export function parseBudgetCsv(text: string): ParsedBudgetCsv {
   const problems: BudgetCsvProblem[] = [];
   const rawLines = text.split(/\r?\n/);
@@ -146,9 +99,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
     return i === undefined ? "" : (cols[i] ?? "").trim();
   };
 
-  // Insertion order is the file's order, and the file's order is the budget's
-  // order: a sheet reordered on import would not be the budget that was voted
-  // through.
+  // Insertion order is the file's order, which is the budget's voted order.
   const sheets = new Map<string, ParsedBudgetSheet>();
   const accounts = new Map<string, ParsedBudgetAccount>();
 
@@ -193,8 +144,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
         });
         continue;
       }
-      // The live equation, so the amount stays the product of the two, the
-      // same thing import-budget.ts writes for an antal × á-pris row.
+      // The live equation, so the amount stays the product (as import-budget.ts writes it).
       line = { description, quantity: q, unitPrice: p, expression: `=${q}*${p}` };
     } else if (hasAmount) {
       const amount = amountExpression(amountRaw);
@@ -207,8 +157,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
       }
       line = { description, quantity: null, unitPrice: null, expression: amount };
     } else if (quantityRaw !== "" || unitPriceRaw !== "") {
-      // Half a pair and no amount: the row means nothing, and guessing which
-      // half was meant to be the amount would put a wrong number in a budget.
+      // Half a pair and no amount: guessing which half is the amount would put a wrong number in a budget.
       problems.push({
         line: lineNo,
         message: "Antal och á-pris måste anges tillsammans, annars belopp.",

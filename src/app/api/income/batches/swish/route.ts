@@ -1,12 +1,7 @@
-// Import a Swish export as a batch of draft reports. The browser POSTs the raw
-// CSV, with the range as query parameters, the same shape as the bank import
-// (api/bank/import), which is the other place a file is handed straight to a
-// parser.
-//
-// The body is read as bytes, not text. A Swish export is ISO-8859-1, and
-// lib/income/swish.ts is what knows that; decoding it as UTF-8 on the way past
-// would mangle every å, ä and ö in a message, which would surface not as an
-// error but as payments quietly routed to the reserv.
+// Import a Swish export as a batch of draft reports. The browser POSTs the raw CSV with the range as
+// query parameters. Read as bytes, not text: the export is ISO-8859-1 (lib/income/swish.ts), and
+// UTF-8 decoding would mangle å, ä, ö and misroute payments to the reserv.
+
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";
@@ -18,8 +13,7 @@ import { loadRoutingTable } from "@/lib/income/config";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
 import { routeSwishPayments } from "@/lib/income/routing";
 
-// A term's export is a couple of hundred kilobytes; this is generous against
-// that and small enough that a mistaken upload cannot exhaust memory.
+// A term's export is a couple of hundred kilobytes; this bounds memory.
 const MAX_BYTES = 8 * 1024 * 1024;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -35,7 +29,7 @@ export async function POST(req: Request) {
 
   if (!ISO_DATE.test(from) || !ISO_DATE.test(to)) return fail(422, "income.rangeRequired");
   if (to < from) return fail(422, "income.rangeBackwards");
-  // In the year picked in the header, as a Zettle fetch is (../route.ts).
+  // In the year picked in the header, as a Zettle fetch is.
   const offYear = (await denyOutsideFiscalYear(from)) ?? (await denyOutsideFiscalYear(to));
   if (offYear) return offYear;
 
@@ -46,8 +40,7 @@ export async function POST(req: Request) {
   const routing = await loadRoutingTable();
   if (!routing.ok) return fail(409, `income.${routing.blocker}`);
 
-  // Read before anything else is asked, so a file that cannot be read is said
-  // as that, naming the line, rather than after a round trip to Fortnox.
+  // Read first, so an unreadable file is said as that, naming the line.
   let payments;
   try {
     payments = parseSwishPayments(bytes, from, to);
@@ -60,8 +53,7 @@ export async function POST(req: Request) {
   const reports = routeSwishPayments(routing.table, payments);
   if (reports.length === 0) return fail(422, "income.noReports");
 
-  // The same fail-safe the Zettle route runs, for the same reason: a day
-  // already booked in Fortnox comes in flagged, so it is not booked twice.
+  // The same fail-safe as the Zettle route: a day already in Fortnox comes in flagged.
   const existing = await fortnoxIncomeVouchers(from, to);
 
   const result = await createDayBatch(

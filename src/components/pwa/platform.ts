@@ -2,10 +2,6 @@
 
 import { useSyncExternalStore } from "react";
 
-// Which way this device puts a site on its home screen, if it does at all.
-// Shared by the dashboard's card (install-hint.tsx) and the first step of the
-// app tour on a phone (shell/guide.tsx), which both offer the same thing.
-
 export type Platform = "installed" | "ios" | "android" | "other";
 
 function readPlatform(): Platform {
@@ -24,12 +20,9 @@ function readPlatform(): Platform {
   return "other";
 }
 
-/** Not installed yet, on a device that has a home screen to put it on. */
 export const installable = (p: Platform) => p === "ios" || p === "android";
 
-// The answer does not change while the page is open, so there is nothing to
-// subscribe to. The store is for reading it after hydration only: the server
-// says "other", which draws nothing, and the client does not disagree.
+// Read after hydration only: the server says "other", which draws nothing.
 const never = () => () => {};
 
 export function usePlatform(): Platform {

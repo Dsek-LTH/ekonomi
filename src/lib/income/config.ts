@@ -1,20 +1,12 @@
-// The routing table, read from the settings an admin edits.
-//
-// intakt used to read all of this from a config.yaml on the treasurer's
-// laptop, and later from a copy this file serialised into every request. Now
-// nothing leaves the app: the rows are here, an admin edits them under
-// Inställningar → Försäljning, and lib/income/routing.ts applies them.
+// The routing table, read from the settings an admin edits (applied by lib/income/routing.ts).
+
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import type { FeeRoute, Route, RoutingTable } from "./routing";
 
-/**
- * Why a table could not be built. Each is a message key under
- * `errors.income`. The routing table is admin-editable, so these are all
- * states a person can put the app into and has to be told how to get out of.
- */
+/** Why a table could not be built. Each is a message key under `errors.income`. */
 export type IncomeConfigBlocker = "noCommittees" | "noPrefixes" | "noFallback";
 
 /** One thing in the way. */
@@ -25,13 +17,7 @@ export interface IncomeConfigProblem {
 type RoutingResult =
   { ok: true; table: RoutingTable } | { ok: false; blocker: IncomeConfigBlocker };
 
-/**
- * Everything wrong with the routing table, in the order it has to be fixed.
- *
- * Every problem rather than the first, so the Intäkter page can list what is
- * left to do before anyone fetches, instead of a fetch stopping at one of them
- * and leaving the next to be found by trying again.
- */
+/** Every problem rather than the first, so the Intäkter page lists what is left before a fetch. */
 function routingProblems(
   committees: number,
   prefixes: number,
@@ -40,17 +26,12 @@ function routingProblems(
   const problems: IncomeConfigProblem[] = [];
   if (committees === 0) problems.push({ blocker: "noCommittees" });
   if (prefixes === 0) problems.push({ blocker: "noPrefixes" });
-  // Without a reserv an unrecognised product has nowhere to go. It is a
-  // setting with no default, so its absence refuses rather than guessing.
+  // Without a reserv an unrecognised product has nowhere to go.
   if (!fallback) problems.push({ blocker: "noFallback" });
   return problems;
 }
 
-/**
- * The reserv as a route, or null when it is not set, or names a verksamhet
- * that has since stopped selling. Routing a sale to a retired verksamhet would
- * book takings to somebody who no longer takes any.
- */
+/** The reserv as a route, or null when unset or naming a retired verksamhet. */
 async function loadFallback(): Promise<Route | null> {
   const settings = await loadBookkeepingSettings();
   if (!settings.incomeFallbackIncomeId || !settings.incomeFallbackAccount) return null;
@@ -67,10 +48,7 @@ async function loadFallback(): Promise<Route | null> {
     : null;
 }
 
-/**
- * Where Zettle's fees book. Either half may be unset: the day still imports,
- * and booking it is what refuses, naming the setting.
- */
+/** Where Zettle's fees book. Either half may be unset: the day imports, booking refuses. */
 export async function loadFeeRoute(): Promise<FeeRoute> {
   const settings = await loadBookkeepingSettings();
   return {
@@ -93,8 +71,7 @@ export async function incomeRoutingProblems(): Promise<IncomeConfigProblem[]> {
 export async function loadRoutingTable(): Promise<RoutingResult> {
   const [committees, prefixes, amountGuesses, fallback] = await Promise.all([
     prisma.resultUnitIncome.count({ where: { active: true } }),
-    // Only prefixes of a verksamhet that still sells: retiring one is a
-    // supported thing to do, and its prefixes then simply stop matching.
+    // Only prefixes of a verksamhet that still sells.
     prisma.incomeProductPrefix.findMany({
       where: { income: { active: true } },
       select: {
@@ -120,8 +97,7 @@ export async function loadRoutingTable(): Promise<RoutingResult> {
           {
             key: p.income.key,
             account: p.account,
-            // The prefix's own, else its verksamhet's. Resolved here so routing
-            // never has to know there were two places to look.
+            // The prefix's own, else its verksamhet's.
             costCenterId: p.costCenterId ?? p.income.defaultCostCenterId,
           },
         ]),

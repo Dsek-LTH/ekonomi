@@ -1,12 +1,7 @@
 "use client";
 
-// One account on a budget sheet: its header row, its line items, the row that
-// adds another, and the comments underneath.
-//
-// The largest of the sheet's pieces and the one that reads the most of it,
-// which is why the sheet arrives as a context rather than as arguments. This
-// took forty-two of them as a closure, and the section card above it was
-// carrying eleven of those purely to hand them down. See ./sheet-context.
+// One account on a budget sheet: header row, line items, the add row and comments. The
+// sheet arrives as a context (./sheet-context) rather than as props.
 import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { lineKeys, type JoinedAccount } from "@/lib/budget/compare";
 import type { ColumnDef } from "@/lib/budget/grid";
@@ -43,12 +38,8 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
   const k = col.key;
   if (k === "konto")
     return (
-      // The account-number column, on a row that has no number of its own. What
-      // it holds instead is the elbow: down out of the account above, right into
-      // this row, the same mark the income screen puts on a product's variant,
-      // and the same reading. The grip keeps the left of the cell; `ml-auto`
-      // holds the elbow against the row it points at, whether or not the grip
-      // is there to be seen.
+      // The number column on a row with no number holds the elbow, pointing at the row it
+      // belongs to (like the income screen's variants). `ml-auto` keeps it against the row.
       <td key={k} className="border-r border-border/60 p-0">
         <span className="flex items-center py-1.5 pl-1.5 pr-2">
           {isAdmin && (
@@ -148,30 +139,22 @@ export function AccountBlock({ account }: { account: Account }) {
   const d = draft(account.id);
   const incomeLike = effectiveKind(account.accountCode) === "INCOME";
 
-  // The same account on the other side. Rows are matched on their description
-  // (lineKeys), so `keys[i]` is what this sheet's i-th row is known as over
-  // there, and anything left over is a row only they have.
+  // The same account on the other side, matched on description (lineKeys): `keys[i]` is this
+  // sheet's i-th row there, and what is left over is a row only they have.
   const cmp = compareAccounts.get(account.accountCode);
-  // Off the rows as drawn, not as they arrived: a row being dragged is in a
-  // different place, and its comparison has to travel with it.
+  // Off the rows as drawn: a dragged row's comparison travels with it.
   const lines = linesOf(account);
   const keys = lineKeys(lines);
   const cmpLines = new Map((cmp?.lines ?? []).map((l) => [l.key, l]));
   const ghostLines = (cmp?.lines ?? []).filter((l) => !keys.includes(l.key));
 
-  // Editorial changes in force on this account. They are already inside
-  // `total`, the evaluator adds them (lib/budget/eval.ts), so the rows below
-  // are what makes the figure explicable rather than merely different from
-  // what was adopted.
+  // Editorial changes in force. They are already inside `total` (lib/budget/eval.ts); the
+  // rows make the figure explicable.
   const adjRows = adjustments.get(account.id) ?? [];
   const adjTotal = adjRows.reduce((sum, r) => sum + r.amount, 0);
-  // Read against something else (the utfall, or another budget), an account
-  // is one row: its number, its name, what it budgets, and the comparison
-  // beside it. The rows that build the figure, the changes and the way to add
-  // one are how a budget is written, not how it is read against what
-  // happened, and the utfall has nothing to say about a row anyway: Fortnox
-  // books to an account, so every row of it stood there with two empty cells.
-  // Writing comes back with the comparison switched off.
+  // Read against something else, an account is one row: its number, name, budget and the
+  // comparison. The utfall has nothing to say about a row (Fortnox books to an account).
+  // Writing comes back with the comparison off.
   if (showCompare) {
     return (
       <tbody className="border-b border-border">
@@ -203,31 +186,23 @@ export function AccountBlock({ account }: { account: Account }) {
 
   return (
     <tbody className="border-b border-border">
-      {/* Marked like the rows below it: standing in this line and copying
-          takes the account and everything under it. */}
       <tr data-account-row={account.id} className="group bg-background">
         {gut(
           grid.accountRow.get(`${ccCode}|${account.id}`),
           isAdmin &&
             tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
         )}
-        {/* No grip. An account used to be draggable from one section to the
-            other, which set an override saying a cost account was income. The
-            side is the account number's to decide now, so there is nothing to
-            drag it to. */}
+
         <td className="group relative border-r border-border/60 bg-surface p-0 align-middle">
           {isAdmin ? (
             <Combobox
-              // Its own side only. Swapping 3010 for 5010 while the row sits
-              // under Intäkter would send it to the other heading mid-edit;
-              // an account changes what it is, not where it lives.
+              // Its own side only: swapping 3010 for 5010 under Intäkter would move it mid-edit.
               options={accountOptionsFor(effectiveKind(account.accountCode), account.accountCode)}
               value={account.accountCode}
               onChange={(v) => {
                 if (v === account.accountCode) return;
-                // The code pulls the name with it, resolved from the chart, so
-                // both are taken off the answer, and only those two, since
-                // the account's rows are not in it.
+                // The code pulls the name with it (resolved from the chart), so take both from the
+                // answer and nothing else, since the account's rows are not in it.
                 api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v }, (b, data) =>
                   withAccount(b, account.id, (a) => ({
                     ...a,
@@ -239,8 +214,7 @@ export function AccountBlock({ account }: { account: Account }) {
               placeholder={tBook("accountPlaceholder")}
               searchPlaceholder={tBook("accountSearch")}
               emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-              // Centred like the voucher table's account, and like this
-              // cell when the sheet is read against the utfall.
+
               align="center"
               buttonClassName="px-2 py-1.5 font-mono text-sm font-medium text-foreground"
               chevronClassName="text-faint"
@@ -252,7 +226,6 @@ export function AccountBlock({ account }: { account: Account }) {
             </div>
           )}
         </td>
-        {/* Read-only: the name follows the account code from the chart. */}
         <td
           className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold"
           colSpan={columns.length - 1}
@@ -277,30 +250,21 @@ export function AccountBlock({ account }: { account: Account }) {
       {lines.map((li, i) => (
         <tr
           key={li.id}
-          // What a drag reads the sheet by: every row it may land among says
-          // which row it is and whose account it belongs to.
+
           data-line={li.id}
           data-account={account.id}
-          // Only ever set, never cleared: a row carried into another account
-          // is a different <tr> under a different <tbody>, and React mounts
-          // the new one around the same time it drops the old.
+          // Only set, never cleared: a row carried into another account is a new <tr> under a
+          // new <tbody>, mounted around the time React drops the old one.
           ref={(el) => {
             if (el && draggingLineId === li.id) liftRef.current = el;
           }}
           className={cn(
             "group border-t border-border/40 transition-colors hover:bg-hover",
-            // Lifted: over the rows it passes, on the sheet's own background
-            // so they don't read through it, and outlined so it is a row in
-            // hand rather than one that happens to overlap. Outline and not a
-            // shadow: box-shadow is not painted on the rows of a
-            // border-collapse table, which this is.
-            //
-            // `pointer-events-none` is what lets the drag see the sheet
-            // underneath it. The row is directly under the pointer the whole
-            // way, and it cannot be the answer to what it is over.
+            // Lifted: opaque so rows do not read through it, outlined (box-shadow is not painted
+            // on rows of a border-collapse table). `pointer-events-none` lets the drag see the
+            // sheet underneath.
             draggingLineId === li.id &&
               "pointer-events-none relative z-10 bg-background outline outline-1 outline-border",
-            // Ticked, and so part of what a copy would take.
             isTicked("rows", li.id) && "bg-accent-soft/40",
           )}
         >
@@ -326,9 +290,6 @@ export function AccountBlock({ account }: { account: Account }) {
         </tr>
       ))}
 
-      {/* Editorial changes, one row each, under the adopted rows they change.
-          Never editable. A change is amended by recording another one, not
-          by rewriting it (see the changes view). */}
       {adjRows.map((row) => (
         <tr key={row.change.id} className="border-t border-border/40 bg-warning-soft/40">
           {gut(undefined)}
@@ -368,8 +329,6 @@ export function AccountBlock({ account }: { account: Account }) {
         </tr>
       ))}
 
-      {/* Rows only the other side has. Nothing here is editable: they are not
-          this budget's rows, and adding them is a decision, not a formality. */}
       {ghostLines.map((l) => (
         <tr key={`ghost-${l.key}`} className="border-t border-border/40 text-muted">
           {gut(undefined)}
@@ -384,9 +343,7 @@ export function AccountBlock({ account }: { account: Account }) {
       ))}
 
       {isAdmin && (
-        // Also where a dragged row lands when it is carried this far down an
-        // account, including an account with no rows of its own, which has
-        // nothing else to aim at.
+        // Also where a dragged row lands in an account with no rows of its own.
         <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
           <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
           {columns.map((col) => {
@@ -429,8 +386,6 @@ export function AccountBlock({ account }: { account: Account }) {
         </tr>
       )}
 
-      {/* Account total, summed below the individual lines (under Belopp). The
-          two trailing cells carry the compared figure and its diff vs budget. */}
       <tr className="border-t border-border/60 bg-surface">
         {gut(undefined)}
         <td
@@ -438,17 +393,13 @@ export function AccountBlock({ account }: { account: Account }) {
           className="px-2 py-1.5 text-right text-xs font-medium text-muted"
         >
           {t("sum")}
-          {/* What the account said before the changes, the number that was
-              voted through, kept beside the one in force so neither has to be
-              worked out from the other. */}
+
           {adjTotal !== 0 && total !== undefined && (
             <span className="ml-2 font-normal normal-case tracking-normal text-muted">
               {t("originally", { amount: fmt(total - adjTotal) })}
             </span>
           )}
-          {/* Says the sum is short a row rather than letting a partial total
-              pass for the budgeted amount. The rows themselves are already
-              marked; this is the figure they add up to admitting it. */}
+
           {totalIncomplete && (
             <span className="ml-2 font-normal normal-case tracking-normal text-warning">
               {t("incompleteSum")}
@@ -483,8 +434,7 @@ export function AccountBlock({ account }: { account: Account }) {
               aria-expanded={open}
               className={cn(
                 "flex items-center gap-1 rounded-control px-1.5 py-1 tabular-nums transition hover:bg-hover hover:text-foreground",
-                // Accent while the thread is open; a plain (unmuted) icon means
-                // "there is something to read here" without opening it.
+
                 open ? "text-accent" : account.comments.length > 0 && "text-foreground",
               )}
             >
@@ -497,8 +447,7 @@ export function AccountBlock({ account }: { account: Account }) {
 
       {open && (
         <tr className="bg-surface">
-          {/* sheet-field: what's in here is a form field, not a sheet cell.
-              it keeps the app's focus ring and this row draws no cell box. */}
+          {/* sheet-field: a form field, not a sheet cell: keeps the focus ring and draws no cell box. */}
           <td colSpan={totalCols} className="sheet-field px-4 py-3">
             <div className="space-y-2">
               {account.comments.length === 0 && (
@@ -561,9 +510,7 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
     <tbody className="border-b border-border">
       <tr className="bg-background text-muted">
         {gut(undefined)}
-        {/* A ghost row's account cell is the real cell held back: the same
-            code, on the page's own ground rather than the surface, in the
-            row's muted ink. */}
+
         <td className="border-r border-border/60 px-2 py-1.5 font-mono text-sm font-medium">
           {account.code}
         </td>

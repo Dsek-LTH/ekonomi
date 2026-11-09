@@ -8,11 +8,6 @@ import {
 } from "./contract-scope";
 import type { Capability } from "@/lib/domain/types";
 
-// The rule that keeps an uthyrningsansvarig out of the sponsoravtal. Worth
-// testing rather than trusting, because every query and every route leans on
-// it, and the failure is silent: a scope that quietly widens shows up as
-// nothing at all until somebody reads a contract they should not have.
-
 const viewer = (...capabilities: Capability[]): Viewer => ({
   id: "u1",
   roles: [],
@@ -55,8 +50,7 @@ describe("contractScopeWhere", () => {
   });
 
   it("matches nothing for an empty scope, rather than everything", () => {
-    // The failure mode this guards: a filter that came out `{}` for a viewer
-    // with no capability would hand them the archive.
+    // A `{}` filter for a viewer with no capability would hand them the archive.
     const where = contractScopeWhere({ kind: "none" });
     expect(where).toEqual({ id: { in: [] } });
     expect(where).not.toEqual({});
@@ -84,7 +78,6 @@ describe("canManageKind", () => {
   });
 
   it("lets the rental grant change a rental only", () => {
-    // Not even to fix a typo in a sponsoravtal's title.
     expect(canManageKind(RENTAL, { hasRental: true })).toBe(true);
     expect(canManageKind(RENTAL, { hasRental: false })).toBe(false);
   });

@@ -6,8 +6,6 @@ import { VoucherCommentBody } from "@/lib/api/schemas/closing";
 import { canViewBookkeeping } from "@/lib/domain/permissions";
 import { resolveVoucher } from "@/lib/server/closing-voucher";
 
-// Add to a voucher's thread. Whoever may read the books may write in it: the
-// revisorer ask, the treasury answers, and both are one conversation.
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ year: string; voucher: string }> },

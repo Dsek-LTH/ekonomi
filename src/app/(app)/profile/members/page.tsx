@@ -7,9 +7,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("members");
 
-// The profile's Medlemmar tab: every member's redovisningsbetyg, for
-// the holders of MEMBER_SCORE_VIEW. `?id=` opens one member's breakdown, which
-// is where Översikt's "Släpar efter" and the score on an utlägg lead.
+// The profile's Medlemmar tab: every member's redovisningsbetyg, for MEMBER_SCORE_VIEW. `?id=` opens one breakdown.
 export default async function ProfileMembersPage({
   searchParams,
 }: {
@@ -19,8 +17,7 @@ export default async function ProfileMembersPage({
   const { id } = await searchParams;
   const t = await getTranslations("nav");
   const rows = await getMemberScores();
-  // Somebody with nothing in the year is not in the list, but a link may
-  // still name them.
+  // Somebody with nothing in the year is not listed, but a link may name them.
   const selected = id ? (rows.find((r) => r.userId === id) ?? (await getMemberScoreRow(id))) : null;
   return <MembersClient title={t("members")} rows={rows} selected={selected} />;
 }

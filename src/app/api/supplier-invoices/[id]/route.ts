@@ -1,11 +1,5 @@
-// One levfaktura: the treasurer's kontering of it, a field at a time.
-//
-// The kontering (supplier, amount, dates, OCR, and its lines) is the
-// treasurer's, once every row is attested and until it is in Fortnox
-// (canBook). The head's fields are saved as each is left, the lines together
-// when Spara kontering is pressed. Marking the kontering done is
-// ./transition's `book`. The fördelning is not changed here: that is the
-// unit's, and is sent with its attest.
+// One levfaktura: the treasurer's kontering, once every row is attested and until it is in Fortnox (canBook).
+// Head fields are saved as each is left, the lines together on Spara kontering. Marking it done is ./transition's `book`.
 import { prisma } from "@/lib/server/db";
 import { isoToDate } from "@/lib/domain/date";
 import { gate } from "@/lib/api/guard";
@@ -49,9 +43,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const { invoice, can } = access;
   if (!can.canBook) return refuseChange(invoice, isWithTreasury(invoice.status));
 
-  // What changed, by field name, for the history. The values themselves are
-  // on the invoice, and a log of every keystroke's worth of old text says less
-  // than the one line "Leverantör, belopp ändrade" does.
+  // What changed, by field name, for the history (not the values).
   const changed: string[] = [];
   const data: Record<string, unknown> = {};
 
@@ -64,8 +56,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   for (const f of ["invoiceDate", "dueDate"] as const) {
     const v = body[f];
     if (v === undefined || v === (isoDate(invoice[f]) || null)) continue;
-    // The invoice's own date decides its year, and it is set in the one
-    // picked in the header. The due date may fall in the next.
+    // The invoice's date decides its year, set in the one picked in the header. The due date may fall in the next.
     if (f === "invoiceDate") {
       const offYear = await denyOutsideFiscalYear(v);
       if (offYear) return offYear;
@@ -119,8 +110,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const result = await commit(() =>
     prisma.$transaction(async (tx) => {
-      // Still in the state it was judged editable in. Exported in another tab
-      // a moment ago, it is not this request's to change.
+      // Still in the state it was judged editable in; exported in another tab, it is not this request's to change.
       applied(
         await tx.supplierInvoice.updateMany({
           where: { id: invoice.id, status: invoice.status },

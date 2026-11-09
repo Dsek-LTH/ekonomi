@@ -8,10 +8,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("rentals");
 
-// Uthyrning: where the gear is, rather than which agreements exist.
-//
-// The same Contract rows the archive lists, read for a different job. See
-// lib/data/rentals.ts for why that is two lists and not two tables.
+// Uthyrning: where the gear is, rather than which agreements exist (same Contract rows as the archive; see lib/data/rentals.ts).
 export default async function RentalsPage({
   searchParams,
 }: {
@@ -19,13 +16,10 @@ export default async function RentalsPage({
 }) {
   const user = await requirePage(canViewRentals);
 
-  // "Att göra" rather than "Alla" as the resting tab. Somebody opening this on
-  // a Monday wants what is late and what is back but not yet dealt with, and a
-  // page that opens on the full history makes them filter to it every time.
+  // "Att göra" is the resting tab: what is late and what is back but not dealt with.
   const query = parseListQuery(await searchParams, { defaultTab: "todo" });
 
-  // One day for the whole page: every state on the screen is derived against
-  // it, so a list left open over midnight cannot start disagreeing with itself.
+  // One day for the whole page, so a list left open over midnight cannot disagree with itself.
   const asOf = today();
 
   const [page, counts] = await Promise.all([

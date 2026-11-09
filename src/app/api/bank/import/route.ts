@@ -1,7 +1,5 @@
-// Import a bank "Transaktionsrapport" CSV. The browser POSTs the raw file; we
-// decode it (Windows-1252), parse rows, auto-create unassigned Card rows for
-// any new card numbers, then insert the transactions, skipping ones already
-// imported (importHash @unique). Bookkeeper/admin only.
+// Import a bank "Transaktionsrapport" CSV (Windows-1252), auto-creating unassigned Cards and skipping rows
+// already imported (importHash @unique). Bookkeeper/admin only.
 import { NextResponse } from "next/server";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { appUrl, emailT, frame, transactionsBlock } from "@/lib/email/content";
@@ -13,18 +11,12 @@ import { fail, gate } from "@/lib/api/guard";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// A long statement is a long mail, and past this many lines nobody reads it.
-// The rest is one line saying how many more, and the link to all of them.
+// Past this many lines the mail says how many more, with a link.
 const MAX_LINES = 30;
 
 /**
- * Tell each card holder what just landed on their card: one mail per holder per
- * import, never one per transaction. Refunds included, since a refund needs an
- * utlägg as much as a purchase does. A card nobody holds yet has nobody to tell;
- * its transactions reach the holder in the Sunday digest once it is assigned.
- *
- * Not the importer excluded, unlike the other notifications: they read a CSV,
- * they did not make the purchases on it.
+ * One mail per card holder per import, refunds included. A card nobody holds has nobody to tell (the Sunday digest
+ * covers it once assigned). The importer is not excluded, unlike other notifications: they read a CSV, they did not make the purchases.
  */
 async function notifyCardHolders(
   tx: TxClient,
@@ -84,8 +76,7 @@ export async function POST(req: Request) {
     return fail(422, "bank.noTransactions");
   }
 
-  // Auto-create a Card (no holder) for every card number we haven't seen, so it
-  // shows up in admin → Sektionskort ready to assign. Existing cards untouched.
+  // Auto-create a holderless Card for every new card number, ready to assign in admin → Sektionskort.
   const existingCards = await prisma.card.findMany({
     where: { last4: { in: cardLast4s } },
     select: { id: true, last4: true },

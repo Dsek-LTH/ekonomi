@@ -1,8 +1,5 @@
-// The budget cell-editing layer: the read-only-until-edit input renderers
-// (text / formula / auto), the buffered-edit + focus state, and the optimistic
-// commit path (apply locally, re-evaluate on the client, PATCH in the
-// background). Returned to the budget client and threaded into the sheets.
-// (Edit mode itself belongs to the sheet that owns the keyboard nav.)
+// The budget cell-editing layer: input renderers, buffered-edit and focus state, and the
+// optimistic commit (apply locally, re-evaluate on the client, PATCH in the background).
 import { useState } from "react";
 import { usePhone } from "@/lib/ui/media";
 import { toStored, toDisplay, type BudgetGrid } from "@/lib/budget/grid";
@@ -24,22 +21,15 @@ interface Opts {
   isAdmin: boolean;
   budget: Budget;
   setBudget: React.Dispatch<React.SetStateAction<Budget>>;
-  /** The page's `useMutation().mutate`, the shared write path, error message
-   *  and all. Passed in rather than taken here so a cell edit shares the page's
-   *  busy scope instead of opening a second one. */
+  /** The page's `useMutation().mutate`, passed in so a cell edit shares its busy scope. */
   mutate: MutateFn;
   load: () => Promise<void>;
   api: ApiFn;
 }
 
 export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load, api }: Opts) {
-  // On a phone a Belopp cell is ~110px rather than 260, so it shows the answer
-  // and keeps the working for the tap. Idle, a formula cell normally reads
-  // "2 × TROJA_POLICY = 700"; at that width the equation would fill the box and
-  // push the one number anybody is scanning for out of sight, which is worse
-  // than not showing it. Focus already swaps the cell to its formula, and the
-  // `title` carries it either way, so the working is one tap deep rather than
-  // gone. See cost-center-sheet.tsx for the rest of the narrow geometry.
+  // On a phone a Belopp cell is ~110px: show the answer and keep the working for the tap, since
+  // the equation would push out the number being scanned for (see cost-center-sheet.tsx).
   const compact = usePhone();
 
   // Buffered in-progress cell edits, keyed `${id}:${field}`.
@@ -57,13 +47,9 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
       return n;
     });
 
-  // A cell edit shouldn’t refetch (and re-evaluate) the whole budget, that’s
-  // a PATCH plus two GETs per keystroke-commit. Instead we apply the change to
-  // local state, re-run the evaluator on the client (`recomputeBudget`, the
-  // same `evaluate` the server uses), and fire the PATCH in the background,
-  // only reloading if it fails.
+  // A cell edit applies locally and re-runs the evaluator on the client (`recomputeBudget`)
+  // rather than refetching, and PATCHes in the background, reloading only on failure.
 
-  // Merge a columnValues patch the same way the server does (empty clears).
   function mergeValues(
     cur: Record<string, string>,
     patch: Record<string, string>,
@@ -77,7 +63,6 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     return merged;
   }
 
-  // Apply a PATCH payload to local state by URL shape; null = not a known field edit.
   function applyLocal(rev: Budget, url: string, payload: Record<string, unknown>): Budget | null {
     const str = (k: string, fallback: string) =>
       typeof payload[k] === "string" ? payload[k] : fallback;
@@ -143,12 +128,8 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     return null;
   }
 
-  // The optimistic path: show the edit, then tell the server. It goes through
-  // the same `mutate` as every other write in the app. It only asks it not to
-  // refresh afterwards, because the new value is already on screen (see the
-  // `refresh` option in components/shell/use-mutation.ts). It used to be a bare
-  // fetch, which meant it was also the one write in the app that printed the
-  // server's error *code* at the reader instead of the sentence behind it.
+  // The optimistic path: show the edit, then tell the server through the shared `mutate`,
+  // without a refresh (the value is already on screen; see components/shell/use-mutation.ts).
   async function commitField(url: string, payload: Record<string, unknown>) {
     const next = applyLocal(budget, url, payload);
     if (!next) return void api(url, "PATCH", payload); // unknown shape → reload path
@@ -174,8 +155,6 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     await commitField(url, payload(v.trim()));
   }
 
-  // Commit a formula cell: turn the typed A1 form back into stored row-bound
-  // tokens, then PATCH if it actually changed.
   async function commitFormula(
     id: string,
     field: string,
@@ -188,27 +167,21 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     setFocusKey((k) => (k === key ? null : k));
     const typed = pending[key];
     if (typed === undefined) return;
-    // Forgiving entry: "2x3x12" / "8 × TACK_POLICY" → a formula, before we bind
-    // any A1 references to their row-stable tokens.
+    // Forgiving entry ("2x3x12", "8 × TACK_POLICY") becomes a formula before A1 references are bound.
     const stored = toStored(normalizeFormula(typed), sheet, grid);
     clearP(id, field);
     if (stored.trim() === raw.trim()) return;
     await commitField(url, payload(stored));
   }
 
-  // Enter finishes the edit (the blur commits it); Escape puts back what was
-  // there. The cell keeps focus on Escape, so `focusKey` stays set: only blur
-  // clears it. Clearing it here left a focused formula cell rendering its idle
-  // text ("fel" on a bad formula), and the next Enter would then edit, and
-  // commit, that display string instead of the formula.
+  // Enter finishes the edit (blur commits it), Escape restores. Escape keeps focus, so
+  // `focusKey` stays set: clearing it made the next Enter commit the idle display string.
   const editKeys = (id: string, field: string) => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
     if (e.key === "Escape") clearP(id, field);
   };
 
-  // An editable text cell (admin only); otherwise a static value. Invoked as a
-  // plain function (not <Cell/>) so the <input> reconciles by position and keeps
-  // focus across re-renders instead of remounting on every keystroke.
+  // Invoked as a plain function (not <Cell/>) so the <input> keeps focus across re-renders.
   const renderCell: CellFn = ({
     id,
     field,
@@ -244,9 +217,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     );
   };
 
-  // A spreadsheet-style cell: shows the evaluated value when idle, the formula
-  // (in A1 form, with a leading "=") while focused. `raw` is the stored string,
-  // `computed` the evaluated number, `sheet` the cost-centre code for ref scope.
+  // Shows the evaluated value when idle, the formula (A1 form, leading "=") while focused.
   const renderFormula: FormulaFn = ({
     id,
     field,
@@ -263,15 +234,13 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     unit = "ore",
   }: FormulaArgs) => {
     const key = `${id}:${field}`;
-    // A Belopp is money in öre; a variable is whatever it means. The renderer
-    // is shared, so which one this cell holds has to come in with it.
+    // A Belopp is öre, a variable is whatever it means: the shared renderer needs to be told.
     const show = unit === "scalar" ? fmtScalar : fmt;
     const focused = focusKey === key;
     const empty = raw.trim() === "";
     const isFormula = raw.trim().startsWith("=");
     const formulaText = toDisplay(raw, sheet, grid);
-    // The equation without "=", e.g. "2 × TROJA_POLICY", shown while editing and
-    // (on the Belopp column) idle, suffixed with its evaluated result.
+
     const pretty = isFormula ? prettyFormula(formulaText) : formulaText;
     const asFormula = display === "formula" || focused;
     const idle = formulaIdleText({
@@ -305,9 +274,8 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         value={focused ? (pending[key] ?? pretty) : empty ? "" : idle}
         placeholder={placeholder}
         title={isFormula && !focused ? formulaText : undefined}
-        // Focusing swaps the display to the formula, so the caret is placed after
-        // that re-render. A gated cell is only *selected* on focus (edit mode comes
-        // later, on Enter) leave a collapsed caret, not a select-all highlight.
+        // Focusing swaps the display to the formula, so the caret is placed after that
+        // re-render. A gated cell is only selected on focus: leave a collapsed caret.
         onFocus={(e) => {
           setFocusKey(key);
           if (pending[key] === undefined) setP(id, field, pretty);

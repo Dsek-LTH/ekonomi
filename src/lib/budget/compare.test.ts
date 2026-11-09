@@ -23,7 +23,6 @@ const side = (
 ): Snapshot => ({ id, label: id, sheets, vars });
 
 describe("compareKey", () => {
-  // The cost-centre code is the one thing that means the same in every budget.
   it("matches a linked sheet on its cost-centre code", () => {
     expect(compareKey({ id: "x", costCenter: { code: "SEX02" } })).toBe("SEX02");
   });
@@ -34,7 +33,6 @@ describe("compareKey", () => {
     expect(a).toBe(b);
   });
 
-  // The honest answer: there is nothing to recognise it by.
   it("falls back to the sheet's own id when it has no name, so it matches nothing", () => {
     expect(compareKey({ id: "a", label: "  " })).toBe("#a");
     expect(compareKey({ id: "a" })).not.toBe(compareKey({ id: "b" }));
@@ -54,8 +52,6 @@ describe("lineKeys", () => {
     expect(lineKeys([{ description: "  Mat   och  dryck " }])).toEqual(["mat och dryck"]);
   });
 
-  // The n-th "Övrigt" can only be known in the context of the rest, which is
-  // why this takes the whole account at once.
   it("tells repeated descriptions apart by their position", () => {
     expect(
       lineKeys([{ description: "Övrigt" }, { description: "Tröjor" }, { description: "Övrigt" }]),
@@ -185,7 +181,6 @@ describe("joinSnapshots", () => {
     expect(lines[1].values).toEqual([undefined, 50]);
   });
 
-  // The budget in front of you keeps its own arrangement and its own wording.
   it("takes order and labels from the first side that mentions something", () => {
     const joined = joinSnapshots([
       side("a", [
@@ -293,15 +288,11 @@ describe("sheetTotals", () => {
 });
 
 describe("budgetLabel", () => {
-  // Several budgets share a year, so the year alone doesn't identify one.
   it("leads with the year and then names the budget", () => {
     expect(budgetLabel({ year: 2026, name: "Ursprunglig" })).toBe("2026 - Ursprunglig");
   });
 
   it("names the financial year, not the year it was adopted in", () => {
-    // A year's ordinary budget is passed before that year begins, so the two
-    // are routinely different years, and the financial year is the one that
-    // decides which ledger the budget is measured against.
     const budget = { year: 2026, name: "Ursprunglig", adoptedAt: "2025-11-14" };
     expect(budgetLabel(budget)).toBe("2026 - Ursprunglig");
   });

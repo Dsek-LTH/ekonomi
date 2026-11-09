@@ -10,14 +10,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("invoices");
 
-// Fakturor: every levfaktura the reader may see, from the moment it is given
-// to a unit until it is in Fortnox, with the stage as a tab. See
-// docs/navigation.md.
-//
-// It used to be the booking half only, with the attest half on Att attestera
-// beside the utlägg. That left an invoice sitting with its unit listed nowhere
-// under Leverantörsfakturor at all. Both halves are tabs here now, and the
-// resultatansvarig reads the same list on their own units.
 export default async function InvoicesPage({
   searchParams,
 }: {
@@ -27,16 +19,13 @@ export default async function InvoicesPage({
   const params = await searchParams;
   const owned = await ownedResultUnits(user);
 
-  // Narrowest first, as the track draws them. A scope that is not the
-  // reader's is answered with the one they would have landed on, as on Utlägg.
   const scopes: InvoiceScope[] = [
     ...(owned.names.length > 0 ? (["unit"] as const) : []),
     ...(canViewBookkeeping(user.capabilities) || canTriageInvoices(user.capabilities)
       ? (["all"] as const)
       : []),
   ];
-  // An attester who answers for no unit (an admin, say) still has the page,
-  // and reads it as the section's: that is what they attest on.
+  // An attester without a unit (an admin) reads it as the section's.
   if (scopes.length === 0) scopes.push("all");
   const scope = scopes.find((s) => s === params.scope) ?? scopes[scopes.length - 1];
   const tab: InvoiceTab = INVOICE_TABS.find((t) => t === params.tab) ?? invoiceDefaultTab(scope);
@@ -45,8 +34,6 @@ export default async function InvoicesPage({
     getInvoiceRows(user, { ownUnits: scope === "unit" }),
     getFiscalYear(),
   ]);
-  // Not keyed by scope: a remount would redraw the scope switch, and its pill
-  // would jump to the new scope instead of sliding there. The client follows
-  // the new scope's stage itself.
+  // Not keyed by scope: a remount would make the scope pill jump instead of slide.
   return <InvoicesClient rows={rows} scope={scope} scopes={scopes} tab={tab} fiscal={fiscal} />;
 }

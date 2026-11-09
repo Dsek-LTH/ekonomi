@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { BookVoucher, VoucherLineInput } from "./expense";
 
-// A voucher row is built by two screens (the utlägg booking table and the
-// income one) and both of them send a cleared text field as null. The schema
-// used to accept a string or nothing at all but not null, which refused the
-// whole booking over a row nobody had written anything on.
+// A voucher row is built by two screens, and both send a cleared text field as null; the schema must accept it.
 describe("VoucherLineInput's optional text", () => {
   const row = { account: "5010", accountName: "Kontorsmaterial", debit: 12500, credit: 0 };
 
@@ -24,8 +21,6 @@ describe("VoucherLineInput's optional text", () => {
   });
 
   it("treats the cost centre beside it the same way", () => {
-    // The two fields are the same kind of thing, and the bug was that they were
-    // spelled differently.
     expect(VoucherLineInput.parse({ ...row, costCenterCode: null }).costCenterCode).toBeNull();
     expect(VoucherLineInput.parse({ ...row, costCenterCode: "" }).costCenterCode).toBeNull();
   });
@@ -33,8 +28,7 @@ describe("VoucherLineInput's optional text", () => {
 
 describe("BookVoucher", () => {
   it("accepts the body the booking screen sends", () => {
-    // The shape from book-client.tsx: a locked payment row with text, then the
-    // typed rows, whose empty fields are null. This is the request that failed.
+    // The shape from book-client.tsx: a locked payment row with text, then typed rows whose empty fields are null.
     const body = {
       expectedUpdatedAt: "2026-05-02T09:14:03.512Z",
       date: "2026-05-01",
@@ -62,8 +56,7 @@ describe("BookVoucher", () => {
   });
 
   it("refuses a booking that does not say which version it was made against", () => {
-    // Without it there is nothing to tell a colleague's save from ours, and the
-    // later one would quietly win.
+    // Without it a colleague's save cannot be told from ours and the later one wins.
     expect(BookVoucher.safeParse({ lines: [] }).success).toBe(false);
   });
 });

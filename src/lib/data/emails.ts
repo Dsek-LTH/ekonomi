@@ -1,10 +1,3 @@
-// The outbox read as a log: every mail the app has written, to whom, and what
-// became of it. See prisma/schema/notification.prisma.
-//
-// Read by Inställningar → E-post, which lists all of it, and by the person
-// dialog under Användare, which lists one member's. "Visa fler" asks for a
-// longer list rather than the next page, so a reload after a retry or a test
-// mail redraws everything on screen, not just its first page.
 import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
@@ -15,12 +8,8 @@ import { LOGO_CID } from "@/lib/email/types";
 import type { NotificationKind } from "@/lib/domain/types";
 
 /**
- * Where a mail has got to.
- *
- *   SENT      the relay took it
- *   QUEUED    not tried yet, or tried and not finished (a lease still held)
- *   RETRYING  failed, and will be tried again
- *   FAILED    failed every try it gets, and stays unsent until retried by hand
+ * SENT: relay took it. QUEUED: not tried yet, or lease held. RETRYING: failed, will retry.
+ * FAILED: exhausted its tries, unsent until retried by hand.
  */
 export type EmailStatus = "SENT" | "QUEUED" | "RETRYING" | "FAILED";
 
@@ -43,7 +32,6 @@ export interface EmailLogRow {
 
 export interface EmailLogPage {
   rows: EmailLogRow[];
-  /** Whether the log goes on past these rows. */
   more: boolean;
   /** Whether a relay is set. Off, every mail is "sent" to the server log. */
   mailEnabled: boolean;
@@ -72,7 +60,6 @@ const FILTERS: Record<Exclude<EmailFilter, "">, Prisma.OutboundEmailWhereInput> 
 export async function getEmailLog(opts: {
   recipientId?: string;
   filter?: EmailFilter;
-  /** Matched against the subject and the recipient's name and address. */
   q?: string;
   /** How many rows. Clamped to a page at the least. */
   take?: number;
@@ -94,7 +81,6 @@ export async function getEmailLog(opts: {
   const rows = await prisma.outboundEmail.findMany({
     where: { AND: and },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    // One more than asked for, to learn whether the log goes on.
     take: take + 1,
     select: {
       id: true,
@@ -127,7 +113,6 @@ export async function getEmailLog(opts: {
   };
 }
 
-/** One mail as it was written: both bodies, ready to show. */
 export async function getEmailBody(
   id: string,
 ): Promise<{ subject: string; text: string; html: string | null } | null> {
@@ -136,9 +121,7 @@ export async function getEmailBody(
     select: { subject: true, text: true, html: true },
   });
   if (!row) return null;
-  // The logo is an attachment in a sent mail, drawn by content id. A browser
-  // has no attachment to resolve that against, so the preview points it at
-  // the same file in public/ instead.
+  // The logo is a content-id attachment in a sent mail; the preview points at public/ instead.
   const html = row.html?.replaceAll(`cid:${LOGO_CID}`, "/email-logo.png") ?? null;
   return { ...row, html };
 }

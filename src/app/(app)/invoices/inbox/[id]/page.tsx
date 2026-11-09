@@ -15,13 +15,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("invoiceDocument");
 
-// Fördela a document in the unit's Inkorg: the unit's step, and the one that
-// makes it an invoice. The same form an invoice is fördelad again on
-// (../../[id]/allocate), reached from the Inkorg and from the mail the unit
-// was sent when it was given the document.
-//
-// The PDF is read here, the first time anybody needs what it says. What it
-// says is only offered: the unit has the document beside the form.
 export default async function DocumentAllocatePage({
   params,
 }: {
@@ -58,7 +51,6 @@ export default async function DocumentAllocatePage({
       defaults={{
         amount: scanned.amount == null ? null : scanned.amount / 100,
         rounding: null,
-        // What triage entered when sending it, failing that the PDF.
         dueDate: doc.dueDate || scanned.dueDate || "",
         description: cleanSubject(doc.subject) ?? "",
       }}

@@ -26,9 +26,7 @@ export function RentalsClient({
   const { date } = useFormat();
   const controls = useUrlTableControls(page.total, "todo");
 
-  // The count rides on the tab, so "what needs doing" is answerable without
-  // opening it. Only on the two tabs where a number means work: "Alla" and
-  // "Avslutade" are counts of history and would read as a backlog.
+  // The count rides on the two tabs where a number means work; "Alla" and "Avslutade" would read as a backlog.
   const todo = counts.OVERDUE + counts.AWAITING_CHECK;
   const TABS: TabFilter = useMemo(
     () =>
@@ -71,9 +69,7 @@ export function RentalsClient({
         key: "returned",
         header: t("col.returned"),
         mobile: "hide",
-        // What actually happened, beside what was agreed. A rental that came
-        // back four days late is the row somebody is looking for, and it is
-        // invisible unless both dates are on the page.
+        // What actually happened beside what was agreed (a rental four days late must be visible).
         cell: (r) =>
           r.returnedAt ? (
             <span className="whitespace-nowrap">
@@ -120,9 +116,7 @@ export function RentalsClient({
           }
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(r) => r.id}
-          // Through to the contract, which is the one page that describes this
-          // row. A second detail screen showing the same rental from an
-          // operational angle would be two pages disagreeing about one thing.
+          // Through to the contract, the one page that describes this row.
           rowHref={(r) => `/contracts/${r.id}`}
           empty={
             page.total === 0 && !narrowed && controls.tab === "" ? t("emptyTitle") : t("noMatch")

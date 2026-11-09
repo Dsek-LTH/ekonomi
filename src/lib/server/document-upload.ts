@@ -1,10 +1,5 @@
-// Reading one uploaded document off a multipart request: the size limits, what
-// the file actually is, and the image normalisation, before anything is stored.
-//
-// The same checks the receipt upload makes (api/expenses/[id]/receipts), in the
-// same order and for the same reasons, which are written out there. Pulled out
-// here for the levfaktura routes, which take a document the same way and have
-// no reason to judge one differently.
+// Reading one uploaded document off a multipart request: size limits, file type check and image
+// normalisation. Same checks as the receipt upload (api/expenses/[id]/receipts), shared with the levfaktura routes.
 import "server-only";
 
 import type { NextResponse } from "next/server";
@@ -22,11 +17,7 @@ export interface ReadDocument {
   byteSize: number;
 }
 
-/**
- * The file in the form's "file" field, ready to store, or the response that
- * says why not. Images come back normalised (rotated, downscaled, HEIC made
- * JPEG); a PDF comes back exactly as sent.
- */
+/** The file in the form's "file" field, ready to store, or the response saying why not. Images are normalised; a PDF is as sent. */
 export async function readDocumentUpload(
   req: Request,
 ): Promise<{ ok: true; doc: ReadDocument } | { ok: false; res: NextResponse }> {

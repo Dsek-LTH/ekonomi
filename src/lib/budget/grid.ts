@@ -1,15 +1,6 @@
-// Spreadsheet grid index for the budget sheets.
-//
-// Every budget uses the same fixed 3-column layout: Konto, Beskrivning and
-// Belopp (pinned last), which holds the equation itself. Column letters
-// (A, B, C) are assigned left-to-right.
-//
-// References are stored bound to the row identity *and the field key* (not the
-// letter), so they survive row reordering:
-//   cell value    →  @L<lineItemId>:<fieldKey>   (fieldKey = expression | x1…x6)
-//   account total →  account(<CC_CODE>, <ACCT_CODE>)
-// Both round-trip back to a live A1 coordinate through this grid. The evaluator
-// (lib/budget/eval.ts) understands both token forms.
+// Spreadsheet grid index for the budget sheets: fixed layout Konto, Beskrivning, Belopp, letters assigned left to right.
+// References are stored bound to row identity and field key (`@L<lineItemId>:<fieldKey>`, `account(<CC>, <ACCT>)`), so they survive
+// reordering. This grid converts them to and from A1.
 
 import { effectiveKind } from "@/lib/budget";
 
@@ -17,38 +8,30 @@ const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 type ColKind = "konto" | "text" | "number";
 
-// The six fixed general-purpose columns between Beskrivning and Belopp.
 export const EXTRA_COLUMN_KEYS = ["x1", "x2", "x3", "x4", "x5", "x6"] as const;
 
-// One column in the final, ordered layout.
 export interface ColumnDef {
   key: string; // field key: konto | beskrivning | expression | <columnId>
-  name: string; // header label
+  name: string;
   kind: ColKind; // konto = account-only; text = free string; number = formula cell (referenceable)
-  custom: boolean; // true for user-defined columns (key === columnId)
+  custom: boolean;
   sortOrder: number;
-  letter: string; // assigned by position
+  letter: string;
 }
 
-// The fixed layout: Konto, Beskrivning, Belopp. Belopp holds the equation
-// itself (e.g. "=2*TROJA_POLICY"), shown as "2 × TROJA_POLICY = 700", so the
-// old general-purpose breakdown columns (x1…x6) are no longer part of the grid.
-// A built-in's `name` is a key under `budget.col`, resolved by whichever sheet
-// draws the header; a custom column would carry the name someone typed.
+// The fixed layout: Konto, Beskrivning, Belopp (the equation). A built-in's `name` is a key under `budget.col`.
 const BUILTINS: Omit<ColumnDef, "letter">[] = [
   { key: "konto", name: "konto", kind: "konto", custom: false, sortOrder: 0 },
   { key: "beskrivning", name: "beskrivning", kind: "text", custom: false, sortOrder: 100 },
   { key: "expression", name: "expression", kind: "number", custom: false, sortOrder: 1_000_000 },
 ];
 
-// The full ordered column list, with letters assigned by position.
 export function orderedColumns(): ColumnDef[] {
   const merged = [...BUILTINS].sort((a, b) => a.sortOrder - b.sortOrder);
   return merged.map((c, i) => ({ ...c, letter: LETTERS[i] ?? "?" }));
 }
 
-// Map a built-in cell key to its A1 letter is done via the grid; the legacy
-// single-letter suffix (.C/.D/.E from before custom columns) maps here.
+// The legacy single-letter suffix (.C/.D/.E from before custom columns) maps here.
 function legacyField(s: string): string {
   return s === "C" ? "quantity" : s === "D" ? "unitPrice" : s === "E" ? "expression" : s;
 }
@@ -150,18 +133,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
   };
 }
 
-// What a cost-centre code may hold, kept in step with the format the settings
-// screen accepts (POST /api/cost-centers): letters (Å/Ä/Ö included, this is a
-// Swedish chart), digits, underscore and hyphen. A code the settings screen lets
-// someone create has to be nameable in a formula.
-//
-// Two spellings, because the hyphen is only unambiguous in one of them. Inside
-// `account(…)` the arguments are delimited, so it can be taken literally. In the
-// bare A1 form it cannot: `=SEX01-NARU!C4` is a subtraction far more often than
-// it is a sheet called SEX01-NARU, and reading it as the latter would quietly
-// change what the formula means. So a hyphenated sheet is reachable through
-// `account(…)` and not through A1, which fails visibly ("fel") rather than
-// wrongly.
+// What a cost-centre code may hold, in step with POST /api/cost-centers: letters (Å/Ä/Ö included), digits, underscore, hyphen.
+// The hyphen is unambiguous only inside `account(…)`: in bare A1, `=SEX01-NARU!C4` is a subtraction, so hyphenated sheets are reachable only through `account(…)`.
 const CODE = String.raw`[\p{L}\p{N}_-]+`;
 const A1_CODE = String.raw`[\p{L}\p{N}_]+`;
 
@@ -203,8 +176,7 @@ function tokenToA1(token: string, currentSheet: string, grid: BudgetGrid): strin
   return null;
 }
 
-// The hyphen stays out of the lookbehind on purpose: in `=5-SEX01!C4` the "-"
-// is the operator, and the reference after it still has to convert.
+// The hyphen stays out of the lookbehind: in `=5-SEX01!C4` the "-" is the operator.
 const A1_WORD = new RegExp(
   String.raw`(?<![\p{L}\p{N}_!])((?:${A1_CODE}!)?[A-Za-z]\d+)(?![\p{L}\p{N}_])`,
   "gu",
@@ -214,8 +186,7 @@ const TOKEN_WORD = new RegExp(
   "giu",
 );
 
-// What the user typed (A1) → what we store (field-bound tokens). Literals pass
-// through. An A1 word that doesn't resolve to a real cell is left as-is.
+// An A1 word that doesn't resolve to a real cell is left as-is.
 export function toStored(raw: string, currentSheet: string, grid: BudgetGrid): string {
   const s = raw.trim();
   if (!s.startsWith("=")) return s;
@@ -224,7 +195,6 @@ export function toStored(raw: string, currentSheet: string, grid: BudgetGrid): s
   );
 }
 
-// What we store (tokens) → what we show when editing (A1 coordinates).
 export function toDisplay(stored: string, currentSheet: string, grid: BudgetGrid): string {
   const s = stored.trim();
   if (!s.startsWith("=")) return s;

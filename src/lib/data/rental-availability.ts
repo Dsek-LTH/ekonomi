@@ -1,22 +1,12 @@
-// What the gear is already promised to, over a period.
-//
-// The query half of lib/contract/availability.ts, which holds the rule. Split
-// that way because the rule is arithmetic worth asserting on (four stands, two
-// contracts, one left) and the query is a join worth keeping out of it.
+// Query half of lib/contract/availability.ts, which holds the rule.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { freeOver, shortfalls, type Booking, type Shortfall } from "@/lib/contract/availability";
 import { isoDay } from "@/lib/domain/date";
 /**
- * Every catalogue line held over a period, as bookings the rule can read.
- *
- * The period is widened to whole days at both ends by the caller: these are
- * `@db.Date`-shaped questions asked of `DateTime` columns, and comparing the
- * ISO day strings is what keeps a timezone out of it.
- *
- * `exclude` is the contract being edited. Without it, amending a rental would
- * find its own lines and report the gear as taken by itself.
+ * Every catalogue line held over a period. The caller widens it to whole days (ISO day strings
+ * are compared to keep timezones out). `exclude` is the contract being edited.
  */
 async function bookingsOver(
   period: { from: string; to: string },
@@ -27,13 +17,9 @@ async function bookingsOver(
       itemId: { not: null },
       rental: {
         contract: {
-          // Every rental holds its gear, a draft included. The clash to prevent
-          // is two people drawing contracts for the same Saturday, and by the
-          // time both are signed it is too late to prevent anything.
+          // Every rental holds its gear, drafts included, to stop two contracts for the same day.
           ...(exclude ? { id: { not: exclude } } : {}),
         },
-        // Cheap pre-filter in Postgres. The exact overlap, including the early
-        // return below, is settled in the rule.
         pickupAt: { lte: new Date(`${period.to}T23:59:59.999Z`) },
         returnAt: { gte: new Date(`${period.from}T00:00:00.000Z`) },
       },
@@ -49,15 +35,11 @@ async function bookingsOver(
     itemId: r.itemId!,
     quantity: r.quantity,
     from: isoDay(r.rental.pickupAt),
-    // Gear that has already come back is free again from the day it came back,
-    // whatever the contract said. An early return that kept the slot booked
-    // would have the app refusing to lend out a Soundboks that is sitting on
-    // the shelf.
+    // Returned gear is free again from the day it came back, whatever the contract said.
     to: isoDay(r.rental.returnedAt ?? r.rental.returnAt),
   }));
 }
 
-/** How many of each catalogue item the section owns. */
 async function ownedCounts(): Promise<Map<string, number>> {
   const items = await prisma.rentalItem.findMany({
     select: { id: true, quantity: true },
@@ -65,14 +47,12 @@ async function ownedCounts(): Promise<Map<string, number>> {
   return new Map(items.map((i) => [i.id, i.quantity]));
 }
 
-/** One catalogue item, and how much of it is free over the asked-for period. */
 export interface Availability {
   itemId: string;
   owned: number;
   free: number;
 }
 
-/** What the rental form draws beside each option. */
 export async function getAvailability(
   period: { from: string; to: string },
   exclude?: string,
@@ -86,17 +66,8 @@ export async function getAvailability(
   }));
 }
 
-/**
- * Whether a contract's lines can be covered over its period.
- *
- * What the create and amend routes call before writing. Returns the items that
- * cannot be, so a refusal can name them rather than saying "something is
- * booked".
- */
 export async function checkAvailability(args: {
-  // `itemId` is optional as well as nullable, because that is how the request
-  // schema spells "this line is free text" and this is called straight from
-  // the parsed body.
+  // Optional as well as nullable: matches the request schema, called straight from the parsed body.
   lines: readonly { itemId?: string | null; quantity: number }[];
   period: { from: string; to: string };
   exclude?: string;
@@ -113,8 +84,6 @@ export async function checkAvailability(args: {
   return shortfalls({ requests, owned, bookings, period: args.period });
 }
 
-/** The names behind a shortfall, so a refusal can say "Soundboks" rather than
- *  a cuid. */
 export async function nameShortfalls(
   found: readonly Shortfall[],
 ): Promise<{ name: string; owned: number; booked: number; wanted: number }[]> {

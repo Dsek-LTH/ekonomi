@@ -1,14 +1,5 @@
 "use client";
 
-// Fetching a range: the three sources, the two dates, and the button.
-//
-// Two ways onto the screen, the same form in both. While there is nothing to
-// book it is the page (FetchPanel), because fetching is then the only thing
-// to do. Once there is, it is a dialog (FetchDialog) opened from the list's
-// own header: importing happens a few times a term and reading every day, so
-// the form stays out of the way until asked for, and opening it moves nothing
-// on the page. It used to be a card unfolded under a button on a toolbar row
-// of its own, which stood alone above the list and pushed it down.
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -21,32 +12,25 @@ import { DateInput, Field } from "@/components/ui/field";
 import { useFiscalYear } from "@/components/shell/fiscal-year-context";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
 
-/** What a fetch answers with. See api/income/batches. */
 interface FetchResult {
   batchId: string;
   created: number;
-  /** Drafts of the same days, from an earlier fetch, that this one replaced. */
   superseded: number;
   alreadyBooked: string[];
-  /** Days Fortnox already had a voucher for, which were not imported at all. */
   alreadyInFortnox: string[];
   fortnoxChecked: boolean;
   fortnoxCheckSkipped: "notConnected" | "seriesUnset" | "failed" | null;
 }
 
-/** The two ways a day comes in: fetched from Zettle, or read from a Swish file. */
 export type FetchSource = "ZETTLE" | "SWISH";
 
-/** The form inside a card, as the page, for when there is nothing to book. */
 export function FetchPanel({
   source,
   ready,
   title,
   subtitle,
 }: {
-  /** Which page this is on: a Zettle fetch, or a Swish upload. */
   source: FetchSource;
-  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
   title: string;
   subtitle: string;
@@ -59,15 +43,13 @@ export function FetchPanel({
   );
 }
 
-/** The form in a dialog, from the list's header. Closes itself once a fetch
- *  has gone through, since what it fetched is then on the list behind it. */
+/** The form in a dialog, from the list's header. Closes itself once a fetch has gone through. */
 export function FetchDialog({
   source,
   ready,
   onClose,
 }: {
   source: FetchSource;
-  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
   onClose: () => void;
 }) {
@@ -94,12 +76,9 @@ function FetchForm({
   onCancel,
 }: {
   source: FetchSource;
-  /** Nothing in the setup stands in the way of a fetch. See lib/income/setup.ts. */
   ready: boolean;
-  /** After a fetch that went through. */
   onDone?: () => void;
-  /** In a dialog: the form is then the dialog's body, with Avbryt beside the
-   *  button in its footer, the way every other dialog closes. */
+  /** In a dialog: the form is the dialog's body, with Avbryt beside the button in its footer. */
   onCancel?: () => void;
 }) {
   const t = useTranslations("income");
@@ -114,10 +93,7 @@ function FetchForm({
 
   const busy = pending === "fetch";
   const rangeSet = Boolean(from && to);
-  // The service is what reaches Zettle and renders; without it there is nothing
-  // to import. Said once, by the page, rather than as a failure on every button.
-  // Every day fetched becomes a report, so the range is kept to the year
-  // picked in the header, as the routes keep it.
+  // Without the service there is nothing to import: said once by the page. The range is kept to the year picked in the header, as the routes keep it.
   const offYear = (d: string) =>
     outsideFiscalYear(fiscalYear, d)
       ? tCommon("dateOutsideFiscalYear", { year: fiscalYearLabel(fiscalYear!) })
@@ -130,10 +106,7 @@ function FetchForm({
     if (!result) return;
     onDone?.();
     const parts = [t("summary.imported", { count: result.created })];
-    // Each of these is only worth a line when it happened, but always worth
-    // one then: a day that silently went missing looks like takings that
-    // vanished, and one that was quietly replaced looks like an import that
-    // did nothing.
+    // Each is worth a line when it happened: a day that silently went missing looks like vanished takings.
     if (result.superseded > 0) {
       parts.push(t("summary.superseded", { count: result.superseded }));
     }
@@ -143,8 +116,7 @@ function FetchForm({
     if (result.alreadyInFortnox.length > 0) {
       parts.push(t("summary.alreadyInFortnox", { count: result.alreadyInFortnox.length }));
     }
-    // Only when the check was meant to run and could not. Not being connected
-    // to Fortnox at all is a way this app is run, not news.
+    // Only when the check was meant to run and could not (not being connected to Fortnox is normal).
     if (result.fortnoxCheckSkipped === "failed") parts.push(t("summary.fortnoxCheckFailed"));
     // Connected, but with no series chosen there was nowhere to look.
     if (result.fortnoxCheckSkipped === "seriesUnset") {
@@ -167,8 +139,7 @@ function FetchForm({
     const params = new URLSearchParams({ from, to, filename: file.name });
     const result = await mutate<FetchResult>(`/api/income/batches/swish?${params}`, {
       key: "fetch",
-      // The CSV goes up as-is. It is ISO-8859-1, and the service is what knows
-      // that. Decoding it here would mangle every å, ä and ö in a message.
+      // The CSV goes up as-is: it is ISO-8859-1 and the service decodes it (decoding here would mangle å, ä, ö).
       body: file,
       contentType: "text/csv",
       error: t("fetchFailed"),
@@ -179,15 +150,6 @@ function FetchForm({
 
   const fields = (
     <>
-      {/* Sized on a wrapper rather than on the control: every field in the
-          app is `w-full` inside whatever holds it (see `control` in
-          components/ui/field.tsx), and `cn` joins classes rather than merging
-          them, a `w-40` passed to the input would leave both widths in the
-          class attribute for Tailwind's emission order to settle.
-
-          Ten characters wide, because that is what the mask allows and a
-          field that grew with the row would be mostly empty. Both the same,
-          because they are the two ends of one range. */}
       <div className="w-40">
         <Field label={t("fetch.from")} requirement="required" error={fromError}>
           <DateInput
@@ -254,11 +216,7 @@ function FetchForm({
   }
 
   return (
-    // One row on a laptop, wrapping on a narrow window: the four controls are
-    // one sentence: this source, these dates, go. Bottom-aligned, so the labels
-    // sit above a single line of controls rather than each field floating at
-    // its own height. A wider gap down the page than across it: when the row
-    // does wrap, the labels need clearing from the controls above them.
+    // One row on a laptop, wrapping on a narrow window; bottom-aligned so the labels sit above a single line of controls.
     <CardBody className="flex flex-wrap items-end gap-x-4 gap-y-5">
       {fields}
       {submit}

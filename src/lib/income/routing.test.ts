@@ -101,8 +101,6 @@ describe("routeZettleSales", () => {
     expect(keys).toEqual(["cafe", "sexet"]);
   });
 
-  // "s1 - Öl" must not be read as "s" followed by "1 - Öl", whichever order
-  // the prefixes happen to come in.
   it("prefers the longer of two overlapping prefixes, and takes its cost centre", () => {
     const [line] = oneDay([sale({ name: "s1 - Öl", unitPrice: 4000, total: 4000 })]).lines;
     expect(line).toMatchObject({ name: "Öl", account: "3011", costCenterId: "cc-pub" });
@@ -126,8 +124,6 @@ describe("routeZettleSales", () => {
     expect(days[0].lines.map((l) => l.unitKey)).toEqual(["sexet", "cafe"]);
   });
 
-  // The same product sold under two cost centres must stay two lines, or the
-  // voucher could not book them apart.
   it("does not merge lines that book to different cost centres", () => {
     const pub = table({
       prefixes: new Map([
@@ -176,9 +172,7 @@ describe("routeZettleSales", () => {
 
   it("makes a day of fees alone when nothing was sold", () => {
     const days = routeZettleSales(table(), [], [{ date: "2026-01-04", amount: 90 }], fee);
-    expect(days).toEqual([
-      expect.objectContaining({ date: "2026-01-04", total: -90 }),
-    ]);
+    expect(days).toEqual([expect.objectContaining({ date: "2026-01-04", total: -90 })]);
   });
 });
 

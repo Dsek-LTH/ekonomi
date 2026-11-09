@@ -1,19 +1,8 @@
-// The income pipeline's shapes: what the intakt service sends, and the days
-// the app routes those sales into.
-//
-// The wire half are hand-written counterparts to Go structs in another
-// repository (report.SaleLine, report.Fee and report.SwishPayment), so
-// nothing but care keeps them in step. The service rejects
-// unknown fields, so a name misspelled here fails loudly on the first request
-// rather than silently dropping a value.
-//
-// Every amount is öre, matching both the service and the database. Nothing here
-// is kronor.
+// The income pipeline's shapes. The wire types are hand-written counterparts to Go structs in the
+// intakt repository (report.SaleLine, report.Fee, report.SwishPayment) and the service rejects
+// unknown fields. Every amount is öre.
 
-/**
- * One sold line of a day, as routing leaves it: whose it was, where it books,
- * and what it adds to the clearing account. Amounts in öre.
- */
+/** One sold line of a day, as routing leaves it. Amounts in öre. */
 export interface IncomeDayLine {
   /** A sale, or one of Zettle's fees for the day. */
   kind: "SALE" | "FEE";

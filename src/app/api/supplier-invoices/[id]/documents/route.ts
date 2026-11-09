@@ -3,8 +3,7 @@
 // straight onto it (multipart, field "file"), or one taken from the Inkorg
 // (JSON, { documentId }).
 //
-// The same rule as changing the rest of it (canEditDocuments): the PDF is
-// what the attester signs for, so it cannot be changed while they read it.
+// Same rule as changing the rest of it (canEditDocuments): the PDF is what the attester signs for.
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -80,7 +79,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 }
 
-/** A document from the Inkorg onto this invoice. Triage's, since the Inkorg is. */
 async function attachFromInbox(req: Request, invoice: { id: string }, actorId: string) {
   const parsed = await parseBody(req, FromInbox);
   if (!parsed.ok) return parsed.res;

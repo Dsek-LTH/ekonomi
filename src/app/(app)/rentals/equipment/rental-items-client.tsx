@@ -1,18 +1,7 @@
 "use client";
 
-// Uthyrning → Utrustning. The gear the section lets out, what there is of it,
-// and what it costs to replace.
-//
-// The replacement value is why this screen exists. It is the figure the
-// liability clause of an uthyrningsavtal points at, and before there was a
-// catalogue it was whatever the person drawing the contract remembered, so the
-// same speaker went out at three different values. The quantity is why the
-// screen earns its keep twice: it is what availability is measured against, so
-// a wrong count here is a Soundboks promised to two people.
-//
-// A table rather than a list of label-and-value rows, because the point of
-// having them all on one screen is comparing them, and nothing compares when
-// the numbers do not line up. Editing is a dialog: see item-dialog.tsx.
+// Uthyrning → Utrustning: the gear the section lets out. The replacement value is what an uthyrningsavtal's liability clause
+// points at, and the quantity is what availability is measured against. Editing is a dialog: see item-dialog.tsx.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -29,13 +18,10 @@ import type { RentalItemRow } from "@/lib/data/rental-items";
 export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
   const t = useTranslations("contracts.items");
 
-  // Null means the dialog is closed; an item means edit; the "new" sentinel
-  // means add. Three states in one value, because they are one dialog and
-  // separate flags could disagree about which.
+  // Null means closed; an item means edit; the "new" sentinel means add.
   const [editing, setEditing] = useState<RentalItemRow | "new" | null>(null);
 
-  // The whole catalogue is on the page, so the table filters and sorts in the
-  // browser. Fifteen rows, not fifteen thousand.
+  // The whole catalogue is on the page, so the table filters and sorts in the browser.
   const controls = useTableControls({ sortKey: "name" });
 
   const columns: Column<RentalItemRow>[] = useMemo(
@@ -50,11 +36,6 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
         cell: (i) => (
           <span>
             <span className="flex flex-wrap items-center gap-2">
-              {/* The name is the control. DataTable rows are links, not
-                  buttons, and this one has to open a dialog rather than
-                  navigate, so the affordance sits on the words somebody would
-                  aim at anyway. That is one target per row instead of a pencil
-                  column repeating "editable" fifteen times. */}
               <Button
                 variant="link"
                 type="button"
@@ -86,8 +67,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
         mobile: "hide",
         value: (i) => i.dailyPriceOre ?? -1,
         sortable: true,
-        // A dash, not "0,00 kr": no standing price and free of charge are
-        // different answers, and the contract prints them differently.
+        // A dash, not "0,00 kr": no standing price and free of charge print differently on the contract.
         cell: (i) =>
           i.dailyPriceOre === null ? (
             <span className="text-muted">-</span>

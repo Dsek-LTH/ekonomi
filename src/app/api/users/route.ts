@@ -1,8 +1,5 @@
-// Member search for the person pickers in Inställningar → Användare.
-// Admin only: it exposes the section's member directory.
-//
-// There is deliberately no "list everyone" mode. The section has on the order
-// of a thousand members, and every screen that needs a person needs one person.
+// Member search for the person pickers in Inställningar -> Användare. Admin only. No "list everyone"
+// mode: the section has about a thousand members.
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { searchUsers } from "@/lib/data/users";

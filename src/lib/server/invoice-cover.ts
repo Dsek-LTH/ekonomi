@@ -1,14 +1,6 @@
-// The attest page that goes to Fortnox in front of a levfaktura's PDF: which
-// invoice, who attested each row and when, and who konterade and sent it.
-//
-// The utläggsräkning's counterpart, and for the same reason: the invoice
-// itself says what was bought, and this says who in the section agreed to pay
-// for it. Fortnox keeps the two together with the supplier invoice, so the
-// attest is part of the verifikat rather than something only this app knows.
-//
-// Typeset like the utläggsräkning, from a template drawn the same way
-// (invoice-cover/invoice-cover.typ), so the two read as one family in Fortnox.
-// pdf-lib then staples the invoice behind it (lib/server/pdf-merge.ts).
+// The attest page that goes to Fortnox in front of a levfaktura's PDF: who attested each row and when, and who
+// konterade and sent it. The utläggsräkning's counterpart, typeset the same way (invoice-cover/invoice-cover.typ),
+// then stapled by lib/server/pdf-merge.ts.
 import "server-only";
 
 import path from "node:path";
@@ -73,8 +65,7 @@ export interface InvoiceCoverData {
 /** The day in Stockholm, as an ISO date. A signature at 00:30 is that day's. */
 const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
 
-/** The page as the template draws it. Pure, so the wording can be tested
- *  without typesetting anything. */
+/** The page as the template draws it. Pure, so the wording can be tested. */
 export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
   return {
     reference: f.reference,
@@ -85,8 +76,7 @@ export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
     resultUnit: f.resultUnit,
     description: f.description,
     created: day(f.created),
-    // What the rows add up to, as on the utläggsräkning: this page is about
-    // what was attested, and the export has already checked it is the amount.
+    // What the rows add up to, as on the utläggsräkning.
     total: formatOreKr(
       f.rows.reduce((s, r) => s + r.amount, 0),
       { decimals: 2 },
@@ -104,12 +94,8 @@ export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
 }
 
 /**
- * What the page says about this invoice, read from it and its history. One
- * function for the export and for the panel, so the page a reader checks is
- * the page Fortnox gets.
- *
- * The export passes what it knows better: the supplier's name as Fortnox's
- * register has it, and the treasurer who is sending it right now.
+ * What the page says about this invoice, for both the export and the panel. The export passes what it knows
+ * better: the supplier's name as Fortnox has it, and the treasurer sending it.
  */
 export async function invoiceCoverFacts(
   invoice: LoadedInvoice,
@@ -124,7 +110,7 @@ export async function invoiceCoverFacts(
       },
       select: { id: true, name: true },
     }),
-    // Who konterade it: the last time it was, if it was done more than once.
+    // Who konterade it: the last time, if done more than once.
     prisma.supplierInvoiceEvent.findFirst({
       where: { invoiceId: invoice.id, type: "BOOKED" },
       orderBy: { createdAt: "desc" },
@@ -147,8 +133,7 @@ export async function invoiceCoverFacts(
     amount: invoice.amount ?? 0,
     description: invoice.description,
     resultUnit: invoice.resultUnit?.name ?? null,
-    // What each unit signed for: a single row is the whole invoice, a split
-    // names its shares.
+    // A single row is the whole invoice; a split names its shares.
     rows: invoice.allocations.map((a) => ({
       costCenter: a.costCenter.code,
       amount: (invoice.allocations.length === 1 ? invoice.amount : a.amount) ?? 0,

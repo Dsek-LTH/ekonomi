@@ -44,12 +44,7 @@ import {
 } from "./report-types";
 import { isoDay } from "@/lib/domain/date";
 
-// Month names come from the locale rather than a table of our own: they are
-// the one piece of wording here that Intl already knows in every language.
-//
-// Two lengths, because two places ask. A picker and a readout have room for
-// "September"; a chart's x axis has room for twelve labels and therefore for
-// none of them at that length.
+// Month names come from the locale (Intl). Two lengths: pickers/readouts have room for "September", an x axis does not.
 const monthName = (locale: string, monthIndex: number, long = true) =>
   new Date(Date.UTC(2000, monthIndex, 1)).toLocaleString(locale, {
     month: long ? "long" : "short",
@@ -58,11 +53,7 @@ const monthName = (locale: string, monthIndex: number, long = true) =>
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/**
- * Every month the financial year spans, as the days it covers. A broken
- * financial year can begin or end inside a month, so the first and last are
- * clipped to the year rather than assumed to be whole.
- */
+/** Every month the financial year spans, as the days it covers (a broken year's first and last are clipped). */
 function monthsOf(
   year: LedgerYear,
 ): { key: string; from: string; to: string; index: number; y: number }[] {
@@ -109,25 +100,17 @@ export default function LedgerClient({
 }: {
   fortnox: FortnoxStatus;
   costCenters: { code: string; name: string }[];
-  /**
-   * The header's räkenskapsår, the report's year. Changing it there refreshes
-   * the page, which remounts this (page.tsx keys it by the year), so the
-   * period and the cached rows start over for the new year. Null before any
-   * year is synced, and the server picks one.
-   */
+  /** The header's räkenskapsår. Changing it remounts this (page.tsx keys it by the year). Null before any year is synced. */
   fiscalYearId: number | null;
 }) {
   const t = useTranslations("ledger");
   const tCommon = useTranslations("common");
-  // Un-namespaced, for resolveApiError: the server's codes are absolute paths
-  // under `errors`, the same contract useMutation reads them by.
+  // Un-namespaced, for resolveApiError: server codes are absolute paths under `errors`.
   const tAll = useTranslations();
   const notify = useNotify();
   const { date, dateTime } = useFormat();
   const locale = useLocale();
-  // What the charts label a month with. Short and yearless on the axis, since
-  // the axis is one financial year and repeating it twelve times says nothing;
-  // full in a readout, which is read one at a time.
+  // Chart month labels: short and yearless on the axis, full in a readout.
   const chartMonthLabel = useCallback(
     (m: string, long = false) => {
       const [y, mm] = m.split("-");
@@ -141,71 +124,37 @@ export default function LedgerClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Held as state so it stays the same object for the life of the page, which
-  // is the year's (see fiscalYearId).
+  // State, so it is the same object for the life of the page (the year's, see fiscalYearId).
   const [initial] = useState<QueryState>(() => ({ ...INITIAL, year: fiscalYearId }));
   const [query, setQuery] = useState<QueryState>(initial);
   const [view, setView] = useState<ViewOptions>(EMPTY_VIEW);
 
-  /**
-   * Table or charts. The same report either way: everything the parameter panel
-   * decides applies to both, and switching does not re-ask the server for the
-   * report itself.
-   *
-   * The charts are their own fetch, made the first time somebody switches and
-   * not before. The report is already the slowest request in the app, and a
-   * second aggregate over the same table on every parameter change would be
-   * paid for by every reader, including the ones who never leave the table.
-   */
+  /** Table or charts over the same report. The charts are their own fetch, made the first time somebody switches. */
   const [mode, setMode] = useState<"TABLE" | "CHART">("TABLE");
 
-  // Per-account drill-down state.
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [rows, setRows] = useState<Record<string, RowView[]>>({});
   /**
-   * Which report the cached rows belong to.
-   *
-   * Bumped by `update`, which also empties the cache. Without it a drill-down
-   * still in flight when a filter changed would land afterwards and refill the
-   * cache it had just been cleared from, putting last period's transactions
-   * under an account in this one. Out-of-order responses between two accounts
-   * are already harmless, since each writes under its own key; this is about
-   * the report moving underneath them.
+   * Which report the cached rows belong to. Bumped by `update` (which empties the cache) so a drill-down in flight
+   * when a filter changed cannot refill the cache with last period's transactions.
    */
   const reportGeneration = useRef(0);
 
-  // Control changes can outpace the network; only the newest request may write
-  // to state, so a slow early one can't overwrite a fast later one.
+  // Only the newest request may write to state, so a slow early one cannot overwrite a later one.
   const latest = useRef(0);
 
-  // Whether the dates were last set by hand. The Period picker otherwise works
-  // out its choice from the dates, and a hand-typed range that happens to be a
-  // whole month would then snap back to naming that month, which is not what
-  // the person typing it chose. Cleared by picking a preset or another year.
+  // Whether the dates were last set by hand, so a hand-typed whole month does not snap back to naming that month.
+  // Cleared by picking a preset or another year.
   const [customPeriod, setCustomPeriod] = useState(false);
-  // The result report's figure columns. Their own state rather than part of
-  // the view: "Rensa" clears the search and the zero filter, and a reader's
-  // choice of columns is not a filter to be cleared with them.
+  // Their own state: "Rensa" clears the search and zero filter, not the column choice.
   const [columns, setColumns] = useState<ResultColumn[]>(["period"]);
 
-  // The panel and the report, sized to the window from lg so only the
-  // accounts scroll. See useFillViewport.
+  // The panel and report are sized to the window from lg so only the accounts scroll (useFillViewport).
   const fillRef = useFillViewport<HTMLDivElement>();
 
   /**
-   * The report itself, and the one fetch on this screen that is not a
-   * `useQuery`.
-   *
-   * It cannot be. The server clamps the period into the financial year and
-   * picks defaults, and the controls have to follow what it actually reported
-   * on, so the response writes back into `query`. Deriving the url from `query`
-   * as well would make that write a second request: the echo produces the same
-   * clamped values, so it would settle after one extra round trip rather than
-   * loop, but one extra round trip on the slowest request in the app, on every
-   * parameter change, is not a tidiness worth paying for.
-   *
-   * The trend fetch below has no such echo, which is exactly why it is
-   * declarative and this is not.
+   * The report itself: the one fetch here that is not a `useQuery`. The server clamps the period and picks defaults and
+   * the controls follow what it reported, so deriving the url from `query` would make that write-back a second request.
    */
   const load = useCallback(
     async (q: QueryState) => {
@@ -228,19 +177,16 @@ export default function LedgerClient({
         const res = await fetch(`/api/ledger/report?${params.toString()}`);
         const json = await res.json();
         if (id !== latest.current) return;
-        // Through resolveApiError, not `json.error` raw: that field carries a
-        // message *code*, and printing it put "auth.signedOut" on screen.
+        // Through resolveApiError: `json.error` is a message code ("auth.signedOut"), not text.
         if (!res.ok) throw new Error(resolveApiError(tAll, json) ?? t("loadFailed"));
         setData(json);
-        // The server clamps the period to the financial year and picks a default
-        // one, so the controls follow what it actually reported on.
+        // The server clamps the period and picks a default, so the controls follow what it reported on.
         setQuery((cur) => ({
           ...cur,
           year: json.year?.id ?? null,
           from: json.period?.from ?? null,
           to: json.period?.to ?? null,
-          // The server resolves which budget was used (the locked one unless
-          // asked otherwise), so the picker shows what was compared.
+          // The server resolves which budget was used (the locked one unless asked otherwise).
           budget: json.budget ?? null,
         }));
       } catch (e) {
@@ -254,18 +200,8 @@ export default function LedgerClient({
   );
 
   /**
-   * The same period, cut for the charts. See /api/ledger/trend.
-   *
-   * Declarative, unlike `load` above: this one asks a question and reports the
-   * answer, so the url *is* the state and `useQuery` can own the rest. It
-   * fetches when the charts are on screen and refetches when the parameters
-   * they describe move, which is also what stops a reader arriving back at the
-   * charts and seeing a picture of a period nobody is looking at.
-   *
-   * Null while the table is showing, or for a balansrapport: a balance sheet is
-   * a position rather than a period, and its "months" would be twelve copies of
-   * one balance. The charts view says so instead of drawing something
-   * meaningless.
+   * The same period, cut for the charts (/api/ledger/trend). Declarative: the url is the state, fetched when the charts
+   * are on screen and refetched when their parameters move. Null while the table shows or for a balansrapport.
    */
   const trendUrl = useMemo(() => {
     if (mode !== "CHART" || query.kind !== "RESULT" || query.year == null) return null;
@@ -283,16 +219,12 @@ export default function LedgerClient({
     error: trendError,
   } = useQuery<TrendResponse>(trendUrl, { error: "ledger.loadFailed", keepPrevious: false });
 
-  // load() does set state before it awaits, but on this first call it sets
-  // `loading` to true and `error` to null, which is what they already are, so
-  // React bails out and no extra render happens. The rule cannot see that the
-  // values match, hence the exemption rather than a restructure.
+  // load() sets `loading`/`error` to what they already are on this first call, so React bails out; the rule cannot see that.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load(initial);
   }, [load, initial]);
 
-  // The panel only exists once there is something to report on.
   const hasPanel = data != null && data.years.length > 0;
 
   // Anything the server decides refetches; the view options below don't.
@@ -300,34 +232,20 @@ export default function LedgerClient({
     setOpenKey(null);
     setRows({});
     reportGeneration.current++;
-    // Nothing to drop for the charts: their url is built from `query`, so a
-    // change of period makes it a different url and the fetch follows on its
-    // own, if and only if the charts are what is on screen.
+    // Nothing to drop for the charts: their url is built from `query`.
     const next = { ...query, ...patch };
-    // Summed or per cost centre is not a choice of its own: it follows from
-    // which cost centres are asked for. All of them reads as one report of the
-    // whole section, summed. Picking any, one or several or either bucket,
-    // means those are what is being looked at, so each gets its own card and
-    // heading, which also says what the report is of when there is only one.
+    // Summed or per cost centre follows from the cost centres asked for: all is one summed report, any means one card each.
     next.group = next.costCenters.length > 0 ? "SPECIFIED" : "SUMMED";
-    // A new year has its own months, so the period resets with it. The budget
-    // does not: any budget may be compared against any year, and one that was
-    // picked by hand, with its year on the label, is a choice to keep rather
-    // than to quietly undo. Leaving it null instead lets the server offer this
-    // year's own, which is what someone who never touched the picker wants.
+    // A new year has its own months, so the period resets. The budget does not: a hand-picked one is kept, null lets the
+    // server offer this year's.
     if (patch.year !== undefined && patch.year !== query.year) {
       next.from = null;
       next.to = null;
       setCustomPeriod(false);
     }
-    // A balansrapport has nothing these charts draw, so the toggle is not
-    // offered for one. Somebody standing in the charts when they switch report
-    // is put back in the table rather than left looking at a view that has
-    // stopped existing.
+    // A balansrapport has nothing the charts draw: put a viewer in the charts back in the table.
     if (next.kind !== "RESULT") setMode("TABLE");
-    // The result report takes last year as columns, not as its comparison. One
-    // switched over with "Föregående år" chosen keeps seeing last year: the
-    // comparison becomes the column that says the same.
+    // The result report takes last year as columns, not as its comparison: "Föregående år" becomes the column.
     if (next.kind === "RESULT" && next.compare === "PRIOR") {
       next.compare = "NONE";
       const withPrior: ResultColumn[] = columns.includes("prior") ? columns : [...columns, "prior"];
@@ -338,8 +256,7 @@ export default function LedgerClient({
     load(next);
   }
 
-  // A change of columns only goes back to the server when it changes whether
-  // last year is needed; the rest is the report already in hand, drawn again.
+  // A column change goes back to the server only when it changes whether last year is needed.
   function changeColumns(next: ResultColumn[]) {
     setColumns(next);
     const prior = needsPriorYear(next);
@@ -359,22 +276,16 @@ export default function LedgerClient({
         year: String(query.year),
         account: acct.account,
       });
-      // Per cost centre, the row is that one cost centre. Summed, it is every
-      // cost centre the report was filtered to, which with no filter is all.
+      // Per cost centre, the row is that cost centre; summed, every cost centre the report was filtered to.
       if (query.group === "SPECIFIED") params.set("costCenter", g.costCenterCode ?? "");
       else for (const cc of query.costCenters) params.append("costCenter", cc);
       if (query.from) params.set("from", query.from);
       if (query.to) params.set("to", query.to);
-      // A failed drill-down used to leave the row open and permanently empty,
-      // which reads as "there is nothing behind this account", the opposite of
-      // what happened. Say so instead; the row stays open so the retry is one
-      // more click on the same place.
+      // Say a failed drill-down failed (not "nothing behind this account"); the row stays open for a retry.
       try {
         const res = await fetch(`/api/ledger/rows?${params.toString()}`);
         const json = await res.json().catch(() => ({}));
-        // The report moved while this was in flight. Its rows describe a period
-        // nobody is looking at any more, and the failure of one is not worth
-        // reporting either.
+        // The report moved while this was in flight: its failure is not worth reporting.
         if (generation !== reportGeneration.current) return;
         if (!res.ok) {
           notify.error(resolveApiError(tAll, json) ?? t("rowsFailed"));
@@ -390,14 +301,8 @@ export default function LedgerClient({
 
   const selectedYear = data?.years.find((y) => y.id === query.year) ?? null;
 
-  // The Period picker: the whole year, each of its months, or a range of the
-  // reader's own. The dates below it are the truth; this names them, and
-  // picking one of its presets is a quicker way of setting them.
-  //
-  // Built every render, not memoised: picking a preset goes through `update`,
-  // which merges into the `query` of the render it was made in, so a kept copy
-  // would quietly undo whatever else changed since. Thirteen options is no
-  // work to rebuild.
+  // The Period picker names the dates below it. Built every render: a preset goes through `update`, which merges into
+  // the `query` of the render it was made in, so a memoised copy would undo later changes.
   const period = (() => {
     if (!selectedYear) return undefined;
     const months = monthsOf(selectedYear);
@@ -409,8 +314,7 @@ export default function LedgerClient({
       })),
       { value: CUSTOM, label: t("customPeriod") },
     ];
-    // Before the first answer the dates are unset, which the server reads as
-    // the whole year, so that is what the picker says too.
+    // Before the first answer the dates are unset, which the server reads as the whole year.
     const from = query.from ?? selectedYear.fromDate;
     const to = query.to ?? selectedYear.toDate;
     const value = customPeriod
@@ -441,11 +345,8 @@ export default function LedgerClient({
   const isBalance = query.kind === "BALANCE";
   const showComparison = data?.comparison !== "NONE" && data?.comparison != null;
   const comparisonLabel = data?.comparison === "BUDGET" ? t("budget") : t("priorYear");
-  // The column header stays short ("Budget"); everything that describes the
-  // report as a whole names the budget, since which one was compared against is
-  // the whole point of being able to choose. The year is part of the name here:
-  // the budget need not be this year's, and a report that says only "Budget -
-  // Ursprunglig" over a 2023 budget is a report that misleads.
+  // The column header stays short ("Budget"); the report as a whole names the budget with its year, since it need not
+  // be this year's.
   const compared = data?.budgets.find((b) => b.id === data.budget);
   const budgetName = compared && `${compared.year} - ${compared.name}`;
   const comparisonFull =
@@ -458,8 +359,7 @@ export default function LedgerClient({
     budgetName ? ` - ${budgetName}` : ""
   }`;
 
-  // Asked for a comparison the data can't supply. Say so rather than silently
-  // dropping the column.
+  // Asked for a comparison the data can't supply: say so rather than drop the column.
   const comparisonMissing =
     data != null && data.comparisonRequested !== "NONE" && data.comparison === "NONE";
 
@@ -467,8 +367,7 @@ export default function LedgerClient({
   // no charts to show is always the table, whatever was last switched to.
   const charting = mode === "CHART" && !isBalance;
 
-  // One description of the columns for every table in the report, so a cost
-  // centre's table, the next one's and the bottom line all agree.
+  // One description of the columns for every table in the report.
   const shape: Shape = {
     isBalance,
     showComparison,
@@ -483,9 +382,7 @@ export default function LedgerClient({
     ? t("lastSynced", { time: dateTime(selectedYear.lastSyncAt) })
     : null;
 
-  // One cost centre is named in full; several by their codes, which is what
-  // fits on the bar's summary line and in the printout's header.
-  // The two buckets read as words, in full or in a list.
+  // One cost centre in full; several by code (fits the bar and printout header). The two buckets read as words.
   const ccBucket = (code: string) =>
     code === "" ? t("noCostCenter") : code === "*" ? t("withCostCenter") : null;
   const ccName = (code: string) =>
@@ -521,51 +418,29 @@ export default function LedgerClient({
     );
   }
 
-  /**
-   * What is on screen, named for the heading on paper.
-   *
-   * Not the report kind on the charts. Somebody looking at five pictures of a
-   * period is not looking at a resultatrapport, and a line that opens by
-   * naming one is wrong before it reaches the facts that follow. The word is
-   * the one on the switch beside the title, so the page calls the thing you
-   * picked what it called it when you picked it.
-   */
+  /** What is on screen, named for the print heading: the charts are not a resultatrapport. The word matches the switch. */
   const documentTitle = charting
     ? t("charts.diagram")
     : isBalance
       ? t("balanceReport")
       : t("resultReport");
 
-  // The comparison clause is dropped on the charts unless it is a budget: a
-  // prior-year column is a real thing about the report and nothing the charts
-  // draw, so naming it here would describe a screen nobody is looking at.
+  // The comparison clause is dropped on the charts unless it is a budget (a prior-year column is not drawn there).
   const summaryComparison = charting ? data?.comparison === "BUDGET" : showComparison;
 
   return (
     <PageShell title={t("title")}>
-      {/* One slot, two cards. The parameters are not the same question in the
-          two views: most of the report's panel says nothing to a chart, and the
-          charts turn its three-way comparison into the one part of it they can
-          draw. Both write the same `QueryState`, so the period survives a
-          switch and the two views cannot end up describing different things.
-
-          From lg the panel is a column on the left that stays put while the
-          report scrolls, the way Fortnox lays out its resultat- and
-          balansrapport. Below lg it sits above the report. */}
+      {/* One slot, two cards sharing one `QueryState`. From lg the panel is a column left of the report; below lg it sits above. */}
       <div
         ref={fillRef}
         className={cn(
-          // -mb-14 takes back most of the 80px the shell keeps under every
-          // page: with nothing below the report to clear, it was a band of
-          // empty window under the one box that scrolls.
+          // -mb-14 takes back most of the 80px the shell keeps under every page.
           "lg:-mb-14",
-          // One or the other, never both: `cn` joins rather than merges, so
-          // `lg:flex` beside `lg:grid` would be settled by stylesheet order.
+          // One or the other, never both: `cn` joins rather than merges.
           hasPanel
             ? "lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-6"
             : "lg:flex lg:flex-col",
-          // `!` because the height is an inline style, which a plain class
-          // cannot beat, and a printout must not stop at the window's edge.
+          // `!` because the height is an inline style, and a printout must not stop at the window's edge.
           "print:block print:h-auto!",
         )}
       >
@@ -575,21 +450,8 @@ export default function LedgerClient({
             data-tour="ledger-params"
             className="mb-5 lg:mb-0 lg:h-full lg:overflow-y-auto lg:overscroll-contain print:hidden"
           >
-            {/* The panel's toolbar: what the settings below produce. The same
-              period as a table or as charts, and the file to take away. Here
-              rather than on a strip of PageShell's own above the report: that
-              strip held one toggle at its far end and was a band of empty
-              header across the whole page. Never in the band, where a toggle
-              reads as one more "whose" (docs/navigation.md).
-
-              The toggle is hidden for a balansrapport, which has no period
-              these charts draw. Hidden rather than left out, so the Export
-              menu beside it does not move when the report changes kind. One
-              menu rather than a button per format: which file is wanted is one
-              question. PDF goes through the browser's print dialog, where "Save
-              as PDF" is the destination; the printout below is laid out for
-              exactly that. CSV is the table's rows, so it is offered with the
-              table only. */}
+            {/* The panel's toolbar: period as table or charts, and Export (toggle hidden for a balansrapport so the menu does
+              not move). PDF goes through the browser's print dialog; CSV is the table's rows. */}
             <div className="mb-3 flex items-center justify-between gap-3" data-tour="ledger-tools">
               <Menu
                 label={t("export")}
@@ -649,17 +511,12 @@ export default function LedgerClient({
           </aside>
         )}
 
-        {/* A column that hands its leftover height to the report's scrollport.
-          `overflow-y-auto` is only a fallback: the charts are not a scrollport
-          of their own, and a tall chart view still has to be reachable. */}
+        {/* Hands its leftover height to the report's scrollport; `overflow-y-auto` is a fallback for the charts. */}
         <div className="min-w-0 lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto print:block print:overflow-visible">
           {error ? (
             <EmptyState title={t("loadFailed")} description={error} />
           ) : loading ? (
-            // Changing a parameter re-queries the whole report, which is the slowest
-            // fetch in the app. While it runs, the report's own skeleton stands in
-            // its scrollport: same columns, same headings, rows to come. The charts
-            // have no columns to borrow and keep the generic sheet.
+            // Re-querying shows the report's own skeleton (same columns); the charts keep the generic sheet.
             charting ? (
               <SkeletonSheet rows={14} columns={5} />
             ) : (
@@ -679,9 +536,7 @@ export default function LedgerClient({
               className="space-y-5 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"
               style={reportSurfaceVars(reportColumns(shape))}
             >
-              {/* On paper the panel is gone, so this is the only thing
-              that says what was printed. The charts' heading. The table prints
-              as a report of its own, in Fortnox's form, below. */}
+              {/* On paper the panel is gone, so this says what was printed (the charts' heading; the table prints its own). */}
               <div className={cn("hidden", charting && "print:block")}>
                 <h2 className="text-lg font-semibold">
                   {documentTitle}
@@ -702,9 +557,7 @@ export default function LedgerClient({
                 </p>
               </div>
 
-              {/* Above the branch: a comparison that could not be applied is as
-              true of the charts as of the table, and the charts pace against
-              exactly the budget this warns is missing. */}
+              {/* Above the branch: a missing comparison is as true of the charts as of the table. */}
               {comparisonMissing && (
                 <p className="text-sm text-warning">
                   {data.comparisonRequested === "BUDGET"
@@ -714,8 +567,7 @@ export default function LedgerClient({
                     : t("priorYearNotSynced")}
                 </p>
               )}
-              {/* Last year's columns asked for and nothing to fill them with. Said
-              outright, or the empty columns read as a year of zeroes. */}
+              {/* Last year's columns asked for with nothing to fill them: said outright, not as a year of zeroes. */}
               {!charting && data.priorAvailable === false && (
                 <p className="text-sm text-warning">{t("priorColumnsUnavailable")}</p>
               )}
@@ -724,8 +576,7 @@ export default function LedgerClient({
                 trendError ? (
                   <EmptyState title={t("charts.loadFailed")} description={trendError} />
                 ) : trendLoading || !trend ? (
-                  // The same skeleton the table uses, in the same place, so
-                  // switching views does not also change what waiting looks like.
+                  // The table's skeleton, so switching views does not change what waiting looks like.
                   <SkeletonSheet rows={10} columns={4} />
                 ) : (
                   <ReportCharts
@@ -764,10 +615,7 @@ export default function LedgerClient({
                     <EmptyNote size="page">{t("noRowsInPeriod")}</EmptyNote>
                   ) : (
                     <>
-                      {/* Every group card in one scrollport: the columns then line up
-                  across cost centres because they are laid out by the same
-                  grid, not because anything keeps them in step. From lg it is
-                  also the only thing on the page that scrolls. */}
+                      {/* Every group card in one scrollport, so columns line up structurally; from lg it is the page's only scroller. */}
                       <ReportScroller className="min-h-0 flex-1 print:hidden">
                         <div className="space-y-5">
                           {report.groups.map((g) => (

@@ -4,11 +4,8 @@ import { RENTAL_TERMS, TERMS_VERSION } from "./terms";
 import type { RentalContractData } from "./types";
 import { PDFDocument } from "pdf-lib";
 
-// The live preview draws the contract while the form is still being filled in,
-// so the template meets shapes the saved document never does: no dates, no
-// renter, no lines at all. Each of these used to be impossible by construction
-// and is now the ordinary state of the page for the first minute somebody is on
-// it, which makes them the cases most likely to break the template.
+// The live preview draws a half-filled form (no dates, renter or lines), the shapes most
+// likely to break the template.
 
 const empty: RentalContractData = {
   lessor: {
@@ -50,8 +47,7 @@ describe("the letterhead", () => {
   });
 
   it("renders with no address at all, so a missing SECTION entry cannot break it", async () => {
-    // lib/contract/section.ts is edited by hand, and a half-filled one must
-    // still produce a document rather than a stack trace.
+    // lib/contract/section.ts is edited by hand and a half-filled one must still render.
     expect(
       await pages({
         ...empty,

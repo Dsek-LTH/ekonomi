@@ -1,7 +1,4 @@
-// The plain-text drawing of an email, for clients that show no HTML and for
-// the log in development. Written by hand rather than derived from the HTML:
-// it says in words what the HTML says with colour ("(Återbetalning)" where the
-// HTML has a green amount), and spells out every link.
+// The plain-text drawing of an email, written by hand: it says in words what the HTML says with colour.
 import type { Block, Email } from "./types";
 
 function blockText(b: Block): string[] {

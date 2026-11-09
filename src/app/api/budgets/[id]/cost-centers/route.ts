@@ -8,10 +8,7 @@ import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { CreateSheet } from "@/lib/api/schemas/budget";
 
-// POST /api/budgets/[id]/cost-centers
-//   { costCenterId }: add a cost centre to the budget
-//   { cloneFromId }:  duplicate a sheet already in it, detached from any cost
-//                      centre (see cloneCostCenter)
+// Body is { costCenterId } or { cloneFromId } (a detached copy of a sheet already in this budget).
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: budgetId } = await ctx.params;
   const g = await allowBudgetWrite({ budget: budgetId });
@@ -26,8 +23,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       where: { id: cloneFromId },
       select: { budgetId: true },
     });
-    // Cloning out of another budget would sidestep that budget's own lock, and
-    // isn't what the button means.
+    // Cloning out of another budget would sidestep that budget's own lock.
     if (!source || source.budgetId !== budgetId) {
       return fail(404, "budget.sheetNotFound");
     }

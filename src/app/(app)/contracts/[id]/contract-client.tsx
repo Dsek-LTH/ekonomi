@@ -1,27 +1,7 @@
 "use client";
 
-// One contract, read beside the document it is about.
-//
-// The shape is the one every contract platform converges on, and the page did
-// none of it before: the document takes the panel on the right and the column
-// on the left describes it, status first, then the facts, then
-// the rental record, then the filing and the history. Actions are one group on
-// the status card rather than one per card.
-//
-// What changed, and why each one:
-//
-//   The document was a link in a list halfway down. It is the thing the page is
-//   about, so it is now in the receipt panel, which exists precisely to keep a
-//   document open beside the work (components/receipt/receipt-panel.tsx).
-//
-//   Whether it was signed was at the bottom, under the documents, inside the
-//   parties card. It is the first question anybody has, so it is the first
-//   thing on the page. See status-strip.tsx.
-//
-//   Four actions lived in four card headers and a delete sat at the very
-//   bottom, so doing anything meant hunting for where that verb had been put.
-//   They are one group now, on the header of the card that *is* the contract,
-//   which is where the utlägg page puts its own. See contract-actions.tsx.
+// One contract, read beside its document (receipt panel on the right). Left column: status, facts, rental record, filing
+// and history. Actions are one group on the status card (contract-actions.tsx).
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -65,17 +45,12 @@ export function ContractClient({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const hasSignedFiles = contract.files.some((f) => isSigned(f.role) || isImmutable(f.role));
-  // CONTRACT is the one kind that is an agreement with somebody: has a
-  // status and a validity period. PROTOCOL/OTHER carry none of
-  // that. See prisma/schema/contract.prisma.
+  // CONTRACT is the one kind with a status and validity period; PROTOCOL/OTHER carry none. See prisma/schema/contract.prisma.
   const isAgreement = contract.kind === "CONTRACT";
-  // Until somebody signs, a rental is changed on the form it was drawn on
-  // (contracts/[id]/edit), which redraws the document. See canEditRental.
+  // Until signed, a rental is changed on the form it was drawn on, which redraws the document. See canEditRental.
   const rentalEditable = contract.rental !== null && canEditRental(contract);
 
-  // Which kind of file the picker was opened for. A ref rather than state: it
-  // is set the moment before the picker opens and read when it closes, and
-  // nothing on screen depends on it.
+  // Which kind of file the picker was opened for. A ref: nothing on screen depends on it.
   const uploadRole = useRef<"SIGNED" | "ORIGINAL">("ORIGINAL");
 
   function pick(role: "SIGNED" | "ORIGINAL") {
@@ -93,8 +68,7 @@ export function ContractClient({
   async function removeFile(fileId: string, filename: string, signed: boolean) {
     const ok = await confirm({
       title: t("detail.deleteFile"),
-      // Removing the signed copy is allowed, since a wrong upload has to be
-      // fixable, but it changes what the contract is, so it says so.
+      // Removing the signed copy is allowed (a wrong upload must be fixable) but it changes the contract, so it says so.
       message: signed
         ? t("detail.deleteSignedFileConfirm", { filename })
         : t("detail.deleteFileConfirm", { filename }),
@@ -136,18 +110,14 @@ export function ContractClient({
       back={contract.rental ? "/rentals" : "/contracts"}
       width="content"
     >
-      {/* The contract itself, in the panel that exists for reading a document
-          beside the work. Which files and in what order is one decision, made
-          in lib/contract/document-url.ts so this page and any other that shows
-          a contract cannot disagree about it. */}
+      {/* The contract itself; which files and in what order is decided in lib/contract/document-url.ts. */}
       <ReceiptPanelSource
         documents={contractDocuments(contract)}
         emptyTitle={t("detail.documents")}
         emptyDescription={t("detail.noDocuments")}
       />
 
-      {/* Lives here rather than beside a button, so the same input serves the
-          header menu and the documents card below. */}
+      {/* One input serves the header menu and the documents card. */}
       <input
         ref={fileRef}
         type="file"
@@ -162,10 +132,7 @@ export function ContractClient({
       />
 
       <div className="space-y-5">
-        {/* The status pill and the action menu, one card: only CONTRACT has
-            a status to show. A lean document
-            (PROTOCOL, OTHER) is filed or it doesn't exist, with nobody to
-            sign it, so its actions ride the details card below instead. */}
+        {/* Only CONTRACT has a status; a lean document's actions ride the details card below. */}
         {isAgreement && (
           <StatusStrip
             contract={contract}
@@ -206,10 +173,7 @@ export function ContractClient({
           </>
         )}
 
-        {/* Uppgifter, for a lean document (PROTOCOL, OTHER) only. An agreement
-            says who it is with and for when on the status card above, and this
-            card used to say it a second time. A lean document has no status
-            card, so its facts and its action menu are here. */}
+        {/* Uppgifter, for a lean document (PROTOCOL, OTHER) only: it has no status card, so its facts and actions are here. */}
         {!isAgreement && (
           <Card>
             <CardHeader
@@ -238,8 +202,6 @@ export function ContractClient({
                 <Fact label={t("form.date")}>
                   {contract.date ? date(contract.date) : t("validity.none")}
                 </Fact>
-                {/* Null for PROTOCOL always, and for an OTHER that named
-                    nobody. */}
                 {contract.counterparty && (
                   <Fact label={t("col.counterparty")}>
                     <span className="block">{contract.counterparty}</span>
@@ -291,10 +253,6 @@ export function ContractClient({
           </CardBody>
         </Card>
 
-        {/* The filing, as small print under the contract rather than a card
-            competing with it: who put it in the archive and when, which wording
-            of the terms a drawn contract used, and whatever tags and notes
-            somebody left for the next reader. */}
         <footer className="space-y-3 px-1 text-xs text-muted">
           <p>
             {[
@@ -329,8 +287,7 @@ export function ContractClient({
   );
 }
 
-/** The archive fields, as a dialog opened from "Ändra" in the actions menu,
- *  the way every record with several fields is edited. */
+/** The archive fields, as a dialog opened from "Ändra" in the actions menu. */
 function EditDialog({ contract, onClose }: { contract: ContractDetail; onClose: () => void }) {
   const t = useTranslations("contracts");
   const { mutate, pending } = useMutation();
@@ -338,12 +295,8 @@ function EditDialog({ contract, onClose }: { contract: ContractDetail; onClose: 
   const [title, setTitle] = useState(contract.title);
   // CONTRACT is the one kind with a period and a status; see Contract.agreement.
   const isAgreement = contract.kind === "CONTRACT";
-  // Everything but a meeting's minutes may name who it is with, required for
-  // CONTRACT and optional for OTHER; see AgreementDetails.counterparty.
-  // A rental states who it is with and when on its own form, which redraws the
-  // document. The same fields here as well would let the row and the PDF say
-  // different things, so for a rental this is only the filing: title, tags
-  // and notes.
+  // Everything but a meeting's minutes may name who it is with (required for CONTRACT, optional for OTHER). A rental
+  // states that on its own form, so here it is only the filing: title, tags and notes.
   const isRental = contract.rental !== null;
   const showCounterparty = contract.kind !== "PROTOCOL" && !isRental;
   const [counterparty, setCounterparty] = useState(contract.counterparty ?? "");
@@ -353,14 +306,12 @@ function EditDialog({ contract, onClose }: { contract: ContractDetail; onClose: 
   const [city, setCity] = useState(contract.counterpartyCity ?? "");
   const [validFrom, setValidFrom] = useState(contract.validFrom ?? "");
   const [validTo, setValidTo] = useState(contract.validTo ?? "");
-  // The one date a lean document (PROTOCOL, OTHER) carries in place of the
-  // period above.
+  // The one date a lean document carries in place of the period.
   const [date, setDate] = useState(contract.date ?? "");
   const [tags, setTags] = useState(contract.tags.join(", "));
   const [notes, setNotes] = useState(contract.notes ?? "");
 
-  // An emptied date field clears the column; a half-typed one is left alone,
-  // which is what `undefined` means to the patch schema.
+  // An emptied date field clears the column; a half-typed one is left alone (`undefined` to the patch schema).
   const dateField = (v: string) => (v === "" ? null : isCompleteDate(v) ? v : undefined);
 
   async function save() {
@@ -368,10 +319,7 @@ function EditDialog({ contract, onClose }: { contract: ContractDetail; onClose: 
       method: "PATCH",
       body: {
         title: title.trim(),
-        // Omitted rather than sent empty for OTHER: the field is optional
-        // there, and the patch schema's `counterparty` cannot be blanked
-        // (see UpdateContract), so an untouched empty field must mean
-        // "leave it" rather than "clear it".
+        // Omitted rather than sent empty for OTHER: `counterparty` cannot be blanked (see UpdateContract), so empty means "leave it".
         ...(showCounterparty && counterparty.trim() !== ""
           ? { counterparty: counterparty.trim() }
           : {}),

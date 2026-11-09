@@ -1,9 +1,4 @@
-// Reading the stock: the products, the shelf, and the log.
-//
-// The shelf is not a column. It is `SUM()` over the log, because the log is the
-// record and anything kept beside it could disagree with it. See
-// lib/stock/onhand.ts. The grouped aggregate does the replay in Postgres so a
-// year of movements never crosses the wire to be added up in Node.
+// The shelf is `SUM()` over the log, grouped in Postgres so a year of movements never crosses the wire (lib/stock/onhand.ts).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -26,31 +21,23 @@ export interface StockProductDto {
   unitMl?: number;
   nominalMl?: number;
   costPriceOre?: number;
-  /** How long it keeps from delivery, in whole months. Absent where nobody has
-   *  said, and on everything that does not go off. See lib/stock/expiry.ts. */
+  /** Months it keeps from delivery. Absent where unsaid and for things that do not go off (lib/stock/expiry.ts). */
   shelfLifeMonths?: number;
   ean?: string;
   /** Systembolaget's article number. See lib/stock/systembolaget.ts. */
   systembolagetId?: string;
-  /** Free labels, cleaned and sorted. Always a list, empty when the product
-   *  carries none: an absent array would be a second way of saying that, and
-   *  every reader would have to know both. See lib/stock/tags.ts. */
+  /** Free labels, cleaned and sorted. Always a list, never absent (lib/stock/tags.ts). */
   tags: string[];
 }
 
-/** A product with what is on the shelf, which is the only way a screen wants it. */
 export interface StockLevelDto extends StockProductDto {
   onHand: OnHand;
-  /** Stock that cannot be: negative, or liquid with no bottle. Always a
-   *  bookkeeping fault rather than a fact; the overview says so. */
+  /** Stock that cannot be (negative, or liquid with no bottle): a bookkeeping fault, which the overview says. */
   impossible: boolean;
 }
 
-/** Null becomes absent. A DTO field that is not there reads better than one
- *  that is there holding nothing. */
 const opt = <T>(v: T | null): T | undefined => v ?? undefined;
 
-/** Every product the bar keeps. There is no second kind. */
 export async function getStockProducts(): Promise<StockProductDto[]> {
   const rows = await prisma.stockProduct.findMany({
     orderBy: [{ name: "asc" }],
@@ -86,18 +73,8 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
 }
 
 /**
- * Every product with what is on the shelf of it.
- *
- * The shelf is not a column: it is `SUM()` over the log, grouped in Postgres so
- * a year of movements never crosses the wire to be added up in Node. See
- * lib/stock/onhand.ts for why nothing is stored.
- *
- * `asOf` cuts the sum off at the end of a day, which is what makes "what did we
- * hold in May" answerable at all: the same replay, stopped earlier. It reads
- * the log as it is now understood rather than as it read at the time. A
- * delivery corrected last week changes what May turns out to have held, and
- * that is the point of correcting it. What the books *said* on a day is a
- * different question, and one nothing here claims to answer.
+ * Every product with what is on the shelf of it. `asOf` stops the replay at the end of a day, reading the log
+ * as understood now (a delivery corrected last week changes what May held), not as the books said then.
  */
 export async function getStockLevels(asOf?: string): Promise<StockLevelDto[]> {
   const upTo = asOf ? { occurredAt: { lte: new Date(asOf) } } : undefined;
@@ -145,52 +122,33 @@ interface StockLogPartDto {
 }
 
 /**
- * One line of the log.
- *
- * A night's worth of one product, or a single delivery or stocktake. Grouped
- * that way because the log is read at a glance and what a reader wants from it
- * is what the stock did (*Onsdagspub, Absolut Vodka, three bottles down*)
- * rather than the six rows a spirit's rungs and directions come to. What those
- * rows were is in `parts`, a chevron away.
- *
- * Who did it is deliberately not here. That question is answered by
- * `getStockChanges`, read as a feed on the event and on the product, because
- * a line covering several movements has no single author and pretending
- * otherwise was how the two readings kept colliding.
+ * One line of the log: a night's worth of one product, or a single delivery or stocktake. The rows are in
+ * `parts`. Who did it is not here: a line covering several movements has no single author (see `getStockChanges`).
  */
 export interface StockLogRowDto {
   id: string;
   productId: string;
   productName: string;
   productKind: StockKind;
-  /** Set when the line is a night's worth of movements for one product. */
   eventId?: string;
   tagName?: string;
-  /** Set when the line is a single delivery, stocktake or correction. */
   kind?: StockEntryKind;
-  /** Signed, in whole things: what the line did to the shelf. */
   units: number;
   open: { 80: number; 60: number; 40: number; 20: number };
   /** How many things were dropped. Moves no stock. See the schema. */
   spilledQty: number;
-  /** What it did to the value of the stock, in öre. */
   valueDeltaOre: number;
-  /** The day it happened, and the day it was written down. Both, because the
-   *  gap between them is the sort of thing an inspection asks about. */
+  /** The day it happened and the day it was written down. */
   occurredAt: string;
   recordedAt: string;
   actorName: string;
   note?: string;
   expenseId?: string;
   expenseReference?: string;
-  /** What a night's line is made of, in reading order. */
   parts?: StockLogPartDto[];
   /**
-   * Whether this row is a stocktake, which is corrected by counting again.
-   *
-   * Everything else is its author's to change, count or no count: a count
-   * states what was on the shelf on a day, and its own difference is worked out
-   * again on every change, so nothing before it can move anything after it.
+   * Whether this row is a stocktake, corrected by counting again. Everything else is its author's to change:
+   * a count's difference is recomputed on every change, so nothing before it moves anything after it.
    */
   locked?: boolean;
 }
@@ -198,7 +156,6 @@ export interface StockLogRowDto {
 interface StockLogFilter {
   productIds?: string[];
   kinds?: StockEntryKind[];
-  /** One event's rows, which is how an event's page links into the log. */
   eventId?: string;
   /** Inclusive, `YYYY-MM-DD`. */
   from?: string;
@@ -206,20 +163,11 @@ interface StockLogFilter {
   take?: number;
 }
 
-/**
- * The log, newest first.
- *
- * By `occurredAt` and then by `createdAt`: several movements share a date all
- * the time, a night's servings are all that Friday, and the order they were
- * written in is the only thing that distinguishes them. Without the second key
- * the list would reshuffle between two loads of the same page.
- */
+/** The log, newest first by `occurredAt` then `createdAt` (movements share dates, so the second key keeps the order stable). */
 export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLogRowDto[]> {
   const rows = await prisma.stockEntry.findMany({
     where: {
-      // Several of each, because a reader narrowing a log is usually excluding
-      // rather than picking: "the two beers" or "everything except stocktakes".
-      // An empty list is no filter at all, not a filter matching nothing.
+      // Several of each, since narrowing a log is usually excluding. An empty list is no filter.
       productId: filter.productIds?.length ? { in: filter.productIds } : undefined,
       kind: filter.kinds?.length ? { in: filter.kinds } : undefined,
       eventId: filter.eventId,
@@ -255,15 +203,11 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
     },
   });
 
-  // ── One line per thing that happened ──
-  //
-  // A night's movements of one product are one line; a delivery or a stocktake
-  // is its own. Grouped here rather than on the screen so the figures a reader
-  // sees and the figures anything else computes come from the same fold.
+  // One line per thing that happened: a night's movements of one product, or a delivery/stocktake. Grouped
+  // here so the figures shown and computed come from one fold.
   const lines: StockLogRowDto[] = [];
   const nights = new Map<string, StockLogRowDto>();
-  // A stocktake of a spirit states a figure per rung, so it is several rows
-  // saying one thing. Gathered the same way a night is, for the same reason.
+  // A spirit stocktake states a figure per rung (several rows, one thing): gathered like a night.
   const counts = new Map<string, StockLogRowDto>();
 
   for (const r of rows) {
@@ -327,8 +271,7 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
     const key = `${r.eventId}|${r.productId}`;
     let line = nights.get(key);
     if (!line) {
-      // Rows arrive newest first, so the first one seen is the one whose date
-      // and author the line carries.
+      // Rows arrive newest first, so the first seen carries the line's date and author.
       line = {
         ...base,
         id: key,
@@ -364,19 +307,16 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
     });
   }
 
-  // Out, then in, then spill; whole things before the ladder. The order a
-  // person reads a night in, rather than the order rows were written.
+  // Out, then in, then spill; whole things before the ladder (the order a night is read in).
   const order: Record<string, number> = { CHECKOUT: 0, RETURN: 1, WASTE: 2 };
   for (const line of nights.values()) {
     line.parts!.sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9) || a.level - b.level);
   }
-  // A count reads whole things first, then down the ladder, the order somebody
-  // walks a shelf in.
+  // A count reads whole things first, then down the ladder (the order a shelf is walked).
   for (const line of counts.values()) line.parts!.sort((a, b) => a.level - b.level);
   return lines;
 }
 
-/** One thing somebody did to a stock row. */
 export interface StockChangeDto {
   id: string;
   action: "CREATE" | "UPDATE" | "DELETE";
@@ -393,22 +333,9 @@ export interface StockChangeDto {
 }
 
 /**
- * Who did what, read either by event or by product.
- *
- * The other half of the log, and deliberately a separate one. The ledger says
- * what the stock did; this says who made it say that, including the things
- * that turned out not to have happened at all, which the ledger no longer
- * carries because they were mistakes rather than movements.
- *
- * Keyed both ways because the two questions are asked in different places. "What
- * happened at Onsdagspub" belongs on the event. "Why does Fireball say 20"
- * belongs on the product, and a delivery has no event to ask it from.
- *
- * `onlyEdits` is what keeps the product page from saying everything twice. An
- * event has no other list of its movements, so it shows the whole feed; a
- * product has one right beside this, and a creation row there is the movement
- * next to it restated. What is left is the corrections, which is the question
- * that list cannot answer.
+ * Who did what, read by event or by product: the other half of the log, including entries later found mistaken
+ * (which the ledger no longer carries). `onlyEdits` omits creation rows, which would restate the movement list
+ * beside it on the product page.
  */
 export async function getStockChanges(
   filter: { eventId?: string; productId?: string; take?: number; onlyEdits?: boolean } = {},
@@ -418,9 +345,7 @@ export async function getStockChanges(
     where: {
       eventId: filter.eventId,
       productId: filter.productId,
-      // A row being made is the movement itself, said twice. Where the reader
-      // already has a list of movements beside this one (the product page),
-      // only what happened to them *afterwards* is new information.
+      // A creation row restates the movement; where a movement list sits beside this one, only later edits are new.
       action: filter.onlyEdits ? { in: ["UPDATE", "DELETE"] } : undefined,
     },
     orderBy: { at: "desc" },
@@ -456,21 +381,16 @@ export async function getStockChanges(
   }));
 }
 
-// ── Events ──────────────────────────────────────────────────────────
-
 export interface StockEventDto {
   id: string;
   name: string;
   date: string;
-  /** How many movements have been booked on it. */
   entries: number;
-  /** How many products it has touched. */
   products: number;
   /** What it sold, in öre, at the average the log carries. */
   soldValueOre: number;
 }
 
-/** What one product did on one event. */
 interface TagLineDto {
   productId: string;
   productName: string;
@@ -482,11 +402,7 @@ interface TagLineDto {
   sold: number;
   /** What the sold quantity cost, in öre, at the average the log carries. */
   soldValueOre: number;
-  /**
-   * What each of the product's cells reads, keyed `${kind}|${level}`, the
-   * grid's own coordinates, see lib/stock/cells.ts. Only cells something has
-   * been booked on appear; the sheet reads a missing one as nought.
-   */
+  /** Cell readings keyed `${kind}|${level}` (lib/stock/cells.ts). Only cells with bookings appear; a missing one reads as nought. */
   cells: Record<string, number>;
 }
 
@@ -494,7 +410,6 @@ export interface StockEventDetailDto extends StockEventDto {
   lines: TagLineDto[];
 }
 
-/** The columns of the entry table this file needs to fold an event. */
 const TAG_ENTRY = {
   kind: true,
   units: true,
@@ -525,13 +440,7 @@ const asMovement = (r: TagRow): TagMovement => ({
   level: r.level,
 });
 
-/**
- * What a bottle of each of these products costs, at the moving average.
- *
- * The whole log, not the event's part of it: a night's cost of goods is not a
- * different question from what the shelf is worth. See lib/stock/value.ts for
- * why the unit cost is worked out rather than stored.
- */
+/** Cost of a bottle of each product at the moving average, over the whole log (lib/stock/value.ts). */
 async function unitCosts(productIds: string[]): Promise<Map<string, number>> {
   if (productIds.length === 0) return new Map();
   const values = await prisma.stockEntry.groupBy({
@@ -558,15 +467,8 @@ const soldValue = (
 };
 
 /**
- * The events, most recent first.
- *
- * Recent first because the one being registered against is nearly always the
- * last one made. A pub is entered the evening it runs, or the Monday after.
- *
- * Every event's arithmetic is folded here rather than on the row that opens it,
- * so the list can say what a night sold. Two queries for the whole page: the
- * movements of every event shown, and the unit cost of every product they
- * touched.
+ * The events, most recent first (the one being registered against is nearly always the latest). Every event's
+ * arithmetic is folded here in two queries: all movements shown, and each touched product's unit cost.
  */
 export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
   const events = await prisma.stockEvent.findMany({
@@ -617,14 +519,7 @@ export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
   });
 }
 
-/**
- * One event, with what it moved per product and what each of its cells reads.
- *
- * The cells are the sheet's whole state. They are sums over the log rather than
- * anything stored. A cell is one column of the entry table scoped to a
- * product, a kind and a rung, so what the grid shows and what the ledger holds
- * cannot drift apart, and editing a cell is a difference written to the log.
- */
+/** One event, with what it moved per product and what each cell reads. Cells are sums over the log, never stored. */
 export async function getStockEvent(id: string): Promise<StockEventDetailDto | null> {
   const event = await prisma.stockEvent.findUnique({
     where: { id },
@@ -648,9 +543,7 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
   }
   const costs = await unitCosts([...byProduct.keys()]);
 
-  // Every cell of the event at once, then handed out per product below. The same
-  // fold the sheet's confirm goes through, so the figure somebody types against
-  // is the figure the server will check them against.
+  // Every cell of the event at once, by the same fold the sheet's confirm uses, so a typed figure is checked against the same figure.
   const cells = cellTotals(
     entries.map((e): CellRow => ({
       productId: e.product.id,
@@ -693,21 +586,9 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
   };
 }
 
-// ── The product's own two histories ────────────────────────────────────────
-//
-// A product has been through two entirely different sorts of thing, and the
-// page used to show them as one list because the database stores them in one
-// table. They are not one question. What a product did *at nights* is a
-// consumption story, naturally told per event and in the shape of the event
-// sheet. What happened to it *in the cellar*, bought, counted, corrected, is
-// a chronological list of deliberate acts with nothing to do with each other.
-//
-// Splitting them this way also settles where a correction belongs, which no
-// amount of filtering one merged list ever did: a correction to a night's
-// figure hangs off that night, and a correction to a delivery sits beside the
-// delivery.
+// The product's own two histories: nights (consumption, per event) and the cellar (deliveries, counts,
+// corrections). A correction to a night hangs off that night; one to a delivery sits beside the delivery.
 
-/** What one product did on one event, with whatever was later changed about it. */
 export interface ProductEventDto {
   eventId: string;
   tagName: string;
@@ -717,18 +598,12 @@ export interface ProductEventDto {
   back: number;
   spilled: number;
   sold: number;
-  /** Corrections made to this product's figures on this event, newest first. */
   changes: StockChangeDto[];
 }
 
 /**
- * Every event this product has any record on, newest first.
- *
- * Records, not movements. A night whose figures were entered and then removed
- * has nothing left in the ledger, correctly, since nothing happened, but
- * somebody did do that, and a row that vanished would take the only trace of it
- * with it. Such a night appears with nothing in its columns and the story
- * behind its chevron.
+ * Every event this product has any record on, newest first. Records, not movements: a night whose figures were
+ * entered then removed has nothing in the ledger but keeps its row and story.
  */
 export async function getProductEvents(productId: string): Promise<ProductEventDto[]> {
   const [entries, changes, product] = await Promise.all([
@@ -736,8 +611,7 @@ export async function getProductEvents(productId: string): Promise<ProductEventD
       where: { productId, eventId: { not: null } },
       select: { ...TAG_ENTRY, eventId: true, event: { select: { name: true, date: true } } },
     }),
-    // Edits only. A row being created is the figure the row already shows, and
-    // a chevron restating it is the duplication this split exists to end.
+    // Edits only: a creation row is the figure the row already shows.
     getStockChanges({ productId, take: 200, onlyEdits: true }),
     prisma.stockProduct.findUnique({
       where: { id: productId },
@@ -768,36 +642,27 @@ export async function getProductEvents(productId: string): Promise<ProductEventD
     ...tagTotals(product, (rows.get(eventId) ?? []).map(asMovement)),
     changes: onTag.get(eventId) ?? [],
   }));
-  // Newest night first. An event known only from a change has no date of its own
-  // here, and sorts last, which is where a night nothing is booked on belongs.
+  // Newest night first; an event known only from a change has no date and sorts last.
   out.sort((a, b) => b.date.localeCompare(a.date) || a.tagName.localeCompare(b.tagName, "sv"));
   return out;
 }
 
-/** One thing that happened to the product in the cellar. */
 export interface CellarRowDto {
   id: string;
-  /** When it was written down. The order these appeared in. */
   at: string;
   /** The day it happened. Absent on a correction, which happened when it happened. */
   occurredAt?: string;
   kind: StockEntryKind;
   actorName: string;
-  /** Set on a correction: what the figure was, and what it became. */
   from?: number;
   to?: number;
-  /** Set on a movement: what it did to the shelf. */
   units?: number;
   open?: { 80: number; 60: number; 40: number; 20: number };
   /**
-   * Which rung the row is about: 0 for a whole thing, or one of the four.
-   *
-   * Carried so the correction dialog can read back the figure somebody typed.
-   * A write-off of an opened bottle moves nothing but its rung, so `units` is
-   * nought on it and a dialog reading only that would offer to correct a zero.
+   * Which rung the row is about: 0 for a whole thing, or one of the four. A write-off of an opened bottle moves only
+   * its rung (`units` is nought), so the correction dialog needs this.
    */
   level?: number;
-  /** On a stocktake: what was counted, per rung. */
   counted?: { level: number; qty: number }[];
   valueDeltaOre?: number;
   note?: string;
@@ -805,14 +670,7 @@ export interface CellarRowDto {
   fixable: boolean;
 }
 
-/**
- * Deliveries, stocktakes and corrections to them, most recently written first.
- *
- * Ordered by when each was recorded rather than by the day it is about, because
- * that is the order somebody is reconstructing: a delivery entered on Monday
- * for Friday, and put right on Tuesday, reads in the order those three things
- * happened to the record.
- */
+/** Deliveries, stocktakes and corrections to them, by when each was recorded (the order a record is reconstructed in). */
 export async function getProductCellar(productId: string): Promise<CellarRowDto[]> {
   const [entries, changes] = await Promise.all([
     prisma.stockEntry.findMany({
@@ -836,14 +694,13 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
         actor: { select: { name: true } },
       },
     }),
-    // Edits only, for the same reason: the delivery itself is a row above.
+    // Edits only: the delivery itself is a row above.
     getStockChanges({ productId, take: 100, onlyEdits: true }),
   ]);
 
   const rows: CellarRowDto[] = [];
 
-  // A stocktake states a figure per rung, so it is several rows saying one
-  // thing, gathered the way the log gathers them.
+  // A stocktake states a figure per rung: several rows, gathered like the log does.
   const counts = new Map<string, CellarRowDto>();
   for (const e of entries) {
     if (e.kind === "COUNT") {
@@ -882,8 +739,7 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
       level: e.level,
       valueDeltaOre: e.valueDeltaOre,
       note: opt(e.note),
-      // A stocktake is corrected by counting again; a night's figures belong to
-      // its own sheet. What is left is the case this page is for.
+      // A stocktake is corrected by counting again; a night's figures belong to its sheet.
       fixable: true,
     });
   }
@@ -906,52 +762,28 @@ export async function getProductCellar(productId: string): Promise<CellarRowDto[
   return rows;
 }
 
-/**
- * How many movements the log holds for one product.
- *
- * Only ever asked before deleting it: the confirmation has to say what is about
- * to go, and "ta bort" over a product that carries two terms of a lagerbokföring
- * is a different act from the same word over one typed a minute ago. Counted
- * rather than loaded, because the figure is the whole answer.
- */
+/** How many movements the log holds for one product, for the delete confirmation. */
 export async function getProductMovementCount(productId: string): Promise<number> {
   return prisma.stockEntry.count({ where: { productId } });
 }
 
-/**
- * How much notice the section wants before a delivery's estimated date. Null
- * until somebody chooses it, and no checks are raised until then.
- */
+/** Notice wanted before a delivery's estimated date. Null until chosen; no checks are raised until then. */
 export async function getStockSettings(): Promise<{ expiryLeadDays: number | null }> {
   const row = await prisma.stockSettings.findUnique({ where: { id: "singleton" } });
   return { expiryLeadDays: row?.expiryLeadDays ?? null };
 }
 
 /**
- * Which products want somebody to go and read a crate, and which delivery is
- * the reason.
- *
- * One entry per product, keyed by product id, holding its oldest outstanding
- * check. Not one per delivery: a lager bought monthly for three years has
- * thirty-six of them, and a list somebody cannot get to the bottom of is a list
- * that stops being read. The rule for which of them still count is
- * lib/stock/expiry.ts, and it is pure, so the flag on a row and the count in a
- * filter cannot disagree.
- *
- * Two queries whatever the shelf holds. The deliveries that could possibly be
- * due, and the movements needed to know which products have run out since.
- * `bestBefore` is indexed, and the second query is over products the first one
- * named rather than over the whole log.
+ * Products wanting somebody to read a crate, and the delivery that is the reason: one entry per product, its oldest
+ * outstanding check. The rule is pure (lib/stock/expiry.ts), so the row flag and filter count agree. Two queries
+ * whatever the shelf holds; the second is over products the first named.
  */
 export async function getExpiryChecks(now: string = today()): Promise<Map<string, Check> | null> {
   const { expiryLeadDays } = await getStockSettings();
-  // Not chosen, so there is no rule to apply. Null rather than an empty map,
-  // which would read as "nothing due" on a shelf nobody is watching.
+  // Not chosen: no rule applies. Null, not an empty map, which would read as "nothing due".
   if (expiryLeadDays === null) return null;
 
-  // The window the rule can possibly fire in. Anything dated further out than
-  // the lead time is not due, and asking the database that is cheaper than
-  // walking every delivery ever made through a pure function.
+  // The window the rule can fire in: anything dated beyond the lead time is not due, cheaper to ask the database.
   const horizon = new Date(now);
   horizon.setDate(horizon.getDate() + expiryLeadDays);
 
@@ -964,19 +796,8 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
 
   const productIds = [...new Set(deliveries.map((d) => d.productId))];
 
-  // How far back the walk has to go.
-  //
-  // `checkOf` skips a delivery whose own day is on or before the last day the
-  // shelf was bare, so the only empty days that can change an answer are the
-  // ones at or after the oldest delivery being asked about. Anything earlier
-  // than that gives the same verdict whatever its exact date, which is what
-  // makes the cut safe.
-  //
-  // It matters because this used to fetch every movement those products had
-  // ever made, with no bound at all: the widest query on the page, growing for
-  // the life of the installation, to answer a question about the last few
-  // months. What is before the cut arrives as one summed opening balance
-  // instead of as rows.
+  // How far back the walk must go: `checkOf` skips a delivery on or before the last bare day, so only empty days
+  // at or after the oldest asked-about delivery matter. What is before the cut arrives as one summed opening balance.
   const earliest = deliveries.reduce(
     (min, d) => (d.occurredAt < min ? d.occurredAt : min),
     deliveries[0].occurredAt,
@@ -988,8 +809,7 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
       where: { productId: { in: productIds }, occurredAt: { lt: earliest } },
       _sum: OPEN_SUM,
     }),
-    // Only the columns the walk reads: it has no business fetching values or
-    // notes.
+    // Only the columns the walk reads.
     prisma.stockEntry.findMany({
       where: { productId: { in: productIds }, occurredAt: { gte: earliest } },
       orderBy: { occurredAt: "asc" },
@@ -1029,9 +849,7 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
     if (check) byProduct.set(d.productId, [...(byProduct.get(d.productId) ?? []), check]);
   }
 
-  // One per product, and only where something is actually owed. `soonestCheck`
-  // is what applies that second half, so the flag on a row and the schedule on
-  // the product's page cannot disagree about what "due" means.
+  // One per product, only where something is owed. `soonestCheck` applies that, so the row flag and the product page agree.
   const out = new Map<string, Check>();
   for (const [productId, checks] of byProduct) {
     const worst = soonestCheck(checks);
@@ -1040,11 +858,7 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
   return out;
 }
 
-/**
- * One movement as the shelf walk reads it: a day, and what it did to what is
- * standing there. Both callers of `lastEmptied` map their rows through this,
- * so the two cannot count an opened bottle differently.
- */
+/** One movement as the shelf walk reads it. Both callers of `lastEmptied` map through this so an opened bottle counts the same. */
 const asStep = (m: {
   occurredAt: Date;
   units: number;
@@ -1061,7 +875,6 @@ const asStep = (m: {
   };
 };
 
-/** The columns a delivery contributes to a check, as the rule wants them. */
 const asDelivery = (e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "checkedAt">) => ({
   id: e.id,
   occurredAt: isoDay(e.occurredAt),
@@ -1070,17 +883,8 @@ const asDelivery = (e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "ch
 });
 
 /**
- * Every check one product will raise, oldest date first.
- *
- * The whole schedule rather than the one thing owed: what is overdue, what is
- * coming inside the notice period, what is months off, and what somebody has
- * already been down and looked at. The overview asks the narrow question and
- * gets one flag; this is where the answer is worked through, one delivery at a
- * time, which is why they are dismissed one at a time too.
- *
- * Deliveries the shelf has been empty since are not here at all. They are not
- * dismissed, they are gone, and a page listing them would be asking somebody to
- * clear rows about beer that was drunk two years ago.
+ * Every check one product will raise, oldest date first: overdue, coming, far off and already looked at.
+ * Deliveries the shelf has been empty since are not here at all.
  */
 export async function getProductChecks(
   productId: string,
@@ -1090,8 +894,7 @@ export async function getProductChecks(
   // Not chosen: see getExpiryChecks.
   if (expiryLeadDays === null) return null;
 
-  // No horizon, unlike the overview's query. This is one product and the page
-  // wants what is coming as well as what is owed.
+  // No horizon: this page wants what is coming as well as what is owed.
   const deliveries = await prisma.stockEntry.findMany({
     where: { productId, kind: "PURCHASE", bestBefore: { not: null } },
     orderBy: { bestBefore: "asc" },
@@ -1099,10 +902,7 @@ export async function getProductChecks(
   });
   if (deliveries.length === 0) return [];
 
-  // Bounded at the oldest delivery on the page, with everything before it
-  // summed into an opening balance. Same reasoning as `getExpiryChecks`, where
-  // it is written out: no empty day earlier than the oldest delivery can change
-  // what any of them says.
+  // Bounded at the oldest delivery on the page, as in `getExpiryChecks`.
   const earliest = deliveries.reduce(
     (min, d) => (d.occurredAt < min ? d.occurredAt : min),
     deliveries[0].occurredAt,

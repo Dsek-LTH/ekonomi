@@ -5,18 +5,8 @@ import { LIST_POLL_MS, type LiveBookkeeping } from "@/lib/domain/presence";
 
 const NOTHING: LiveBookkeeping = { booking: {}, reviewing: {}, exporting: {} };
 
-/**
- * What is happening to which utlägg right now: who else is booking or
- * reviewing one, and which are locked by an export. Kept fresh while the list is on screen, and
- * asked again the moment it comes back into view. A hidden list asks nothing,
- * since nobody is reading it.
- *
- * `refresh` asks at once, for when the answer is known to have changed: an
- * export that was just refused because somebody else holds the lock.
- *
- * `enabled` false asks nothing: the Utlägg list only needs this on Alla, for
- * bookkeeping, and every other reading of it would be polling for nobody.
- */
+/** Who else is booking or reviewing which utlägg, and which are locked by an export. Polled while visible.
+ * `refresh` asks at once; `enabled` false asks nothing. */
 export function useLiveBookkeeping(enabled = true): LiveBookkeeping & { refresh: () => void } {
   const [live, setLive] = useState<LiveBookkeeping>(NOTHING);
   const poll = useRef<() => Promise<void>>(async () => {});

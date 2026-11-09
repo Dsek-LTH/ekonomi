@@ -16,8 +16,6 @@ import { loadReviewContext } from "../../review-context";
 
 export const generateMetadata = titled("incomeDay");
 
-// One day of takings: konterad here, granskad and bokförd by somebody else.
-// See ../../day-client.tsx.
 export default async function IncomeDayPage({
   params,
 }: {
@@ -30,8 +28,7 @@ export default async function IncomeDayPage({
   const detail = await getIncomeReport(id);
   if (!detail) notFound();
   const { report } = detail;
-  // A day under the other source's path is somebody's old link, or a typo.
-  // It goes where the day lives rather than showing it under the wrong page.
+  // A day under the other source's path is an old link or a typo: send it to where the day lives.
   if (slugOf(report.source) !== source) redirect(`/income/${slugOf(report.source)}/${id}`);
 
   const context = await loadReviewContext([report]);

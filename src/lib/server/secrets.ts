@@ -1,18 +1,11 @@
-// Symmetric encryption for third-party credentials we have to store at rest
-// (Fortnox OAuth tokens). AES-256-GCM, so tampering is detected rather than
-// silently decrypting to garbage.
-//
-// The key comes from FORTNOX_TOKEN_KEY when set, otherwise it is derived from
-// AUTH_SECRET, which means rotating AUTH_SECRET makes every stored token
-// undecryptable and forces a reconnect. That is an acceptable failure mode
-// (reconnecting is a two-click flow) and it keeps local dev zero-config.
+// Symmetric encryption (AES-256-GCM, so tampering is detected) for stored third-party credentials. The key
+// is FORTNOX_TOKEN_KEY, else derived from AUTH_SECRET (rotating it forces a Fortnox reconnect).
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
 
 const PREFIX = "v1"; // ciphertext marker, anything else is not ours to read
 const ALGORITHM = "aes-256-gcm";
 const IV_BYTES = 12; // GCM standard nonce length
-// Named after the project's old name (utlagg) and kept that way on purpose.
-// The salt is part of the key, so changing it makes every stored token unreadable.
+// Named after the project's old name (utlagg) on purpose: the salt is part of the key.
 const SALT = "utlagg.fortnox.tokens.v1";
 
 let cachedKey: Buffer | null = null;
@@ -41,17 +34,7 @@ export function encryptSecret(plaintext: string): string {
   ].join(":");
 }
 
-/**
- * Decrypt a stored secret.
- *
- * Anything not in the `v1:iv:tag:ciphertext` shape was not written by this
- * module, and there is nothing sensible to do with it. This used to hand such a
- * value back unchanged, for tokens stored before encryption existed, which
- * also meant a truncated or corrupted row was passed on as though it were a
- * valid credential, and the failure surfaced much later as an opaque 401 from
- * the far end. Refusing here says what is actually wrong; for a Fortnox token
- * the fix is to reconnect, which is a two-click flow.
- */
+/** Decrypt a stored secret. Anything not in the `v1:iv:tag:ciphertext` shape is refused (for a Fortnox token: reconnect). */
 export function decryptSecret(stored: string): string {
   const parts = stored.split(":");
   if (parts.length !== 4 || parts[0] !== PREFIX) {

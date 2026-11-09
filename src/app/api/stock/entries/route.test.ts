@@ -1,18 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Writing to the log.
-//
-// Tested at the route because the invariants that make a lagerbokföring worth
-// having are enforced here and only here: what may leave the shelf, what a
-// movement is worth at the moment it happens, and that the three kinds making
-// up a night name the night they belong to. The pure halves (`pickFault`,
-// `entryFault`, `valueDelta`) have their own tests; what those cannot say is
-// whether the route actually asks them, in the right order, before it writes.
-//
-// Mocked at the lowest layer, as the transition test does it: the session and
-// the database. The gate, the schema, the stock rules and the response are all
-// the real thing.
-
 const h = vi.hoisted(() => ({
   capabilities: ["STOCK_MANAGE"] as string[],
   /** What the log says the shelf holds, as a summed row. */
@@ -77,8 +64,6 @@ vi.mock("@/lib/server/db", () => ({
   },
 }));
 
-// The replay is its own module with its own tests. What matters here is that
-// the route runs it, which the calls below assert.
 const replay = vi.fn(async () => 0);
 vi.mock("@/lib/server/stock-replay", () => ({ replayProduct: replay }));
 
@@ -152,8 +137,6 @@ describe("POST /api/stock/entries", () => {
     expect(res.status).toBe(201);
     const data = h.create.mock.calls[0][0].data;
     expect(data).toMatchObject({ productId: "p1", kind: "PURCHASE", units: 24 });
-    // 24 cans at 12,00 kr. The price rides on the row so re-pricing the product
-    // later cannot move what this delivery was worth.
     expect(data.valueDeltaOre).toBe(24 * 1200);
     expect(data.unitCostOre).toBe(1200);
     // A delivery is the one kind that arrives with an age.
@@ -174,8 +157,6 @@ describe("POST /api/stock/entries", () => {
     h.sums = { ...h.sums, units: 24, valueDeltaOre: 24 * 1200 };
     const res = await post(delivery({ kind: "CHECKOUT", units: -6, eventId: "ev1" }));
     expect(res.status).toBe(201);
-    // Six cans off a shelf that cost 12,00 each: what leaves is what it was
-    // worth at the moving average, not what it would cost to replace.
     expect(h.create.mock.calls[0][0].data.valueDeltaOre).toBe(-6 * 1200);
   });
 
@@ -191,8 +172,6 @@ describe("POST /api/stock/entries", () => {
   });
 
   it("keeps the cellar's own kinds off a night", async () => {
-    // A spoilage against an event would take the same bottle away twice: once
-    // when it was checked out, and again here.
     const res = await post(delivery({ kind: "SPOILAGE", units: -1, eventId: "ev1" }));
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({ error: "stock.eventOnNightOnly" });
@@ -215,9 +194,6 @@ describe("POST /api/stock/entries", () => {
 
   describe("a spill", () => {
     it("records what was dropped and moves no stock", async () => {
-      // Six went out to the pub and two were dropped there. They left the
-      // cellar at checkout, so taking them off the shelf again would remove
-      // them twice.
       h.booked = [checkedOut(6)];
       const res = await post(delivery({ kind: "WASTE", units: 0, spilledQty: 2, eventId: "ev1" }));
       expect(res.status).toBe(201);
@@ -275,14 +251,10 @@ describe("POST /api/stock/entries", () => {
         counted: { sealed: 18 },
       });
       expect(res.status).toBe(201);
-      // A UNIT product has one rung, so one row. Batched either way: a VOLUME
-      // product is five, and they used to be ten round trips.
       expect(h.createManyAndReturn).toHaveBeenCalledTimes(1);
       const rows = h.createManyAndReturn.mock.calls[0][0].data;
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ kind: "COUNT", level: 0, countedQty: 18 });
-      // The difference from what the books expected is the replay's to work
-      // out, which is what makes a count a baseline rather than an adjustment.
       expect(replay).toHaveBeenCalledWith(expect.anything(), "p1");
     });
 
@@ -296,8 +268,6 @@ describe("POST /api/stock/entries", () => {
       });
       expect(res.status).toBe(201);
       const rows = h.createManyAndReturn.mock.calls[0][0].data;
-      // The whole ladder, so a rung counted at nothing is stated rather than
-      // left to mean "not counted".
       expect(rows.map((r: { level: number }) => r.level)).toEqual([0, 80, 60, 40, 20]);
       expect(rows.map((r: { countedQty: number }) => r.countedQty)).toEqual([3, 1, 0, 2, 0]);
       // One change row per entry, paired by position.

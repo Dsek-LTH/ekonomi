@@ -1,13 +1,11 @@
-// The signed-in member's choice of emails, one kind at a time.
 import { prisma } from "@/lib/server/db";
 import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PutNotificationPreference } from "@/lib/api/schemas/admin";
 import { isOnByDefault } from "@/lib/domain/notifications";
 
-// PUT /api/profile/notifications: { kind, enabled }. A choice that matches the
-// default deletes the row rather than writing one, so the table only ever holds
-// departures and a changed default reaches everyone who never touched it.
+// PUT /api/profile/notifications: { kind, enabled }. A choice matching the default deletes the row,
+// so the table only holds departures.
 export async function PUT(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;

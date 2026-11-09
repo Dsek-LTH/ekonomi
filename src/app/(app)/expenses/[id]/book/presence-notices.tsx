@@ -10,7 +10,6 @@ import { useProgressRouter } from "@/components/shell/route-progress";
 import { useFormat } from "@/lib/ui/use-format";
 import type { PresentUser } from "@/lib/domain/presence";
 
-/** Colleagues who have this utlägg's booking screen open too. Nothing when none. */
 export function OthersBookingNotice({ others }: { others: PresentUser[] }) {
   const t = useTranslations("book.presence");
   const { list } = useFormat();
@@ -20,19 +19,8 @@ export function OthersBookingNotice({ others }: { others: PresentUser[] }) {
   );
 }
 
-/**
- * The utlägg was saved by somebody else while this screen had it open.
- *
- * A dialog first, because whatever is typed here is now written against a
- * version that is gone and the bookkeeper has to know before they do any more
- * of it. Then, once dismissed, a notice that stays: closing the dialog is "let
- * me copy what I wrote", not "carry on", and the save button stays dead until
- * the page is reloaded (the server would refuse it anyway).
- *
- * Reloading is a refresh of the Server Components. The page keys this screen on
- * the utlägg's version, so the refresh remounts it with the new voucher rather
- * than keeping the rows typed into the old one.
- */
+/** Saved by somebody else while this screen was open. The save button stays dead until reload,
+ * since the server would refuse it. */
 export function UpdatedElsewhere({ by }: { by?: PresentUser }) {
   const t = useTranslations("book.presence");
   const { user } = useRole();

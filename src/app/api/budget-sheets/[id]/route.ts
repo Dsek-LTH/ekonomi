@@ -5,16 +5,11 @@ import { fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchSheet } from "@/lib/api/schemas/budget";
 
-// PATCH /api/budget-sheets/[id]: which cost centre this sheet is, and
-// what it is called while it isn't one.
-//   { costCenterId: string } link it (the cost centre must be free in this
-//                            budget, one cannot be budgeted twice)
+// PATCH /api/budget-sheets/[id]: which cost centre this sheet is, and what it is called while it isn't one.
+//   { costCenterId: string } link it (must be free in this budget)
 //   { costCenterId: null }   detach it, keeping the figures
 //   { label: string }        rename a detached sheet
-//
-// Relinking is deliberately allowed on any sheet, not just a fresh clone: a
-// budget drafted before the cost centres were sorted out has to be repointable
-// afterwards.
+// Relinking is allowed on any sheet, so a budget drafted before the cost centres were sorted can be repointed.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await allowBudgetWrite({ costCenter: id });
@@ -54,8 +49,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json(updated);
 }
 
-// DELETE /api/budget-sheets/[id]: drop a cost centre from the budget.
-// Its accounts and rows go with it (cascade); other budgets are untouched.
+// DELETE /api/budget-sheets/[id]: drop a cost centre from the budget (accounts and rows cascade).
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await allowBudgetWrite({ costCenter: id });

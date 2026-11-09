@@ -1,27 +1,12 @@
-// Which of a contract's files the reader is shown, and in what order.
-//
-// The same job lib/expense/document-url.ts does for an utlägg, and client-safe
-// for the same reason: the panel runs in the browser, and the decision has to
-// be made in one place so two screens showing the same contract cannot show
-// different documents.
-//
-// The order is what a reader wants first, not what the archive holds first. A
-// signed contract is what the parties actually agreed to, so it leads; the
-// rendering that preceded it is below it, worth keeping because "what did we
-// send them" is a real question when a signature is disputed.
-// Attachments come last: a photograph of the gear is context, not the
-// agreement. The evidence log is deliberately not here at all, because it is a
-// provider's audit file rather than something to read beside the work, and it
-// is one click away in the documents list.
+// Which of a contract's files the panel shows, and in what order (client-safe, like
+// lib/expense/document-url.ts). Signed copy leads, then the generated rendering, then
+// attachments. The evidence log is deliberately left out (still in the documents list).
 
-/** One document in the panel: where it is and what it is. Structural on
- *  purpose, so this file (which knows nothing about the viewer) can be the one
- *  place that decides what the panel gets. */
+/** One document in the panel. Structural, so this file decides what the panel gets. */
 interface PanelDocument {
   src: string;
   mimeType: string;
   filename?: string;
-  /** What the panel captions it, where it stacks more than one. */
   label?: string;
 }
 
@@ -41,21 +26,16 @@ interface ContractLike {
 const ORDER: readonly string[] = ["SIGNED", "GENERATED", "ORIGINAL", "ATTACHMENT"];
 
 export function contractDocuments(contract: ContractLike): PanelDocument[] {
-  return (
-    contract.files
-      .filter((f) => ORDER.includes(f.role))
-      .slice()
-      // Stable within a role, so two attachments keep the order the archive
-      // returned them in (newest first) rather than an order nobody chose.
-      .sort((a, b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role))
-      .map((f) => ({
-        src: `/api/contracts/${contract.id}/files/${f.id}`,
-        mimeType: f.mimeType,
-        filename: f.filename,
-        // Its own name. A contract's files are already named for what they are
-        // ("uthyrningsavtal-2026-09-18-F-sektionen.pdf"), unlike an utlägg's two,
-        // which are generated and need telling apart by hand.
-        label: f.filename,
-      }))
-  );
+  return contract.files
+    .filter((f) => ORDER.includes(f.role))
+    .slice()
+
+    .sort((a, b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role))
+    .map((f) => ({
+      src: `/api/contracts/${contract.id}/files/${f.id}`,
+      mimeType: f.mimeType,
+      filename: f.filename,
+
+      label: f.filename,
+    }));
 }

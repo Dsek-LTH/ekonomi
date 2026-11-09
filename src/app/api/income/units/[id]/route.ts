@@ -22,8 +22,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (defaultCostCenterId) {
     const cc = await prisma.costCenter.findUnique({ where: { id: defaultCostCenterId } });
     if (!cc) return fail(422, "income.unknownCostCenter");
-    // Only one of the unit's own cost centres: sales booked on another unit's
-    // would be attested by that unit's resultatansvariga, not this one's.
+    // Only the unit's own cost centres: another unit's would be attested by its resultatansvariga.
     const income = await prisma.resultUnitIncome.findUnique({
       where: { id },
       select: { resultUnitId: true, resultUnit: { select: { name: true } } },
@@ -41,8 +40,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       prisma.resultUnitIncome.update({
         where: { id },
         data: {
-          // Cleared back to null means "use the unit's own name", which is the
-          // ordinary case, so an empty string is a removal, not a blank name.
+          // An empty string clears back to null ("use the unit's own name").
           ...(properName !== undefined && { properName: properName || null }),
           ...(description !== undefined && { description }),
           ...(defaultCostCenterId !== undefined && { defaultCostCenterId }),
@@ -57,18 +55,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return new Response(null, { status: 204 });
 }
 
-/**
- * Remove the income profile, or retire it when the unit has history.
- *
- * The same shape as retiring a cost centre, and for the same reason: reports
- * already booked name the unit, and its settings are what say how they were
- * routed. Retiring keeps the books readable and takes the unit out of the
- * routing (lib/income/routing.ts), which is all anybody actually wanted.
- *
- * The result unit itself is never touched. Deciding that a verksamhet no longer
- * sells anything is not deciding that it has stopped existing; it still owns its
- * cost centres and its resultatansvariga.
- */
+/** Remove the income profile, or retire it when the unit has history (booked reports name it). The result unit itself is never touched. */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
@@ -90,8 +77,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ retired: true });
   }
 
-  // Prefixes cascade, so a verksamhet that never took anything in takes its
-  // routing with it rather than leaving prefixes pointing at nothing.
+  // Prefixes cascade.
   await prisma.resultUnitIncome.delete({ where: { id } });
   return NextResponse.json({ retired: false });
 }

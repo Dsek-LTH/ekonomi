@@ -1,18 +1,8 @@
 "use client";
 
-// Which card purchase an utlägg is: the bank rows on the member's card, ranked
-// for this claim by lib/domain/matching.ts.
-//
-// Mostly there is one answer, so mostly that is all this shows. Once a row is
-// picked the list folds to that one line with a way to change it. Until then
-// it shows the rows that can be picked, then any that are very likely this
-// purchase with the amount typed wrong (each with the fix: take its amount),
-// and everything else behind one link, for looking. How matching works is
-// behind a "?" (MatchHelp) rather than written out above the list, where it
-// was three paragraphs on the smallest card of the form.
-//
-// One line per row: day, text, why it cannot be picked, amount. They were two
-// lines each, with the reason as a sentence under the date.
+// Which card purchase an utlägg is: the member's bank rows ranked by lib/domain/matching.ts. Once a row is
+// picked the list folds to that line. Until then: pickable rows, likely amount typos (with the fix), and the
+// rest behind one link.
 import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -30,12 +20,7 @@ import { cn } from "@/lib/ui/utils";
 
 type Candidate = MatchCandidate<BankTransaction>;
 
-// Day, text, then whatever is at the end. The day is short and fixed-width so
-// a column of them lines up and the texts start in one place.
-//
-// Below sm the end goes onto a line of its own under the text. On one line it
-// took what it needed (a tag, "Använd beloppet", the amount) and the text was
-// left with nothing, while the end ran out over the card's edge.
+// Day, text, then the end of the row. Below sm the end goes on its own line under the text.
 const ROW =
   "grid grid-cols-[3.75rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[3.75rem_minmax(0,1fr)_auto]";
 /** The end of a row: under the text on a phone, its own column from sm. */
@@ -57,11 +42,7 @@ export function TransactionPicker({
   onPick: (id: string) => void;
   /** The claim's amount, a magnitude, for the line said when nothing fits. */
   amount: number;
-  /**
-   * Take a row's amount as the utlägg's and pick it. Offered on a row that is
-   * very likely this purchase typed wrong (see `fixable`). Left out where the
-   * amount cannot be changed from here.
-   */
+  /** Take a row's amount as the utlägg's and pick it. Offered on a likely amount typo (see `fixable`). */
   onUseAmount?: (txn: BankTransaction) => void;
   busy?: boolean;
   pendingId?: string | null;
@@ -206,8 +187,7 @@ function CandidateRow({
   const t = useTranslations("expenses.match");
   const { txn } = c;
 
-  // Why it cannot be picked, as a tag rather than a sentence: what the eye
-  // looks for on a row it expected to be able to pick.
+  // Why it cannot be picked, as a tag.
   const tag =
     c.blocked === "amount"
       ? {
@@ -272,8 +252,7 @@ function CandidateRow({
   );
 }
 
-// "12 okt", the day and the month and nothing else: every row is on the
-// member's card this year or last, and the year would be most of the width.
+// "12 okt": every row is on the member's card this year or last, so no year.
 function useShortDay() {
   const locale = useLocale();
   return useMemo(() => {
@@ -286,7 +265,7 @@ function useShortDay() {
   }, [locale]);
 }
 
-/** How matching works, behind a "?" beside the heading rather than above the list. */
+/** How matching works, behind a "?" beside the heading. */
 export function MatchHelp() {
   const t = useTranslations("expenses.match");
   return (

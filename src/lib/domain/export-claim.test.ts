@@ -6,9 +6,7 @@ import {
   exportLock,
 } from "./export-claim";
 
-// What an export lock means. The asymmetry is the point: a lock that never sent
-// anything may lapse, because nothing can exist in Fortnox for it, and a lock
-// that sent a request never lapses into "free", because something might.
+// A lock that never sent anything may lapse; one that sent a request never becomes "free", since something might exist in Fortnox.
 
 const T = 1_000_000_000;
 const at = (ago: number) => new Date(T - ago);
@@ -29,8 +27,7 @@ describe("exportLock", () => {
   });
 
   it("never lets a lock that sent a request lapse into free", () => {
-    // However old. Past the point no request can still be in flight it becomes
-    // something to look into, not something to export again.
+    // Past the point no request can be in flight it needs a look, not a re-export.
     expect(exportLock("SENT", at(SEND_ABANDONED_MS - 1), T)).toBe("exporting");
     expect(exportLock("SENT", at(SEND_ABANDONED_MS), T)).toBe("uncertain");
     expect(exportLock("SENT", at(365 * 24 * 3_600_000), T)).toBe("uncertain");
@@ -42,9 +39,7 @@ describe("exportLock", () => {
   });
 
   it("waits out the slowest request before calling one abandoned", () => {
-    // Every write to Fortnox is called off at FORTNOX_WRITE_TIMEOUT_MS, so by
-    // then nothing can still be in flight, with room to spare for the writes
-    // either side of it.
+    // Writes are called off at FORTNOX_WRITE_TIMEOUT_MS, so by then nothing can be in flight.
     expect(SEND_ABANDONED_MS).toBeGreaterThanOrEqual(5 * FORTNOX_WRITE_TIMEOUT_MS);
   });
 });

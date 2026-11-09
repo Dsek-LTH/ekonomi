@@ -1,10 +1,5 @@
 // Storing a fetch: what Zettle or a Swish export said was sold, routed into days.
-//
-// This is where pending.yaml used to be. The old flow wrote a manifest file
-// that the treasurer edited by hand, filling in cost centres, deleting lines
-// to skip, and then `upload` booked whatever was left. The same three steps
-// happen here, except the middle one is a screen and the state survives a
-// reload.
+
 import "server-only";
 
 import type { Prisma } from "@/lib/generated/prisma/client";
@@ -19,25 +14,11 @@ interface CreateBatchResult {
   created: number;
   /** The reports that were stored. */
   reportIds: string[];
-  /**
-   * Unbooked reports of this source the fetch cleared out before storing what
-   * it brought back.
-   *
-   * A fetch is a fresh start for its source: what is waiting to be booked is
-   * exactly what came back from it. Re-fetching after correcting a product
-   * prefix is the case that matters, since the wrongly routed days have to go.
-   * Only this source's, so fetching Swish leaves the Zettle days someone is
-   * halfway through alone, and only unbooked ones. A booked day is the
-   * section's record of money it took in; nothing about fetching may touch it.
-   */
+  /** Unbooked reports of this source the fetch cleared before storing. A fetch restarts its own source's drafts only, never booked days. */
   superseded: number;
   /** Days imported with a warning because this database has already booked them. */
   alreadyBooked: string[];
-  /**
-   * Days imported with a warning: Fortnox already holds a voucher for some of
-   * that day's money in this source, from an older install, the CLI this
-   * replaced, or a per-verksamhet voucher from before the per-day one.
-   */
+  /** Days imported with a warning: Fortnox already holds a voucher for some of that day's money. */
   alreadyInFortnox: string[];
 }
 
@@ -50,14 +31,9 @@ interface BatchInput {
 }
 
 /**
- * What a fetch has to reckon with for its source: the days already booked
- * here, and the drafts it sweeps aside.
- *
- * `booked`: day to a booked report holding some of that day's money. Any
- * report counts, including an old per-verksamhet one or an old day of Zettle
- * fees: booking the whole day again would count that money twice. The day is
- * still imported, pointing at it, because a day missing from the queue cannot
- * be told apart from a day the fetch never covered. Booking it is refused.
+ * What a fetch reckons with for its source. `booked`: day to a booked report holding some of that
+ * day's money (any kind, since booking again would double count). The day is still imported,
+ * pointing at it, and booking is refused.
  */
 async function existingReports(
   source: BatchInput["source"],
@@ -82,14 +58,8 @@ async function existingReports(
 }
 
 /**
- * Store a fetch as one draft report per day.
- *
- * Each line carries its verksamhet, resolved from the income key routing put
- * on it, and its cost centre, which routing already resolved from the prefix
- * or the verksamhet. A line naming a key the app does not have would mean the
- * routing table changed under the fetch. It is kept with no verksamhet and
- * marked unmatched rather than dropped, since dropping it would lose money
- * from the day's total, and the day cannot be booked until someone places it.
+ * Store a fetch as one draft report per day. A line naming an unknown income key is kept unmatched
+ * (no verksamhet) rather than dropped, so the total holds and the day cannot be booked until placed.
  */
 export async function createDayBatch(
   input: BatchInput,
@@ -112,8 +82,7 @@ export async function createDayBatch(
   const alreadyInFortnox = days.filter((d) => inFortnox(d.date)).map((d) => d.date);
   const stale = already.unbookedIds;
 
-  // One transaction: a half-written batch is worse than none, because the part
-  // that landed looks like a complete import of a narrower range.
+  // One transaction: a half-written batch looks like a complete import of a narrower range.
   const batch = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const created = await tx.incomeBatch.create({
       data: {
@@ -124,8 +93,7 @@ export async function createDayBatch(
         createdById: input.createdById,
       },
     });
-    // Inside the transaction, and before the new ones: if this import fails
-    // half way, what it was clearing is still there.
+    // Before the new ones, so a failed import leaves what it was clearing.
     if (stale.length > 0) await tx.incomeReport.deleteMany({ where: { id: { in: stale } } });
 
     const reportIds: string[] = [];

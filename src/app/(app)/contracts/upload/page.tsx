@@ -9,13 +9,10 @@ import { titled } from "@/lib/server/page-title";
 export const generateMetadata = titled("uploadContract");
 
 export default async function UploadContractPage() {
-  // Filing an arbitrary agreement is the wide grant. An uthyrningsansvarig
-  // draws rentals through the rental form, which is a different page.
+  // Filing an arbitrary agreement is the wide grant; uthyrningsansvariga draw rentals through the rental form.
   const user = await requirePage(canManageContracts);
 
-  // The vocabulary the section already uses, so filing the tenth contract
-  // reaches for the same words as the first rather than inventing "ljudanl"
-  // beside "ljud".
+  // The section's existing vocabulary, so tags do not drift ("ljudanl" beside "ljud").
   return (
     <UploadContractClient
       knownTags={await getContractTags(contractScopeOf(user))}

@@ -1,16 +1,6 @@
-// Leverantörsfakturor as the screens read them: which ones a viewer may see,
-// the list, and one invoice with everything its page needs.
-//
-// Who may see what, stated once:
-//
-//   • triage and the bookkeeping roles see every invoice, the inkorg included;
-//   • a resultatansvarig sees the invoices given to a unit they answer for, and
-//     any invoice konterad onto one of their cost centres, since that is one
-//     they may be asked to sign;
-//   • nobody else sees any.
-//
-// The same rule answers both a list and a single invoice, the second by asking
-// for the first narrowed to one id. A rule written twice is a rule that drifts.
+// Who may see what: triage and bookkeeping roles see every invoice (inkorg included); a
+// resultatansvarig sees those given to their units and any konterad onto their cost centres; nobody
+// else. One rule answers both list and single invoice (the latter is the former narrowed to one id).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -48,10 +38,7 @@ import type { DocumentReading } from "@/lib/server/invoice-documents";
 import type { Viewer } from "./expense-scope";
 import { isoDate } from "./shared";
 
-// ── Who is asking ─────────────────────────────────────────────────
-
-/** Everything the rules need to know about a viewer, and what attesting needs
- *  besides: the unit names, since that is what canAttestAllocation compares. */
+/** Everything the rules need about a viewer, plus unit names (what canAttestAllocation compares). */
 export interface InvoiceViewerCtx extends InvoiceViewer {
   ownedResultUnitNames: string[];
   ownedPrefixes: string[];
@@ -63,8 +50,7 @@ export async function invoiceViewerOf(viewer: Viewer): Promise<InvoiceViewerCtx>
     ownedResultUnits(viewer),
     getPrefixes(),
   ]);
-  // The ids behind the names, from the prefix table already in hand. A unit
-  // with no prefixes is not in it, so it is looked up; that is the rare case.
+  // The ids behind the names, from the prefix table in hand. A unit with no prefixes is looked up.
   const ids = new Map(prefixes.map((p) => [p.resultUnitName, p.resultUnitId]));
   const missing = names.filter((n) => !ids.has(n));
   if (missing.length) {
@@ -85,8 +71,7 @@ export async function invoiceViewerOf(viewer: Viewer): Promise<InvoiceViewerCtx>
   };
 }
 
-/** Which result units the viewer may attest for, as the screens need it:
- *  every one for an admin, otherwise the units they answer for. */
+/** Result units the viewer may attest for: every one for an admin, else those they answer for. */
 export interface AttestReach {
   all: boolean;
   units: string[];
@@ -96,21 +81,15 @@ export function attestReachOf(v: InvoiceViewerCtx): AttestReach {
   return { all: isAdmin(v.capabilities), units: v.ownedResultUnitNames };
 }
 
-/** Whether the viewer sees every invoice there is. */
 const seesEverything = (v: InvoiceViewer) =>
   canTriageInvoices(v.capabilities) ||
   canViewBookkeeping(v.capabilities) ||
   isAdmin(v.capabilities);
 
-/**
- * The viewer's reach as a filter. Somebody with no reach at all gets a filter
- * that matches nothing, rather than an empty `OR`, which Prisma reads as no
- * filter and so as everything.
- */
+/** The viewer's reach as a filter. No reach matches nothing: an empty `OR` would mean everything. */
 export function invoiceScopeWhere(
   v: InvoiceViewerCtx,
-  /** Only the reader's own result units', even for one who sees everything:
-   *  the Min resultatenhet reading of Fakturor. */
+  /** Only the reader's own result units', even for one who sees everything (Min resultatenhet). */
   { ownUnits = false }: { ownUnits?: boolean } = {},
 ): Prisma.SupplierInvoiceWhereInput {
   if (!ownUnits && seesEverything(v)) return {};
@@ -126,20 +105,17 @@ export function invoiceScopeWhere(
   return { OR };
 }
 
-/** Whether the viewer may attest one allocation, by the utlägg rule. */
 export function mayAttest(v: InvoiceViewerCtx, costCenterCode: string): boolean {
   return canAttestAllocation({
     actorCapabilities: v.capabilities,
     actorRoles: v.roles,
-    // Nobody is claiming money on an invoice, so nobody is excluded as its
-    // submitter. See the note at the top of lib/domain/supplier-invoice.ts.
+    // Nobody claims money on an invoice, so nobody is excluded as submitter (lib/domain/supplier-invoice.ts).
     actorIsSubmitter: false,
     actorOwnedResultUnits: v.ownedResultUnitNames,
     allocationResultUnit: resultUnitNameForCode(costCenterCode, v.prefixes),
   });
 }
 
-/** The rules' view of one invoice, from rows already loaded. */
 export function invoiceFactsOf(
   v: InvoiceViewerCtx,
   inv: {
@@ -158,8 +134,6 @@ export function invoiceFactsOf(
     })),
   };
 }
-
-// ── The list ──────────────────────────────────────────────────────
 
 export interface SupplierInvoiceRow {
   id: string;
@@ -200,13 +174,7 @@ const ROW_SELECT = {
   allocations: { select: { approvedById: true, costCenter: { select: { code: true } } } },
 } satisfies Prisma.SupplierInvoiceSelect;
 
-/**
- * Every invoice the viewer may see, newest first.
- *
- * Not paged. An invoice is a few a week at most, and the screen filters in the
- * browser (ClientDataTable) the way the other lists of that size do. When
- * that stops being true it is this function that changes.
- */
+/** Every invoice the viewer may see, newest first. Not paged: a few a week, filtered in the browser (ClientDataTable). */
 export async function getInvoiceRows(
   viewer: Viewer,
   opts: { ownUnits?: boolean } = {},
@@ -236,8 +204,6 @@ export async function getInvoiceRows(
   }));
 }
 
-// ── One invoice ───────────────────────────────────────────────────
-
 export interface SupplierInvoiceAllocationView {
   id: string;
   costCenterCode: string;
@@ -255,7 +221,6 @@ export interface SupplierInvoiceAllocationView {
   canAttest: boolean;
 }
 
-/** One line of the treasury's kontering. See SupplierInvoiceLine. */
 export interface SupplierInvoiceLineView {
   id: string;
   account: string;
@@ -281,7 +246,6 @@ export interface SupplierInvoiceEventView {
   date: string; // ISO
 }
 
-/** The mail an invoice came in, for one that was forwarded. */
 export interface InvoiceMailView {
   fromAddress: string;
   fromName: string | null;
@@ -317,7 +281,6 @@ export interface SupplierInvoiceView {
   /** Which fields were read from the PDF rather than typed. */
   prefilled: string[];
   fortnoxSupplierNumber: string | null;
-  /** Fortnox's number for it, once exported. */
   fortnoxGivenNumber: string | null;
   exportedAt: string | null;
   /** Set while an export holds the lock. UNCERTAIN is the one to act on: the
@@ -326,33 +289,22 @@ export interface SupplierInvoiceView {
   /** The picked Fortnox supplier as the app's copy of the register has it,
    *  for the giro check on the record before it is sent. */
   register: { name: string; bankgiro: string | null; plusgiro: string | null } | null;
-  /**
-   * An account to start each line on, by allocation id, for an attested
-   * invoice with no kontering yet: whatever the same supplier's last invoice
-   * was booked on, for the same cost centre if it had one.
-   */
+  /** Account to start each line on, by allocation id, for an attested invoice with no kontering: the supplier's last booking, same cost centre if any. */
   suggestedAccounts: Record<string, string>;
   resultUnitId: string | null;
   resultUnitName: string | null;
   receivedByName: string | null;
   receivedAt: string;
   mail: InvoiceMailView | null;
-  /**
-   * The cost centre the fördelning opens on, for an invoice waiting for one:
-   * one named in the forwarded mail or the PDF's "Er referens", failing that
-   * the one the same supplier's last invoice went to, failing that the unit's
-   * only one. Null when none of them settles it.
-   */
+  /** The cost centre the fördelning opens on: named in the mail or PDF "Er referens", else the supplier's last invoice's, else the unit's only one. */
   suggestedCostCenter: string | null;
   allocations: SupplierInvoiceAllocationView[];
-  /** The kontering, once the treasury has saved one. Empty before. */
   lines: SupplierInvoiceLineView[];
   documents: { id: string; filename: string; mimeType: string }[];
   events: SupplierInvoiceEventView[];
   updatedAt: string;
 }
 
-/** The ASSIGNED event's `diff`, as it was written. */
 function assignedTo(diff: unknown): string | null {
   const to = (diff as { to?: unknown } | null)?.to;
   return typeof to === "string" ? to : null;
@@ -360,7 +312,6 @@ function assignedTo(diff: unknown): string | null {
 
 const AUTO_RULES: readonly AutoRule[] = ["costCenter", "unitName", "forwarder"];
 
-/** The automatic ASSIGNED event's reason, as lib/server/inbound-mail.ts wrote it. */
 function autoOf(diff: unknown): { rule: AutoRule; match: string } | null {
   const d = diff as { auto?: unknown; match?: unknown } | null;
   return AUTO_RULES.includes(d?.auto as AutoRule) && typeof d?.match === "string"
@@ -368,12 +319,7 @@ function autoOf(diff: unknown): { rule: AutoRule; match: string } | null {
     : null;
 }
 
-/**
- * Which cost centre to offer for the kontering. See suggestedCostCenter on
- * SupplierInvoiceView for the order. Only ever one belonging to the invoice's
- * unit: a suggestion from another unit's history would be a suggestion to
- * charge somebody else.
- */
+/** Which cost centre to offer for the kontering (order: see suggestedCostCenter). Only ever the invoice's own unit's. */
 export async function costCenterSuggestionFor(inv: {
   id: string;
   resultUnitId: string | null;
@@ -421,8 +367,7 @@ export async function costCenterSuggestionFor(inv: {
   return centres.length === 1 ? centres[0].code : null;
 }
 
-/** See suggestedAccounts on SupplierInvoiceView. Matched on the Fortnox
- *  supplier when one is picked, else the org number, else the name. */
+/** See suggestedAccounts on SupplierInvoiceView. Matched on Fortnox supplier, else org number, else name. */
 async function accountSuggestionsFor(inv: {
   id: string;
   fortnoxSupplierNumber: string | null;
@@ -452,16 +397,11 @@ async function accountSuggestionsFor(inv: {
   );
 }
 
-/**
- * One invoice and what the viewer may do with it, or null when there is no
- * such invoice or it is outside what they may see. The two are the same
- * answer on purpose: an invoice that is not yours to read is not there.
- */
+/** One invoice and what the viewer may do with it, or null when absent or out of reach (the same answer on purpose). */
 export async function getInvoice(
   id: string,
   viewer: Viewer,
-  /** What its PDF says, read by the fördelning's page, for the cost centre
-   *  suggestion to go on before any of it is saved on the invoice. */
+  /** What its PDF says, for the cost centre suggestion before anything is saved. */
   reading?: DocumentReading,
 ): Promise<{ invoice: SupplierInvoiceView; can: InvoiceCapabilities } | null> {
   const v = await invoiceViewerOf(viewer);
@@ -500,9 +440,7 @@ export async function getInvoice(
   });
   if (!inv) return null;
 
-  // The account names, for showing what a number means. One lookup for every
-  // row rather than a relation, because the column is a plain number. See
-  // SupplierInvoiceAllocation.account.
+  // Account names, looked up once for every row (the column is a plain number). See SupplierInvoiceAllocation.account.
   const numbers = [
     ...new Set([
       ...inv.allocations.flatMap((a) => (a.account ? [a.account] : [])),
@@ -618,17 +556,12 @@ export async function getInvoice(
   };
 }
 
-// ── The mailbox, for triage ───────────────────────────────────────
-
 export interface InboxHealth {
-  /** Whether the Gmail integration is configured at all. */
   enabled: boolean;
-  /** The address invoices are mailed to, or null when not configured. */
   address: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
   watchExpiresAt: string | null;
-  /** The latest refused mails, so a forward that went nowhere can be found. */
   rejected: {
     id: string;
     fromAddress: string;
@@ -638,7 +571,6 @@ export interface InboxHealth {
   }[];
 }
 
-/** How the inkorg mailbox is doing, for the foot of triage's list. */
 export async function getInboxHealth(): Promise<InboxHealth> {
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
   const [state, rejected] = await Promise.all([
@@ -673,7 +605,6 @@ export async function getInboxHealth(): Promise<InboxHealth> {
   };
 }
 
-/** The result units an invoice can be given to, for triage's picker. */
 export async function getAssignableResultUnits(): Promise<{ id: string; name: string }[]> {
   return prisma.resultUnit.findMany({
     orderBy: [{ name: "asc" }, { id: "asc" }],

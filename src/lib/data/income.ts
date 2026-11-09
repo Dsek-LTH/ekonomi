@@ -1,8 +1,4 @@
-// Reading income: the days, and the fetches that brought them in.
-//
-// Report-first. A batch is provenance, when someone pressed fetch, and the
-// screens that work with takings work day by day, so the two report queries
-// below are the ones that matter.
+// Income days and the fetches that brought them in. A batch is provenance; screens work day by day.
 import "server-only";
 
 import { oreToSEK } from "@/lib/domain/money";
@@ -15,15 +11,12 @@ import { sourcesOf, type IncomeSourceSlug } from "@/lib/income/source-slug";
 import { getPrefixes, resultUnitForCode } from "@/lib/server/result-units";
 import { voucherBasis, type ManualVoucherRow } from "@/lib/income/manual-voucher";
 
-// Money here is SEK, not öre: these cross into the browser and are rendered
-// by <Amount>, and the repo's rule is that the database keeps öre and the
-// interface shows kronor (lib/domain/money.ts).
+// Money here is SEK, not öre (rendered by <Amount>; lib/domain/money.ts).
 export interface IncomeLineRow {
   id: string;
   kind: "SALE" | "FEE";
   /** Whose sale. Null on a fee, and on a sale routing could not place. */
   resultUnitId: string | null;
-  /** The verksamhet as the documents name it. */
   unitName: string | null;
   name: string;
   variant: string | null;
@@ -44,64 +37,31 @@ export interface IncomeReportRow {
   id: string;
   source: IncomeSource;
   date: string;
-  /** What the day moves the clearing account by: sales less fees. */
   total: number;
   status: IncomeReportStatus;
-  /**
-   * Booked before the per-day voucher: one verksamhet's day, or a day of
-   * Zettle fees. Read-only from here on. See lib/income/legacy.ts.
-   */
+  /** Booked before the per-day voucher: one verksamhet's day, or a day of Zettle fees. Read-only (lib/income/legacy.ts). */
   legacy: boolean;
-  /**
-   * Every verksamhet with sales on the day, by name. On an old report, the one
-   * it was for, or none for a day of fees.
-   */
+  /** Every verksamhet with sales on the day, by name. On an old report, the one it was for. */
   unitNames: string[];
-  /** Every cost centre the day books to, by code. */
   costCenterCodes: string[];
   documentFilename: string | null;
   /** The Fortnox voucher, once exported, e.g. "IR-142". */
   voucherLabel: string | null;
-  /**
-   * A voucher Fortnox already held for some of this source's money on this
-   * day when the report was imported, "IR-142". The day is shown all the same;
-   * this is what colours it as a warning.
-   */
+  /** A voucher Fortnox already held for some of this source's money on this day at import, e.g. "IR-142". Shown as a warning. */
   existingVoucher: string | null;
-  /**
-   * A report booked here that already holds some of this day's money, its
-   * voucher label if it has one. Null when there is none. Distinct from
-   * `existingVoucher`: this one cannot be booked at all.
-   */
+  /** A report booked here that already holds some of this day's money. Unlike `existingVoucher`, it blocks booking. */
   duplicateOf: { id: string; voucherLabel: string | null } | null;
-  /** Which fetch brought this day in, for the provenance column. */
   batchId: string;
   importedAt: string;
-  /**
-   * When the row last changed, a line corrected above all.
-   *
-   * It is in the row because of the document. A draft's intäktsräkning is
-   * rendered on the way past and held by the browser for five minutes
-   * (api/income/reports/[id]/document), which is right for stepping back to a
-   * day you just looked at and wrong the moment a line is corrected. Hung on
-   * the document's URL, this makes the corrected report a different address.
-   */
+  /** When the row last changed. Hung on the document URL so a corrected report is a new address (the draft document is browser-cached for five minutes). */
   updatedAt: string;
-  /**
-   * Who wrote the kontering: whoever konterade the day and whoever wrote it by
-   * hand. Neither may granska and bokföra it (lib/domain/review.ts).
-   */
+  /** Who wrote the kontering (konterade or wrote by hand). Neither may granska and bokföra it (lib/domain/review.ts). */
   bookedBy: string[];
-  /** Who konterade the day, and when. Null until it is konterad. */
   reviewedByName: string | null;
   reviewedAt: string | null;
   lines: IncomeLineRow[];
-  /**
-   * A kontering written by hand, or null when the day books the rows its lines
-   * give. See lib/income/manual-voucher.ts.
-   */
+  /** A hand-written kontering, or null when the day books the rows its lines give (lib/income/manual-voucher.ts). */
   manual: {
-    /** Every row but the clearing account, kronor. */
     rows: {
       account: string;
       accountName: string;
@@ -111,16 +71,13 @@ export interface IncomeReportRow {
       debit: number;
       credit: number;
     }[];
-    /** A line has changed since it was written, so it cannot be booked as it is. */
     stale: boolean;
     byName: string | null;
     at: string | null;
   } | null;
 }
 
-// What a report row is loaded with, wherever it is loaded: the review screen,
-// the booked list. One include, so the lists cannot drift into showing subtly
-// different things about the same day.
+// One include for every place a report row is loaded, so lists cannot drift.
 const UNIT_NAME = { select: { name: true, income: { select: { properName: true } } } } as const;
 
 const REPORT_INCLUDE = {
@@ -186,10 +143,8 @@ function reportRow(r: LoadedReport): IncomeReportRow {
     reviewedByName: r.reviewedBy?.name ?? null,
     reviewedAt: r.reviewedAt?.toISOString() ?? null,
     updatedAt: r.updatedAt.toISOString(),
-    // A day booked before the per-day voucher keeps its verksamhet on the
-    // report, not the lines, and its fees in a report of their own. Read onto
-    // the lines here, so the screens draw an old day the way they draw a new
-    // one rather than as a day of unplaced sales.
+    // A day booked before the per-day voucher keeps its verksamhet on the report and its fees in a
+    // report of their own; read onto the lines so old days draw like new ones.
     lines: r.lines.map((l) => ({
       id: l.id,
       kind: legacy && r.source === "ZETTLE_FEE" ? ("FEE" as const) : l.kind,
@@ -231,36 +186,19 @@ function manualOf(r: LoadedReport): IncomeReportRow["manual"] {
 }
 
 /**
- * A verksamhet a mis-routed sale can be given to, and the accounts it books
- * revenue to. See lib/income/lines.ts and the assign dialog.
- *
- * The accounts are the ones its product prefixes point at, which is the closest
- * thing to "where does this unit's money normally go" the routing table holds.
- * They are offered first in the picker rather than imposed: a unit that sells
- * beer and food has two, and which one a mis-sold line belongs to is not
- * recoverable from the line. The routing strips the prefix off the product
- * name, so a line in the reserv never carried one.
+ * A verksamhet a mis-routed sale can be given to, and the accounts its product prefixes point at
+ * (offered first, not imposed). The routing strips the prefix, so a reserv line never carried one.
+ * See lib/income/lines.ts.
  */
 export interface IncomeMoveTarget {
   resultUnitId: string;
-  /** As the documents name it: the properName override, else the unit's own. */
   name: string;
   accounts: { account: string; accountName: string; prefixes: string[] }[];
-  /**
-   * The unit's own cost centres: active ones whose code its result-unit prefix
-   * matches (lib/server/result-units.ts). Offered first when a day's sales for
-   * the unit are given a cost centre.
-   */
+  /** The unit's active cost centres whose code its result-unit prefix matches (lib/server/result-units.ts). */
   costCenterCodes: string[];
 }
 
-/**
- * Every verksamhet still taking money in, as places to give a sale to.
- *
- * Inactive ones are left out for the same reason the routing drops them
- * (lib/income/config.ts): a verksamhet that has stopped selling takes no new
- * takings.
- */
+/** Every verksamhet still taking money in (inactive ones are dropped, as in lib/income/config.ts). */
 export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
   const [units, accounts, prefixes, centres] = await Promise.all([
     prisma.resultUnitIncome.findMany({
@@ -288,9 +226,7 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
 
   return units
     .map((u) => {
-      // One entry per distinct account, carrying the prefixes that route to it
-      // "3011 - öl, öl2" says more about what the account is for than its
-      // name from the chart does.
+      // One entry per distinct account with the prefixes routing to it: "3011 - öl, öl2".
       const byAccount = new Map<string, string[]>();
       for (const p of u.prefixes) {
         const codes = byAccount.get(p.account);
@@ -313,11 +249,7 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
     .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 }
 
-/**
- * Every day of one of Intäkter's pages, Zettle or Swish, newest first: the
- * ones waiting to be konterade, the konterade ones waiting to be bokförda, and
- * the bokförda. The stage is a tab on the page, cut in the browser.
- */
+/** Every day of one Intäkter page, Zettle or Swish, newest first; the stage is a tab cut in the browser. */
 export async function getIncomeReports(slug: IncomeSourceSlug): Promise<IncomeReportRow[]> {
   const reports = await prisma.incomeReport.findMany({
     where: { source: { in: sourcesOf(slug) } },
@@ -327,7 +259,6 @@ export async function getIncomeReports(slug: IncomeSourceSlug): Promise<IncomeRe
   return reports.map(reportRow);
 }
 
-/** One row of a stored verifikation, as the day's page shows it. Kronor. */
 export interface IncomeVoucherRow {
   account: string;
   accountName: string;
@@ -338,10 +269,8 @@ export interface IncomeVoucherRow {
   credit: number;
 }
 
-/** A day, and what its page needs beyond the list row. */
 export interface IncomeReportDetail {
   report: IncomeReportRow;
-  /** The verifikation as konterad, once it is. */
   voucher: IncomeVoucherRow[] | null;
 }
 

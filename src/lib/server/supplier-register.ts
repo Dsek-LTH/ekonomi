@@ -7,8 +7,7 @@ import { matchSupplier } from "@/lib/domain/payment-ref";
 import type { InvoiceTextFields } from "@/lib/domain/invoice-text";
 import type { FortnoxSupplier } from "@/lib/fortnox";
 
-/** The register as Fortnox just listed it, replacing what was kept. A
- *  supplier Fortnox no longer lists is dropped, since nothing points at it. */
+/** The register as Fortnox just listed it, replacing what was kept (suppliers no longer listed are dropped). */
 export async function rememberRegister(list: readonly FortnoxSupplier[]): Promise<void> {
   const now = new Date();
   await prisma.$transaction([

@@ -1,35 +1,7 @@
 "use client";
 
-// Filing an agreement that already exists.
-//
-// One of the two doors into the archive, and the one that writes nothing. What
-// it does is take an agreement that was signed somewhere else, often years ago
-// and on paper, and record it here. The other door is contracts/rental/new,
-// which is the only place in the app where a contract comes into being: it
-// takes answers and draws a document out of them.
-//
-// Both used to be called "Nytt avtal", side by side on the list's toolbar in
-// the same button, which said the same thing about copying a PDF into a folder
-// and about authoring an agreement between two parties. They are named for
-// their verbs now, and each page offers the other one at the foot, so somebody
-// who took the wrong door has a way across before they have typed anything.
-//
-// The document leads. Whoever opens this page is holding a PDF, and that is
-// usually the whole reason they are here: the dates, the org number and the
-// counterparty are all read off it. So the panel is declared with an `onFile`
-// and stands open as a dropzone from the first paint, the same arrangement the
-// utlägg wizard uses for a receipt. Drop the file, then fill the form in with
-// it beside you rather than in another window.
-//
-// Three cards, each one subject, matching the uthyrningsavtal form next door:
-// what the agreement is, how long it runs, and how it gets found again. It was
-// nine fields in one flat column with the same gap between all of them, so
-// nothing said where "what is this" ended and "how do we file it" began.
-//
-// Widths are container queries, not viewport breakpoints. The panel beside this
-// form can be dragged, so the form's width changes while the viewport does not
-// move at all, and `sm:` asks the wrong question. Same reason as the rental
-// form and AllocationEditor.
+// Filing an agreement signed elsewhere (the other door is contracts/rental/new). The document leads: the panel is a
+// dropzone from first paint. Widths are container queries (the panel beside the form can be dragged).
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -66,15 +38,11 @@ export function UploadContractClient({
   const { mutate, pending } = useMutation();
 
   const [kind, setKind] = useState<ContractKind>("CONTRACT");
-  // Whether the file is the signed copy, which is what makes an agreement
-  // Signerat (see lib/contract/status.ts). Yes by default: what is filed here
-  // was signed somewhere else far more often than not.
+  // Whether the file is the signed copy, which makes an agreement Signerat (lib/contract/status.ts). Default yes.
   const [fileIsSigned, setFileIsSigned] = useState(true);
   const [title, setTitle] = useState("");
 
-  // The directory, picked from rather than typed. New rows made on the fly
-  // (see the Combobox's `onCreate` below) join this list so they can be
-  // selected the moment they exist, without a round trip back to the server.
+  // The directory, picked from. Rows created on the fly join it so they can be selected at once.
   const [counterpartyOptions, setCounterpartyOptions] = useState(counterparties);
   const [counterpartyId, setCounterpartyId] = useState<string | null>(null);
   // What was typed and offered as something to create, until the dialog it
@@ -103,14 +71,10 @@ export function UploadContractClient({
   const [tags, setTags] = useState("");
   const [notes, setNotes] = useState("");
 
-  // The document, held here until the contract it belongs to exists. There is
-  // nothing to attach it to before the save, which is also why the panel shows
-  // it from a local URL rather than from an address in the archive.
+  // The document is held here until the contract exists, so the panel shows it from a local URL.
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  // One cleanup covers both ways a preview ends, a second file replacing the
-  // first and the page going away, because either is this value changing.
-  // Without it the browser holds the file for as long as the tab lives.
+  // One cleanup covers a replaced file and unmount; otherwise the browser holds the file for the life of the tab.
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
@@ -121,17 +85,11 @@ export function UploadContractClient({
     setPreviewUrl(URL.createObjectURL(picked));
   };
 
-  // A half-typed date is a real state of a masked field, so a date is only sent
-  // once it is whole. Same rule the expense form applies, from the same helper.
+  // A masked date is only sent once whole (same rule as the expense form).
   const dateOrNull = (v: string) => (isCompleteDate(v) ? v : null);
-  // CONTRACT is the one kind that is an agreement with somebody, states a
-  // period and carries a status. PROTOCOL/OTHER are both the same lean shape
-  // instead: a title, one date, tags, notes, a file. See
-  // prisma/schema/contract.prisma.
+  // CONTRACT is the one kind with a period and status; PROTOCOL/OTHER are the lean shape. See prisma/schema/contract.prisma.
   const isAgreement = kind === "CONTRACT";
-  // Everything but a meeting's minutes may name who it is with. Required for
-  // CONTRACT, optional for OTHER: naming a counterparty on an OTHER document
-  // does not make it an agreement, so it never asks for a period or a status.
+  // Everything but a meeting's minutes may name who it is with: required for CONTRACT, optional for OTHER (no period or status).
   const showCounterparty = kind !== "PROTOCOL";
   const ready =
     title.trim() !== "" &&
@@ -148,16 +106,14 @@ export function UploadContractClient({
         validFrom: dateOrNull(validFrom),
         validTo: dateOrNull(validTo),
         date: dateOrNull(date),
-        // Split here and normalised on the server, which is the only place that
-        // decides what a tag looks like. See lib/contract/tags.ts.
+        // Split here, normalised on the server (lib/contract/tags.ts).
         tags: tags
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
         notes: notes.trim() || null,
       },
-      // No success message: the upload below may still fail, and saying "saved"
-      // before the document is in would be the wrong half of the news.
+      // No success message: the upload below may still fail.
       refresh: false,
     });
     if (!created) return;
@@ -165,16 +121,13 @@ export function UploadContractClient({
     if (file) {
       const form = new FormData();
       form.append("file", file);
-      // The signed copy only for an agreement, since a lean document has no
-      // status for it to settle.
+      // The signed copy only for an agreement (a lean document has no status).
       form.append("role", isAgreement && fileIsSigned ? "SIGNED" : "ORIGINAL");
       const uploaded = await mutate(`/api/contracts/${created.id}/files`, {
         body: form,
         refresh: false,
       });
-      // The contract exists either way, so a failed upload goes to the contract
-      // rather than back to an empty form: the document can be added there, and
-      // filing the same contract twice is worse than one without its PDF.
+      // The contract exists either way, so a failed upload goes to the contract, where the document can be added.
       if (!uploaded) {
         router.push(`/contracts/${created.id}`);
         return;
@@ -188,11 +141,7 @@ export function UploadContractClient({
 
   return (
     <PageShell title={t("form.uploadTitle")} width="content" back="/contracts">
-      {/* The panel is where the document goes and where it is read, which is
-          one place rather than two. Declared with `onFile` and nothing to show,
-          so it opens as a dropzone and becomes a viewer the moment a file
-          lands. The copy is passed because the panel's own wording is about
-          receipts; see UploadCopy. */}
+      {/* The panel is dropzone and viewer in one: declared with `onFile`, with its own copy (see UploadCopy). */}
       <ReceiptPanelSource
         previewUrl={previewUrl}
         mimeType={file?.type}
@@ -218,10 +167,7 @@ export function UploadContractClient({
             }
           />
           <CardBody className="@container space-y-4">
-            {/* FieldGroup, not Field: a segment is a <button>, and a <label>
-                forwards a click anywhere in its box to the first labelable
-                element inside it, so clicking the word "Dokumenttyp" picked the
-                first typ. */}
+            {/* FieldGroup, not Field: a <label> would forward clicks on the word to the first segment. */}
             <FieldGroup label={t("form.kind")} requirement="required">
               <SegmentedControl
                 options={KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) }))}
@@ -230,10 +176,7 @@ export function UploadContractClient({
               />
             </FieldGroup>
 
-            {/* Hidden rather than shown-and-optional for PROTOCOL: a
-                meeting's minutes is never with anybody, and asking "who is
-                this with" is the wrong question there, not an optional one.
-                OTHER gets it too, optionally: see AgreementDetails.counterparty. */}
+            {/* Hidden for PROTOCOL (minutes are never with anybody); optional for OTHER, see AgreementDetails.counterparty. */}
             {showCounterparty && (
               <div className="grid gap-4 @xl:grid-cols-[2fr_1fr]">
                 <FieldGroup
@@ -278,9 +221,7 @@ export function UploadContractClient({
               <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
             </Field>
 
-            {/* Asked only once there is a file to say it about. Without one the
-                agreement is filed as a draft, and its signed copy can be
-                uploaded from its own page later. */}
+            {/* Asked only once there is a file; without one the agreement is filed as a draft. */}
             {isAgreement && file && (
               <div className="space-y-1">
                 <Checkbox
@@ -313,10 +254,7 @@ export function UploadContractClient({
             </CardBody>
           </Card>
         ) : (
-          // A lean document has no period and no status: it is filed or it
-          // doesn't exist. Just the one date, required for a protocol
-          // (pretty much the whole of what one states), left to the filer
-          // for OTHER.
+          // A lean document has no period or status: just the one date, required for a protocol, left to the filer for OTHER.
           <Card>
             <CardHeader title={t("form.sectionDate")} subtitle={t("form.sectionDateHint")} />
             <CardBody className="@container">
@@ -342,9 +280,7 @@ export function UploadContractClient({
                 autoComplete="off"
               />
             </Field>
-            {/* The section's existing vocabulary, offered by the browser rather
-                than drawn by us: the field takes several comma-separated tags,
-                which a Combobox over one value cannot express. */}
+            {/* Offered by the browser: several comma-separated tags, which a Combobox over one value cannot express. */}
             <datalist id="contract-tags">
               {knownTags.map((tag) => (
                 <option key={tag} value={tag} />
@@ -357,10 +293,7 @@ export function UploadContractClient({
           </CardBody>
         </Card>
 
-        {/* Why the button is grey, beside the button. It used to be disabled and
-            silent, which left the only unanswered question on the page with
-            nowhere to read the answer. Same wording register as the utlägg
-            wizard's submit blocker, and the same colour. */}
+        {/* Why the button is grey, beside the button. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-warning">
             {ready ? null : t(isAgreement ? "form.incomplete" : "form.incompleteTitleOnly")}
@@ -375,10 +308,6 @@ export function UploadContractClient({
           </div>
         </div>
 
-        {/* The other door. Below the buttons rather than among them: it is not
-            a third thing to do with this form, it is the way out of the wrong
-            one, and it is offered here because nothing has been typed that
-            walking through it would lose. */}
         <p className="text-xs text-muted">
           {t("form.otherKind")}{" "}
           <Button variant="link" type="button" onClick={() => router.push("/contracts/rental/new")}>

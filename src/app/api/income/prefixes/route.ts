@@ -1,5 +1,4 @@
-// Create a product-name prefix: the rule that routes "s1 - Öl" to
-// Sexmästeriet's beer account.
+// Create a product-name prefix: the rule that routes "s1 - Öl" to Sexmästeriet's beer account.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";

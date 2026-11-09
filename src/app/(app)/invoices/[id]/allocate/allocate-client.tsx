@@ -1,18 +1,5 @@
 "use client";
 
-// The fördelning of a levfaktura, as the page around it is the utlägg's form:
-// the invoice beside it in the document panel, one card of what the unit
-// says about it, and the button that sends it. See page.tsx.
-//
-// Fördela and attestera are two acts, but the unit does both here. The unit
-// proposes the split (which cost centre takes how much) and signs the rows it
-// may sign as it sends it. Any other unit's rows wait for that unit, which
-// signs on the record. With one cost centre of its own it is one press.
-//
-// Two ways in, one form (AllocateForm). The first fördelning is of a document
-// in the unit's Inkorg, and is what makes it an invoice
-// (../../inbox/[id]). After that it is an invoice whose split was reopened or
-// sent back, fördelad again here.
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -48,9 +35,7 @@ export function InvoiceAllocateClient({
   fromScan,
 }: {
   data: WorkspaceData;
-  /** What the form opens on. See page.tsx. */
   defaults: AllocateDefaults;
-  /** Which of them were read off the PDF, so the form can say to check them. */
   fromScan: { amount: boolean; dueDate: boolean };
 }) {
   const { invoice, can, reach, costCenters } = data;
@@ -63,8 +48,6 @@ export function InvoiceAllocateClient({
   const tr = useTransition(invoice.id, () => router.push(record));
   const back = useReturnToInbox(invoice.id, () => router.push("/invoices"));
 
-  // The unit's "Inte vår" and triage's "Tillbaka till inkorgen" are the same
-  // act, named for who does it.
   const backLabel = can.canMove ? tAction("return") : tAction("decline");
 
   async function uploadDocument(file: File) {
@@ -132,8 +115,7 @@ export function InvoiceAllocateClient({
   );
 }
 
-/** What the form opens on: the amount and öresutjämning in kronor, the due
- *  date and the line. */
+/** What the form opens on (amount and öresutjämning in kronor). */
 export interface AllocateDefaults {
   amount: number | null;
   rounding: number | null;
@@ -141,7 +123,6 @@ export interface AllocateDefaults {
   description: string;
 }
 
-/** What the form sends, whichever way it was reached. */
 export interface AllocateSubmission {
   rows: KonteringRow[];
   amount: number; // öre
@@ -150,11 +131,6 @@ export interface AllocateSubmission {
   description: string | null;
 }
 
-/**
- * The fördelning itself: the amount, due date and line, the split, who signs
- * what, and the button that sends it. What it is a fördelning of (a document
- * or an invoice) is its caller's, which also says what sending it does.
- */
 export function AllocateForm({
   title,
   subtitle,
@@ -177,22 +153,16 @@ export function AllocateForm({
   title: string;
   subtitle?: string;
   back: string;
-  /** The document panel's source, beside the form. */
   panel: ReactNode;
-  /** Said above the form: why it came back, for one that did. */
   notice?: ReactNode;
-  /** The unit it was given to, whose cost centres are offered first. */
   unitName: string | null;
   initialRows: AllocationRow[];
   defaults: AllocateDefaults;
   fromScan: { amount: boolean; dueDate: boolean };
-  /** The mail it was forwarded in, for what the forwarder wrote. */
   mail: { fromName: string | null; fromAddress: string; note: string | null } | null;
   costCenters: CostCenter[];
-  /** Who the viewer may attest for, so the button says what pressing it does. */
   reach: AttestReach;
   documentCount: number;
-  /** "Inte vår", or triage taking it back, when the viewer may. */
   decline: { label: string; busy: boolean; run: () => void } | null;
   busy: boolean;
   pending: boolean;
@@ -210,10 +180,7 @@ export function AllocateForm({
   const total = totalInput.trim() ? parseSEK(totalInput) : null;
   const totalOre = total == null || !Number.isFinite(total) || total <= 0 ? null : sekToOre(total);
 
-  // Öresutjämning, either sign. A plain text field rather than an amount
-  // field, since it needs the minus a phone's number pad does not have. The
-  // split adds up to the amount without it: a unit splitting an invoice
-  // copies its lines, and the öre rounded away belong to none of them.
+  // Plain text field: a phone's number pad has no minus.
   const [roundingInput, setRoundingInput] = useState(
     defaults.rounding ? sekToInput(defaults.rounding) : "",
   );
@@ -222,8 +189,7 @@ export function AllocateForm({
   const costOre = totalOre == null ? null : costTotal(totalOre, roundingOk ? roundingOre : 0);
 
   const [rows, setRowsState] = useState<AllocationRow[]>(initialRows);
-  // Stable, because the editor keeps a lone row's amount equal to the total
-  // in an effect that depends on it.
+  // Stable: the editor syncs a lone row's amount to the total in an effect.
   const setRows = useCallback((next: AllocationRow[]) => setRowsState(next), []);
   const split = rows.length > 1;
 
@@ -233,7 +199,6 @@ export function AllocateForm({
   );
   const mayAttest = (code: string) => reach.all || reach.units.includes(unitOf.get(code) ?? "");
 
-  // The unit's own cost centres first: that is nearly always the answer.
   const options = useMemo(() => {
     const own = (c: CostCenter) => (c.resultUnit && c.resultUnit === unitName ? 0 : 1);
     return [...costCenters].sort((a, b) => own(a) - own(b) || a.code.localeCompare(b.code));
@@ -252,18 +217,16 @@ export function AllocateForm({
       : !roundingOk
         ? "supplierInvoice.badRounding"
         : !dueDate
-        ? "supplierInvoice.noDueDate"
-        : payload.length !== rows.length
-          ? "supplierInvoice.noAllocations"
-          : attestBlocker({
-              documentCount,
-              rows: payload.map((p) => ({ amount: p.amount })),
-              invoiceAmount: totalOre,
-              rounding: roundingOre,
-            });
+          ? "supplierInvoice.noDueDate"
+          : payload.length !== rows.length
+            ? "supplierInvoice.noAllocations"
+            : attestBlocker({
+                documentCount,
+                rows: payload.map((p) => ({ amount: p.amount })),
+                invoiceAmount: totalOre,
+                rounding: roundingOre,
+              });
 
-  // Who will sign what, once sent: the reader now, the rest asked. Only worth
-  // saying when somebody else is in it.
   const picked = rows.filter((r) => r.costCenterCode);
   const others = [
     ...new Set(

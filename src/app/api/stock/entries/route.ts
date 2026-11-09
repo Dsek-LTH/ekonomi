@@ -1,9 +1,6 @@
-// Write to the log, and read it back.
-//
-// POST only. There is no PATCH and no DELETE on a stock entry anywhere in this
-// app, and their absence is the feature: a lagerbokföring whose rows can be
-// changed after the fact is a record nobody can defend under inspection. A
-// mistake is corrected by a new row naming the row it corrects.
+// Write to the log, and read it back. POST only: stock entries are never edited or deleted, a
+// mistake is a new row naming the row it corrects.
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
@@ -27,7 +24,7 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const take = Number(url.searchParams.get("take"));
-  // Repeated or comma-separated, the same as the screen writes them.
+  // Repeated or comma-separated.
   const many = (key: string) =>
     url.searchParams
       .getAll(key)
@@ -43,8 +40,7 @@ export async function GET(req: Request) {
   return NextResponse.json(log);
 }
 
-// The product as a movement needs it: what it is, how it is measured, and
-// what it costs and keeps today.
+// The product as a movement needs it.
 function findProduct(id: string) {
   return prisma.stockProduct.findUnique({
     where: { id },
@@ -61,13 +57,8 @@ function findProduct(id: string) {
 }
 type Product = NonNullable<Awaited<ReturnType<typeof findProduct>>>;
 
-// ── A stocktake ──
-//
-// What it states is what is on the shelf, so that is what is stored: a row
-// per rung holding the counted figure. The difference from what the books
-// expected is left to the replay, which works it out again every time
-// anything before the count changes, which is what makes a count a baseline
-// rather than an adjustment that quietly expires. See lib/stock/replay.ts.
+// A stocktake stores the counted figure per rung; the difference is derived by the replay
+// (lib/stock/replay.ts).
 async function recordStocktake(
   body: CreateStockEntry & { counted: NonNullable<CreateStockEntry["counted"]> },
   product: Product,
@@ -82,9 +73,7 @@ async function recordStocktake(
     })),
   ].filter((w) => product.kind === "VOLUME" || w.level === 0);
 
-  // Two statements rather than ten. A stocktake of a VOLUME product is five
-  // rungs, each of which was its own entry insert followed by its own change
-  // insert, in sequence, inside the transaction.
+  // Two statements rather than ten (a VOLUME stocktake is five rungs).
   const made = await bulkTransaction(async (tx) => {
     const rows = await tx.stockEntry.createManyAndReturn({
       data: wanted.map((w) => ({
@@ -92,9 +81,7 @@ async function recordStocktake(
         kind: "COUNT" as const,
         level: w.level,
         countedQty: w.qty,
-        // What the product costs today, kept on the row. A stocktake that
-        // finds stock the log had lost is worth what that stock cost, and
-        // that has to stay what it was when a price is corrected later.
+        // The cost today, kept on the row so later price edits cannot move it.
         unitCostOre: product.costPriceOre,
         occurredAt: new Date(body.occurredAt),
         actorId: actorId,
@@ -102,7 +89,7 @@ async function recordStocktake(
       })),
       select: { id: true },
     });
-    // In the order given, which is what pairs each row with its rung.
+    // In the order given, which pairs each row with its rung.
     await tx.stockChange.createMany({
       data: rows.map((row, i) => ({
         entryId: row.id,
@@ -120,19 +107,10 @@ async function recordStocktake(
   return NextResponse.json({ id: made[0] }, { status: 201 });
 }
 
-// ── The event ──
-//
-// The three kinds that make up a night must name one. A movement of stock to
-// or from a bar that belongs to no night is a row nothing can ever reconcile:
-// a pub running past midnight is two dates and a committee may take stock out
-// twice in an evening, so nothing but an explicit event says which rows go
-// together.
+// The three kinds that make up a night must name an event, or the rows can never be reconciled.
 const NEEDS_EVENT: StockEntryKind[] = ["CHECKOUT", "RETURN", "WASTE"];
 
-/**
- * Whether this movement names the night it belongs to (or, for the cellar's
- * own kinds, names none), and what that night still has out of this product.
- */
+/** Whether this movement names its night (or, for cellar kinds, none), and what that night still has out of this product. */
 async function nightCeiling(
   body: CreateStockEntry,
   product: Product,
@@ -145,16 +123,12 @@ async function nightCeiling(
     });
     if (!event) return { ok: false, res: fail(422, "stock.eventNotFound") };
   } else if (body.eventId) {
-    // A delivery, a stocktake and a cellar write-off are about the cellar
-    // rather than a night, and letting one carry an event would put stock into
-    // a night's arithmetic that never went to it. A SPOILAGE especially: it
-    // takes stock off the shelf, and against an event that had already checked
-    // that stock out it would take the same bottle away twice.
+    // Cellar kinds must not carry an event, or stock enters a night's arithmetic that never went
+    // to it (SPOILAGE would take the same bottle away twice).
     return { ok: false, res: fail(422, "stock.eventOnNightOnly") };
   }
 
-  // What this event has already moved of this product, which is the ceiling on
-  // anything coming back or being written off against it.
+  // What this event has already moved of this product: the ceiling for returns and write-offs.
   let stillOut = 0;
   if (body.eventId) {
     const booked = await prisma.stockEntry.findMany({
@@ -198,22 +172,13 @@ export async function POST(req: Request) {
   const product = await findProduct(body.productId);
   if (!product) return fail(404, "stock.productNotFound");
 
-  // A stocktake states what is on the shelf rather than moving anything, so it
-  // is written its own way. Everything below is a movement.
+  // A stocktake states the shelf rather than moving anything.
   if (body.counted) return recordStocktake({ ...body, counted: body.counted }, product, g.actor.id);
 
-  // What the log already says this product holds. Needed twice below: to check
-  // that the bottles being taken are actually on the shelf, and to price
-  // whatever is leaving, which is what `withValue` is for.
+  // What the log holds: to check the bottles are on the shelf and to price what leaves.
   const held = await heldOnHand(prisma, product, { withValue: true });
 
-  // ── The bottles ──
-  //
-  // A level is never re-estimated on the way out: the body picks bottles that
-  // are already on a rung, and the shelf has to actually have them. `pickFault`
-  // is where the bar's rule lives: the open ones leave before a sealed one
-  // does, and it is the same function the form asks before offering the
-  // button.
+  // The body picks bottles already on a rung. `pickFault` is the bar's rule, shared with the form.
   let units = body.units ?? 0;
   const open: OpenBottles = {};
   for (const level of LEVELS) {
@@ -225,18 +190,12 @@ export async function POST(req: Request) {
   if (!night.ok) return night.res;
   const { stillOut } = night;
 
-  // ── A spill moves no stock ──
-  //
-  // What was dropped had already left the cellar when it was checked out, so
-  // taking it off the shelf again would remove it twice and the crate would
-  // come up short at the next stocktake. The quantity goes in its own column
-  // and the shelf columns stay at nothing.
+  // A spill moves no stock (it left at checkout): the quantity goes in its own column.
   const spilledQty = body.kind === "WASTE" ? (body.spilledQty ?? 0) : 0;
   const level = body.level ?? 0;
   if (body.kind === "WASTE") {
     if (spilledQty <= 0) return fail(422, "stock.nothingSpilled");
-    // Compared in the product's own unit: the figure above is a count of
-    // bottles, and what the night is missing is millilitres of them.
+    // Compared in the product's own unit (millilitres for bottles).
     const lost = spillVolume(product, { kind: "WASTE", units: 0, spilledQty, level });
     if (lost > stillOut) return fail(422, "stock.moreThanWentOut");
     units = 0;
@@ -257,11 +216,7 @@ export async function POST(req: Request) {
         LEVELS.map((l) => [l, Math.max(0, -(open[l] ?? 0))]).filter(([, n]) => (n as number) > 0),
       ) as OpenBottles,
     };
-    // A write-off is not a choice, so the ladder has no say in it. Somebody
-    // dropped the bottle they dropped, and refusing to record a sealed one
-    // because an open one is still standing on the shelf would be asking them
-    // to write down a different accident. Everything else is stock being
-    // picked, and there the dregs go first. See lib/stock/levels.ts.
+    // A write-off is not a choice, so the ladder has no say. Everything else is picked, dregs first.
     const bad =
       body.kind === "SPOILAGE"
         ? shortfall({ sealed: held.units, open: held.open }, pick)
@@ -276,28 +231,19 @@ export async function POST(req: Request) {
     spilledQty,
     correctsId: body.correctsId ?? null,
   };
-  // The same rule the form applies before offering the button, so the two can
-  // never disagree about what a movement is.
+  // The same rule the form applies, so the two cannot disagree.
   const fault = entryFault(movement, product);
   if (fault) return fail(422, `stock.${fault}`);
 
-  // ── What it does to the value ──
-  //
-  // A purchase brings what was paid. Anything leaving costs the moving average
-  // at this moment, computed here and never recomputed, because the average
-  // moves with the next delivery and a figure worked out later would not be
-  // what this movement was worth. See lib/stock/value.ts.
+  // A purchase brings what was paid. Anything leaving costs the moving average now, never
+  // recomputed (lib/stock/value.ts).
   const valueDeltaOre = valueDelta(
     { qty: costBasis({ units: held.units }), valueOre: held.valueOre },
-    // The price as it stands now, which is also what the row is about to
-    // capture: from here on the two are the same figure and neither can be
-    // moved by re-pricing the product.
+    // The price now, which the row also captures.
     { kind: body.kind, units, unitCostOre: product.costPriceOre },
   );
 
-  // The two rows this one may name. Looked up together: they are independent
-  // questions, and asking them in sequence made the second wait on the first
-  // for no reason. Both resolve to null when the body did not name one.
+  // The rows this one may name, looked up together. Null when not named.
   const [target, expense] = await Promise.all([
     body.correctsId
       ? prisma.stockEntry.findUnique({
@@ -315,15 +261,11 @@ export async function POST(req: Request) {
   }
   if (body.expenseId && !expense) return fail(422, "stock.expenseNotFound");
 
-  // Only a delivery brings stock into the building with an age. A return is
-  // stock coming back from a night out, and it is already as old as whatever
-  // delivery carried it in.
+  // Only a delivery brings stock in with an age. A return is as old as its delivery.
   const bestBeforeAt =
     body.kind === "PURCHASE" ? bestBeforeOf(body.occurredAt, product.shelfLifeMonths) : null;
 
-  // Recorded as something somebody did, not only as something that happened.
-  // The product's own feed is where "why does Fireball say 20?" gets answered,
-  // and a delivery has no event to ask it from.
+  // Recorded as something somebody did, for the product's feed (a delivery has no event).
   const entry = await prisma.stockEntry.create({
     data: {
       productId: product.id,
@@ -331,16 +273,10 @@ export async function POST(req: Request) {
       units,
       ...openColumns(open),
       valueDeltaOre,
-      // The price as it stands now, captured so that nothing computed from it
-      // can move when the product is re-priced. See the schema note.
+      // The price now, captured so re-pricing cannot move it.
       unitCostOre: product.costPriceOre,
-      // And, on a delivery, roughly how long what just arrived keeps. Captured
-      // for the same reason and at the same moment: it is a fact about the day
-      // the stock came in, and correcting a product's shelf life afterwards
-      // must change what the next delivery is watched for rather than reach
-      // back into one somebody has already been out to check. Null on every
-      // other kind, and on a product nobody has given a shelf life. See
-      // lib/stock/expiry.ts.
+      // On a delivery, also the shelf life, captured for the same reason (lib/stock/expiry.ts).
+      // Null on other kinds.
       bestBefore: bestBeforeAt ? new Date(bestBeforeAt) : null,
       spilledQty,
       level,
@@ -354,11 +290,8 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  // The figure somebody typed, at the rung the row is about. A spill carries
-  // its own count; everything else is what the shelf columns moved, and for a
-  // row about an opened bottle that is the rung rather than `units`, which is
-  // nought on one. A feed that logged those as nothing would be a feed that
-  // lost the movement it exists to explain.
+  // The figure typed at the rung the row is about. A spill carries its own count; otherwise the
+  // shelf columns' move, which for an opened bottle is the rung rather than `units`.
   const movedQty =
     body.kind === "WASTE" ? spilledQty : Math.abs(isLevel(level) ? (open[level] ?? 0) : units);
 
@@ -375,8 +308,7 @@ export async function POST(req: Request) {
     },
   });
 
-  // A delivery dated before rows that already exist changes what they cost, and
-  // any row before a count changes what the count's difference has to be.
+  // A delivery dated before existing rows changes their cost, and a row before a count changes its difference.
   await bulkTransaction(async (tx) => replayProduct(tx, product.id));
 
   return NextResponse.json({ id: entry.id }, { status: 201 });

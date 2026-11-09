@@ -1,30 +1,13 @@
-// Granskning: the look at a konterat utlägg before it is bokfört in Fortnox.
-//
-// Two questions, both answered here so the export route, the review queue and
-// the review screen cannot give different answers to them:
-//
-//   who konterade it, and may this viewer bokföra it (the two-person rule)
-//   what about it is worth a second look before it is sent (the warnings)
-//
-// Bokföring is the one step that cannot be undone. Fortnox has no delete for a
-// voucher, only a makulering, so the check belongs in front of it.
+// Granskning: the look at a konterat utlägg before it is bokfört in Fortnox. Answers who konterade it
+// and whether this viewer may bokföra it (two-person rule), and what deserves a second look
+// (warnings). Bokföring cannot be undone (Fortnox only has makulering), so the check goes in front.
 
-/** One write to an utlägg's history, as far as these rules care. */
 export interface BookingEvent {
   type: string;
   actorId: string | null;
 }
 
-/**
- * The kontering as it stands: the latest BOOKED event, and the EDITED ones
- * after it, in order. Null when it has never been konterat.
- *
- * Counted from the latest BOOKED event. An utlägg reopened and konterat again
- * starts over, because the earlier rows are gone.
- *
- * Generic so each caller keeps what it loaded with the events (a name, a
- * date) and the rule for which events count is written once.
- */
+/** The kontering as it stands: the latest BOOKED event and the EDITED ones after it, in order. Null when never konterat. Generic so callers keep what they loaded with the events. */
 export function bookingTrail<E extends { type: string }>(
   events: readonly E[],
 ): { booked: E; amended: E[] } | null {
@@ -36,13 +19,7 @@ export function bookingTrail<E extends { type: string }>(
   };
 }
 
-/**
- * Everyone who has written this utlägg's kontering: whoever konterade it last,
- * and whoever has amended the rows since. In the order they first did.
- *
- * Amenders count. Otherwise changing one digit in a colleague's kontering
- * would make it yours to bokföra, and the second pair of eyes would be your own.
- */
+/** Everyone who has written this utlägg's kontering: last konterare and later amenders, in order of first appearance. Amenders count, or changing one digit would make it yours to bokföra. */
 export function bookedBy(events: readonly BookingEvent[]): string[] {
   const trail = bookingTrail(events);
   if (!trail) return [];
@@ -50,16 +27,8 @@ export function bookedBy(events: readonly BookingEvent[]): string[] {
   return [...new Set(ids)];
 }
 
-/**
- * Why this viewer may not bokföra this utlägg, or null when they may.
- *
- * The rule always holds: whoever konterade it does not bokföra it. It is not a
- * setting, because a second pair of eyes is not something to switch off. Who
- * is exempt is: the roles holding REVIEW_OWN_BOOKING, which is set in
- * Inställningar → Roller, so no role is named here.
- */
+/** Why this viewer may not bokföra this utlägg, or null. Whoever konterade it does not bokföra it. Exempt are the roles holding REVIEW_OWN_BOOKING (Inställningar → Roller). */
 export function reviewBlocker(opts: {
-  /** canReviewOwnBooking for the viewer. */
   exempt: boolean;
   viewerId: string;
   bookedBy: readonly string[];
@@ -68,12 +37,7 @@ export function reviewBlocker(opts: {
   return opts.bookedBy.includes(opts.viewerId) ? "ownBooking" : null;
 }
 
-/**
- * What the review screen points out. Each is a message key under
- * `bookkeeping.review.warning`. None of them stops the bokföring: each is
- * something a person may have decided on purpose, and the reviewer is the one
- * looking.
- */
+/** What the review screen points out, as message keys under `bookkeeping.review.warning`. None stops the bokföring. */
 export type ReviewWarning =
   | "outsideFinancialYear"
   | "prefixOnlyText"
@@ -82,13 +46,10 @@ export type ReviewWarning =
   | "inactiveProject";
 
 export function reviewWarnings(input: {
-  /** ISO date of the voucher. */
   date: string;
-  /** The synced financial years. Empty means none have been synced, and then
-   *  the date is not something this app can judge. */
+  /** The synced financial years. Empty means none synced, so the date cannot be judged. */
   financialYears: readonly { fromDate: string; toDate: string }[];
   description: string;
-  /** The fixed start of the voucher text, see the kontering screen. */
   textPrefix: string;
   lines: readonly { account: string; costCenterCode?: string; project?: string }[];
   isActiveAccount: (n: string) => boolean;
@@ -120,10 +81,6 @@ export function reviewWarnings(input: {
   return out;
 }
 
-/**
- * The fixed start of an utlägg's voucher text: the submitter's StiL id for a
- * card purchase, "PU <stilid>" for anything the section owes the member.
- * The kontering screen locks it; the review checks whether anything follows it.
- */
+/** The fixed start of an utlägg's voucher text: the submitter's StiL id for a card purchase, "PU <stilid>" for anything owed to the member. The kontering screen locks it. */
 export const voucherTextPrefix = (paymentType: string, studentId: string) =>
   paymentType === "CARD" ? studentId : `PU ${studentId}`;

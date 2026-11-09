@@ -18,9 +18,6 @@ describe("voucherText", () => {
     expect(voucherText("PU Anna Andersson", null)).toBe("PU Anna Andersson");
   });
 
-  // Fortnox cuts Description at 200 characters. Cutting from the end would take
-  // the reference with it and leave a voucher nothing traces back to, so the
-  // text is what gets shortened.
   it("keeps the reference when the text is too long to fit", () => {
     const long = "x".repeat(300);
     const out = voucherText(long, "DEK26-0043");

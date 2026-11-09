@@ -1,14 +1,6 @@
-// The voucher a day of takings will be posted as, and whether it may be.
-//
-// Derived from the day's lines by the same function the booking route uses
-// (buildDayVoucherLines in lib/income/voucher.ts), so what the screen shows is
-// the voucher the server writes, row for row. Or, when somebody has written the
-// kontering by hand, those rows, which are saved on the server with a
-// fingerprint of the lines (lib/income/manual-voucher.ts). Nothing here holds
-// an edited voucher of its own, which is what used to go wrong: an edit kept in
-// the browser outlived the correction it was made before, and was booked.
-//
-// Pure over plain data, so it is tested without a React tree.
+// The voucher a day of takings will be posted as: derived by the booking route's function (buildDayVoucherLines in
+// lib/income/voucher.ts), or the hand-written rows saved with a fingerprint of the lines (lib/income/manual-voucher.ts).
+// Nothing here holds an edited voucher. Pure over plain data.
 import { oreToSEK, sekToOre } from "@/lib/domain/money";
 import type { IncomeLineRow, IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
@@ -16,7 +8,6 @@ import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/type
 import { clearingRow, manualVoucherBlocker } from "@/lib/income/manual-voucher";
 import { buildDayVoucherLines, incomeVoucherBlocker } from "@/lib/income/voucher";
 
-/** One row of the voucher as the screen shows it. Kronor. */
 export interface VoucherPreviewRow {
   account: string;
   accountName: string;
@@ -27,10 +18,7 @@ export interface VoucherPreviewRow {
   credit: number;
 }
 
-/**
- * Why a day cannot be booked yet, the first reason that applies. Each is a
- * message key under `income.blocker`, worded as what to do about it.
- */
+/** Why a day cannot be booked yet, the first reason that applies: a message key under `income.blocker`. */
 export type DayBlocker =
   | "alreadyBooked"
   | "manualStale"
@@ -53,39 +41,26 @@ export interface DayVoucher {
   totalDebit: number;
   totalCredit: number;
   blocker: DayBlocker | null;
-  /** Whether the button may be live: the server applies the same rules. */
   canBook: boolean;
 }
 
-/** An account's name from the chart, or the number itself when it is not in it. */
 const nameOf = (accounts: AccountRecord[], number: string) =>
   accounts.find((a) => a.number === number)?.name ?? number;
 
-/**
- * Where to read a day's intäktsräkning, stamped with when the report last
- * changed so a corrected day is a different address and the browser does not
- * show the copy it was allowed to keep for five minutes.
- */
+/** Where to read a day's intäktsräkning, stamped with when the report last changed so a corrected day is a new address (the browser caches for five minutes). */
 export const documentUrl = (report: IncomeReportRow) =>
   `/api/income/reports/${report.id}/document?v=${encodeURIComponent(report.updatedAt)}`;
 
-/** Where the money landed, which is a property of how it was paid. */
 const clearingAccountFor = (report: IncomeReportRow, settings: IncomeSettingsRow) =>
   (report.source === "SWISH" ? settings.swishClearingAccount : settings.zettleClearingAccount) ??
   "";
 
-/** Lines that move money. A line that came to nothing books nothing. */
 const moving = (lines: readonly IncomeLineRow[]) => lines.filter((l) => l.total !== 0);
 
-/** What on the day still needs a person, counted, for the findings and the list. */
 export interface LineFindings {
-  /** Matched no prefix, or has no verksamhet. */
   unplaced: number;
-  /** No cost centre at all. */
   noCostCenter: number;
-  /** On a cost centre that has been archived, by code. */
   inactive: string[];
-  /** On a local cost centre, which reaches Fortnox only as text, by code. */
   local: string[];
 }
 
@@ -120,12 +95,10 @@ export function dayVoucher({
   settings: IncomeSettingsRow;
   accounts: AccountRecord[];
   costCenters: CostCenter[];
-  /** Fortnox projects, which a hand-written row may name. */
   projects?: ProjectRecord[];
 }): DayVoucher {
   const clearing = clearingAccountFor(report, settings);
-  // The code stands in for the id: it is what the screen has, and one code is
-  // one cost centre, so the rows group the same way the server's do.
+  // The code stands in for the id: one code is one cost centre, so rows group as the server's do.
   const input = {
     lines: report.lines.map((l) => ({
       account: l.account,
@@ -159,11 +132,7 @@ export function dayVoucher({
   };
 }
 
-/**
- * A kontering written by hand: its rows, then the clearing row, which is the
- * day's total and nobody's choice. Held to the same rules the booking route
- * holds it to.
- */
+/** A kontering written by hand: its rows, then the clearing row (the day's total). Held to the booking route's rules. */
 function manualVoucher(
   report: IncomeReportRow,
   clearing: string,
@@ -200,7 +169,6 @@ function manualVoucher(
   };
 }
 
-/** What stops a hand-written kontering being booked, as the route checks it. */
 function manualBlockerFor(
   report: IncomeReportRow,
   total: number,
@@ -239,7 +207,6 @@ function manualBlockerFor(
   return invalid ? "manualInvalid" : null;
 }
 
-/** The same checks as the booking route, in the same order. */
 function blockerFor(
   report: IncomeReportRow,
   input: Parameters<typeof incomeVoucherBlocker>[0],

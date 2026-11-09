@@ -1,9 +1,7 @@
 "use client";
 
-// Every member's redovisningsbetyg, the lowest first, since those are the ones
-// to talk to. A list rather than a table: a face, a name, the score and what
-// waits is all a row needs. A row opens the same
-// breakdown the member sees on their own profile.
+// Every member's redovisningsbetyg, lowest first. A row opens the breakdown the member sees on their own profile.
+
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -16,8 +14,7 @@ import { MemberScorePanel, ScoreNumber } from "@/components/member-score";
 import { UserAvatar } from "@/components/ui/avatar";
 import type { MemberScoreRow } from "@/lib/data/member-score";
 
-/** Lowest first, and "Ny" after everyone with a score: nothing to go on is not
- *  a low score. Then whoever has the most waiting. */
+/** Lowest first, "Ny" after everyone with a score, then most waiting. */
 const byConcern = (a: MemberScoreRow, b: MemberScoreRow) =>
   (a.score.score ?? 101) - (b.score.score ?? 101) ||
   b.score.waiting.length - a.score.waiting.length ||

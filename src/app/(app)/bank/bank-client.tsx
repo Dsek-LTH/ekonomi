@@ -47,27 +47,15 @@ export default function BankClient({
   viewerId,
 }: {
   page: RowPage<BankTransaction>;
-  /** Settled on the server, see page.tsx. Never decided here. */
   scope: BankScope;
-  /** The scopes this reader may pick between, in track order. */
   scopes: BankScope[];
-  /** The reader's own cards, to decide whether the card column earns its width. */
   cards: SectionCard[];
-  /**
-   * The whole card register, for the picker in the card column. Empty for
-   * anybody the server does not let assign one, which is what decides whether
-   * the picker is drawn at all: an empty list here is not a short menu, it is
-   * "not yours to change".
-   */
+  /** The whole card register, for the card picker. Empty for anybody the server does not let assign one, which also decides whether the picker is drawn. */
   allCards: SectionCard[];
-  /** The purchases on no card. Empty for anybody who cannot place them. */
-  /** Purchases on no card, on the section's reading. "Utan kort" is a tab
-   *  only while this is above zero. */
+  /** Purchases on no card (the section's reading). "Utan kort" is a tab only while above zero. */
   cardless: number;
-  /** The reader's own purchases with no utlägg yet, on Mina. Zero elsewhere. */
   unaccounted: number;
-  /** Whether placing the cardless ones is the reader's job, which makes their
-   *  count work waiting rather than a tally (a revisor sees them too). */
+  /** Whether placing the cardless ones is the reader's job (their count is work waiting, not a tally; a revisor sees them too). */
   placesCards: boolean;
   viewerId: string;
 }) {
@@ -80,19 +68,14 @@ export default function BankClient({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const controls = useUrlTableControls(page.total, bankDefaultTab(scope));
-  // The no-card list is every row it will ever hold, so it narrows in the
-  // browser and keeps its state here rather than in the address, which is the
-  // main list's.
+  // The no-card list holds every row it will have, so it narrows in the browser.
   const canImport = canBookkeep(user.capabilities);
-  // The register is only sent to somebody the server would let write it, so
-  // having one is the permission (see page.tsx).
+  // The register is only sent to somebody who may write it, so having one is the permission.
   const canAssign = allCards.length > 0;
   const importing = pending === "import";
 
-  // Chasing card purchases nobody has accounted for: tick them, then
-  // "Påminn", and each holder gets one mail listing theirs. Only the main
-  // list. A purchase on no card has no holder to remind, which is the job the
-  // no-card table is for. See useReminderPicks.
+  // Reminders for unaccounted card purchases: tick, then "Påminn" (see useReminderPicks). Main
+  // list only, since a purchase on no card has no holder to remind.
   const picks = useReminderPicks({
     rows: page.rows,
     enabled: canSendReminders(user.capabilities),
@@ -102,20 +85,12 @@ export default function BankClient({
     rowLabel: (tx) => `${date(tx.transactionDate)} ${tx.description}`,
   });
 
-  // In the URL, like every other filter on a list: which purchases you were
-  // looking at is a thing people send each other, and it is the same parameter
-  // the server reads to decide what to fetch. See useScopeSwitch.
+  // In the URL like other list filters; the server reads the same parameter (see useScopeSwitch).
   const setScope = useScopeSwitch(controls.tab, (s) => bankDefaultTab(s as BankScope));
 
-  // Stage, named for who acts next. "Utan kort" only on the section's reading
-  // and only while there is one: those purchases are on nobody's own feed, and
-  // placing them is bookkeeping's. It used to be a notice with a second table
-  // under it, because as a tab it sat empty most of the time. A tab that is
-  // hidden when empty has no such cost (see docs/navigation.md).
-  //
-  // No predicates. The tab is a filter the server applies (see
-  // getBankTransactionPage), so the rows arrive already narrowed to it. The
-  // default differs per scope, so it is always passed (see bankDefaultTab).
+  // Stage, named for who acts next. "Utan kort" only on the section's reading and only while
+  // there is one (docs/navigation.md). The tab is a server filter (getBankTransactionPage), so
+  // it is always passed since the default differs per scope (bankDefaultTab).
   const tabs: TabFilter = BANK_TABS.filter((v) => v !== "nocard" || cardless > 0).map((value) => ({
     value,
     label: t(`tab.${value}`),
@@ -129,7 +104,6 @@ export default function BankClient({
   }));
 
   async function upload(file: File) {
-    // The CSV is posted as-is; only the summary line is ours to build.
     const data = await mutate("/api/bank/import", {
       key: "import",
       body: file,
@@ -145,7 +119,6 @@ export default function BankClient({
       [count("cardsCreated"), "newCards"],
       [count("skippedRows"), "skippedRows"],
     ];
-    // Everything but the import count is only worth a line when it happened.
     const parts = counts
       .filter(([n], i) => i === 0 || n > 0)
       .map(([n, key]) => t(`summary.${key}`, { count: n }));
@@ -167,11 +140,8 @@ export default function BankClient({
     });
   }
 
-  // An empty pick means "off every card", which is a real answer: a row put on
-  // the wrong card has to be able to come off it again.
-  //
-  // Answers whether it took, because the cell shows the picked holder before
-  // the server has confirmed it and has to put that back if it did not.
+  // An empty pick means "off every card": a row on the wrong card must be able to come off. It
+  // answers whether it took, so the cell can revert its optimistic holder.
   async function assignCard(txId: string, cardId: string): Promise<boolean> {
     const body: PatchBankTransaction = { cardId: cardId || null };
     const res = await mutate(`/api/bank/${txId}`, {
@@ -186,8 +156,7 @@ export default function BankClient({
   const columns: Column<BankTransaction>[] = [
     bankDateColumn(t("colDate"), date),
     bankDescriptionColumn(t("colTransaction")),
-    // Whose card it sat on, or (when they are all yours) which of your cards.
-    // The second only earns its width once somebody holds more than one.
+    // Whose card it sat on, or (when all are yours) which of your cards, once somebody holds several.
     scope !== "mine"
       ? bankHolderColumn(
           t("colHolder"),
@@ -204,23 +173,8 @@ export default function BankClient({
         )
       : bankCardColumn(t("colCard"), cards.length <= 1),
     bankAmountColumn(t("colAmount")),
-    // Was a status pill saying "Matchad - DEK26-0039". It said the same thing
-    // this does, in more words and without going anywhere, and the tabs above
-    // already sort matched from unmatched, which is the only part a pill was
-    // adding. Same column as on Kortköp, so the two tables answer "which
-    // utlägg" the same way.
-    //
-    // The same column offers "Redovisa" where there is no utlägg yet and the
-    // purchase is the viewer's own: has this been dealt with is one question,
-    // and the link and the button are its two answers. They were two columns,
-    // one of them empty on every row the other was not. "Redovisa" used to
-    // exist only on Kortköp, which meant a treasurer looking at the section's
-    // feed found their own unaccounted purchase and could not do the one thing
-    // they wanted to it.
-    //
-    // On a phone it rides in the card's action row rather than its line of
-    // details, because a button cannot sit in a line of small text. The
-    // matched utlägg's number goes with it and reads there as the link it is.
+    // Also offers "Redovisa" where there is no utlägg yet and the purchase is the viewer's own.
+    // On a phone it rides in the card's action row, with the matched utlägg's number as a link.
     {
       ...bankMatchedColumn(t("colExpense"), {
         linked: t("matched"),
@@ -238,10 +192,8 @@ export default function BankClient({
       key: "actions",
       header: "",
       align: "right",
-      // Not on a phone, where the row's one button is "Redovisa". Deleting a
-      // bank row is a treasurer's tidying, done at a desk.
+      // Not on a phone, where the row's one button is "Redovisa". Delete is a desk task.
       mobile: "hide",
-      // Only the delete now, so only for someone who may delete.
       hidden: !canImport,
       cell: (tx) => (
         <span className="flex items-center justify-end gap-1">
@@ -260,9 +212,7 @@ export default function BankClient({
     },
   ];
 
-  // The cardless rows are there to be put on a card, so on a phone the picker
-  // stands opposite the second line rather than the holder's name being in it,
-  // which these rows do not have.
+  // On a phone the picker stands opposite the second line (cardless rows have no holder name).
   const cardlessColumns = columns.map((c) =>
     c.key === "holder" ? { ...c, mobile: "status" as const, mobileCell: undefined } : c,
   );
@@ -281,15 +231,13 @@ export default function BankClient({
           : undefined
       }
     >
-      {/* Transaction list */}
       <Card>
         <DataTable
           columns={[picks.column, ...(controls.tab === "nocard" ? cardlessColumns : columns)]}
           rows={page.rows}
           controls={controls}
           tabs={tabs}
-          // On the list's own toolbar, like every other list's action: an
-          // import adds rows to what is below it.
+
           action={
             canImport && (
               <>
@@ -344,21 +292,12 @@ export default function BankClient({
 }
 
 /**
- * Which card a purchase sat on, as something bookkeeping can set.
- *
- * The import only places a row on a card when the Referens ended in a K####
- * token. The rest arrive on no card at all, which means they never reach the
- * feed of the person who made the purchase, so nobody accounts for them. This
- * is where somebody says whose they were.
+ * Which card a purchase sat on, as something bookkeeping can set. The import places a row
+ * only when the Referens ended in a K#### token; the rest have no card and never reach the
+ * purchaser's feed.
  */
 
-/**
- * The box a card holder sits in, assigned or not: the card picker's own shape
- * from md (176px, the field's padding and border), so a name, a name that can
- * be changed and the "Välj kort" picker all start at the same place in the
- * column. Only the edge differs, and only the changeable one shows it, on
- * hover.
- */
+/** The box a card holder sits in: the picker's shape from md (176px), so names and the "Välj kort" picker line up. */
 const CARD_BOX =
   "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-8 md:w-44 md:px-2.5";
 
@@ -371,33 +310,25 @@ function CardCell({
   tx: BankTransaction;
   cards: SectionCard[];
   busy: boolean;
-  /** Whether the write took. See `assignCard`. */
   onPick: (cardId: string) => Promise<boolean>;
 }) {
   const t = useTranslations("bank");
-  // A row with no card opens as the picker: that is the work, and it is what
-  // makes the gaps visible in a list that is mostly not gaps. A row that has a
-  // card reads as text until it is clicked, so the section's feed stays a feed
-  // rather than a wall of dropdowns.
+  // A row with no card opens as the picker (that is the work); one with a card reads as text
+  // until clicked.
   const [picking, setPicking] = useState(false);
-  // The card just picked, which is who the row belongs to from the moment it
-  // was chosen. The write and the re-render behind it are two round trips, and
-  // leaving a dropdown on screen for that stretch reads as a pick that did not
-  // land. Dropped again if the server refuses it.
+  // The card just picked, shown at once since the write and re-render take two round trips.
+  // Dropped if the server refuses it.
   const [picked, setPicked] = useState<string | null>(null);
 
   async function pick(cardId: string) {
     setPicked(cardId);
-    // Clearing puts the row back on no card, which is the state the picker is
-    // the display for, so that one stays open.
+    // Clearing puts the row back on no card, so that picker stays open.
     setPicking(cardId === "");
     if (await onPick(cardId)) return;
     setPicked(null);
     setPicking(true);
   }
 
-  // The row as the pick leaves it, until the refreshed one carries the same
-  // thing. Same shape either way, so the cell has one thing to draw.
   const card = picked ? cards.find((c) => c.id === picked) : undefined;
   const row: BankTransaction = card
     ? {
@@ -417,13 +348,8 @@ function CardCell({
         }
       : tx;
 
-  // The server refuses to move the card under a matched purchase: a match is
-  // only allowed between an utlägg and its submitter's own card, so the match
-  // has to come off first. Better not to offer it than to offer it and refuse.
-  //
-  // Said on hover, and drawn with no chevron, so it does not look like the
-  // ones that can be changed. The same box as theirs, borderless, so the names
-  // in the column line up whichever they are.
+  // The server refuses to move the card under a matched purchase (a match is only between an
+  // utlägg and its submitter's own card), so it is not offered. Hover text, no chevron.
   if (tx.matchedExpenseId) {
     return (
       <Tooltip label={t("cardLocked")} align="start" className="w-full md:w-44">
@@ -435,10 +361,7 @@ function CardCell({
     );
   }
 
-  // A picker at rest: the name and number with a faint chevron after them,
-  // which is the mark every list-picker in the app carries, and the field's
-  // own edge and fill once the pointer is on it. The chevron is always there,
-  // since a phone has no hover to show it on.
+  // A picker at rest: name and number with a faint chevron (always, since a phone has no hover).
   if (row.cardLast4 && !picking) {
     return (
       <Tooltip label={t("changeCard")} align="start" className="w-full md:w-44">
@@ -464,10 +387,7 @@ function CardCell({
     <Combobox
       size="sm"
       className="md:w-44"
-      // On a phone a word opposite the row's second line rather than a field:
-      // a 44px control there overlapped the rows above and below it. The list
-      // it opens is a screen of its own on a phone, so the trigger only has to
-      // be something to tap. From md it is the field it always was.
+      // On a phone a word opposite the row's second line: a 44px control overlapped the rows.
       buttonClassName="md:h-8 md:rounded-control md:border md:border-border-control md:bg-background md:px-2.5"
       chevronClassName="text-accent md:text-faint"
       allowClear
@@ -476,16 +396,13 @@ function CardCell({
       onChange={pick}
       placeholder={t("assignCard")}
       aria-label={t("assignCard")}
-      // Opened by the click on the holder's name, the list comes with it, and
-      // shutting it without a pick puts the name back. A row on no card has
-      // no name to go back to, so its picker simply stays.
+      // Shutting the list without a pick puts the name back; a row on no card keeps its picker.
       openOnMount={picking}
       onClose={() => {
         if (row.cardLast4) setPicking(false);
       }}
-      // The number is what the bank wrote and the holder is who it means, so
-      // the option carries both. Collapsed to the number alone on a trigger too
-      // narrow for the name, which is the cell in most tables.
+      // Carries the number (what the bank wrote) and the holder (who it means); the number
+      // alone on a trigger too narrow for the name.
       options={cards.map((c) => ({
         value: c.id,
         label: c.holderName ? `····${c.last4} - ${c.holderName}` : `····${c.last4}`,

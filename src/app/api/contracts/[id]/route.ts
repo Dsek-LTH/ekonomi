@@ -1,9 +1,4 @@
-// Amend or remove one contract's archive record.
-//
-// "The record", not the agreement. A PATCH here changes the filing around a
-// document: its title, who it is with, the dates it covers, the tags somebody
-// will search by. It cannot change what a signed PDF says, because that is a
-// file and this is a row, and the file is what the parties actually agreed to.
+// Amends the filing record (title, counterparty, dates, tags), never what a signed PDF says.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
@@ -20,9 +15,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 // PATCH /api/contracts/:id
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  // The wide grant is not required to reach this route, because a rental-only
-  // holder may amend their own rentals. What they may touch is settled per
-  // contract below, once its kind is known.
+  // The wide grant is not required: a rental-only holder may amend their own rentals, settled per contract below.
   const g = await gate(canManageRentals, "contract.noManageAccess");
   if (!g.ok) return g.res;
 
@@ -39,10 +32,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
-  // Absent means "leave it". Spelled out field by field rather than spread,
-  // because three of them need converting and a blanket spread would write
-  // `undefined` into columns Prisma would then leave alone by luck rather than
-  // by intent.
+  // Absent means "leave it": spelled out per field, not spread, so undefined is not written by luck.
   const data: Prisma.ContractUpdateInput = {};
   if (d.kind !== undefined) data.kind = d.kind;
   if (d.title !== undefined) data.title = d.title;
@@ -50,11 +40,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (d.tags !== undefined) data.tags = normaliseTags(d.tags);
   if (d.notes !== undefined) data.notes = d.notes;
 
-  // The agreement-specific fields, on their own table now (see
-  // AgreementDetails). Sent for a CONTRACT row, which always already has the
-  // AgreementDetails these fields update, or for an OTHER row naming a
-  // counterparty for the first time, which does not: see the upsert below.
-  // A meeting's minutes is never with anybody, so it never gets this table.
+  // Agreement fields live on AgreementDetails: a CONTRACT row always has it, an OTHER row naming a counterparty for the first time does not (upsert below).
   const agreement: Prisma.AgreementDetailsUpdateInput = {};
   let touchesAgreement = false;
   if (d.counterparty !== undefined) {
@@ -93,11 +79,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
   if (touchesAgreement) {
     if (existing.kind === "PROTOCOL") return fail(400, "contract.counterpartyNotAllowed");
-    // upsert, not update: a CONTRACT row already has this table, but an
-    // OTHER row being given a counterparty for the first time does not.
-    // The create side never sets validFrom/validTo, which only apply
-    // to CONTRACT, and the edit form only ever sends those for CONTRACT
-    // rows, which always take the update branch instead.
+    // upsert: an OTHER row may not have the table yet. Create never sets validFrom/validTo (CONTRACT only).
     data.agreement = {
       upsert: {
         update: agreement,
@@ -141,18 +123,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return fail(403, "contract.noManageAccess");
   }
 
-  // A contract holding its signed copy is not deletable whole. The signed file
-  // has to be removed on its own first, behind its own warning, so a cascade
-  // can never take it by accident.
+  // A contract holding its signed copy is not deletable whole: remove the signed file first, behind its own warning.
   const evidence = contract.files.filter((f) => isSigned(f.role) || isImmutable(f.role));
   if (evidence.length > 0) {
     return fail(409, "contract.hasSignedFiles", { values: { count: evidence.length } });
   }
 
-  // Bytes before rows, the same order every delete in this app uses. Best-effort
-  // on the objects: the cascade below is what actually makes the contract gone,
-  // and an object left behind is collectable, where a row pointing at nothing
-  // is a document the archive offers and cannot open.
+  // Bytes before rows, best-effort: an orphaned object is collectable, a row pointing at nothing is not openable.
   for (const f of contract.files) await deleteObjectBestEffort(f.objectKey);
   await prisma.contract.delete({ where: { id: contract.id } });
 

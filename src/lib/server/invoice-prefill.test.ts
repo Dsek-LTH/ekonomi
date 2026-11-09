@@ -3,10 +3,8 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { pdfLines } from "./pdf-text";
 import { prefillData, readInvoicePdf } from "./invoice-prefill";
 
-// The whole path a real invoice takes: a PDF with a text layer, read by pdfjs
-// the way the server reads it, parsed, and turned into the write that fills
-// the invoice. The PDF is drawn here with pdf-lib, laid out the way an invoice
-// is, with labels on the left and values far to the right of them.
+// The whole path of a real invoice: a PDF with a text layer (drawn here with pdf-lib, labels left and values
+// far right) read by pdfjs, parsed, and turned into the write that fills the invoice.
 
 async function invoicePdf(): Promise<Uint8Array> {
   const doc = await PDFDocument.create();

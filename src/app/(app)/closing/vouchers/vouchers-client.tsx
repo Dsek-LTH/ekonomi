@@ -34,7 +34,6 @@ export default function ClosingVouchersClient({
   page: RowPage<ClosingVoucher>;
   counts: Record<ClosingTab, number>;
   progress: ClosingProgress;
-  /** The pass the review filter asks about. */
   filterPass: ReviewPass;
 }) {
   const t = useTranslations("closing");
@@ -49,8 +48,7 @@ export default function ClosingVouchersClient({
     tab("expense"),
     tab("income"),
     tab("none"),
-    // Only while there is something under it. Most years there should be
-    // nothing, and an empty tab reads as one more thing to check.
+
     ...(counts.disagrees > 0 ? [tab("disagrees")] : []),
   ];
 
@@ -145,8 +143,6 @@ export default function ClosingVouchersClient({
     },
   ];
 
-  // How far each pass has got, over the whole year rather than the filtered
-  // view: it is the question "are we done", which a filter does not change.
   const summary = (
     <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
       {REVIEW_PASSES.map((p) => (

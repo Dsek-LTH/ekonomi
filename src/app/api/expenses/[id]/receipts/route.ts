@@ -1,6 +1,4 @@
-// Receipt upload (proxy model): browser → this route → MinIO. The Next server
-// authenticates, validates, stores the bytes in MinIO, and records a Receipt
-// row + an audit event in Postgres. MinIO is never exposed to the browser.
+// Receipt upload (proxy model): browser -> this route -> MinIO. MinIO is never exposed to the browser.
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
@@ -12,13 +10,10 @@ import { fail, gate } from "@/lib/api/guard";
 import { canEditExpense, denyExpenseView } from "@/lib/api/expense-access";
 import { RECEIPT_ORDER } from "@/lib/data/receipt-order";
 
-// Generous limit on the *original* upload. Images get downscaled on the server.
+// Generous limit on the original upload. Images get downscaled on the server.
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
-// The multipart envelope around a 25 MB file is a little larger than the file.
-// The allowance is loose on purpose: this is the cheap check that keeps an
-// absurd body from being read at all, and `file.size` below is what actually
-// holds the limit.
+// The multipart envelope is a little larger than the file. Loose on purpose: `file.size` below holds the limit.
 const MAX_BODY_BYTES = MAX_BYTES + 1024 * 1024;
 
 // POST /api/expenses/:id/receipts: multipart form-data, field "file".
@@ -30,16 +25,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!expense) return fail(404, "expense.notFound");
 
-  // Adding a receipt changes the utlägg, so it follows the edit rule: the
-  // submitter (or an admin), and only while the utlägg is still editable.
+  // Adding a receipt follows the edit rule: the submitter (or an admin), while the utlägg is still editable.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return hidden;
   if (!canEditExpense(g.actor, expense)) {
     return fail(403, "expense.noReceiptAccess");
   }
   if (!isEditable(expense.status)) {
-    // Same rule as the PATCH beside it, and the same way out: swapping the
-    // underlag under an attester who is reading it is the edit this closes.
+    // Same rule as the PATCH beside it: the underlag must not be swapped under an attester who is reading it.
     return isRecallable(expense.status)
       ? fail(409, "expense.editWhilePendingAttest")
       : fail(409, "expense.notChangeableInStatus", {
@@ -47,12 +40,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         });
   }
 
-  // Before the body is touched. `req.formData()` reads the whole request into
-  // memory, so checking `file.size` afterwards protected the bucket and not the
-  // server. A 2 GB POST was buffered in full and only then called too big.
-  // Content-Length is the sender's claim, which is enough here: an honest one
-  // is refused for nothing, and a dishonest one still meets the real limit
-  // below once the bytes are counted.
+  // Before the body is touched: `req.formData()` buffers the whole request. Content-Length is the sender's claim,
+  // enough here, since the real limit still applies once the bytes are counted.
   const declared = Number(req.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     return fail(413, "receipt.sizeRange", { values: { max: MAX_BYTES } });
@@ -71,9 +60,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return fail(413, "receipt.sizeRange", { values: { max: MAX_BYTES } });
   }
 
-  // What the file *is*, from its own first bytes. `file.type` is the client's
-  // claim about them and is never used for anything but the error message.
-  // Checked against the head alone, before committing to buffering 25 MB.
+  // What the file is, from its first bytes. `file.type` is the client's claim, used only for the error message.
   const head = new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer());
   const fileType = sniffReceiptType(head);
   if (!fileType) {
@@ -84,19 +71,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const receiptId = randomUUID();
   const original = Buffer.from(await file.arrayBuffer());
 
-  // Images are normalised (HEIC→JPEG, EXIF-rotated, downscaled, but PNG when
-  // the image is see-through); PDFs are stored as-is. Work out the object to
-  // write plus the row's metadata, then persist atomically (object first, row
-  // second).
-  //
-  // One object, singular. This was an array, and every use of it a `map` over
-  // exactly one element, the shape left behind when the 480px thumbnail was
-  // removed and the loops around it were not.
+  // Images are normalised (HEIC to JPEG, EXIF-rotated, downscaled, PNG when see-through). PDFs are stored as-is.
+  // Persist atomically: object first, row second.
   let filename = file.name;
   let mimeType: string = fileType;
   let byteSize = file.size;
-  // Annotated, not inferred: `original` narrows to Buffer<ArrayBuffer> and the
-  // normalised bytes come back as the wider Buffer, which is what putObject takes.
+  // Annotated, not inferred: `original` narrows to Buffer<ArrayBuffer> but putObject takes the wider Buffer.
   let body: Buffer = original;
 
   if (isNormalisableImage(fileType)) {
@@ -113,15 +93,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
   const objectKey = receiptKey(expense.id, receiptId, filename);
 
-  // Store bytes first; only write the row if that succeeds (no orphan rows).
-  // The write and the row are both inside the try: whatever got as far as the
-  // bucket is removed on the way out if the row never lands.
+  // Store bytes first, the row only if that succeeds. Both are inside the try: whatever reached the bucket is removed if the row never lands.
   try {
     await putObject(objectKey, body, mimeType);
 
     const receipt = await prisma.$transaction(async (tx) => {
-      // Last among the utlägg's documents. The submitter can move it from
-      // there (see ./order).
       const last = await tx.receipt.aggregate({
         where: { expenseId: expense.id },
         _max: { position: true },
@@ -152,8 +128,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
     return NextResponse.json(receipt, { status: 201 });
   } catch (err) {
-    // Roll back whatever reached the bucket. Deleting a key that was never
-    // written is a no-op, so this needs no record of which writes succeeded.
+    // Roll back whatever reached the bucket. Deleting a key never written is a no-op.
     await deleteObjectBestEffort(objectKey);
     throw err;
   }

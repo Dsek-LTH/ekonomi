@@ -1,15 +1,5 @@
 "use client";
 
-// Kontera a levfaktura: the treasury's step once every share is attested,
-// reached from the invoice's record by its Kontera button
-// (/invoices/[id]/book). The supplier from Fortnox's register, what the
-// invoice says (read off the PDF at the fördelning, to be checked here), and
-// the kontering's lines, free as an utlägg's are. Saved, it is konterad, and the record
-// offers to send it to Fortnox, as an utlägg's does once konterat. Nothing
-// here talks to Fortnox's books.
-//
-// The PDF is not in here. The page puts it in the app's document panel
-// beside it, the way an utlägg's receipt is.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -48,25 +38,9 @@ import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/suppli
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
 import { useTransition, type WorkspaceProps } from "./invoice-shared";
 
-// ── The form ──────────────────────────────────────────────────────
-//
-// Laid out as Fortnox's own leverantörsfaktura form, so a treasurer who knows
-// that one finds everything where they expect it: the invoice's head in boxed
-// fields (supplier, dates, OCR, number, total), the rest folded under
-// "Ytterligare uppgifter", and the kontering as a debit and credit table that
-// ends on the leverantörsskuld and says whether it balances. Each field of the
-// head saves on its own as it is left. The lines are saved together, by Spara
-// kontering, the way an utlägg's voucher is.
-
 const toOre = (sek: number | null) => (sek == null ? null : sekToOre(sek));
 
-/**
- * The lines the table opens on: the kontering as saved, or for one not made
- * yet, a line per attested share on its cost centre, on the account the same
- * supplier was booked on last. A split's shares already leave the
- * öresutjämning out (costTotal), and the one row of an unsplit invoice is
- * the amount without it, so the voucher balances from the start.
- */
+/** Opening lines: the saved kontering, else a line per attested share. Shares exclude öresutjämning, so the voucher balances. */
 function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
   if (invoice.lines.length > 0) {
     return invoice.lines.map((l) => ({
@@ -99,7 +73,6 @@ function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
   }));
 }
 
-/** The table's typed rows as the route takes them. */
 function linesOf(rows: VoucherEditorRow[]): InvoiceLine[] {
   const amount = (v: string) => (v.trim() ? parseOre(v) : 0);
   return filledVoucherRows(rows).map((r) => ({
@@ -112,7 +85,6 @@ function linesOf(rows: VoucherEditorRow[]): InvoiceLine[] {
   }));
 }
 
-/** A boxed field with its label above it, as one cell of the head. */
 function BookField({
   label,
   className,
@@ -130,8 +102,7 @@ function BookField({
   );
 }
 
-/** An input that keeps what is typed until it is left, and saves it then. A
- *  save refused puts back what was there. */
+/** Saves on blur; a refused save restores the saved value. */
 function SavedInput({
   value,
   onSave,
@@ -148,7 +119,6 @@ function SavedInput({
   align?: "right";
 }) {
   const [draft, setDraft] = useState(value);
-  // What the server says, once a save lands or the page refreshes.
   const [seen, setSeen] = useState(value);
   if (seen !== value) {
     setSeen(value);
@@ -177,11 +147,9 @@ function SavedInput({
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);
-          // Saved as soon as it is a whole date. A date picked from the
-          // calendar never focuses the field, so no blur would follow it.
+          // A date picked from the calendar never focuses the field, so no blur follows.
           if (isCompleteDate(e.target.value)) void commit(e.target.value);
         }}
-        // Left half typed, it goes back to what was saved. Emptied, it clears.
         onBlur={() => (draft === "" ? void commit() : !isCompleteDate(draft) && setDraft(value))}
         className="w-full"
       />
@@ -203,21 +171,9 @@ function SavedInput({
   );
 }
 
-/** The record's own header, drawn at the top of the card. */
 type CardProps = WorkspaceProps & { header?: React.ReactNode };
 
-/**
- * Attested: the treasurer completes what Fortnox needs and saves it.
- *
- * Mostly confirming rather than typing. The supplier is picked from Fortnox's
- * own register, matched to the invoice's org number or giro where it can be
- * (usually already, when the document came in), and the accounts start on
- * what the same supplier was booked on last time. Both are saved the moment
- * they are picked, the same as the fields around them. A match or a suggestion
- * nobody has touched is saved by Spara. A bankgiro the register does not know
- * is said out loud here, and again in the question asked before it is sent,
- * because that is what invoice fraud looks like.
- */
+/** Attested: the treasurer completes what Fortnox needs. A bankgiro the register does not know is flagged here and again before sending (invoice fraud). */
 export function BookPanel({ invoice, accounts, costCenters, projects, onDone, header }: CardProps) {
   const t = useTranslations("invoices.workspace");
   const tAction = useTranslations("invoices.action");
@@ -242,15 +198,12 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   }
   const url = `/api/supplier-invoices/${invoice.id}`;
 
-  // Picked here and not yet back from the server. Cleared when it is, since
-  // the invoice then says the same.
   const [picked, setPicked] = useState<{ supplier?: string }>({});
   const [seen, setSeen] = useState(invoice.updatedAt);
   if (seen !== invoice.updatedAt) {
     setSeen(invoice.updatedAt);
     setPicked({});
   }
-  // The kontering, as it is being written. Kept here until Spara kontering.
   const [rows, setRows] = useState<VoucherEditorRow[]>(() => initialRows(invoice));
   const lines = linesOf(rows);
 
@@ -262,8 +215,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
 
   const supplierBody = (number: string): PatchSupplierInvoice => ({
     fortnoxSupplierNumber: number || null,
-    // The register's name, once one is picked: it is the name Fortnox will
-    // print, so it is the one the archive should show.
+    // The register's name is the one Fortnox prints.
     ...(list.find((s) => s.number === number) && {
       supplierName: list.find((s) => s.number === number)!.name,
     }),
@@ -305,8 +257,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   });
 
   async function book() {
-    // The lines, and what is shown but not saved: a register match nobody
-    // has touched. The route leaves out whatever already says the same.
+    // The route leaves out lines that already match.
     const unsaved: PatchSupplierInvoice = {
       ...(supplierNo !== (invoice.fortnoxSupplierNumber ?? "") && supplierBody(supplierNo)),
       lines,
@@ -323,9 +274,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     short: s.name,
   }));
 
-  // The voucher as it will be sent: the lines, the öresutjämning on its own
-  // account, and the whole on the leverantörsskuld's credit side. Worked in
-  // öre, so the sums meet exactly.
+  // Worked in öre so the sums meet exactly.
   const debitOre = lines.reduce((sum, l) => sum + l.debit, 0) + Math.max(roundingOre, 0);
   const creditOre =
     lines.reduce((sum, l) => sum + l.credit, 0) + totalOre + Math.max(-roundingOre, 0);
@@ -333,7 +282,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   const credit = creditOre / 100;
   const difference = (creditOre - debitOre) / 100;
 
-  // Öresutjämning, either sign, typed as kronor: "-0,56".
   async function commitRounding(raw: string) {
     const v = raw.trim();
     if (!v) return put({ rounding: null });
@@ -348,9 +296,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   const text = (key: "invoiceNumber" | "ocr" | "yourReference" | "ourReference") => (
     <SavedInput value={invoice[key] ?? ""} onSave={(v) => commit(key, v)} />
   );
-  // The supplier's own details are the register's, not this invoice's to
-  // change: shown as the picked supplier has them, and as the invoice printed
-  // them until one is picked. A giro that disagrees is the warning below.
+  // Supplier details are the register's, not the invoice's, once one is picked.
   const ofSupplier = (key: "bankgiro" | "plusgiro") => (
     <SavedInput readOnly value={(supplier ? supplier[key] : invoice[key]) ?? ""} />
   );
@@ -362,7 +308,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
       <Card>
         {header}
         <div className="@container space-y-5 px-inset py-5">
-          {/* The head: who, when, which and how much. */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 @2xl:grid-cols-4">
             <BookField label={t("supplier")} className="col-span-2">
               <Combobox
@@ -374,9 +319,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
                 searchPlaceholder={t("searchSupplier")}
                 aria-label={t("supplier")}
               />
-              {/* Suppliers are added in Fortnox, not here. The picker reads the
-                  register afresh each time, so one added there is on the list
-                  the next time this is opened. */}
+              {/* Suppliers are added in Fortnox, not here. */}
               {!supplier && !suppliers.loading && invoice.supplierName && (
                 <p className="mt-1.5 text-xs text-muted">
                   {t("supplierNotInRegister", { name: invoice.supplierName })}
@@ -408,20 +351,16 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
                 onSave={(v) => commit("amount", v)}
               />
             </BookField>
-            {/* The voucher's cost centre, in the head as Fortnox has it: every
-                row of the kontering below takes it unless it says otherwise. */}
             <BookField label={tVoucher("allCostCenter")} className="col-span-2">
               <VoucherCostCenterPicker rows={rows} onChange={setRows} costCenters={costCenters} />
             </BookField>
           </div>
 
-          {/* The rest, which the export carries but is seldom changed. */}
           <details open className="group border-t border-border pt-3">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold">
               <IconChevronRight className="size-4 transition-transform group-open:rotate-90" />
               {tBook("more")}
             </summary>
-            {/* The two references in one column, as Fortnox stacks them. */}
             <div className="mt-3 grid grid-cols-2 items-start gap-x-4 gap-y-3 @2xl:grid-cols-4">
               <div className="col-span-2 space-y-3 @2xl:col-span-2">
                 <BookField label={tBook("ourRef")}>{text("ourReference")}</BookField>
@@ -434,10 +373,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
         </div>
       </Card>
 
-      {/* The kontering, in the voucher table an utlägg is booked in: free
-          rows, spare ones under them, each with its own cost centre and
-          project. It opens on the attested shares, and the leverantörsskuld
-          is the locked row, credited with the whole. */}
       <Card>
         <VoucherEditor
           rows={rows}
@@ -471,8 +406,6 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
           totalCredit={credit}
         />
 
-        {/* Under a rule of its own: a figure about the invoice, not a row of
-            the kontering above it. */}
         <div className="flex justify-end border-t border-border px-inset py-4">
           <BookField label={tBook("rounding")} className="w-40">
             <SavedInput
@@ -503,10 +436,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
           <BalanceChip balanced={difference === 0} difference={formatSEK(Math.abs(difference))} />
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* The amount booked is not what the split was attested against,
-                which the balance chip is already saying. Only the unit can
-                change its split, and changing it asks every signer again, so
-                the way on is back to them. Any other reason gets the chip. */}
+            {/* Only the unit can change its split, which asks every signer again. */}
             {sumMismatch ? (
               <Button variant="secondary" disabled={tr.busy} onClick={() => void sendBack()}>
                 {tBook("sendBack", { unit: invoice.resultUnitName ?? "-" })}
@@ -529,11 +459,7 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   );
 }
 
-/**
- * An export whose outcome nobody knows: the request went to Fortnox and no
- * clear answer came back. Only a look in Fortnox settles it, so the panel asks
- * for exactly that, and offers the two answers.
- */
+/** An export with unknown outcome: only a look in Fortnox settles it. */
 export function UncertainExport({
   invoice,
   header,

@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// The nightly sync (syncAll): one claim at a time, each step on its own, and
-// this year's and last year's ledger.
-//
-// Fortnox and the database are mocked. What is real is the order of the steps,
-// which ones are skipped when another fails, and what is recorded afterwards.
+// syncAll: one claim at a time, each step on its own.
 
 const h = vi.hoisted(() => ({
   claim: 1,
@@ -21,8 +17,6 @@ const YEARS = [
   { id: 1, fromDate: "2024-07-01", toDate: "2025-06-30" },
 ];
 
-// Every model method answers with nothing to do, which is all the steps need
-// to run to the end. Only the claim and the record of the run are looked at.
 vi.mock("@/lib/server/db", () => {
   const model = new Proxy(
     {},

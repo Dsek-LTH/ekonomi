@@ -8,33 +8,13 @@ import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { useEscape } from "@/lib/ui/escape";
 import { cn } from "@/lib/ui/utils";
 
-// A "?" beside a control, with the explanation the control itself has no room
-// for. Hover to read it.
-//
-// Not a `title` attribute, which is what the rest of the app uses for a word or
-// two: the browser's own tooltip takes a second to appear, can't be styled, and
-// collapses whitespace, so anything with structure (a list of what a file has
-// to contain, say) arrives as one long line after a pause. That is fine for
-// "Ta bort" and no use at all for an explanation someone is actually reading.
-//
-// Hover is not the only way in. It doesn't exist on a phone, and it isn't
-// available to anyone on a keyboard, so focus opens it too and a click toggles
-// it: three ways to the same panel rather than one that half the readers of
-// this page don't have.
-//
-// The panel is portalled to <body> and placed with `position: fixed`, the way
-// the menu and the combobox are (lib/ui/anchored-panel.ts). It used to hang off
-// the button with `position: absolute`, which only works where nothing around
-// the button makes a layer of its own. In Inställningar → Roller every row's
-// name cell is sticky with a z-index, so a hint opened in one row was painted
-// over by the rows below it, and the grid's horizontal scroll box cut off the
-// part that reached past its edge.
+// A "?" with an explanation too long for a title attribute. Hover, focus and click all open it.
+// Portalled to <body> with position: fixed (lib/ui/anchored-panel.ts): absolute got painted over by sticky rows and cut by scroll boxes.
 export function InfoHint({
   label,
   children,
   className,
 }: {
-  /** Names the button for screen readers and for the native tooltip. */
   label: string;
   children: React.ReactNode;
   className?: string;
@@ -51,13 +31,7 @@ export function InfoHint({
     setOpen(true);
   };
 
-  // Escape closes, and so does a press anywhere else. A panel opened by a tap
-  // has no pointer leaving it to close it again.
-  //
-  // Escape goes through the shared stack rather than a listener of this hint's
-  // own. The listener here was a plain one that never stopped the event, so a
-  // hint opened inside a dialog handed the same keypress to the dialog behind
-  // it and one press closed both. See lib/ui/escape.ts.
+  // Escape goes through the shared stack (lib/ui/escape.ts) so a hint inside a dialog does not close both. A press elsewhere also closes.
   useEscape(open, () => setOpen(false));
   useDismissOnOutside(open, [wrap, panel], () => setOpen(false));
 
@@ -89,17 +63,12 @@ export function InfoHint({
             ref={panel}
             id={id}
             role="tooltip"
-            // Starts at the button and runs right, held inside the window by
-            // placeAnchored, which pulls it back from the right-hand edge for a
-            // hint at the end of a card header. Below the button unless there
-            // is more room above.
             style={placeAnchored(rect, {
               wanted: 160,
               width: Math.min(288, window.innerWidth - 16),
               minHeight: 80,
             })}
-            // Over everything, dialogs included, like the other portalled
-            // panels: they share <body> with the modals at z-[200].
+            // Over dialogs: shares <body> with the modals at z-[200].
             className="z-[210] overflow-y-auto rounded-panel border border-border bg-background p-3 text-left text-xs leading-relaxed font-normal text-muted shadow-[var(--shadow-pop)]"
           >
             {children}

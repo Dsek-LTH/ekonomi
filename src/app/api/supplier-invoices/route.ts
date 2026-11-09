@@ -1,17 +1,8 @@
-// Making a levfaktura: a document in a unit's Inkorg, fördelad by that unit.
-// The fördelning is what makes it an invoice. Until a unit has said which of
-// its cost centres take it, it is a document that may still turn out to be
-// somebody else's, and nothing is owed on it that anybody has signed for.
-//
-// The fördelning is the one a reopened invoice is given again through its
-// transition (`attest`), planned the same way (planAllocation): the rows the
-// sender may sign are signed as it is made, and only a split onto another
-// unit's cost centre waits, in PENDING_APPROVAL, for that unit. The PDF is
-// read here too, as the page that sent this read it, and what it says fills
-// the rest of the invoice for the treasury to check.
-//
-// The invoice's history starts with what the document went through: when it
-// arrived and who gave it to the unit, dated as they happened.
+// Making a levfaktura: a unit fördelar a document in its Inkorg, and the fördelning is what makes it an invoice.
+// Planned like a reopened invoice's attest (planAllocation): the rows the sender may sign are signed as it is made,
+// and only a split onto another unit's cost centre waits in PENDING_APPROVAL.
+// The PDF is read here as the page read it, filling the rest for the treasury to check.
+// History starts with when the document arrived and who gave it to the unit.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { deliverSoon, notify } from "@/lib/server/notify";
@@ -60,9 +51,7 @@ export async function POST(req: Request) {
   if (!planning.ok) return planning.res;
   const { planned, signed, status, attesters } = planning.plan;
 
-  // What the PDF says fills what the unit did not type, for the treasury to
-  // check. Read before the transaction, since storage and the PDF reader are
-  // slow; the page that sent this has read it already, so it is usually kept.
+  // What the PDF says fills what the unit did not type. Read before the transaction (slow), usually kept from the page.
   const reading = await readDocumentScan(doc.id);
   const typed = {
     amount,
@@ -75,9 +64,7 @@ export async function POST(req: Request) {
     (f) => f !== "amount" && f !== "dueDate",
   );
 
-  // Dated by what the invoice says, or by today for one that says nothing
-  // readable, which has to be in the year picked in the header for it to be
-  // in the Fakturor list it is looked for in.
+  // Dated by the invoice, or today, which must be in the year picked in the header to appear in the Fakturor list.
   const offYear = await denyOutsideFiscalYear((filled.invoiceDate as Date | undefined) ?? today());
   if (offYear) return offYear;
 
@@ -132,9 +119,7 @@ export async function POST(req: Request) {
             },
           },
         });
-        // Still in that unit's Inkorg is part of the condition: fördelad in
-        // another tab a moment ago, or given elsewhere, it is not this
-        // request's to make an invoice of.
+        // Still in that unit's Inkorg is part of the condition: fördelad elsewhere a moment ago, it is not this request's to make an invoice of.
         applied(
           await tx.supplierInvoiceDocument.updateMany({
             where: { id: doc.id, invoiceId: null, resultUnitId: unit.id },

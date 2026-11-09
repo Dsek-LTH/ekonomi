@@ -1,23 +1,6 @@
-// What a cover page says, as plain data.
-//
-// This is the contract between the app and whatever typesets the page, and it
-// is deliberately dull: strings and numbers, nothing from Prisma, nothing from
-// the engine. Two things follow from that.
-//
-// The engine is swappable. `renderCover` takes this and returns PDF bytes; a
-// LaTeX implementation would be a second file with the same signature and
-// nothing else in the app would move. See cover/typst.ts.
-//
-// And the interesting half is testable without one. Turning an utlägg into
-// these fields is where the decisions live (which name, which date, what a
-// missing approver reads as), and `buildCoverData` can be asserted on with no
-// binary installed anywhere. See lib/expense/document.ts.
-//
-// Everything here is pre-formatted, in Swedish, ready to be placed. The
-// typesetter is not given amounts in öre and a locale to sort out: it is given
-// "69,00 kr". A document that is archived beside a voucher cannot follow
-// whoever happens to be looking at it, so there is one wording and this is
-// where it is decided.
+// What a cover page says, as plain data: the contract with whatever typesets it (cover/typst.ts),
+// so the engine is swappable and buildCoverData (lib/expense/document.ts) is testable without one.
+// Pre-formatted Swedish, because an archived page cannot follow whoever is looking.
 
 /** One cost-centre slice of the utlägg, with the attest that cleared it. */
 interface ExpenseCoverAllocation {
@@ -32,24 +15,9 @@ interface ExpenseCoverAllocation {
   approvedAt: string | null;
 }
 
-/**
- * The journey behind a milersättning, as the page states it.
- *
- * A mileage claim has no receipt to staple behind the cover. Nobody
- * photographs driving their own car, so what would otherwise be a second
- * document is a section of this one: the odometer at each end, the difference
- * between them, and what a kilometre was worth on the day. The readings are why
- * it is worth printing at all; a distance alone is a number somebody arrived
- * at, and these are what the car said.
- *
- * Null for every other kind of utlägg, whose underlag is a real receipt and
- * follows on the next page.
- */
+/** The journey behind a milersättning: odometer at each end, the difference and the kr/km. Null for other kinds. */
 export interface ExpenseCoverJourney {
-  /** The journey's stops, already joined for the page: "Kårhuset, Lund →
-   *  Snabbgross → Kårhuset, Lund", or a dash on a draft that has not said yet.
-   *  Without it the page states a distance nobody can place, which is the one
-   *  thing Skatteverket asks of a milersättning's underlag. */
+  /** The stops, joined for the page ("Kårhuset, Lund → Snabbgross"), or a dash on a draft. */
   route: string;
   /** "12 300,0 km": the total odometer when the journey began. */
   odometerStart: string;
@@ -60,18 +28,7 @@ export interface ExpenseCoverJourney {
   rate: string;
 }
 
-/**
- * The dispens that let a late utlägg be filed, as the page states it.
- *
- * On the cover because this page is what is archived beside the voucher. An
- * utlägg filed after the section's own deadline was paid because somebody with
- * the authority to decided it should be, and a reader coming to the voucher a
- * year later has no other way to find that out. Without it the page shows a
- * receipt dated months before the claim and no explanation at all, which is the
- * one thing an underlag must not do.
- *
- * Null on every utlägg that was in time, which is nearly all of them.
- */
+/** The dispens that let a late utlägg be filed. On the cover because it is archived beside the voucher. Null when in time. */
 export interface ExpenseCoverWaiver {
   /** Who granted it. */
   by: string;
@@ -79,19 +36,11 @@ export interface ExpenseCoverWaiver {
   at: string;
   /** Why, in their own words. */
   reason: string;
-  /** "61 dagar efter köpet": how late the claim actually was, worked out in
-   *  document.ts so the page states a fact rather than inviting a subtraction
-   *  across two dates in different places. */
+  /** "61 dagar efter köpet": worked out in document.ts. */
   lateness: string;
 }
 
-/**
- * Who konterade the utlägg, as the page states it.
- *
- * On the cover because Fortnox names the voucher after whoever sent it, the
- * bokförare. This page is filed with it, so it is where the kontering's author
- * can be read.
- */
+/** Who konterade the utlägg. Fortnox names the voucher after the bokförare, so the page says who the kontering's author is. */
 export interface ExpenseCoverBooking {
   by: string;
   /** ISO date. */
@@ -106,13 +55,7 @@ export interface ExpenseCoverData {
   title: string;
   /** ISO date of the purchase, or null when nobody recorded one. */
   purchaseDate: string | null;
-  /**
-   * What to call that date. "Kvittodatum" for an utlägg with a receipt behind
-   * it, "Resdag" for a milersättning, which has no receipt and whose date is
-   * the day it was driven. It read "Sista resdag" from when a claim held a
-   * sheet of journeys; one claim is one journey, so there is no last one to
-   * distinguish. See lib/expense/document.ts.
-   */
+  /** "Kvittodatum" with a receipt, "Resdag" for a milersättning. */
   dateLabel: string;
   /** "Privat utlägg" / "Sektionskort", already worded. */
   paymentType: string;
@@ -134,11 +77,5 @@ export interface ExpenseCoverData {
   booking: ExpenseCoverBooking | null;
 }
 
-/**
- * A cover page, as PDF bytes.
- *
- * The one function an engine has to provide. Nothing in the signature says how
- * A subprocess, a native module, an HTTP call to a sidecar all fit, which is
- * the point of it being this narrow.
- */
+/** A cover page, as PDF bytes: the one function an engine provides. */
 export type CoverRenderer = (data: ExpenseCoverData) => Promise<Uint8Array>;

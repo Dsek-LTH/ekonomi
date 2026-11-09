@@ -1,28 +1,9 @@
-// Writing an event sheet, a cell at a time.
-//
-// A cell is a row: one per event, product, direction and rung, which the
-// database enforces. So this does not append movements. It makes each row say
-// what the sheet says, creating it, changing it or removing it. Zero means
-// there should be no row, because a figure of nothing is not a movement of
-// nothing; it is the absence of one.
-//
-// That is the whole reason a mistake no longer pollutes the log. Booking 200
-// bottles and meaning 20 used to leave both figures in the ledger forever, one
-// cancelling the other. Now the row says 20 and what happened to it is recorded
-// where it belongs: in StockChange, which is read as a feed on the event and
-// on the product.
-//
-// Three things this has to get right that a browser cannot be trusted with.
-//
-// Nothing may be written over somebody else's work unseen. Every cell carries
-// the figure it was decided against, and one that no longer matches is refused
-// with the truth rather than merged.
-//
-// And the log is read forward afterwards. A stocktake states what was on the
-// shelf and cost of goods rides on a moving average, so both depend on
-// everything before them, see lib/server/stock-replay.ts. Which is also why
-// nothing here is frozen behind a count: the count holds by being re-derived,
-// not by forbidding the rows in front of it to change.
+// Writing an event sheet, a cell at a time. A cell is a row (unique per event, product, direction,
+// rung), so this makes each row say what the sheet says: created, changed or removed (zero means
+// no row). History goes to StockChange. Each cell carries the figure it was decided against, and a
+// mismatch is refused with the truth rather than merged. The log is replayed forward afterwards
+// (lib/server/stock-replay.ts).
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
@@ -98,21 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const rowFor = new Map(existing.map((e) => [cellKey(asRow(e)), e]));
     const booked = cellTotals(existing.map(asRow));
 
-    /**
-     * The sheet as this request leaves it, worked out before a single cell is
-     * written.
-     *
-     * A request is one statement about a night, not a queue of them, and it has
-     * to be judged as one. Cell by cell against the stored figures, "eight out
-     * and one dropped" was refused: whichever of the two was checked first, the
-     * other had not happened yet, so the night had taken nothing out and a
-     * spill of one was one too many. Which half of the same save you lost
-     * depended on the order the browser happened to send them in.
-     *
-     * Against this map the answer is the same whatever that order is. The
-     * cellar checks still read `booked`, which is what the shelf reflects. See
-     * SheetState in lib/stock/cells.ts.
-     */
+    /** The sheet as this request leaves it, judged as one statement (see SheetState in lib/stock/cells.ts) so request order cannot matter. */
     const sheet = new Map(booked);
     for (const cell of body.cells) {
       sheet.set(
@@ -137,8 +104,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const row = rowFor.get(key);
       const now = row ? cellQty(asRow(row)) : 0;
 
-      // Moved under them: refused rather than merged. Both readings are
-      // somebody's honest arithmetic and nothing here can tell which was meant.
+      // Moved under them: refused rather than merged.
       if (now !== cell.expected) {
         conflicts.push({ ...ref, actual: now });
         continue;
@@ -155,7 +121,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (wrong) return { fault: wrong } as const;
       }
 
-      // ── Make the row say it ──
       if (cell.qty === 0 && row) {
         await tx.stockEntry.delete({ where: { id: row.id } });
         await tx.stockChange.create({
@@ -224,21 +189,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
       }
 
-      // `booked` is deliberately not advanced here. It and `shelfOf` both
-      // describe the cellar as this request found it, and they have to keep
-      // describing the same moment: the shelf is read once, before the loop,
-      // so a `booked` that crept forward with each write would be measuring
-      // new figures against an old shelf. The night's side of the rule is
-      // already whole: `sheet` holds every cell of this request from the
-      // start.
+      // `booked` is not advanced: it and `shelfOf` describe the cellar as the request found it.
       touched.add(cell.productId);
       written++;
     }
 
     if (conflicts.length > 0) return { conflicts } as const;
 
-    // What a count has to say, and what everything cost, both follow from the
-    // rows before them, so the log is read forward rather than patched.
+    // Follow from the rows before them, so the log is read forward.
     for (const productId of touched) {
       await replayProduct(tx, productId);
     }

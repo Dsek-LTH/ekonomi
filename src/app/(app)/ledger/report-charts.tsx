@@ -1,24 +1,7 @@
 "use client";
 
-// The utfall as pictures. Five of them, each answering a question the table
-// answers only if you already know what you are looking for.
-//
-//   Resultat per månad          how did the year run, and which months hurt
-//   Ackumulerat resultat        are we on track, and since when
-//   Kostnadsställen             who spent what, and who is over
-//   Kostnader per kostnadsställe  when did each of them spend it
-//   Vad pengarna gick till      what kind of cost the money was
-//
-// Hand-drawn, like the stock chart, and for the same reason: five series over
-// twelve months does not need a charting library, and the app's own tokens are
-// what make a chart look like the app. What the two do share is in
-// lib/ui/chart-geometry (the coordinate space and the axis ladder) and
-// lib/ui/chart-colors (the palette), because those are decisions and a decision
-// copied is a decision that gets made differently the second time.
-//
-// The three that are a series over time are SVG. The two that are a ranked list
-// of labelled things are HTML bars: their rows carry a name, a figure and
-// sometimes a link, and laying text out is what HTML is for.
+// The utfall as five hand-drawn charts (no charting library), sharing lib/ui/chart-geometry and lib/ui/chart-colors.
+// The three series over time are SVG; the two ranked lists are HTML bars.
 import { Button } from "@/components/ui/button";
 import { useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -39,51 +22,24 @@ import { formatNumber, formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
 import type { LedgerTrend, TrendCostCenter, TrendMonth } from "@/lib/ledger/trend";
 
-// ── Money ───────────────────────────────────────────────────────────
-//
-// Two formatters, because an axis and a readout are asked different things. A
-// readout is a figure somebody is checking, so it gets `formatSEK` with its öre
-// like every other amount in the app. An axis is a ruler: it wants five short
-// labels that fit in the gutter, and "262 728,00 kr" repeated five times is a
-// wall of digits nobody reads.
+// Two formatters: readouts get `formatSEK` with öre, axes get five short labels that fit the gutter.
 
-/**
- * One unit for a whole axis, chosen from its largest tick.
- *
- * Per axis and not per label: an axis that says "0, 5 000, 10 tkr" has changed
- * the question halfway up itself. The unit is repeated on every label instead
- * of stated once, because there is nowhere on these charts to state it once.
- */
+/** One unit for a whole axis, chosen from its largest tick and repeated on every label. */
 function axisFormat(maxAbs: number): (v: number) => string {
   if (maxAbs >= 1_000_000) return (v) => (v === 0 ? "0" : `${formatNumber(v / 1e6, 0, 1)} mkr`);
   if (maxAbs >= 20_000) return (v) => (v === 0 ? "0" : `${formatNumber(v / 1000, 0, 1)} tkr`);
   return (v) => formatNumber(v, 0, 0);
 }
 
-/** A compact figure for a bar's own label, where the axis is not there to
- *  carry the unit. */
+/** A compact figure for a bar's own label, where no axis carries the unit. */
 const money = (v: number) => `${formatNumber(v, 0, 0)} kr`;
 
-// Money in and money out, named rather than taken off the rotation.
-//
-// The rotation is a list of colours for things that have no colour: the fourth
-// cost centre is the fourth colour and means nothing by it. These two are the
-// opposite, the one place in the app where a chart's hue is an argument: green
-// came in, red went out, which is how every set of accounts anybody has read is
-// coloured. Taking them by index would mean a reordering of the rotation, done
-// for the separation of bands somewhere else entirely, silently repainted the
-// section's costs amber.
-//
-// Safe as a red/green pair despite what globals.css says about those two,
-// because they are also on opposite sides of the zero line and never touch. The
-// axis is what carries the meaning; the colour agrees with it.
+// Money in and money out are named, not taken from the rotation: green in, red out is the one place a hue is an
+// argument. Safe as a red/green pair (cf. globals.css) because they sit on opposite sides of the zero line.
 const INCOME = "var(--chart-3)";
 const COST = "var(--chart-5)";
 
-// ── A readout ───────────────────────────────────────────────────────
-
-/** The little table that follows the pointer across a time chart. Positioned
- *  over the plot, on the side the crosshair is not. */
+/** The table following the pointer across a time chart, placed on the side the crosshair is not. */
 function Readout({
   side,
   title,
@@ -126,8 +82,7 @@ function Readout({
   );
 }
 
-/** A legend, under a chart. Always present where there is more than one series:
- *  colour alone is not a label, and five bands cannot be told apart by it. */
+/** A legend under a chart with more than one series (colour alone is not a label). */
 function Legend({ items }: { items: { key: string; label: string; color: string }[] }) {
   return (
     <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
@@ -141,23 +96,9 @@ function Legend({ items }: { items: { key: string; label: string; color: string 
   );
 }
 
-/**
- * The pointer's month, in a chart's own coordinates.
- *
- * Shared because all three time charts track the same way and getting it subtly
- * different in each is how a crosshair ends up one band off in one of them.
- */
-// ── 1. Resultat per månad ───────────────────────────────────────────
+/** The pointer's month in a chart's own coordinates, shared by all three time charts. */
 
-/**
- * Income above the line, costs below it, the result as a line across the top.
- *
- * Diverging rather than two bars side by side, because the axis is then doing
- * the work the colour would otherwise have to: money in goes up, money out goes
- * down, and the pair reads the same to someone who cannot tell the two hues
- * apart. It is also the only chart here where the green/red pairing is
- * deliberate rather than incidental.
- */
+/** Income above the line, costs below it, the result as a line across the top. Diverging, so the axis carries the meaning. */
 function MonthlyResult({
   months,
   monthLabel,
@@ -204,8 +145,6 @@ function MonthlyResult({
         >
           <YGrid ticks={axis} y={y} geometry={geometry} format={fmt} />
 
-          {/* The zero line is the one gridline that is a fact rather than a
-              ruler mark, so it is drawn over the bars and in the text colour. */}
           {months.map((m, i) => (
             <g key={m.month}>
               {m.income > 0 && (
@@ -240,7 +179,6 @@ function MonthlyResult({
             strokeWidth={1}
           />
 
-          {/* The result, over the two bars it is the difference of. */}
           <polyline
             points={months.map((m, i) => `${cx(i)},${y(m.result)}`).join(" ")}
             fill="none"
@@ -321,16 +259,9 @@ function MonthlyResult({
   );
 }
 
-// ── 2. Ackumulerat resultat ─────────────────────────────────────────
-
 /**
- * The result added up as the year goes, against the budget's pace.
- *
- * The pace is a straight line, and that is an assumption rather than a figure:
- * a budget is a year's total with no monthly split anywhere in it, so the only
- * thing that can be drawn is "if it were spent evenly". The subtitle says so.
- * It is still the line people want, because the question is not "was March
- * exactly a twelfth" but "by now, should we have more left than this".
+ * The result added up as the year goes, against the budget's pace: a straight line (budgets have no monthly split),
+ * which the subtitle says is "if spent evenly".
  */
 function Cumulative({
   months,
@@ -341,11 +272,9 @@ function Cumulative({
 }: {
   months: TrendMonth[];
   monthLabel: (month: string, long?: boolean) => string;
-  /** The compared budget's result for the whole year, or null. */
   budgetTotal: number | null;
   /** How many months the financial year has, which is what the pace divides by. */
   yearLength: number;
-  /** How many months of that year come before this period's first one. */
   offset: number;
 }) {
   const t = useTranslations("ledger.charts");
@@ -354,7 +283,6 @@ function Cumulative({
   const plot = plotOf(geometry);
   const { ref, at, track, clear } = usePointerIndex(months.length, geometry);
 
-  /** The budget spent evenly, at the end of the period's i-th month. */
   const pace = (i: number): number | null =>
     budgetTotal == null || yearLength <= 0 ? null : (budgetTotal * (offset + i + 1)) / yearLength;
 
@@ -484,19 +412,10 @@ function Cumulative({
   );
 }
 
-// ── 3. Kostnadsställen ──────────────────────────────────────────────
-
 /** How many rows the ranking shows before it asks. Twelve is about a screen. */
 const RANKING_HEAD = 12;
 
-/**
- * One bar per cost centre, around a zero line.
- *
- * Diverging, because a cost centre's result is as often negative as not and a
- * chart that took the magnitude would draw the section's best and worst month
- * the same length. HTML rather than SVG: every row is a name, a figure and a
- * bar, and only the bar is a picture.
- */
+/** One bar per cost centre around a zero line (a result can be negative). HTML, since only the bar is a picture. */
 function CostCenterRanking({
   costCenters,
   noCostCenterLabel,
@@ -508,9 +427,7 @@ function CostCenterRanking({
   const [all, setAll] = useState(false);
   const shown = all ? costCenters : costCenters.slice(0, RANKING_HEAD);
 
-  // One scale across every row, including the ones the budget marker reaches
-  // past: bars that were each scaled to themselves would be a list of full-width
-  // bars saying nothing.
+  // One scale across every row, including where the budget marker reaches past.
   const extent = useMemo(() => {
     const values = costCenters.flatMap((c) => [c.result, ...(c.budget == null ? [] : [c.budget])]);
     const lo = Math.min(0, ...values);
@@ -518,7 +435,6 @@ function CostCenterRanking({
     return { lo, hi, span: hi - lo || 1 };
   }, [costCenters]);
 
-  /** Where a value sits across the track, 0-100. */
   const pos = (v: number) => ((v - extent.lo) / extent.span) * 100;
   const zero = pos(0);
 
@@ -543,11 +459,7 @@ function CostCenterRanking({
               )}
             </span>
 
-            {/* The track, and the zero it hangs from. `order` puts it under the
-                name on a phone, where the row wraps, and back beside it from sm
-                where there is width for both. Narrower than the name it stands
-                beside: a bar says which is biggest, and the name is what you
-                came to read. */}
+            {/* `order` puts the track under the name on a phone, and back beside it from sm. */}
             <span className="relative order-last h-5 w-full min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-[2]">
               <span
                 aria-hidden
@@ -564,8 +476,6 @@ function CostCenterRanking({
                 }}
               />
               {c.budget != null && c.budget !== 0 && (
-                // The plan, as a mark rather than a second bar: what is being
-                // read is the distance between them.
                 <span
                   aria-hidden
                   title={t("ranking.budgetMark")}
@@ -596,22 +506,13 @@ function CostCenterRanking({
   );
 }
 
-// ── 4. Kostnader per kostnadsställe ─────────────────────────────────
-
 /** How many cost centres get a band of their own before the rest are swept
  *  together. One under the palette, so "Övriga" can keep the neutral. */
 const STACK_BANDS = Math.min(6, CHART_SERIES_COUNT);
 
 /**
- * Each month's spending, split by who spent it.
- *
- * Stacked bars, not a stacked area: twelve months is a short series, and a bar
- * says "this month" where an area says "at this instant", which is the wrong
- * claim about a figure that is a month's worth of vouchers.
- *
- * Costs only. A stack of results would have bands changing sign inside a
- * column, which is a shape with no meaning: you cannot stack a number that
- * might be negative on top of one that might not.
+ * Each month's spending split by who spent it. Stacked bars, not area (a month's vouchers, not an instant).
+ * Costs only: bands cannot change sign inside a stacked column.
  */
 function CostCenterStack({
   trend,
@@ -629,7 +530,6 @@ function CostCenterStack({
   const { ref, at, track, clear } = usePointerIndex(trend.stack.length, geometry);
   const clipId = useId();
 
-  /** The bands, in the order they stack: the biggest spenders, then the rest. */
   const bands = useMemo(() => {
     const spenders = trend.costCenters.filter((c) => c.costs < 0).sort((a, b) => a.costs - b.costs); // most negative first
     const head = spenders.slice(0, STACK_BANDS);
@@ -654,7 +554,6 @@ function CostCenterStack({
     ];
   }, [trend.costCenters, noCostCenterLabel, t]);
 
-  /** Each month's bands, as magnitudes, in stacking order. */
   const columns = useMemo(
     () =>
       trend.stack.map((s) => ({
@@ -766,21 +665,12 @@ function CostCenterStack({
   );
 }
 
-// ── 5. Vad pengarna gick till ───────────────────────────────────────
-
-/**
- * The period's costs by BAS section, as one bar and a list under it.
- *
- * A bar rather than a pie, for the reason a bar is nearly always right: a
- * length can be compared and an angle cannot. The list under it is where the
- * figures actually get read; the bar is there to say which one is most of it.
- */
+/** The period's costs by BAS section, as one bar and a list under it (lengths compare, angles do not). */
 function CostComposition({ sections }: { sections: LedgerTrend["sections"] }) {
   const t = useTranslations("ledger.charts");
   const tSection = useTranslations("ledger.section");
 
-  // Costs arrive negative, like everything else here. A composition is about
-  // magnitude, so it is the magnitudes that are shared out.
+  // Costs arrive negative; a composition shares out the magnitudes.
   const rows = useMemo(() => {
     const total = sections.reduce((s, x) => s + Math.abs(x.total), 0);
     return sections
@@ -832,8 +722,6 @@ function CostComposition({ sections }: { sections: LedgerTrend["sections"] }) {
   );
 }
 
-// ── The view ────────────────────────────────────────────────────────
-
 export interface TrendResponse {
   year: { id: number; year: number } | null;
   period: { from: string; to: string } | null;
@@ -842,7 +730,6 @@ export interface TrendResponse {
   budget: string | null;
 }
 
-/** Months between two "YYYY-MM", inclusive of both. */
 function monthSpan(from: string, to: string): number {
   const [fy, fm] = from.split("-").map(Number);
   const [ty, tm] = to.split("-").map(Number);
@@ -855,8 +742,7 @@ export function ReportCharts({
   noCostCenterLabel,
 }: {
   data: TrendResponse;
-  /** A month key as a person reads it. `long` asks for the unabbreviated form,
-   *  which the readouts use and the cramped axis does not. */
+  /** A month key as a person reads it; `long` is the unabbreviated form used by readouts. */
   monthLabel: (month: string, long?: boolean) => string;
   noCostCenterLabel: string;
 }) {

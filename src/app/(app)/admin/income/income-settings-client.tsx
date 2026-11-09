@@ -1,21 +1,5 @@
 "use client";
 
-// Inställningar → Försäljning. This screen is intakt's config.yaml: the table
-// that decides which verksamhet a sold product belongs to and which account its
-// money is credited to. It used to be a file on the treasurer's laptop, which
-// meant only whoever held it could change the routing, and that the app and
-// the service could disagree about it.
-//
-// Everything income needs is here, in the order it is set up: the connection,
-// which units sell and what, where the takings are booked, and the Swish rules
-// that are only needed now and then. A unit's sales used to be a section of its
-// dialog under Resultatenheter, so setting up income was a dialog per unit on
-// one page and the accounts on another, and nothing said what was left. What is
-// left now heads the page, each step pointing at the section it is done in.
-//
-// The verksamheter themselves are resultatenheter. Creating one happens under
-// Resultatenheter, where its cost centres and attesters are; giving one sales
-// happens here.
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -51,12 +35,9 @@ export function IncomeSettingsClient({
   serviceConfigured,
 }: {
   config: IncomeConfigView;
-  /** Every unit, selling or not, for the Verksamheter section. */
   resultUnits: ResultUnit[];
   costCenters: CostCenter[];
-  /** The chart, active accounts plus any the settings still point at. */
   accounts: AccountRecord[];
-  /** What is left to do. See lib/income/setup.ts. */
   setup: IncomeSetupStep[];
   serviceConfigured: boolean;
 }) {
@@ -70,8 +51,6 @@ export function IncomeSettingsClient({
     label: `${c.code} - ${c.name}`,
     short: c.code,
   }));
-  // The number alone on the closed picker: it sits in a narrow column, and
-  // the number is what a treasurer reads an account by.
   const accountOptions: ComboOption[] = accounts.map((a) => ({
     value: a.number,
     label: `${a.number} - ${a.name}`,
@@ -83,10 +62,6 @@ export function IncomeSettingsClient({
   const savedSeries = config.settings.incomeVoucherSeries ?? "";
   const [newFallback, setNewFallback] = useState({ amount: "", message: "" });
 
-  // Each picker saves the moment it is picked, the same as the account
-  // pickers under Inställningar → Fortnox. A partial PATCH, so one choice is
-  // one write: a single Spara under four fields used to save all four, and
-  // the page had an "unsaved" state nothing on it showed.
   async function save(body: Record<string, string | null>, key: string) {
     await mutate("/api/income/settings", {
       key,
@@ -108,15 +83,12 @@ export function IncomeSettingsClient({
     save({ incomeFallbackIncomeId: value }, "incomeFallbackIncomeId");
   }
 
-  // Only units that sell can take unmatched sales: routing one there would
-  // book takings to a verksamhet that takes none.
   const sellingOptions: ComboOption[] = resultUnits
     .filter((u) => u.income?.active)
     .map((u) => ({ value: u.income!.id, label: u.resultUnit }));
 
   function pickFeeCostCenter(value: string) {
     setSettings({ ...settings, zettleFeeCostCenterId: value || null });
-    // "" is how the body says "clear it". See UpdateIncomeSettings.
     save({ zettleFeeCostCenterId: value }, "zettleFeeCostCenterId");
   }
 
@@ -144,7 +116,6 @@ export function IncomeSettingsClient({
       <Combobox
         size="sm"
         options={accountOptions}
-        // Empty until chosen: there is no account here to show until then.
         value={settings[key] ?? ""}
         onChange={(v) => pickAccount(key, v)}
         placeholder={tBook("accountPlaceholder")}
@@ -162,7 +133,6 @@ export function IncomeSettingsClient({
         <IncomeSetupNotice steps={setup} canSetUp onPage />
       )}
 
-      {/* ── 1. The connection ── Read-only: it is the server's environment. */}
       <Section id="service">
         <Card>
           <CardHeader
@@ -176,9 +146,6 @@ export function IncomeSettingsClient({
         </Card>
       </Section>
 
-      {/* ── 2. Which units sell, and what ── Every unit is listed, selling or
-          not, so the whole register is in view and turning sales on is a
-          button on its row rather than a hunt for the unit. */}
       <Section id="units">
         <Card>
           <CardHeader
@@ -195,9 +162,6 @@ export function IncomeSettingsClient({
             </p>
           ) : (
             <>
-              {/* Where sales matching no prefix go. One answer for the whole
-                  section, so it is a setting of its own above the units rather
-                  than a flag on one of their prefixes. */}
               <ul className="border-t border-border">
                 <SettingRow label={t("fallback.unit")} hint={t("fallback.unitHint")}>
                   <Combobox
@@ -234,10 +198,6 @@ export function IncomeSettingsClient({
         </Card>
       </Section>
 
-      {/* ── 3. Where takings are booked ── One list of settings, label and what
-          it does on the left, a small control on the right. It was two cards
-          of full-width inputs for four-digit numbers and a four-letter series,
-          each card with its own Spara. */}
       <Section id="booking">
         <Card>
           <CardHeader
@@ -266,10 +226,6 @@ export function IncomeSettingsClient({
                 aria-label={t("accounts.feeCostCenter")}
               />
             </SettingRow>
-            {/* Typed, not picked, so it keeps a save of its own. Left empty,
-                takings go wherever everything else does, which is what they did
-                before this setting existed, and what the hint says rather than
-                leaving an empty box reading as "nowhere". */}
             <SettingRow
               label={t("export.series")}
               hint={
@@ -305,8 +261,6 @@ export function IncomeSettingsClient({
         </Card>
       </Section>
 
-      {/* ── 4. Swish amount fallbacks ── Optional, and said to be: nothing
-          waits on it, it only saves sorting the odd payment by hand. */}
       <Card>
         <CardHeader
           title={t("fallbacks.title")}
@@ -318,10 +272,6 @@ export function IncomeSettingsClient({
             </span>
           }
         />
-        {/* A table rather than chips: amount and message are two columns of
-            the same rule, and chips with an arrow between them stopped being
-            scannable after a handful. The add row is its last line, in the
-            same columns as what it adds. */}
         <ul>
           {config.fallbacks.length === 0 && (
             <li className="border-b border-border px-inset py-3 text-sm text-muted">
@@ -348,8 +298,6 @@ export function IncomeSettingsClient({
             </li>
           ))}
           <li className="flex flex-wrap items-center gap-3 px-inset py-3">
-            {/* The width on the box, not on the control: a control is
-                `w-full` inside whatever holds it. See the allocation editor. */}
             <div className="w-28 shrink-0">
               <AmountInput
                 value={newFallback.amount}
@@ -388,8 +336,6 @@ export function IncomeSettingsClient({
   );
 }
 
-/** A part of the page the setup steps point at. Clear of the overlay's top
- *  edge when one is jumped to. */
 function Section({ id, children }: { id: IncomeSetupSection; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-4">
@@ -398,7 +344,6 @@ function Section({ id, children }: { id: IncomeSetupSection; children: React.Rea
   );
 }
 
-/** Done, or how many steps are left in it. */
 function SectionStatus({ left }: { left: number }) {
   const t = useTranslations("admin.income");
   return (
@@ -414,11 +359,6 @@ function SectionStatus({ left }: { left: number }) {
   );
 }
 
-/**
- * One setting: what it is and what it does on the left, its control on the
- * right in a fixed column, so the controls line up down the card. Stacked on
- * a phone, where there is no room for both.
- */
 function SettingRow({
   label,
   hint,

@@ -76,8 +76,7 @@ describe("stepCell", () => {
   });
 
   it("stops at the edge instead of wrapping", () => {
-    // The difference between a direction and a sequence: `nextCell` would have
-    // carried on to the next row here.
+    // A direction, not a sequence: `nextCell` would continue on the next row.
     expect(stepCell(grid, "c1", 0, 1, all)).toBeNull();
     expect(stepCell(grid, "a1", -1, 0, all)).toBeNull();
     expect(stepCell(grid, "c4", 1, 0, all)).toBeNull();

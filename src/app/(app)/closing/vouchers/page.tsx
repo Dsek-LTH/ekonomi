@@ -9,9 +9,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("closingVouchers");
 
-// Every voucher in one financial year, with the underlag the app holds for it
-// and where it stands in the review. Keyed on Fortnox's financial-year id,
-// which is what the ledger is keyed on.
+// Every voucher in one financial year (Fortnox's financial-year id), with its underlag and review state.
 export default async function ClosingVouchersPage({
   searchParams,
 }: {
@@ -21,8 +19,7 @@ export default async function ClosingVouchersPage({
   const year = await getOpenClosingYear();
   if (!year) return <NoClosingYear />;
 
-  // The review filter asks about the viewer's own pass. Somebody who reviews
-  // in neither (the chair) is asking what the revisorer have done.
+  // The review filter asks about the viewer's own pass; someone in neither (the chair) sees what the revisorer have done.
   const ownPass = reviewPassFor(user.capabilities);
   const filterPass = ownPass ?? "AUDITOR";
 

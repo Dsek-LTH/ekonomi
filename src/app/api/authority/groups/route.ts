@@ -1,21 +1,6 @@
-// What an Authentik group confers here (admin only).
-//
-// One group's whole grant per request: the roles it gives and the result units
-// it makes someone answer for. Writing the finished state rather than a delta is
-// what lets the transaction below check an outcome instead of predicting one.
-//
-// Three things happen inside one transaction, and they have to:
-//
-//   1. the rows for this group are replaced;
-//   2. everyone whose stored group list touches the new mapping is re-derived,
-//      so the change lands now rather than over the next day as people happen to
-//      sign in (lib/server/authentik-roles.ts);
-//   3. the result is checked for the one state this app must never reach:
-//      nobody able to open Inställningar. If it would, the whole thing rolls
-//      back and the caller is told which change did it.
-//
-// Step 3 is why this is not three separate endpoints. A grid saved in pieces has
-// moments between the pieces, and one of those moments is a locked door.
+// One Authentik group's whole grant per request: roles it gives and result units it makes someone answer for
+// (admin only). One transaction replaces its rows, re-derives everyone whose stored group list touches it
+// (lib/server/authentik-roles.ts), and checks that somebody can still open Inställningar, rolling back otherwise.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -36,23 +21,18 @@ export async function PUT(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { group, roles, resultUnitIds } = parsed.data;
 
-  // The one rule no screen may edit around: a group outside `dsek.` is not the
-  // section's and confers nothing however it is stored. Refused here rather
-  // than stored and silently ignored at sign-in, which would be a row that
-  // looks like a grant and is not.
+  // A group outside `dsek.` is not the section's and confers nothing: refused here rather than stored and ignored at sign-in.
   if (!isSectionGroup(group))
     return fail(422, "authority.groupOutsideSection", { values: { group } });
 
-  // A result unit that does not exist cannot be answered for. The foreign key
-  // would refuse this anyway; saying so plainly beats a 500 from the driver.
+  // A nonexistent result unit cannot be answered for. The foreign key would refuse too; this beats a 500.
   if (resultUnitIds.length > 0) {
     const found = await prisma.resultUnit.count({ where: { id: { in: resultUnitIds } } });
     if (found !== new Set(resultUnitIds).size) return fail(404, "resultUnit.notFound");
   }
 
-  // Refused, and rolled back, if it would leave nobody able to reach
-  // Inställningar. See changeAuthority: a concurrent write to a *different*
-  // group's rows is exactly what it is serializable to catch.
+  // Rolled back if it would leave nobody able to reach Inställningar. See changeAuthority: serializable catches a
+  // concurrent write to a different group's rows.
   const done = await changeAuthority(async (tx) => {
     await tx.groupRole.deleteMany({ where: { group } });
     await tx.groupResultUnit.deleteMany({ where: { group } });

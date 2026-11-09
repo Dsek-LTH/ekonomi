@@ -1,21 +1,7 @@
-// ── Acting on the state you actually checked ──────────────────────
-//
-// A route reads an utlägg once, decides against what it read, and then writes.
-// Between those two moments somebody else can act on the same utlägg, whether
-// two attestants clicking at once, two bookkeepers booking the same one, or one
-// person's second tab, and the write would land on a row that no longer looks
-// like the one the decision was made about. Nothing failed; the numbers simply
-// stopped meaning what they said. In the approve path it was worse than a lost
-// update: the rows to sign were chosen by `!a.approvedById` outside the
-// transaction and then written by id alone, so the second writer replaced the
-// first one's signature with their own name. An attest trail that can silently
-// reattribute a signature is not one.
-//
-// So no such write is addressed by id alone. Each one restates the condition it
-// was decided under (the status it expects, the approval slot it expects to be
-// empty, the version the screen was showing) and `applied` insists that it
-// actually matched something. A write that matched nothing means the world
-// moved underneath us, which is a 409 and a reload, not a silent success.
+// Conditional writes against the state a route checked. Between a route's read and write someone else can act on the
+// same utlägg, so no such write is addressed by id alone: each restates the condition it was decided under (status,
+// empty approval slot, version) and `applied` insists it matched. Matching nothing is a 409 and a reload, which keeps
+// the attest trail from silently reattributing a signature.
 import type { NextResponse } from "next/server";
 import { fail } from "./guard";
 

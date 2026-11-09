@@ -1,14 +1,6 @@
-// Send a konterad levfaktura to Fortnox: make the supplier invoice, unbooked,
-// with the attest page and the invoice PDF attached. Booking it and paying it
-// happen in Fortnox, as for every supplier invoice the section has.
-//
-// Made once, never twice. Fortnox has no delete for a supplier invoice made
-// through the API, so the first thing a press of Exportera does is take the
-// export lock on the row, and a second press, from anyone, is refused while it
-// is held. It is let go when the export is recorded, or when it is certain no
-// supplier invoice was made. When that is not certain (Fortnox did not answer,
-// or answered with a server error) it stays, UNCERTAIN, until the treasurer
-// has looked in Fortnox and said which (./release).
+// Send a konterad levfaktura to Fortnox: make the supplier invoice, unbooked, with the attest page and the invoice PDF attached.
+// Made once, never twice (Fortnox has no delete for it): the export lock is taken first and a second press is refused while held.
+// Let go when the export is recorded or certainly made nothing; otherwise UNCERTAIN until the treasurer has looked in Fortnox (./release).
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/server/db";
@@ -67,15 +59,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const blocker = exportBlocker(exportFactsOf(invoice));
   if (blocker) return fail(422, blocker);
 
-  // The treasurer's own Fortnox login, so Fortnox says who made it. Before the
-  // lock, so needing to log in leaves nothing to clean up.
+  // The treasurer's own Fortnox login, before the lock so needing to log in leaves nothing to clean up.
   const auth = await userToken(g.actor.id);
   if (!auth.ok) return auth.res;
   const token = auth.token;
 
-  // Pay where the register says, or know why not. The register is read as
-  // the organisation, like everywhere else; only the writes below are the
-  // treasurer's.
+  // Pay where the register says, or know why not. The register is read as the organisation; only the writes are the treasurer's.
   let supplier;
   try {
     supplier = await getSupplier(await getServiceToken(), invoice.fortnoxSupplierNumber!);
@@ -119,9 +108,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   let fileId: string | null = null;
   try {
-    // The attest page and the invoice, as one PDF, into the supplier invoice
-    // folder of Fortnox's inbox, before the invoice is made: a failure here
-    // leaves nothing in Fortnox's books.
+    // The attest page and invoice as one PDF into Fortnox's inbox before the invoice is made, so a failure leaves nothing in the books.
     const cover = await renderInvoiceCover(
       await invoiceCoverFacts(invoice, {
         supplierName: supplier.name,
@@ -171,8 +158,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       ocr: invoice.ocr && ocrDigits(invoice.ocr),
       yourReference: invoice.yourReference,
       ourReference: invoice.ourReference,
-      // Our number at the end, as an utlägg's is on its voucher, so the
-      // invoice in Fortnox can be traced back to the one here.
+      // Our number at the end, so the Fortnox invoice traces back.
       comments:
         [invoice.description, invoice.reference && `(${invoice.reference})`]
           .filter(Boolean)
@@ -228,9 +214,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   });
 
-  // Attaching the file is the one step after the invoice exists, so it is
-  // best effort: a failure means attaching it by hand in Fortnox, not
-  // exporting again.
+  // Attaching is best effort: a failure means attaching by hand in Fortnox, not exporting again.
   let attachFailed: string | null = null;
   try {
     await connectFileToSupplierInvoice(token, fileId, givenNumber);

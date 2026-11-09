@@ -1,9 +1,5 @@
-// A unit's fördelning of a levfaktura, checked and planned: which cost centres
-// take how much, and which rows the sender signs as they send it. The one
-// place that knows it, because a fördelning is sent from two places: a
-// document in the unit's Inkorg, which it makes into an invoice
-// (api/supplier-invoices), and an invoice the unit has to fördela again
-// (api/supplier-invoices/[id]/transition).
+// A unit's fördelning of a levfaktura, checked and planned: which cost centres take how much and which rows
+// the sender signs. Shared by api/supplier-invoices and api/supplier-invoices/[id]/transition.
 import "server-only";
 
 import type { NextResponse } from "next/server";
@@ -37,11 +33,7 @@ export interface AllocationPlan {
   attesters: string[];
 }
 
-/**
- * Check a fördelning and plan its rows, or the refusal. A retired cost centre
- * is refused unless the invoice already had it (`kept`), so retiring one
- * strands nothing.
- */
+/** Check a fördelning and plan its rows, or the refusal. A retired cost centre is refused unless the invoice already had it (`kept`). */
 export async function planAllocation(f: {
   rows: readonly KonteringRow[];
   /** The amount it is split against, öre. */
@@ -96,8 +88,7 @@ export async function planAllocation(f: {
     };
   });
   const waiting = planned.filter((p) => !p.data.approvedById);
-  // Asked without naming a submitter: the sender has signed what they could,
-  // and is left out of the mail instead.
+  // Asked without naming a submitter: the sender is left out of the mail.
   const attesters = waiting.length
     ? await attestersOf(
         waiting.map((w) => ({ costCenterCode: w.code })),

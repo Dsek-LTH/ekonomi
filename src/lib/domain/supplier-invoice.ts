@@ -1,28 +1,12 @@
-// Leverantörsfakturor: what state an invoice can be in, what each step needs,
-// and who may do what with it.
-//
-// Pure, like the rest of domain/. The database is asked in lib/data and in the
-// routes, and what they found is handed in here, so every rule below can be
-// read, and tested, without one.
-//
-// The work is split by who knows what, in the steps an utlägg goes through.
-// The resultatansvarig knows what the invoice was for and where the cost
-// belongs, so they fördelar it (cost centres, and the amount and due date it is
-// split against) and sign their own rows in the same step. The treasurer knows
-// the supplier register and the chart of accounts, so the rest (supplier,
-// invoice number, OCR, account) is theirs: konterad first, then sent to
-// Fortnox as an act of its own. Neither is asked the other's question.
-//
-// Who may *attest* a row is not decided here. It is the same question it is
-// for an utlägg, about the cost centre's result unit, answered by the same
-// function (canAttestAllocation in permissions.ts). An invoice has no submitter
-// claiming money, so the "never your own" clause never applies.
+// Leverantörsfakturor: invoice states, what each step needs, and who may do what. Pure like the rest
+// of domain/. The resultatansvarig fördelar (cost centres, amount, due date) and signs their rows;
+// the treasurer konterar, then sends to Fortnox. Attest authority is canAttestAllocation in
+// permissions.ts, and the "never your own" clause never applies (no submitter claiming money).
 import { canBookkeep, canTriageInvoices, isAdmin } from "./permissions";
 import type { Tone } from "./status";
 import type { Capability, Role, SupplierInvoiceStatus } from "./types";
 
-/** The leverantörsskuld account, BAS standard. What every supplier invoice's
- *  total is credited to until it is paid. */
+/** The leverantörsskuld account, BAS standard. Every invoice total is credited to it until paid. */
 export const PAYABLE_ACCOUNT = 2440;
 
 /** Öres- och kronutjämning, BAS standard: where an invoice's rounding goes. */
@@ -31,16 +15,7 @@ export const ROUNDING_ACCOUNT = 3740;
 /** The most an öresutjämning may be, in öre, either way: under a krona. */
 export const MAX_ROUNDING = 99;
 
-/**
- * What the cost rows come to, öre: the amount to pay less the öresutjämning.
- *
- * The rounding is `rounding` öre, signed: the amount to pay less what the
- * invoice's lines came to. It is booked on its own account (debited, or
- * credited when negative), so the cost centres carry the lines as printed.
- * That is what a split is made of and what it must add up to, since a unit
- * splitting an invoice copies its lines and the öre rounded away belong to
- * none of them.
- */
+/** What the cost rows come to, öre: the amount to pay less the öresutjämning. The rounding is booked on its own account, so the cost centres carry the lines as printed. */
 export function costTotal(amount: number, rounding: number | null | undefined): number {
   return amount - (rounding ?? 0);
 }
@@ -49,12 +24,7 @@ export function costTotal(amount: number, rounding: number | null | undefined): 
 export const isValidRounding = (ore: number): boolean =>
   Number.isInteger(ore) && Math.abs(ore) <= MAX_ROUNDING;
 
-/**
- * How each status reads, in the colours an utlägg's do (STATUS_TONE): neutral
- * while it waits on its unit, purple while another unit still has to sign,
- * danger when it came back, blue once attested, accent once the treasury has
- * konterat it, success when it is in Fortnox.
- */
+// Colours follow an utlägg's (STATUS_TONE).
 export const INVOICE_STATUS_TONE: Record<SupplierInvoiceStatus, Tone> = {
   ASSIGNED: "neutral",
   PENDING_APPROVAL: "purple",
@@ -64,44 +34,22 @@ export const INVOICE_STATUS_TONE: Record<SupplierInvoiceStatus, Tone> = {
   EXPORTED: "success",
 };
 
-/** Attested by every unit, and with the treasury: to kontera, or konterad and
- *  waiting to be sent. */
+/** Attested by every unit, and with the treasury: to kontera, or konterad and waiting to be sent. */
 const WITH_TREASURY: readonly SupplierInvoiceStatus[] = ["APPROVED", "BOOKED"];
 export const isWithTreasury = (s: SupplierInvoiceStatus): boolean => WITH_TREASURY.includes(s);
 
-/** Waiting for its unit to fördela it again, which signs the unit's own rows
- *  too. The first fördelning is of a document, which it makes an invoice. */
+/** Waiting for its unit to fördela it again, which signs the unit's own rows too. */
 const ATTESTABLE: readonly SupplierInvoiceStatus[] = ["ASSIGNED", "CHANGES_REQUESTED"];
 export const awaitsAllocation = (s: SupplierInvoiceStatus): boolean => ATTESTABLE.includes(s);
 
-/**
- * Where it can still be moved to another unit, or sent back to the Inkorg:
- * while nothing on it is signed. Once a row is, either would move it out from
- * under a signature.
- *
- * Back to the Inkorg means it stops being an invoice. Its documents return
- * there, with the reason it was sent back, and the invoice goes, since every
- * invoice belongs to a unit and this one has none any more. Whatever history
- * it had is from before anybody signed it.
- */
+/** Whether it can still be moved to another unit or sent back to the Inkorg: only while nothing on it is signed. Back to the Inkorg deletes the invoice and returns its documents. */
 export const isInvoiceReturnable = awaitsAllocation;
-
-// ── The attest ────────────────────────────────────────────────────
 
 export interface AttestRow {
   amount: number | null; // öre
 }
 
-/**
- * Why this fördelning cannot be attested, as an error code under
- * `errors.supplierInvoice`, or null when it can.
- *
- * One row needs no amount: it is the whole invoice, whatever that comes to.
- * Two or more name their shares, every one of them, and when the invoice's
- * total is already known (read from the PDF, or typed by the treasurer) the
- * shares must come to it, less the öresutjämning (costTotal). When it is not
- * known yet, the kontering checks the same thing once it is.
- */
+/** Why this fördelning cannot be attested (error code under `errors.supplierInvoice`), or null. One row needs no amount. Two or more must each name a share, and when the total is known the shares must come to it less the öresutjämning (costTotal). */
 export function attestBlocker(f: {
   documentCount: number;
   rows: readonly AttestRow[];
@@ -122,19 +70,12 @@ export function attestBlocker(f: {
   return null;
 }
 
-// ── The export ────────────────────────────────────────────────────
-
-/** An OCR number as Fortnox takes it: digits alone. Printed invoices group
- *  them with spaces (and the odd dash), and that is how they arrive when
- *  copied off the PDF. */
+/** An OCR number as Fortnox takes it: digits alone (printed invoices group them with spaces and dashes). */
 export function ocrDigits(ocr: string): string {
   return ocr.replace(/[\s-]/g, "");
 }
 
-/** Whether Fortnox will take it as an OCR: 2 to 25 digits, once the grouping
- *  is gone, ending in a check digit that adds up (modulus 10, as a personnummer
- *  does). Asked at Spara, so the export never meets Fortnox's own refusal.
- *  The check digit is also what catches a digit typed wrong. */
+/** Whether Fortnox will take it as an OCR: 2 to 25 digits with a valid modulus 10 check digit. Checked at Spara so the export never meets Fortnox's refusal. */
 export function isValidOcr(ocr: string): boolean {
   const digits = ocrDigits(ocr);
   if (!/^\d{2,25}$/.test(digits)) return false;
@@ -155,23 +96,14 @@ export interface ExportFacts {
   dueDate: string | Date | null;
   amount: number | null; // öre
   ocr: string | null;
-  /** Öresutjämning, öre, signed. Booked on its own account at the export. */
   rounding: number | null;
-  /** The attested split's shares, öre. Null for the one row of an unsplit
-   *  invoice, which is the whole of it. */
+  /** The attested split's shares, öre. Null for the one row of an unsplit invoice. */
   shares: readonly (number | null)[];
   /** The treasury's kontering, öre. See SupplierInvoiceLine. */
   lines: readonly { account: string; debit: number; credit: number }[];
 }
 
-/**
- * Why the treasurer cannot kontera it yet, or null when they can, asked again
- * when it is sent. What Fortnox needs to make a supplier invoice it can pay:
- * whose it is, which invoice, when it is due, how much, and a kontering that
- * books exactly that much. A split's shares must come to the total less the
- * öresutjämning too: they are what the units signed for, and only the unit
- * can change them.
- */
+/** Why the treasurer cannot kontera it yet, or null; asked again when it is sent. A split's shares must come to the total less the öresutjämning too, since only the unit can change them. */
 export function exportBlocker(f: ExportFacts): string | null {
   if (!f.fortnoxSupplierNumber) return "supplierInvoice.noSupplier";
   if (!f.invoiceNumber?.trim()) return "supplierInvoice.noInvoiceNumber";
@@ -188,17 +120,13 @@ export function exportBlocker(f: ExportFacts): string | null {
   if (f.lines.some((l) => l.debit < 0 || l.credit < 0 || (l.debit === 0) === (l.credit === 0))) {
     return "supplierInvoice.lineNoAmount";
   }
-  // The lines and the rounding together book the amount to pay, which is
-  // what the leverantörsskuld is credited with.
+  // The lines and the rounding together book the amount to pay.
   const booked = f.lines.reduce((s, l) => s + l.debit - l.credit, 0) + (f.rounding ?? 0);
   if (booked !== f.amount) return "supplierInvoice.unbalanced";
   return null;
 }
 
-// ── Who may do what ───────────────────────────────────────────────
-
-/** What is known about the viewer. `ownedResultUnitIds` is empty for anyone
- *  without RESULTATANSVARIG, see ownedResultUnits in lib/server/result-units.ts. */
+/** `ownedResultUnitIds` is empty for anyone without RESULTATANSVARIG (ownedResultUnits in lib/server/result-units.ts). */
 export interface InvoiceViewer {
   id: string;
   roles: readonly Role[];
@@ -210,8 +138,7 @@ export interface InvoiceViewer {
 export interface InvoiceFacts {
   status: SupplierInvoiceStatus;
   resultUnitId: string | null;
-  /** Per row: whether it is signed, by whom, and whether this viewer may sign
-   *  it. Worked out per row by the caller with canAttestAllocation. */
+  /** Per row: whether it is signed, by whom, and whether this viewer may sign it (canAttestAllocation). */
   allocations: readonly {
     approved: boolean;
     approvedById?: string | null;
@@ -219,44 +146,27 @@ export interface InvoiceFacts {
   }[];
 }
 
-/** The resultatansvarig of the unit the invoice was given to. */
 const ownsUnit = (viewer: InvoiceViewer, invoice: InvoiceFacts) =>
   invoice.resultUnitId !== null && viewer.ownedResultUnitIds.includes(invoice.resultUnitId);
 
 export interface InvoiceCapabilities {
-  /** Fördela it (cost centres, amount, due date, what it is for) and sign the
-   *  rows the viewer may attest, one step. Also open to triage and the admins,
-   *  who may do it on the unit's behalf. For triage without the attest right
-   *  it sends the invoice to the unit's attesters. */
+  /** Fördela it and sign the rows the viewer may attest, in one step. Also open to triage and the admins on the unit's behalf. */
   canAllocate: boolean;
-  /** Sign the rows this viewer may attest on an invoice waiting for them. */
   canAttest: boolean;
-  /** Send it back to the Inkorg, with a reason: the unit's "Inte vår", or
-   *  triage taking it back. See isInvoiceReturnable. */
+  /** Send it back to the Inkorg, with a reason. See isInvoiceReturnable. */
   canReturnToInbox: boolean;
-  /** Take your own signature back, before it reaches Fortnox. */
   canWithdrawAttest: boolean;
-  /** Reopen the split while other units are still signing: every signature
-   *  comes off and it is the unit's to kontera again. The unit's (or
-   *  triage's), since the split is theirs to propose. A signature is on the
-   *  split as it stood, so changing the split asks everyone again. */
+  /** Reopen the split while other units are signing: every signature comes off, since a signature is on the split as it stood. */
   canRedistribute: boolean;
-  /** Send it back to the unit with a comment: by another unit's attester
-   *  while it waits on them, or by the treasury once it is attested. */
+  /** Send it back to the unit with a comment: by another unit's attester while it waits, or by the treasury once attested. */
   canRequestChanges: boolean;
-  /** Give it to another result unit instead. Triage's. */
   canMove: boolean;
-  /** Kontera it: supplier, amount, dates, OCR, and the account on each row.
-   *  The bookkeeping treasurers', once every row is attested and until it is
-   *  in Fortnox. */
+  /** Kontera it: supplier, amount, dates, OCR and the account on each row. Bookkeeping, once every row is attested and until it is in Fortnox. */
   canBook: boolean;
-  /** Send the konterade invoice to Fortnox. */
   canSend: boolean;
-  /** Add and remove the PDF behind it. */
   canEditDocuments: boolean;
 }
 
-/** Everything the page needs to know about what this viewer may do. */
 export function invoiceCapabilities(
   viewer: InvoiceViewer,
   invoice: InvoiceFacts,
@@ -286,22 +196,13 @@ export function invoiceCapabilities(
   };
 }
 
-// ── A document in an Inkorg ───────────────────────────────────────
-
-/** What the viewer may do with a document no invoice has yet. */
 export interface DocumentCapabilities {
-  /** See it at all: triage and the admins every one, a resultatansvarig the
-   *  ones given to their units. */
+  /** See it at all: triage and the admins every one, a resultatansvarig the ones given to their units. */
   canSee: boolean;
-  /** Give it to a result unit, or to another one. Triage's. */
   canAssign: boolean;
-  /** Fördela it, which makes it an invoice. The unit's, and triage's and the
-   *  admins' on the unit's behalf, as for an invoice. Only once it has a
-   *  unit: the fördelning is the unit's cost centres. */
+  /** Fördela it, which makes it an invoice. Only once it has a unit. */
   canAllocate: boolean;
-  /** "Inte vår": back to triage, with a reason. The unit's. */
   canDecline: boolean;
-  /** Delete it for good. Triage's. */
   canDelete: boolean;
 }
 
@@ -321,7 +222,6 @@ export function documentCapabilities(
   };
 }
 
-/** Where the viewer's work on an invoice stands. */
 export type InvoiceQueue =
   | "attest" // waiting for this viewer's attest
   | "export" // attested, for the treasury to kontera and send
@@ -332,20 +232,17 @@ export function invoiceQueue(viewer: InvoiceViewer, invoice: InvoiceFacts): Invo
   const s = invoice.status;
   if (s === "EXPORTED") return "done";
   if (isWithTreasury(s)) return canBookkeep(viewer.capabilities) ? "export" : "elsewhere";
-  // The unit's own people, not everyone who could step in. Triage and the
-  // admins may fördela anything, and a list of everything is not a to-do.
+  // The unit's own people only: a list of everything triage could fördela is not a to-do.
   if (awaitsAllocation(s)) return ownsUnit(viewer, invoice) ? "attest" : "elsewhere";
   return invoice.allocations.some((a) => a.viewerMayAttest && !a.approved) ? "attest" : "elsewhere";
 }
 
-/** Whether the viewer has something to do with this invoice. */
 export const invoiceWaitsOn = (viewer: InvoiceViewer, invoice: InvoiceFacts): boolean => {
   const q = invoiceQueue(viewer, invoice);
   return q === "attest" || q === "export";
 };
 
-/** Whole days from `today` until `dueDate`, negative once it has passed, or
- *  null with no due date. Both `YYYY-MM-DD`. What the inbox warns on. */
+/** Whole days from `today` until `dueDate`, negative once passed, null with no due date. Both `YYYY-MM-DD`. */
 export function daysUntilDue(dueDate: string | null, today: string): number | null {
   if (!dueDate) return null;
   const ms = Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);

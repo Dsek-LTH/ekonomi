@@ -1,9 +1,4 @@
-// File a contract in the archive.
-//
-// There is no GET beside this. The list is a Server Component that reads
-// lib/data/contracts.ts directly, so an endpoint returning the same rows would
-// be a second way to ask the same question and a second place for the access
-// rule to be got wrong.
+// No GET: the list is a Server Component reading lib/data/contracts.ts directly.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageContracts } from "@/lib/domain/permissions";
@@ -22,10 +17,7 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
-  // CONTRACT always gets the table; OTHER only when a counterparty was
-  // actually given, which the refine on CreateContract has already ruled out
-  // for PROTOCOL. Either way `validFrom`/`validTo` stay null: naming who an
-  // OTHER document is with does not give it a period.
+  // CONTRACT always gets the table; OTHER only with a counterparty. validFrom/validTo stay null for OTHER.
   const isContract = d.kind === "CONTRACT";
   const wantsAgreement = isContract || d.counterparty !== "";
 
@@ -33,13 +25,9 @@ export async function POST(req: Request) {
     data: {
       kind: d.kind,
       title: d.title,
-      // A DATE column: the day is the value, so it is built at midnight UTC
-      // rather than from the server's own timezone, which would file a contract
-      // signed on the 1st under the 31st for half the year. Only PROTOCOL/OTHER
-      // use this; the refine on CreateContract guarantees PROTOCOL sent one.
+      // A DATE column: built at midnight UTC, not server timezone (a signing on the 1st would file under the 31st).
       date: d.kind !== "CONTRACT" ? isoToDate(d.date) : null,
-      // Normalised here rather than in the schema, because it is a rule about
-      // the archive rather than about the request. See lib/contract/tags.ts.
+      // Normalised here: a rule about the archive (lib/contract/tags.ts).
       tags: normaliseTags(d.tags),
       notes: d.notes ?? null,
       createdById: g.actor.id,

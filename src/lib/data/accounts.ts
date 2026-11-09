@@ -1,5 +1,3 @@
-// The BAS chart of accounts as synced from Fortnox, and the accounts the
-// booking view pre-fills from it.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -23,8 +21,7 @@ const toAccount = (a: AccountRow): AccountRecord => ({
   lastSyncAt: a.lastSyncAt?.toISOString() ?? undefined,
 });
 
-// Inactive accounts are kept (a budget or an exported verification may still
-// reference one) but sort last, so pickers lead with what's current.
+// Inactive accounts sort last but are kept: a budget or exported verification may reference one.
 async function loadAccounts(where: Prisma.AccountWhereInput): Promise<AccountRecord[]> {
   const accounts = await prisma.account.findMany({
     where,
@@ -33,16 +30,11 @@ async function loadAccounts(where: Prisma.AccountWhereInput): Promise<AccountRec
   return accounts.map(toAccount);
 }
 
-/** The whole synced BAS chart. */
 export function getAccounts(): Promise<AccountRecord[]> {
   return loadAccounts({});
 }
 
-// Accounts a picker should offer: the active ones. `keep` forces specific BAS
-// numbers in even when retired, so an existing voucher that references one (or
-// a bookkeeping setting still pointing at one) stays valid and re-savable.
-// Fortnox retires accounts routinely, so this is the normal case, not an edge.
-// A setting nobody has chosen yet is null, and simply keeps nothing in.
+// `keep` forces numbers in even when retired, so vouchers or settings still pointing at one stay valid.
 export function getActiveAccounts(keep: readonly (string | null)[] = []): Promise<AccountRecord[]> {
   const numbers = [...new Set(keep.filter((n): n is string => Boolean(n)))];
   return loadAccounts(
@@ -50,8 +42,7 @@ export function getActiveAccounts(keep: readonly (string | null)[] = []): Promis
   );
 }
 
-// The accounts the booking view pre-fills. No defaults: see
-// lib/server/bookkeeping-settings.ts.
+// No defaults: see lib/server/bookkeeping-settings.ts.
 export async function getBookkeepingSettings(): Promise<BookkeepingSettings> {
   const row = await loadBookkeepingSettings();
   return {

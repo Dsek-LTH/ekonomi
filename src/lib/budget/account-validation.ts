@@ -1,27 +1,15 @@
-// Validation shared by the two endpoints that set a budget account's code.
-//
-// Budget accounts used to be two free-text fields, so a typo produced a code
-// that matched nothing in the ledger and silently showed no actuals. Now the
-// code must exist in the synced chart (see Settings → Fortnox), and the
-// name is taken from the chart rather than typed.
+// Validation shared by the endpoints that set a budget account's code: it must exist in the synced chart, which supplies the name.
 import { prisma } from "@/lib/server/db";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
 
-// Discriminated on `ok`, so a caller that returns early on failure has a code
-// and a name in hand afterwards without asserting they are there. On failure,
-// `error` is a message code under `errors.budgetAccount`, see lib/api/guard.
+// `error` is a message code under `errors.budgetAccount`.
 type AccountCheck =
   | { ok: true; code: string; name: string }
   | { ok: false; error: string; values?: Record<string, string | number> };
 
 /**
- * Check a code, and where given, that it belongs on the side it is being put.
- *
- * `expect` is the section the account is being added under, so that picking
- * 5010 under Intäkter is refused rather than quietly filed there. Left off by
- * the rename in PATCH, which has no section to answer to: an account renamed
- * from 3010 to 5010 simply moves to Kostnader, because the side is the code's
- * to decide and the sheet redraws from it.
+ * `expect` is the section the account is added under (5010 under Intäkter is refused).
+ * Omitted on rename, where the code decides the side.
  */
 export async function resolveBudgetAccount(
   rawCode: string,
@@ -32,16 +20,13 @@ export async function resolveBudgetAccount(
 
   const account = await prisma.account.findUnique({ where: { number: code } });
   if (!account) {
-    // An empty chart means nobody has synced yet, say that rather than
-    // blaming the account number.
+    // An empty chart means nobody has synced yet.
     const charted = await prisma.account.count();
     return charted
       ? { ok: false, error: "budgetAccount.unknown", values: { code } }
       : { ok: false, error: "budgetAccount.emptyChart" };
   }
-  // The balansräkning is not budgeted. A 1xxx or 2xxx account used to be
-  // pickable and was silently filed as a cost, so a bank balance could sit in a
-  // column of expenses with nothing to say it was wrong.
+  // The balansräkning (1xxx, 2xxx) is not budgeted.
   if (!isResultAccount(account.number)) {
     return {
       ok: false,
@@ -49,8 +34,7 @@ export async function resolveBudgetAccount(
       values: { code: account.number },
     };
   }
-  // And on the side its number puts it on. 3xxx is income, 4xxx-8xxx is cost,
-  // and that is what the ledger will report whatever a budget says about it.
+  // 3xxx is income, 4xxx-8xxx is cost, whatever a budget says.
   if (expect && effectiveKind(account.number) !== expect) {
     return {
       ok: false,

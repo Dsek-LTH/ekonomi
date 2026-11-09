@@ -1,8 +1,6 @@
-// Pull the Fortnox ledger into the local mirror via SIE. Sync is done a whole
-// financial year at a time: fetch the year's SIE, parse it, and replace that
-// year's vouchers+rows in one transaction. That makes every sync idempotent:
-// closed years stay identical, the current year just gets re-pulled, and
-// sidesteps per-voucher fetching (and the API rate limit) entirely.
+// Pulls the Fortnox ledger into the local mirror via SIE, one whole financial year at a
+// time: parse the year's SIE and replace its vouchers and rows in one transaction, so a
+// sync is idempotent and needs no per-voucher fetching.
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/server/db";
 import {
@@ -26,29 +24,15 @@ function* chunks<T>(arr: T[], size: number): Generator<T[]> {
   for (let i = 0; i < arr.length; i += size) yield arr.slice(i, i + size);
 }
 
-// Rows per upsert statement. Postgres caps a statement at 65535 bound
-// parameters; at six columns a chart of accounts would have to be ten thousand
-// rows long to come near it, and a smaller statement keeps the plan cheap.
+// Rows per upsert statement. Postgres caps a statement at 65535 bound parameters.
 const UPSERT_CHUNK = 500;
 
-/**
- * The rows of `list`, one per key, keeping the last of any repeat.
- *
- * A loop of single-row upserts simply overwrote its own work if Fortnox listed
- * a code twice; one statement upserting the batch cannot. Postgres refuses an
- * ON CONFLICT DO UPDATE that would touch the same row a second time, and the
- * whole sync would fail on a duplicate somewhere upstream. Last one wins, which
- * is what the loop did.
- */
+/** The rows of `list`, one per key, last one wins. A batch upsert fails on a repeated key (ON CONFLICT DO UPDATE). */
 function lastByKey<T>(list: readonly T[], key: (item: T) => string): T[] {
   return [...new Map(list.map((item) => [key(item), item])).values()];
 }
 
-/**
- * `($1,$2,$3),($4,$5,$6),…` for a multi-row VALUES, plus the flat parameter
- * list to go with it. `casts` types individual columns where Postgres cannot
- * infer it from context, an enum column most of all.
- */
+/** `($1,$2,$3),($4,$5,$6),…` for a multi-row VALUES plus its flat parameters. `casts` types columns Postgres cannot infer (enums). */
 function valuesClause(
   rows: readonly unknown[][],
   casts: Readonly<Record<number, string>> = {},
@@ -65,8 +49,6 @@ function valuesClause(
   return { sql: tuples.join(","), params };
 }
 
-// Refresh the list of financial years (so the report's year picker and the
-// sync know what exists). Returns them newest-first.
 export async function syncFinancialYears(token: string): Promise<FortnoxFinancialYear[]> {
   const years = await listFinancialYears(token);
   for (const y of years) {
@@ -83,38 +65,22 @@ export interface CostCenterSyncResult {
   upserted: number;
   deactivated: number;
   deleted: number;
-  /** Rows Fortnox does not have that are still in use, now marked local. */
   madeLocal: number;
 }
 
-// Sync the app's CostCenter list from Fortnox: the cost centres that are active
-// in Fortnox become the selectable ones. Matching is by code, existing rows
-// keep their result unit + attestant.
-//
-// Cost centres Fortnox still lists but has archived (Active: false) are only
-// deactivated, since Fortnox might unarchive them later. Ones Fortnox has dropped
-// from the list entirely are removed here too, but only if nothing local points
-// at them (an expense allocation, a verification line, or a budget sheet).
-// Otherwise deleting the row would orphan or destroy that history, so it is
-// marked local instead: Fortnox does not have the code, and a voucher naming
-// it would be rejected, so the export must not send it (see
-// lib/fortnox/export). That is how the alko cost centres the budget import
-// created ended up here. They were never in Fortnox, and they were being sent.
-// Its `active` is left as it was. An admin can retire a local cost centre.
-//
-// Local cost centres are excluded from all of this: nothing in Fortnox will
-// ever list them, so they would otherwise be retired on every sync.
+// Sync CostCenter from Fortnox: active ones become selectable, matched by code, keeping
+// result unit + attestant. Archived ones are only deactivated. Ones Fortnox dropped are
+// removed unless something local references them (expense allocation, verification line,
+// budget sheet), in which case they are marked local (active left as is): Fortnox does
+// not have the code, so the export must not send it (see lib/fortnox/export). Local cost
+// centres are excluded here, or they would be retired on every sync.
 export async function syncCostCenters(token: string): Promise<CostCenterSyncResult> {
   const fortnoxCcs = await listCostCenters(token);
   const seenCodes = new Set(fortnoxCcs.map((c) => c.code));
 
-  // One statement per chunk rather than one per cost centre. `id` is only ever
-  // written on insert. An existing row keeps the one every allocation,
-  // verification line and budget sheet already points at.
-  //
-  // Fortnox now has this code, so it owns the row from here on: a local cost
-  // centre that has since been created for real is adopted rather than
-  // duplicated (the code is unique, so there is only ever the one row).
+  // One statement per chunk. `id` is written only on insert so existing references hold.
+  // Fortnox owns the row from here on: a local cost centre later created for real is
+  // adopted (the code is unique).
   const now = new Date();
   for (const chunk of chunks(
     lastByKey(fortnoxCcs, (c) => c.code),
@@ -146,10 +112,8 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
           allocations: true,
           verificationLines: true,
           budgetCostCenters: true,
-          // Income refers to cost centres too, and every one of these is
-          // SetNull: deleting the row would quietly leave a verksamhet, a
-          // prefix, the fee setting or a waiting day's lines with none, and
-          // the next voucher would reach Fortnox without one.
+          // Income references cost centres too, all SetNull: deleting would silently leave
+          // lines without one and the next voucher would reach Fortnox without it.
           incomeUnits: true,
           incomePrefixes: true,
           incomeLines: true,
@@ -160,17 +124,13 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     },
   });
   const unreferencedIds = gone
-    .filter(
-      (c) =>
-        Object.values(c._count).every((n) => n === 0),
-    )
+    .filter((c) => Object.values(c._count).every((n) => n === 0))
     .map((c) => c.id);
 
   const { count: deleted } = await prisma.costCenter.deleteMany({
     where: { id: { in: unreferencedIds } },
   });
 
-  // Not in Fortnox and still referenced, so kept above: local from here on.
   const { count: madeLocal } = await prisma.costCenter.updateMany({
     where: {
       source: "FORTNOX",
@@ -180,8 +140,6 @@ export async function syncCostCenters(token: string): Promise<CostCenterSyncResu
     data: { source: "LOCAL" },
   });
 
-  // Archived in Fortnox: no longer selectable, but kept, since Fortnox might
-  // unarchive them.
   const { count: deactivated } = await prisma.costCenter.updateMany({
     where: {
       active: true,
@@ -199,10 +157,8 @@ export interface AccountSyncResult {
   deactivated: number;
 }
 
-// Mirror the Fortnox chart of accounts. Accounts are upserted, never deleted:
-// a budget line or an exported verification may still reference one Fortnox has
-// retired, and losing its name would leave those rows unreadable. Retired
-// accounts are marked inactive instead, which hides them from pickers.
+// Accounts are upserted, never deleted: a budget line or exported verification may
+// reference a retired account. Retired ones are marked inactive (hidden from pickers).
 export async function syncAccounts(
   token: string,
   financialYearId: number,
@@ -210,9 +166,6 @@ export async function syncAccounts(
   const accounts = await listAccounts(token, financialYearId);
   const now = new Date();
 
-  // A BAS chart is a thousand accounts and change. One statement per chunk, not
-  // one round trip per account. The loop this replaced was the slowest part of
-  // a sync by a wide margin, and all it was doing was waiting.
   for (const chunk of chunks(
     lastByKey(accounts, (a) => a.number),
     UPSERT_CHUNK,
@@ -246,9 +199,7 @@ export interface ProjectSyncResult {
   deactivated: number;
 }
 
-// Mirror the Fortnox project list, the way the chart of accounts is mirrored:
-// upserted, never deleted, and whatever Fortnox no longer lists is marked
-// inactive. A booked line may name a project that has since been closed.
+// Mirrors projects like accounts: upserted, never deleted, unlisted ones marked inactive.
 export async function syncProjects(token: string): Promise<ProjectSyncResult> {
   const projects = await listProjects(token);
   const now = new Date();
@@ -286,17 +237,15 @@ interface YearSyncResult {
   balances: number;
 }
 
-// Replace one financial year's ledger from its SIE export. Assumes the
-// FortnoxFinancialYear row already exists (syncLedger upserts it first).
+// Replace one financial year's ledger from its SIE export. The FortnoxFinancialYear row
+// must exist (syncLedger upserts it first).
 async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
   const parsed = parseSie(await fetchSie(token, fyId));
 
   const voucherRecords: Prisma.LedgerVoucherCreateManyInput[] = [];
   const rowRecords: Prisma.LedgerRowCreateManyInput[] = [];
 
-  // #IB/#UB (and the optional per-cost-centre #OIB/#OUB), one row per
-  // account+cost-centre key named by either record. Result accounts (3xxx+)
-  // generally have neither and are simply absent.
+  // #IB/#UB (and optional per-cost-centre #OIB/#OUB), one row per account+cost-centre key.
   const balanceRecords: Prisma.LedgerAccountBalanceCreateManyInput[] = [
     ...new Set([...parsed.openingBalances.keys(), ...parsed.closingBalances.keys()]),
   ].map((key) => {
@@ -319,8 +268,7 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
       rows.push({
         id: randomUUID(),
         voucherId,
-        // Copied down from the voucher so a report can be answered without
-        // joining back up to it. See LedgerRow in schema.prisma.
+        // Copied from the voucher to answer reports without a join. See LedgerRow in schema.prisma.
         financialYear: fyId,
         date,
         account: tr.account,
@@ -341,7 +289,6 @@ async function syncYear(token: string, fyId: number): Promise<YearSyncResult> {
       number: v.number,
       date,
       description: v.description,
-      // What a bokslut review is a review of. See lib/closing/fingerprint.ts.
       contentHash: voucherFingerprint({
         date: v.date,
         description: v.description,
@@ -391,9 +338,8 @@ interface LedgerSyncResult {
   costCenters?: CostCenterSyncResult;
 }
 
-// Entry point. scope "current" syncs only the year containing today (fast,
-// one SIE call); "all" syncs every financial year (the full backfill); pass a
-// specific `year` (Fortnox FY id) to sync just that one.
+// scope "current" syncs the year containing today, "all" every financial year, or pass
+// `year` (Fortnox FY id) for one.
 export async function syncLedger(opts: {
   scope: "current" | "all";
   /** Fortnox's id for one financial year, not a calendar year. */
@@ -402,20 +348,16 @@ export async function syncLedger(opts: {
   const token = await getServiceToken();
   const years = await syncFinancialYears(token);
 
-  // Refresh the cost-centre list too, best effort, since it needs the
-  // `costcenter` scope which an older connection may not have granted.
+  // Best effort: needs the `costcenter` scope, which an older connection may lack.
   let costCenters: CostCenterSyncResult | undefined;
   try {
     costCenters = await syncCostCenters(token);
   } catch {
     costCenters = undefined;
   }
-  // The same for projects, which need the `project` scope.
   try {
     await syncProjects(token);
-  } catch {
-    // Best effort, as above.
-  }
+  } catch {}
 
   let targets: FortnoxFinancialYear[];
   if (opts.financialYearId != null) {
@@ -436,16 +378,14 @@ export interface SupplierSyncResult {
   suppliers: number;
 }
 
-// Keep the app's copy of the supplier register (lib/server/supplier-register).
-// It is what a levfaktura's PDF is matched against at the fördelning, so it has
-// to be current without anyone having opened the export picker first.
+// Keep the supplier register copy current (lib/server/supplier-register), since a
+// levfaktura PDF is matched against it at fördelning.
 export async function syncSuppliers(token: string): Promise<SupplierSyncResult> {
   const suppliers = await listSuppliers(token);
   await rememberRegister(suppliers);
   return { suppliers: suppliers.length };
 }
 
-/** The financial year a date falls in, or the newest one Fortnox knows. */
 function yearContaining(
   years: readonly FortnoxFinancialYear[],
   date = isoDay(new Date()),
@@ -453,7 +393,6 @@ function yearContaining(
   return years.find((y) => y.fromDate <= date && date <= y.toDate) ?? years[0];
 }
 
-/** One step of a full sync: what it did, or the error it stopped on. */
 export type SyncStep<T> = { ok: true; result: T } | { ok: false; error: string };
 
 export interface SyncAllResult {
@@ -465,12 +404,7 @@ export interface SyncAllResult {
   ledger: SyncStep<YearSyncResult>[];
 }
 
-/**
- * How long a sync may claim to be running before the claim is ignored. A
- * sync that crashed, or a pod that was killed mid-way, never clears it, and
- * without this the nightly job would stand aside for it forever. A whole run
- * is a few SIE files and some lists, so this is generous.
- */
+/** How long a sync claim is honoured. A crashed sync never clears it, so older claims are ignored. */
 const SYNC_STALE_MS = 30 * 60 * 1000;
 
 const step = async <T>(run: () => Promise<T>): Promise<SyncStep<T>> => {
@@ -482,27 +416,14 @@ const step = async <T>(run: () => Promise<T>): Promise<SyncStep<T>> => {
 };
 
 /**
- * Everything the app mirrors from Fortnox, in one go: the nightly job
- * (api/cron/fortnox-sync) and "Synka allt nu" on the Fortnox settings page.
- * The page's other buttons still fetch one thing each.
- *
- * Each step on its own. A connection without the `project` scope, or a
- * supplier list Fortnox will not hand over, still leaves the ledger synced,
- * and the result says which step failed and why. Only the financial years are
- * needed by later steps, so failing to get them skips the accounts and the
- * ledger, and nothing else.
- *
- * The ledger is this financial year and the one before it. Vouchers keep
- * arriving in last year until its bokslut is done, and the app has nothing
- * that says when that is, so it is always fetched. Older years are closed,
- * and each has its own button on the settings page.
- *
- * Returns null, having done nothing, when another sync is already running.
+ * Everything mirrored from Fortnox: the nightly job (api/cron/fortnox-sync) and "Synka
+ * allt nu". Each step is independent and the result says which failed. Only the financial
+ * years are needed by later steps. The ledger is this year and the previous one (vouchers
+ * keep arriving until its bokslut). Returns null if another sync is already running.
  */
 export async function syncAll(): Promise<SyncAllResult | null> {
   const startedAt = new Date();
-  // The claim. Taken in one statement, so two syncs started at once cannot
-  // both see the row free.
+  // The claim, taken in one statement so two simultaneous syncs cannot both see it free.
   const claimed = await prisma.$executeRaw`
     INSERT INTO "FortnoxSync" ("id", "runningSince", "lastStartedAt", "updatedAt")
     VALUES ('singleton', ${startedAt}, ${startedAt}, ${startedAt})
@@ -520,7 +441,6 @@ export async function syncAll(): Promise<SyncAllResult | null> {
     result = await runAll();
     failure = failedSteps(result);
   } catch (e) {
-    // No token at all: not connected, or the connection is no longer valid.
     failure = e instanceof Error ? e.message : String(e);
     throw e;
   } finally {
@@ -560,7 +480,6 @@ async function runAll(): Promise<SyncAllResult> {
   const current = yearContaining(years.result)!;
   const accounts = await step(() => syncAccounts(token, current.id));
 
-  // The year that ended right before this one, if Fortnox has it.
   const previous = years.result
     .filter((y) => y.toDate < current.fromDate)
     .sort((a, b) => b.toDate.localeCompare(a.toDate))[0];
@@ -579,7 +498,6 @@ async function runAll(): Promise<SyncAllResult> {
   };
 }
 
-/** The steps that failed, named, or null when none did. */
 function failedSteps(r: SyncAllResult): string | null {
   const failed = [
     ...(["financialYears", "costCenters", "projects", "accounts", "suppliers"] as const).flatMap(

@@ -1,19 +1,9 @@
-// Drive a levfaktura through its lifecycle. One endpoint, the same shape as an
-// utlägg's: every action is checked against invoiceCapabilities (who) and the
-// status it was decided under (when), and every write restates that status, so
-// two people acting at once get a 409 rather than a muddle.
-//
-// The unit's fördelning is sent with its attest: the cost centres, and the
-// amount, due date and description it read off the invoice. The rows the
-// sender may sign are signed in the same write. Only a split onto another
-// unit's cost centre waits, in PENDING_APPROVAL, for that unit's signature.
-// The first fördelning is not here: it is what makes the invoice, from a
-// document in the unit's Inkorg (../../route.ts). This is the unit fördela an
-// invoice again, once its split was reopened or its signature taken back.
-//
-// The treasury's kontering is saved a field at a time (../route.ts PATCH) and
-// marked done here (`book`). Sending it to Fortnox is not here: it is a real
-// call to Fortnox and gets a route of its own.
+// Drive a levfaktura through its lifecycle, shaped like an utlägg's: every action is checked against invoiceCapabilities (who)
+// and the status it was decided under (when), and every write restates that status, so simultaneous actors get a 409.
+// The unit's fördelning is sent with its attest, and the rows the sender may sign are signed in the same write.
+// Only a split onto another unit's cost centre waits in PENDING_APPROVAL.
+// The first fördelning is not here: it makes the invoice, from a document in the Inkorg (../../route.ts).
+// The treasury's kontering is saved a field at a time (../route.ts PATCH) and marked done here (`book`). Export to Fortnox has its own route.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import type { TxClient } from "@/lib/server/tx";
@@ -85,7 +75,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!access.ok) return access.res;
   const { invoice, can, mayAttest, viewer } = access;
 
-  // One row of the history, by the actor.
   const event = (
     type: SupplierInvoiceEventType,
     extra: { comment?: string | null; diff?: object } = {},
@@ -97,7 +86,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     ...(extra.diff && { diff: extra.diff }),
   });
 
-  // The mail about this invoice, as of the action being taken.
   const about = (
     key: Parameters<typeof invoiceNotice>[0],
     values: Record<string, string | number> = {},
@@ -115,10 +103,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   };
 
   // ── Give it to another unit instead ───────────────────────────────────────
-  // Only while nothing on it is signed. It keeps where it was: an invoice sent
-  // back with a comment is still waiting on that comment, whoever answers it
-  // now. Sending it back to the Inkorg is not a move but ../return, since an
-  // invoice without a unit is not one.
+  // Only while nothing on it is signed. It keeps where it was. Sending it back to the Inkorg is ../return.
   if (action === "assign") {
     if (!can.canMove) return refuseChange(invoice, isInvoiceReturnable(invoice.status));
     if (!resultUnitId) return fail(422, "supplierInvoice.noResultUnit");
@@ -163,9 +148,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (action === "attest") {
     if (can.canAllocate) {
       if (!rows) return fail(422, "supplierInvoice.noAllocations");
-      // The amount the split is made against and the date it is due by, as
-      // the unit read them off the invoice. The page offers what the PDF
-      // says, and the treasury checks both again at the kontering.
+      // The amount the split is made against and the due date, as the unit read them off the invoice. The treasury checks both again at the kontering.
       const total = amount ?? invoice.amount;
       if (total == null) return fail(422, "supplierInvoice.noAmount");
       const roundOff = rounding !== undefined ? rounding || null : invoice.rounding;
@@ -183,10 +166,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       if (!planning.ok) return planning.res;
       const { planned, signed, status: to, attesters } = planning.plan;
 
-      // What the PDF says fills whatever the invoice still lacks, for the
-      // treasury to check. Read before the transaction, since storage and the
-      // PDF reader are slow; the page that sent this has read it already, so
-      // it is usually kept. What the unit typed is theirs, not the PDF's.
+      // What the PDF says fills whatever the invoice lacks, for the treasury to check. Read before the transaction (slow), usually kept from the page.
+      // What the unit typed is theirs.
       const reading = await readInvoiceScan(invoice.id);
       const typed = {
         amount: total,
@@ -230,7 +211,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return done(to);
     }
 
-    // Another unit's share of a split, signed as it stands.
     if (!can.canAttest) {
       return refuseChange(
         invoice,
@@ -241,8 +221,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const now = new Date();
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {
-        // Still unsigned is part of the condition, so a signature somebody
-        // else put there in the meantime is never written over with ours.
+        // Still unsigned is part of the condition, so another's signature is never written over.
         applied(
           await tx.supplierInvoiceAllocation.updateMany({
             where: { id: { in: mine.map((a) => a.id) }, approvedById: null },
@@ -278,9 +257,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       );
     }
     const mine = invoice.allocations.filter((a) => a.approvedById === actor.id);
-    // The last signature gone, it is back to waiting for its kontering, which
-    // is where the person who withdrew it can change it. Others' signatures
-    // stay on their rows.
+    // With the last signature gone it is back to waiting for its kontering. Others' signatures stay.
     const othersSigned = invoice.allocations.some(
       (a) => a.approvedById && a.approvedById !== actor.id,
     );
@@ -305,10 +282,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // ── Change the split ──────────────────────────────────────────────────────
-  // The unit that proposed it, while others are still signing. Every
-  // signature comes off, its own too, because each was given to the split as
-  // it stood. Back to waiting for its kontering, and whoever signs next is
-  // asked when the new split is sent.
+  // The unit that proposed it, while others are still signing. Every signature comes off, its own too, since each was given to the split as it stood.
   if (action === "redistribute") {
     if (!can.canRedistribute) return refuseChange(invoice, invoice.status === "PENDING_APPROVAL");
     const result = await commit(() =>
@@ -325,9 +299,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   // ── The treasury's kontering, done ────────────────────────────────────────
-  // Every field is already saved as it was left. This says the kontering is
-  // finished, which is only true when what is saved is enough to send. Done
-  // again on a konterad invoice (Ändra kontering), it only checks.
+  // Saved fields are already as left. This says the kontering is finished, true only when enough is saved to send.
+  // On a konterad invoice (Ändra kontering) it only checks.
   if (action === "book") {
     if (!can.canBook) return refuseChange(invoice, isWithTreasury(invoice.status));
     const blocker = exportBlocker(exportFactsOf(invoice));

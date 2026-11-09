@@ -15,12 +15,8 @@ export const CreateBudget = z.object({
 export type CreateBudget = z.infer<typeof CreateBudget>;
 
 /**
- * POST /api/budgets/import: the query half of a budget CSV upload.
- *
- * The file itself is the request body (raw bytes, so its encoding survives to
- * be sniffed), which leaves the year and the name to travel as query
- * parameters. Same defaults as CreateBudget: an import is a budget being
- * created, and the two should not disagree about what an unnamed one is called.
+ * POST /api/budgets/import: the query half of a budget CSV upload (the file is the raw body, so its encoding can be
+ * sniffed). Same defaults as CreateBudget.
  */
 export const ImportBudgetQuery = z.object({
   year: Year.default(() => new Date().getFullYear()),
@@ -28,20 +24,12 @@ export const ImportBudgetQuery = z.object({
 });
 export type ImportBudgetQuery = z.infer<typeof ImportBudgetQuery>;
 
-/**
- * PATCH /api/budgets/[id].
- *
- * Two different gates behind one endpoint: `locked` is the treasurer's alone,
- * `name`/`year` are any admin's on an unlocked budget. The route still splits
- * on which one is present. This only says what each may be.
- */
+/** PATCH /api/budgets/[id]. `locked` is the treasurer's alone; `name`/`year` are any admin's on an unlocked budget. */
 export const PatchBudget = z.object({
   locked: z.boolean().optional(),
   name: NonEmpty.optional(),
   year: Year.optional(),
-  // Clearable: a budget recorded as adopted by mistake has to be able to go
-  // back to being a draft, and an absent field means "not touching it", which
-  // is not the same statement as "never adopted".
+  // Clearable: absent means "not touching it", null means back to draft.
   adoptedAt: Clearable(IsoDate).optional(),
 });
 export type PatchBudget = z.infer<typeof PatchBudget>;
@@ -64,15 +52,7 @@ export type PatchSheet = z.infer<typeof PatchSheet>;
 /** POST /api/budgets/[id]/cost-centers/[ccid]/accounts. */
 export const CreateAccount = z.object({
   accountCode: Trimmed.default(""),
-  /**
-   * The section it is being added under.
-   *
-   * Not a classification the caller gets to choose: 3xxx is income and
-   * 4xxx-8xxx is cost, and this says which side the sheet was asking from so
-   * the server can refuse a code that does not belong there. It replaced
-   * `kindOverride`, which stored the caller's answer and let a cost account sit
-   * under Intäkter.
-   */
+  /** The section it is added under (3xxx income, 4xxx-8xxx cost), so the server can refuse a code that does not belong. */
   kind: AccountKind,
 });
 export type CreateAccount = z.infer<typeof CreateAccount>;
@@ -86,8 +66,7 @@ export type PatchAccount = z.infer<typeof PatchAccount>;
 /** POST /api/budget-accounts/[id]/line-items: a new row on an account. */
 export const CreateLineItem = z.object({
   description: Trimmed.default(""),
-  // A row with no equation is a zero, not an error: the sheet is filled in
-  // gradually and a blank Belopp is where somebody has not got to yet.
+  // A row with no equation is a zero, not an error (the sheet is filled in gradually).
   expression: Trimmed.default("0"),
 });
 export type CreateLineItem = z.infer<typeof CreateLineItem>;
@@ -113,14 +92,7 @@ export const ReorderLineItems = z.object({
 });
 export type ReorderLineItems = z.infer<typeof ReorderLineItems>;
 
-/**
- * POST /api/budgets/[id]/cost-centers/[ccId]/paste: copied rows or accounts,
- * named by what they were copied from rather than by their contents.
- *
- * Ids and not values: a row is a description, an equation, an antal × á-pris and
- * six general columns, and a copy that listed them would be a second description
- * of a row for the paste to get wrong. The server has the originals.
- */
+/** POST /api/budgets/[id]/cost-centers/[ccId]/paste: copied rows or accounts, named by id (the server has the originals). */
 export const PasteIntoSheet = z.object({
   /** Rows to append, and the account of this sheet to append them to. */
   accountId: Id.optional(),
@@ -152,11 +124,8 @@ export const BudgetCommentBody = z.object({
 export type BudgetCommentBody = z.infer<typeof BudgetCommentBody>;
 
 /**
- * One account's share of a redaktionell ändring.
- *
- * `amount` is öre and may be sent as the string somebody typed. The belopp
- * field is free text so a Swede can write "1 234,50", which `parseAmount` in
- * lib/budget/changes.ts turns into öre. A number is taken as öre already.
+ * One account's share of a redaktionell ändring. `amount` is öre, or the string somebody typed ("1 234,50"), which
+ * `parseAmount` in lib/budget/changes.ts turns into öre.
  */
 const ChangeEntryInput = z.object({
   costCenterId: Id,

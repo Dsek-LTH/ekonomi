@@ -1,8 +1,6 @@
-// Parser for Fortnox SIE type-4 exports (the whole general ledger for one
-// financial year). SIE is a Swedish accounting interchange format: line-based,
-// CP437-encoded ("#FORMAT PC8"), with quoted strings and {dimension object}
-// lists. We only need the chart (#KONTO), cost-centre objects (#OBJEKT dim 1),
-// and the vouchers (#VER) with their postings (#TRANS).
+// Parser for Fortnox SIE type-4 exports (one financial year's ledger): line-based, CP437,
+// quoted strings and {dimension object} lists. Reads #KONTO, #OBJEKT dim 1 (cost centres),
+// #VER and #TRANS.
 
 // CP437 high half (0x80-0xFF) → Unicode. The low half is ASCII. This is what
 // turns "Kostnadsstlle" back into "Kostnadsställe".
@@ -17,9 +15,6 @@ export function decodeCp437(buf: Buffer): string {
   return out;
 }
 
-// Split one SIE line into tokens. Quoted strings ("…") become one token with
-// the quotes stripped; brace groups ({…}) become one token keeping the braces
-// (so the caller can tell them apart and parse the inside).
 function tokenize(line: string): string[] {
   const out: string[] = [];
   const n = line.length;
@@ -55,8 +50,7 @@ function tokenize(line: string): string[] {
   return out;
 }
 
-// Pull the cost-centre code (SIE dimension 1) out of a {…} object list such as
-// `{1 "SEKT06"}` or `{1 "X" 6 "Y"}`. Returns undefined for `{}`.
+// Cost-centre code (SIE dimension 1) from a {…} object list, undefined for `{}`.
 function costCenterFromObjects(brace: string): string | undefined {
   const inner = brace.slice(1, -1).trim();
   if (!inner) return undefined;
@@ -86,14 +80,9 @@ interface ParsedSie {
   accounts: Map<string, string>; // account number → name
   costCenters: Map<string, string>; // dim-1 code → name
   vouchers: SieVoucher[];
-  // Balance-sheet account balances for THIS financial year (#IB/#UB year index
-  // 0). Same sign convention as transactions: positive = debit. Only balance
-  // accounts (1xxx-2xxx) carry these; result accounts start each year at zero.
-  //
-  // Keyed `${account}|${costCenterCode}`, where an empty cost centre is the
-  // account-level total from #IB/#UB. Per-cost-centre entries come from
-  // #OIB/#OUB, which an exporter may omit entirely. Callers must treat them
-  // as optional detail, never as the source of the account total.
+  // Balance-sheet balances for THIS year (#IB/#UB year index 0), positive = debit. Keyed
+  // `${account}|${costCenterCode}`: empty cost centre is the account total, per-cost-centre
+  // entries come from #OIB/#OUB (which an exporter may omit) and are optional detail only.
   openingBalances: Map<string, number>; // → SEK at year start
   closingBalances: Map<string, number>; // → SEK at year end
 }
@@ -102,7 +91,6 @@ const balanceKey = (account: string, costCenterCode?: string | null) =>
   `${account}|${costCenterCode ?? ""}`;
 
 function sieDate(raw: string): string {
-  // YYYYMMDD → YYYY-MM-DD
   return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
 }
 
@@ -130,14 +118,12 @@ export function parseSie(text: string): ParsedSie {
         if (t[1]) accounts.set(t[1], t[2] ?? t[1]);
         break;
       case "#OBJEKT":
-        // #OBJEKT <dim> "<code>" "<name>": only dimension 1 is cost centre
         if (t[1] === "1" && t[2]) costCenters.set(t[2], t[3] ?? t[2]);
         break;
       case "#IB":
       case "#UB": {
         // #IB|#UB <yearIndex> <account> <balance> [<quantity>]
-        // yearIndex 0 is this financial year, -1 the one before it; we only
-        // mirror the year being synced, so anything else is skipped.
+        // yearIndex 0 is this year, -1 the one before; only this year is mirrored.
         if (t[1] !== "0") break;
         const account = t[2] ?? "";
         const balance = Number(t[3] ?? 0);
@@ -148,8 +134,7 @@ export function parseSie(text: string): ParsedSie {
       case "#OIB":
       case "#OUB": {
         // #OIB|#OUB <yearIndex> <account> {<objects>} <balance> [<quantity>]
-        // The same balance broken down per object. Optional in SIE, so its
-        // absence just means no per-cost-centre detail is available.
+        // Optional in SIE.
         if (t[1] !== "0") break;
         const account = t[2] ?? "";
         const cc = costCenterFromObjects(t[3] ?? "{}");
@@ -186,8 +171,7 @@ export function parseSie(text: string): ParsedSie {
         });
         break;
       }
-      // #RTRANS/#BTRANS (correction registrations) are intentionally ignored,
-      // Fortnox emits the live posting as #TRANS.
+      // #RTRANS/#BTRANS (corrections) are ignored: Fortnox emits the live posting as #TRANS.
     }
   }
 

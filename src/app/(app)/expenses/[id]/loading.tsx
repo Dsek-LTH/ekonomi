@@ -1,10 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 
-// The invoice as it will land: status with the actions opposite, the ruled
-// strip of amount, date and payment type, the line items, and the small print
-// at the foot. The header above it is identity only (title, then reference and
-// submitter), so it has no action slot to hold.
 export default function Loading() {
   return (
     <SkeletonPage width="content" back titleWidth="w-72">

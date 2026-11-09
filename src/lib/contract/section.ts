@@ -1,43 +1,17 @@
-// Who the section is, as a document names it.
+// The section's own details, printed on the letterhead of every uthyrningsavtal. Check them
+// against the section's registration before the first contract goes out.
 //
-// ─────────────────────────────────────────────────────────────────────
-//  THIS FILE IS THE ONE PLACE TO EDIT THE SECTION'S OWN DETAILS.
-//
-//  They are printed on the letterhead of every uthyrningsavtal the app draws,
-//  which is a document somebody outside the section is bound by. Check them
-//  against what the section is actually registered as before the first contract
-//  goes out, and correct them here.
-// ─────────────────────────────────────────────────────────────────────
-//
-// Local, and deliberately not read from the Fortnox connection.
-//
-// Fortnox holds a company name and an organisation number, and taking the
-// letterhead from there was the first thing tried. It is the wrong source. It
-// makes what a contract says about the section depend on an integration being
-// connected, so a lapsed token changes the document; it makes the address
-// unreviewable, since nobody sees it change; and it renders differently on a
-// machine with no connection at all, which is every test run and every fresh
-// checkout. What the section is called on a contract it issues is a decision,
-// not a synced value, and a decision belongs in a file somebody reads in a
-// diff.
-//
-// It is also why nothing here is async. Drawing a contract used to open a
-// database connection to find out who was drawing it, on every render, and the
-// live preview does that every few seconds.
+// Local on purpose, not read from Fortnox: a contract's wording must not depend on an
+// integration being connected, and the address should change in a reviewable diff.
 
 interface SectionIdentity {
-  /** As the document names it, in the section's own spelling. */
   name: string;
-  /** Organisationsnummer. Null only if the section genuinely has none. */
   orgNo: string | null;
-  /** The street line of the postal address. */
   address: string | null;
-  /** "221 00 Lund": postal code and town on one line, as an address is set. */
   postalLine: string | null;
 }
 
-// The section's postal address, which is a box rather than the street the
-// kårhus stands on. Post sent to the building does not reach the section.
+// A box, not the kårhus street: post sent to the building does not reach the section.
 const POSTAL_CODE = "221 00";
 const CITY = "Lund";
 

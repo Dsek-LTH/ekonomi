@@ -4,13 +4,8 @@ import { describe, expect, it } from "vitest";
 import { renderCover } from "./typst";
 import type { ExpenseCoverData } from "./types";
 
-// These run everywhere, with no skip guard, because the typesetter is a
-// dependency rather than something the machine has to have, which is the whole
-// point of it being the napi build. intakt's LaTeX tests still skip themselves
-// when pdflatex is absent (intakt/report/latex_test.go); this does not have to.
-//
-// What the page *says* is tested in ../document.test.ts without going near a
-// renderer. These only ask whether the template still compiles into pages.
+// No skip guard: the typesetter is the napi build, not something the machine has to have.
+// What the page says is tested in ../document.test.ts. These only ask whether the template still compiles into pages.
 
 const data: ExpenseCoverData = {
   reference: "DEK26-0042",
@@ -20,13 +15,9 @@ const data: ExpenseCoverData = {
   paymentType: "Privat utlägg",
   created: "2026-08-14",
   submitter: { name: 'Emil "jajebums" Helander', studentId: "em8241he-s" },
-  // Not a milersättning: its underlag is a real receipt and follows on the
-  // next page, so the page draws no journey section.
+  // Not a milersättning: its underlag is a real receipt, so no journey section.
   journey: null,
-  // In time, so there is no dispens to state. The one that is takes its own
-  // test below.
   waiver: null,
-  // Konterad, and amended by somebody else since, so the whole line is drawn.
   booking: { by: "Anna Andersson", at: "2026-04-03", amendedBy: "Bo Berg" },
   total: "1 069,00 kr",
   allocations: [
@@ -56,9 +47,7 @@ describe("renderCover", () => {
   });
 
   it("survives everything the data allows to be missing", async () => {
-    // A draft previewed before it has a reference, from a user with no StiL-ID,
-    // with nothing attested yet, every optional field absent at once, which is
-    // the shape most likely to blow up a template that assumed otherwise.
+    // A draft with every optional field absent at once: the shape most likely to blow up a template.
     const bytes = await renderCover({
       ...data,
       reference: "-",
@@ -79,9 +68,7 @@ describe("renderCover", () => {
   });
 
   it("states a dispens without pushing the page over", async () => {
-    // A late utlägg taken anyway, with a reason of the length somebody actually
-    // writes. The block sits above the attesteringar and must not cost the
-    // page its second half.
+    // A late utlägg with a realistically long reason: the block must not cost the page its second half.
     const bytes = await renderCover({
       ...data,
       waiver: {
@@ -97,8 +84,6 @@ describe("renderCover", () => {
   });
 
   it("renders a milersättning's journey on the same one page", async () => {
-    // The section that used to be a second document. It is set above the attest
-    // table, so the page it is on is still the page it has always been.
     const bytes = await renderCover({
       ...data,
       paymentType: "Milersättning",
@@ -115,9 +100,7 @@ describe("renderCover", () => {
   });
 
   it("fits a long multi-stop route without pushing the page over", async () => {
-    // The errand that called at two places before going home, written out with
-    // real addresses. `field` wraps, so this runs to a second line rather than
-    // off the edge; what is asserted is that it stays one page.
+    // Real addresses: `field` wraps, and what is asserted is that it stays one page.
     const bytes = await renderCover({
       ...data,
       paymentType: "Milersättning",
@@ -150,8 +133,7 @@ describe("renderCover", () => {
   });
 
   it("breaks onto a second page rather than overflowing the first", async () => {
-    // The bounded-table argument only holds for realistic utlägg. A section
-    // that splits one across forty cost centres should still get a document.
+    // The bounded-table argument only holds for realistic utlägg; forty cost centres should still get a document.
     const many = Array.from({ length: 40 }, (_, i) => ({
       costCenter: `SEKT${String(i).padStart(2, "0")} - Verksamhet ${i}`,
       amount: "1 234,00 kr",
@@ -164,9 +146,7 @@ describe("renderCover", () => {
   });
 
   it("does not let a comment escape into the markup", async () => {
-    // The data is handed over as JSON and read with `json()`, so a comment is a
-    // string to Typst however it is punctuated, but this is the assertion that
-    // would fail first if that ever became string interpolation.
+    // Data is handed over as JSON, so a comment is a string to Typst however it is punctuated.
     const bytes = await renderCover({
       ...data,
       allocations: [

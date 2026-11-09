@@ -6,20 +6,12 @@ import { getLedgerYears } from "@/lib/ledger";
 import { today } from "@/lib/domain/date";
 import { FISCAL_YEAR_COOKIE, type FiscalYear } from "@/lib/ui/fiscal-year";
 
-/**
- * Every financial year Fortnox has, as far as the ledger has been synced,
- * newest first. What the header's picker offers. Empty when nothing has been
- * synced yet, and then there is no picker and nothing is narrowed.
- */
+/** Every financial year Fortnox has (as far as the ledger is synced), newest first. Empty before any sync. */
 export const getFiscalYears = cache(async (): Promise<FiscalYear[]> =>
   (await getLedgerYears()).map((y) => ({ id: y.id, fromDate: y.fromDate, toDate: y.toDate })),
 );
 
-/**
- * The year the reader is looking at: the one they picked, if Fortnox still
- * has it, otherwise the one today falls in, otherwise the newest there is.
- * Cached per request, so the layout and the page agree without asking twice.
- */
+/** The year the reader is looking at: the one picked if Fortnox has it, else today's, else the newest. Cached per request. */
 export const getFiscalYear = cache(async (): Promise<FiscalYear | null> => {
   const years = await getFiscalYears();
   if (years.length === 0) return null;
@@ -32,8 +24,7 @@ export const getFiscalYear = cache(async (): Promise<FiscalYear | null> => {
   );
 });
 
-/** A year's bounds as a Prisma date filter. What the data layer takes as
- *  `during`, for a `@db.Date` column or a timestamp alike. */
+/** A year's bounds as a Prisma date filter (`during`), for a `@db.Date` column or a timestamp. */
 export type During = { gte: Date; lte: Date };
 
 /** The year's bounds as a Prisma date filter, for a `@db.Date` column. */

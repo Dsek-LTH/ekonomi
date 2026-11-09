@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isRevenueAccount, voucherBalance, voucherBlocker, type VoucherLine } from "./voucher";
 
-// Amounts are öre throughout. That is the point of the rule living here.
+// Amounts are öre throughout.
 const line = (account: string, debit: number, credit: number): VoucherLine => ({
   account,
   debit,
@@ -43,10 +43,7 @@ describe("voucherBlocker", () => {
   });
 
   it("refuses a row that names an account and posts nothing to it", () => {
-    // The bug this exists to stop: the editors only drop a row that is empty
-    // all through, so an account picked and then left behind was a "typed" row
-    // and the rest of the voucher balancing without it made the whole thing
-    // bookable. A 0,00 line nobody meant to write went to Fortnox.
+    // The editors only drop rows empty all through, so a picked-then-left account was a "typed" row and reached Fortnox as a 0,00 line.
     expect(
       voucherBlocker([line("1930", 0, 25000), line("4010", 25000, 0), line("6540", 0, 0)]),
     ).toBe("amountRequired");
@@ -57,15 +54,11 @@ describe("voucherBlocker", () => {
   });
 
   it("refuses an empty voucher by its empty rows, not by its balance", () => {
-    // It does balance, at nothing, so "debet ≠ kredit" would be a sentence
-    // contradicting the two matching sides in front of the reader. What is
-    // actually wrong with it is that no row has an amount, and that is what it
-    // is told.
+    // It balances, at nothing: the message names the real problem, that no row has an amount.
     expect(voucherBlocker([line("1930", 0, 0), line("4010", 0, 0)])).toBe("amountRequired");
   });
 
-  // The reason the rule counts in öre: 0,1 + 0,2 in kronor is not 0,3, so a
-  // voucher balanced to the öre could read as unbalanced by a float's width.
+  // Counting in öre: 0,1 + 0,2 in kronor is not 0,3.
   it("balances exactly at öre resolution", () => {
     expect(
       voucherBlocker([line("1930", 0, 30), line("4010", 10, 0), line("5010", 20, 0)]),
@@ -78,10 +71,7 @@ describe("voucherBlocker", () => {
   });
 });
 
-// Balance is the narrower question, and the booking screens ask it on its own:
-// the chip says whether the voucher adds up, the button waits on the blocker.
-// These are the cases where the two answers differ, which is where the chip
-// used to lie, calling a voucher whose sides met "differs by 0,00 kr".
+// Balance is narrower than bookable: the chip says whether it adds up, the button waits on the blocker.
 describe("voucherBalance", () => {
   it("agrees with the blocker on an ordinary voucher", () => {
     expect(voucherBalance(balanced).balanced).toBe(true);

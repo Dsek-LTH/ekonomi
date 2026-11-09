@@ -1,6 +1,4 @@
-// Assign / unassign a section card's holder and result unit. Admin only. The
-// card registry is the source of truth for whose card purchases show up where:
-// the holder's own feed, and the result unit's.
+// Assign / unassign a section card's holder and result unit (admin only).
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";

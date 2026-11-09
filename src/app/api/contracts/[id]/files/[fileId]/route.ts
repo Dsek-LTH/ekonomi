@@ -1,11 +1,4 @@
-// Serve or remove one file on a contract. The bytes stream
-// browser ← Next ← MinIO, so every read is authorised here and MinIO stays
-// internal.
-//
-// Reading is CONTRACT_VIEW and removing is CONTRACT_MANAGE, which is the one
-// place the two capabilities visibly do different work. A resultatansvarig may
-// read the agreement their unit is spending against; taking the document out of
-// the archive is somebody else's call.
+// Bytes stream through this route so every read is authorised here and MinIO stays internal. Reading is CONTRACT_VIEW, removing is CONTRACT_MANAGE.
 import { prisma } from "@/lib/server/db";
 import { canManageRentals, canViewRentals } from "@/lib/domain/permissions";
 import { canManageKind, contractScopeOf, contractScopeWhere } from "@/lib/data/contract-scope";
@@ -19,11 +12,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; fi
   const g = await gate(canViewRentals, "contract.noViewAccess");
   if (!g.ok) return g.res;
 
-  // Three conditions, all of them load-bearing. Both ids, so a file id from one
-  // contract cannot be read through another's URL. And the viewer's scope, so a
-  // rental-only holder cannot stream a sponsoravtal by knowing its id: this is
-  // the route that hands over the bytes, and a gate that only guarded the page
-  // would be a lock on the door of an open window.
+  // Both ids (a file id must not be readable through another contract's URL) and the viewer's scope (a rental-only holder must not stream a sponsoravtal).
   const file = await prisma.contractFile.findFirst({
     where: {
       id: fileId,
@@ -34,10 +23,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; fi
   });
   if (!file) return fail(404, "contract.fileNotFound");
 
-  // Two very different failures, told apart deliberately, the same way the
-  // receipt route tells them apart. Storage being unreachable is an outage the
-  // rest of the app carries on through; an object storage says is not there is
-  // an agreement that has gone missing, and somebody has to know.
+  // Storage unreachable is an outage; an object storage says is missing is a lost agreement, which somebody has to know.
   let obj;
   try {
     obj = await getObjectStream(file.objectKey);
@@ -53,8 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; fi
 
   const headers = new Headers({
     "Content-Type": obj.contentType,
-    // An avtal names people who are not members and terms the section is bound
-    // by. Never cached anywhere shared.
+    // Names non-members and binds the section: never cached anywhere shared.
     "Cache-Control": "private, max-age=0, no-store",
     "Content-Disposition": `inline; filename="${encodeURIComponent(file.filename)}"`,
   });
@@ -82,8 +67,7 @@ export async function DELETE(
 
   const removed = await deleteContractFile(file.id);
   if (!removed.ok) {
-    // A signed file is evidence and there is no screen that may remove it. The
-    // rule lives in lib/contract/files.ts; this is only how it reads back.
+    // A signed file is evidence and no screen may remove it (rule in lib/contract/files.ts).
     return removed.reason === "fileImmutable"
       ? fail(409, "contract.fileImmutable")
       : fail(404, "contract.fileNotFound");

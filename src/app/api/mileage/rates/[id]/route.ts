@@ -40,9 +40,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const existing = await prisma.mileageRate.findUnique({ where: { id } });
   if (!existing) return fail(404, "mileage.rateNotFound");
 
-  // Nothing cascades and nothing is orphaned: a trip holds its own öre-per-km
-  // rather than pointing at a row here, which is exactly so that a rate entered
-  // by mistake can be taken back out without touching a claim.
+  // A trip holds its own öre-per-km, so deleting a rate never touches a claim.
   await prisma.mileageRate.delete({ where: { id } });
   return NextResponse.json({ id });
 }

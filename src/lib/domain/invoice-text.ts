@@ -1,17 +1,6 @@
-// Reading a supplier invoice's text for the fields the treasurer would
-// otherwise type: amount, dates, invoice number, OCR, bankgiro, plusgiro,
-// the supplier's org number, and "Er referens".
-//
-// Pure. The text comes from the PDF's own text layer (lib/server/pdf-text.ts),
-// as lines in reading order. A scanned invoice has none, and then nothing is
-// found, which is a fine answer: every field here is a suggestion, filled in
-// only where the invoice had nothing, and checked by the treasurer before
-// export.
-//
-// Found by label, the way a person reads an invoice: the value is what follows
-// "Förfallodatum", on the same line or the next. Swedish invoices are
-// regular enough about their labels for this to get most of them, and a field
-// whose label is not recognised is simply left empty.
+// Reading a supplier invoice's text for the fields the treasurer would otherwise type. Pure. Text
+// comes from the PDF text layer (lib/server/pdf-text.ts); a scanned invoice has none and nothing is
+// found. Every field is a suggestion, found by label ("Förfallodatum": same line or the next).
 
 import { isValidOcr } from "./supplier-invoice";
 import { isoDay } from "@/lib/domain/date";
@@ -25,14 +14,10 @@ export interface InvoiceTextFields {
   bankgiro?: string;
   plusgiro?: string;
   supplierOrgNo?: string;
-  /** "Er referens": often a name, and often, when the section asked for it, a
-   *  cost centre code. Read for routing as well as shown. */
+  /** "Er referens": often a name, or a cost centre code. Read for routing as well as shown. */
   reference?: string;
 }
 
-// ── Values ────────────────────────────────────────────────────────
-
-/** A date in any of the shapes Swedish invoices print, as YYYY-MM-DD. */
 export function parseDate(raw: string): string | null {
   const s = raw.trim();
   let y: string, m: string, d: string;
@@ -52,11 +37,7 @@ export function parseDate(raw: string): string | null {
   return !Number.isNaN(date.getTime()) && isoDay(date) === iso ? iso : null;
 }
 
-/**
- * An amount as printed, "1 250,00", "1.250,00", "1250.00", "1 250 kr", into
- * öre. The last amount-shaped thing on the line, because a total line often
- * starts with something else that looks like a number ("Summa 3 st").
- */
+/** An amount as printed ("1 250,00", "1.250,00", "1250.00", "1 250 kr") into öre. The last amount-shaped thing on the line, since a total line often starts with another number ("Summa 3 st"). */
 export function parseAmount(raw: string): number | null {
   const found = raw.match(/\d{1,3}(?:[  .]\d{3})*(?:[.,]\d{2})|\d+(?:[.,]\d{2})?/g);
   if (!found) return null;
@@ -68,10 +49,7 @@ export function parseAmount(raw: string): number | null {
   return Number.isFinite(ore) && ore > 0 ? ore : null;
 }
 
-// ── Labels ────────────────────────────────────────────────────────
-
-/** The value after a label: the rest of its line, or the next line when the
- *  label stands alone (a two-column layout read line by line). */
+/** The value after a label: the rest of its line, or the next line when the label stands alone. */
 function after(lines: readonly string[], label: RegExp): string[] {
   const out: string[] = [];
   lines.forEach((line, i) => {
@@ -92,9 +70,7 @@ const first = <T>(xs: readonly string[], parse: (s: string) => T | null): T | un
   return undefined;
 };
 
-// In order of how sure a label is about being the sum to pay. "Att betala"
-// is that sum on every Swedish invoice that has one; a plain "Summa" may be a
-// subtotal, so it is only asked when nothing better is there.
+// Ordered by how sure a label is to be the sum to pay: "Att betala" always is, a plain "Summa" may be a subtotal.
 const AMOUNT_LABELS = [
   /(?:summa|belopp|totalt)?\s*att betala/i,
   /totalbelopp|totalsumma|total amount|amount due|total due/i,
@@ -119,8 +95,7 @@ export function parseInvoiceText(
     }
   }
 
-  // "Forfallodatum" too: a text layer drawn with a font that lacks the
-  // Swedish letters drops them, and the label is still unmistakable.
+  // "Forfallodatum" too: a text layer with a font lacking the Swedish letters drops them.
   out.dueDate = first(
     after(lines, /f[öo]rfallo(?:datum|dag)|f[öo]rfaller|betala senast|sista betal\w*|due date/i),
     parseDate,
@@ -136,8 +111,7 @@ export function parseInvoiceText(
   );
 
   out.ocr = first(after(lines, /\bocr(?:-?nummer|-?nr)?\b|referensnummer/i), (s) => {
-    // One whose check digit does not add up is misread, or is some other
-    // number, and is better left for the treasurer than prefilled wrong.
+    // A number whose check digit does not add up is misread or something else: leave it for the treasurer.
     const m = s.replace(/\s/g, "").match(/^(\d{2,25})/);
     return m && isValidOcr(m[1]) ? m[1] : null;
   });
@@ -151,8 +125,7 @@ export function parseInvoiceText(
     (s) => s.match(PG)?.[1] ?? null,
   );
 
-  // The supplier's, not ours: the section's own org number is printed on the
-  // invoice too, as the customer's.
+  // The supplier's, not ours: the section's own org number is printed too, as the customer's.
   const own = opts.ownOrgNo ?? null;
   out.supplierOrgNo = first(
     [...after(lines, /org(?:anisations)?\.?\s*-?\s*n(?:umme)?r\.?|org\.? ?nr/i), ...lines],

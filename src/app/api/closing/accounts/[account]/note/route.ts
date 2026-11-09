@@ -4,8 +4,6 @@ import { parseBody } from "@/lib/api/parse";
 import { AccountNoteBody } from "@/lib/api/schemas/closing";
 import { canBookkeep } from "@/lib/domain/permissions";
 
-// What an account is and how it is reconciled. Not tied to a year, so writing
-// it once is enough until somebody has something to add. An empty body clears it.
 export async function PUT(req: Request, ctx: { params: Promise<{ account: string }> }) {
   const g = await gate(canBookkeep);
   if (!g.ok) return g.res;

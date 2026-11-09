@@ -1,21 +1,9 @@
-// What Zettle's API returns, made into sold lines and fees.
-//
-// Ported from intakt (zettle/models.go, zettle/timestamps.go,
-// report/sources.go, report/purchases.go), which this replaces, with the same
-// rules, because days already booked were booked from what that code read:
-//
-//   - A timestamp is an instant, and the day it belongs to is the Swedish day
-//     it falls on: a purchase at 23:30 UTC on a winter evening is the next
-//     day's takings in Lund. A timestamp with no offset (the finance API
-//     writes them that way) is read as UTC.
-//   - A line's total is quantity * unit price - its own discount, and a
-//     purchase-level discount is spread over the purchase's positive lines by
-//     largest remainder, so the shares add up to the öre.
-//   - Fees are the PAYMENT_FEE transactions and nothing else, stored as a
-//     positive cost. The finance API also returns the payments and payouts.
-//
-// Pure, so it is tested without the network. lib/income/zettle-client.ts does
-// the fetching.
+// What Zettle's API returns, made into sold lines and fees. Pure (lib/income/zettle-client.ts fetches).
+//  - A timestamp's day is the Swedish day it falls on. One with no offset is read as UTC.
+//  - A line total is quantity * unit price - its own discount. A purchase-level discount is spread
+//    over the positive lines by largest remainder, so shares add up to the öre.
+//  - Fees are the PAYMENT_FEE transactions only, stored as positive costs.
+
 import type { ZettleFee, ZettleSaleLine } from "./types";
 
 // ── The API's shapes, as far as this reads them ─────────────────────
@@ -26,8 +14,7 @@ export interface ZettlePurchaseDiscount {
   value?: number;
 }
 
-// Every field optional, because Zettle leaves fields out and the code reading
-// these has to say what a missing one means rather than trip over it.
+// Every field optional, because Zettle leaves fields out.
 export interface ZettleProduct {
   name?: string;
   variantName?: string;
@@ -107,11 +94,11 @@ function offsetAt(ms: number): string {
 
 /** Midnight in Lund at the start of an ISO day, as Zettle's range parameters take it. */
 export function stockholmMidnight(day: string): string {
-  // Clocks change at 01:00 UTC, so midnight is always on the same side of a
-  // change as the instant one offset before it: guess, then confirm.
+  // Clocks change at 01:00 UTC, so guess, then confirm.
   const utc = Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10));
   const guess = offsetAt(utc);
-  const hours = (o: string) => (o[0] === "-" ? -1 : 1) * (Number(o.slice(1, 3)) + Number(o.slice(4)) / 60);
+  const hours = (o: string) =>
+    (o[0] === "-" ? -1 : 1) * (Number(o.slice(1, 3)) + Number(o.slice(4)) / 60);
   return `${day}T00:00:00${offsetAt(utc - hours(guess) * 3_600_000)}`;
 }
 
@@ -122,18 +109,14 @@ function nextDay(day: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-/**
- * The query range for the days `from` to `to`, both inclusive: Swedish
- * midnight at the start of `from`, and at the start of the day after `to`,
- * since Zettle's end is exclusive.
- */
+/** The query range for days `from` to `to` inclusive: Swedish midnight to Swedish midnight after `to` (Zettle's end is exclusive). */
 export function zettleRange(from: string, to: string): { start: string; end: string } {
   return { start: stockholmMidnight(from), end: stockholmMidnight(nextDay(to)) };
 }
 
 // ── Purchases ───────────────────────────────────────────────────────
 
-/** "2" → 2. Anything else is 0, as intakt read it. */
+/** "2" -> 2. Anything else is 0. */
 function quantityOf(q: string): number {
   const t = q.trim();
   return /^[+-]?\d+$/.test(t) ? Number(t) : 0;
@@ -143,15 +126,12 @@ function quantityOf(q: string): number {
 export function purchaseDiscountValue(d: ZettlePurchaseDiscount, positiveTotal: number): number {
   if (d.value) return d.value;
   if (d.amount != null) return d.amount;
-  if (d.percentage != null) return Math.floor((Math.trunc(positiveTotal * d.percentage) + 50) / 100);
+  if (d.percentage != null)
+    return Math.floor((Math.trunc(positiveTotal * d.percentage) + 50) / 100);
   return 0;
 }
 
-/**
- * `amount` split over the lines in proportion to their totals, to the öre:
- * each gets the floor of its share, and what is left goes one öre at a time
- * to the largest remainders. Lines that are not positive get nothing.
- */
+/** `amount` split over the lines in proportion to their totals: floors, then the rest to the largest remainders. Non-positive lines get nothing. */
 export function allocateByLargestRemainder(
   amount: number,
   totals: readonly number[],
@@ -168,7 +148,7 @@ export function allocateByLargestRemainder(
     allocated += base;
     remainders.push({ index, remainder: numerator % positiveTotal });
   });
-  // Stable, so equal remainders keep line order, as Go's SortStableFunc did.
+  // Stable, so equal remainders keep line order.
   remainders.sort((a, b) => b.remainder - a.remainder);
   for (let i = 0; i < amount - allocated; i++) {
     allocations[remainders[i % remainders.length].index]++;
@@ -182,9 +162,7 @@ export function normalizePurchases(purchases: readonly ZettlePurchase[]): Zettle
   for (const purchase of purchases) {
     const date = zettleDay(purchase.timestamp ?? "");
     const own: ZettleSaleLine[] = (purchase.products ?? []).map((p) => {
-      // Any field Zettle leaves out is its zero value, as Go's decoder made it.
-      // A custom-amount sale, for one, can come without a name, and that has
-      // to be an empty name rather than a missing one.
+      // Missing fields are zero values; a custom-amount sale can come without a name (empty, not missing).
       const quantity = quantityOf(p.quantity ?? "");
       const unitPrice = p.unitPrice ?? 0;
       const discount = p.discountValue ?? 0;

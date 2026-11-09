@@ -1,24 +1,8 @@
 "use client";
 
-// Who did what, in order.
-//
-// The other half of the stock record, and deliberately a separate half. The log
-// says what the stock did: one line per event and product, netted, because
-// that is what somebody glancing at it wants. This says who made it say that,
-// including the things that turned out not to have happened at all: a beer
-// booked against the wrong product and taken off again leaves no movement, and
-// should not, but somebody may still need to know it was done.
-//
-// Read two ways from one table. On an event it is the night in order; on a
-// product it is that product's whole story, deliveries included, which is
-// where "why does Fireball say 20?" gets asked, and a delivery has no event
-// to ask it from. The middle column is whichever of the two the page is not
-// already about, so a row never repeats its own heading back at you.
-//
-// Drawn with the app's table rather than a list, because the questions asked of
-// it are a table's questions: everything one person did, everything that
-// happened to one product, the day something changed. Search and sorting come
-// with it.
+// Who did what, in order: the other half of the stock record. The log says what stock did (netted per event and product),
+// this says who made it, including changes that netted to no movement.
+// On an event it is the night in order, on a product its whole story including deliveries; the middle column is whichever the page is not about.
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ClientDataTable } from "@/components/ui/client-data-table";
@@ -70,9 +54,7 @@ export function ChangeFeed({
       cell: (c) => c.actorName,
     },
     {
-      // On an event this names the product; on a product it names the
-      // event, or says the change was made in the cellar rather than at a
-      // night. Either way it is the thing the page is not already about.
+      // Names the product on an event, the event (or the cellar) on a product.
       key: "subject",
       header: scope === "event" ? t("changes.col.product") : t("changes.col.event"),
       value: (c) => (scope === "event" ? c.productName : (c.tagName ?? "")),
@@ -108,10 +90,7 @@ export function ChangeFeed({
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       mobile: "trailing",
-      // Always both sides of it. A cell that was never set started at nought
-      // and one that was removed ended there. The row going away is how the
-      // ledger stores "no movement", not something the reader has to be told in
-      // different words. So 0 → 1 and 1 → 0, and every change reads the same.
+      // Always both sides: a cell never set started at 0 and a removed one ended there, so every change reads 0 → 1 or 1 → 0.
       cell: (c) => {
         const from = c.fromQty ?? 0;
         const to = c.toQty ?? 0;

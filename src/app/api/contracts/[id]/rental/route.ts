@@ -1,15 +1,4 @@
-// Amend a rental until somebody has signed it.
-//
-// The whole form again, the same one the rental was drawn on, rather than a
-// patch of the fields that changed: the edit screen is the new-rental form
-// pre-filled, so it sends what that form sends. Everything the agreement says
-// is replaced (the renter, the period, the gear, how many sign) and the
-// document is redrawn.
-//
-// Once the signed copy is uploaded, the route refuses. Not because a signed
-// row is sacred, but because the counterparty has put their name to a document by
-// then, and changing what it says underneath them is the one edit that must not
-// be possible. See canEditRental.
+// Amend a rental until it is signed: the whole new-rental form again, everything replaced and the document redrawn. See canEditRental.
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
 import { canManageKind } from "@/lib/data/contract-scope";
@@ -58,8 +47,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const refused = await refuseRental(d, contract.id);
   if (refused) return refused;
 
-  // A title nobody renamed follows the renter, so "Uthyrning till F-sektionen"
-  // does not outlive a change of renter. One somebody typed is theirs to keep.
+  // A title nobody renamed follows the renter; a typed one is kept.
   const titleIsDerived =
     contract.agreement.counterparty !== null &&
     contract.title === rentalTitle(contract.agreement.counterparty);
@@ -74,19 +62,14 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       },
     });
 
-    // The lines are replaced wholesale rather than diffed. A line has no
-    // identity worth preserving: it is a description and three numbers, and
-    // the form edits the set as a unit, so matching them up by id would be
-    // work in aid of nothing.
+    // Lines are replaced wholesale, not diffed: they have no identity worth keeping.
     await tx.rentalLine.deleteMany({ where: { contractId: contract.id } });
     await tx.rentalLine.createMany({
       data: rentalLines(d).map((l) => ({ ...l, contractId: contract.id })),
     });
   });
 
-  // The stored document described the contract as it was. Redrawn here rather
-  // than left for somebody to remember, because a draft whose PDF disagrees
-  // with its row is exactly the document that gets sent out by mistake.
+  // Redrawn here: a draft whose PDF disagrees with its row gets sent by mistake.
   const drawn = await storeContractDocument(contract.id, g.actor.id);
   if (!drawn.ok) {
     console.error(`[contracts] ${contract.id}: redraw after edit failed`, drawn);

@@ -12,16 +12,11 @@ export const generateMetadata = titled("bookExpense");
 
 export default async function BookExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Writing a verifikation is bookkeeping's alone. The same check
-  // POST /api/expenses/[id]/book makes. The client renders an empty state for
-  // an utlägg that isn't bookable *yet*; that is about the utlägg, not about
-  // who is looking, and this is the half about who is looking.
+  // Same check POST /api/expenses/[id]/book makes: bookkeeping's alone.
   const user = await requirePage(canBookkeep);
 
-  // Two waves: the pickers only offer active accounts/cost centres, but they
-  // must still carry whatever this voucher already points at, otherwise
-  // amending a voucher booked against a since-retired account would fail
-  // validation with no way to fix it. So the expense has to load first.
+  // Two waves: the pickers must still carry whatever this voucher already points at
+  // (a since-retired account), so the expense loads first.
   const [expense, settings] = await Promise.all([getExpense(id, user), getBookkeepingSettings()]);
 
   const lines = expense?.verification?.lines ?? [];
@@ -38,18 +33,13 @@ export default async function BookExpensePage({ params }: { params: Promise<{ id
     getActiveProjects(lines.flatMap((l) => (l.project ? [l.project] : []))),
   ]);
 
-  // Keyed on the utlägg's version. The screen's rows are state seeded from the
-  // props once, so a refresh after somebody else saved would otherwise keep
-  // showing the voucher as it was typed against the old version. A new version
-  // is a new screen. See presence-notices.tsx.
+  // Keyed on the version: the screen's rows are state seeded from props once, so a new version must remount it.
   return (
     <BookExpenseClient
       key={expense?.updatedAt ?? "missing"}
       expense={expense}
       costCenters={costCenters}
-      // No intäktskonton: an utlägg is never booked against one, so the picker
-      // does not offer them. A voucher that already has one keeps it, so the
-      // row still says what it holds and the screen can say why it is refused.
+      // No intäktskonton in the picker, but a voucher that already has one keeps it.
       accounts={accounts.filter(
         (a) => !isRevenueAccount(a.number) || lines.some((l) => l.account === a.number),
       )}

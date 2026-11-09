@@ -1,17 +1,5 @@
-// The parts of "push a voucher to Fortnox" that are the same whatever the
-// voucher substantiates.
-//
-// Two routes do this: api/expenses/[id]/export and
-// api/income/reports/[id]/export. They are deliberately the same shape, down to
-// the order the two Fortnox calls happen in, and the income one said so in a
-// comment at the top of the file rather than in code. Between them they held
-// four copies of the same thing: the öre conversion, the row mapping with its
-// cost-centre rule, the "needing to log in is a prompt, not a failure" branch,
-// the best-effort attach, and the transaction that records the result.
-//
-// What stays in each route is what actually differs: which row it is about,
-// what may be exported, what goes up as the attachment, and what the response
-// says.
+// Shared parts of pushing a voucher to Fortnox, used by api/expenses/[id]/export and
+// api/income/reports/[id]/export (keep their call order the same).
 import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import "server-only";
 
@@ -29,17 +17,11 @@ import {
   type VoucherRowInput,
 } from ".";
 
-/**
- * How to load a verification so `voucherRows` can read it.
- *
- * Shared so the two routes cannot select differently and then wonder why one
- * of them sends cost centres and the other does not.
- */
+/** How to load a verification so `voucherRows` can read it. */
 export const VOUCHER_INCLUDE = {
   include: { lines: { include: { costCenter: true } } },
 } as const;
 
-/** A verification line as both routes load it: with its cost centre attached. */
 interface LineWithCostCenter {
   account: string;
   debit: number;
@@ -50,13 +32,9 @@ interface LineWithCostCenter {
 }
 
 /**
- * A stored verification's lines, as Fortnox takes them.
- *
- * Only a cost centre Fortnox itself has, and has active, travels as a cost
- * centre. Any other code would have the whole voucher rejected. A local one is
- * an app-side dimension (it drives attest and the budget) that Fortnox has
- * never heard of. Its code goes into the row text instead, so the row can still
- * be told apart over there. See lib/domain/cost-center-tag.
+ * A verification's lines as Fortnox takes them. Only a cost centre Fortnox has and has
+ * active travels as one (others get the voucher rejected). A local code goes into the row
+ * text instead (lib/domain/cost-center-tag).
  */
 export const voucherRows = (lines: readonly LineWithCostCenter[]): VoucherRowInput[] =>
   lines.map((l) => {
@@ -65,8 +43,7 @@ export const voucherRows = (lines: readonly LineWithCostCenter[]): VoucherRowInp
     const text = l.description ?? "";
     return {
       account: Number(l.account),
-      // Fortnox works in decimal SEK, the database in integer öre. The one pair
-      // of converters, per lib/domain/money.ts.
+      // Fortnox takes decimal SEK, the database holds integer öre (lib/domain/money.ts).
       debit: oreToSEK(l.debit),
       credit: oreToSEK(l.credit),
       costCenter: sendable ? cc.code : undefined,
@@ -76,14 +53,8 @@ export const voucherRows = (lines: readonly LineWithCostCenter[]): VoucherRowInp
   });
 
 /**
- * The bookkeeper's own Fortnox token, or the response to send instead.
- *
- * Their own and not the service account's, so Fortnox attributes the voucher to
- * them by name. This is the whole reason booking lives in the app.
- *
- * Fetched before anything is written, and answered with a 401 carrying
- * `needsFortnoxLogin`, because needing to log in is a prompt the client turns
- * into a button rather than an export that failed.
+ * The bookkeeper's own Fortnox token (so the voucher carries their name), or the response
+ * to send instead: a 401 with `needsFortnoxLogin`, which the client shows as a login prompt.
  */
 export async function userToken(
   userId: string,
@@ -99,12 +70,8 @@ export async function userToken(
 }
 
 /**
- * Attach an already-uploaded file to the voucher, and carry on if it will not.
- *
- * The only step that can run after the voucher exists, and therefore the only
- * one still best effort: a voucher cannot be deleted through the API, so a
- * failure here means attaching the file by hand in Fortnox, not redoing the
- * export. Returns what went wrong, for the client to word beside the success.
+ * Attach an uploaded file to the voucher, best effort: a voucher cannot be deleted through
+ * the API, so a failure means attaching by hand. Returns what went wrong.
  */
 export async function attachBestEffort(
   token: string,
@@ -130,11 +97,8 @@ export async function attachBestEffort(
 }
 
 /**
- * Stamp the voucher's number onto the local verification, and flip the thing it
- * substantiates to EXPORTED.
- *
- * One transaction, because a verification carrying a Fortnox number while its
- * expense still reads BOOKED is a row that will be exported twice.
+ * Stamp the Fortnox number on the verification and flip the substantiated item to EXPORTED,
+ * in one transaction so nothing is exported twice.
  */
 export async function recordExport(
   verificationId: string,

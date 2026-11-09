@@ -1,11 +1,7 @@
 "use client";
 
-// One half of a budget sheet, Intäkter or Kostnader, as a rounded card.
-//
-// It draws the table's head and foot and delegates every row inside it. As a
-// closure it captured twenty-one things for forty-seven lines, most of them
-// only to pass down; against the sheet context it needs twelve and forwards
-// none of them.
+// One half of a budget sheet, Intäkter or Kostnader, as a card. Draws the head and foot and
+// delegates the rows.
 import type { AccountKind } from "@/lib/budget";
 import type { JoinedAccount } from "@/lib/budget/compare";
 import { fmt } from "./budget-helpers";
@@ -32,8 +28,7 @@ export function SectionCard({
   const { columns, compare, gutWidth, actionsWidth, narrow, showCompare, staticWidth, tCol } =
     useSheet();
   const tGroup = useTranslations("budget.compareGroups");
-  // No longer a drop zone. An account used to be dragged onto the other card to
-  // reclassify it; its number decides the side now, so the card is just a card.
+
   return (
     <div className="budget-grid overflow-x-auto rounded-panel border border-border bg-background">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -47,17 +42,12 @@ export function SectionCard({
             const w = staticWidth(col);
             return <col key={col.key} style={w ? { width: w } : undefined} />;
           })}
-          {/* Wide enough for their headings on one line ("Utfall 2026",
-              "Jämfört med") and a six-figure amount with its sign. At 104 and
-              96 the headings wrapped. */}
+
           {showCompare && <col style={{ width: 140 }} />}
           {showCompare && <col style={{ width: 128 }} />}
           <col style={{ width: actionsWidth }} />
         </colgroup>
         <thead>
-          {/* The groups, over the columns: what this budget says, what it is
-              compared with, and the gap between the two. Only when there is a
-              comparison to group. */}
           {showCompare && compare && (
             <tr className="border-b border-border/60 text-xs font-medium text-muted">
               <th colSpan={columns.length + 1} className="px-2 py-1.5 text-left">
@@ -120,8 +110,7 @@ export function SectionCard({
         {ghosts.map((g) => (
           <GhostAccountBlock key={g.code} account={g} />
         ))}
-        {/* Adding an account is writing the budget, which the comparison's
-            reading view leaves for when it is switched off. */}
+
         {!showCompare && <AddAccountRow kind={kind} />}
       </table>
     </div>

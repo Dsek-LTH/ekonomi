@@ -5,101 +5,43 @@ import Link from "next/link";
 
 import { cn } from "@/lib/ui/utils";
 
-// The pill has to be in place in the frame the track first paints, or the
-// active option sits bare for a frame after every hydration. That means
-// measuring before paint, but on the server `useLayoutEffect` is a no-op React
-// warns about, and this component renders there too.
+// Measures before paint so the pill is in place on first frame. useLayoutEffect is a warned no-op on the server.
 const useMeasureEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-// "Which collection am I looking at?" The track register, and the app's
-// answer to that question everywhere it is asked.
-//
-// See components/ui/segmented-control.tsx for the grammar the switchers share.
-// This is the coarsest of them: it changes *what* the page is a list of, and
-// the page's own title stays put while it does. The track is what says which
-// one you are on, so a heading that said it again would be saying it twice.
-//
-// Two ways of switching, one appearance. "Mina | Alla" is a query parameter on
-// one page; "Att bokföra | Bokförda" is two pages. That difference matters to
-// the router and to nobody else, so the caller declares `onChange` or `href`
-// and gets the same control either way, which is the whole point, because the
-// two used to look like different kinds of thing.
-//
-// Never rendered directly by a page: it is `PageShell`'s `collections` prop, so
-// that where it sits is decided once rather than per screen.
 export interface CollectionOption {
   value: string;
   label: string;
-  /** Shown muted after the label, e.g. "Att bokföra 12". */
   count?: number;
 }
 
 export type Collections = {
-  /** Names the group for a screen reader: "Omfattning", "Avsnitt". */
   label: string;
-  /** Which option is current. */
   value: string;
   options: CollectionOption[];
-} &
-  // One or the other, never both and never a mixture. Declared at the group
-  // rather than per option so a set cannot be half links and half buttons,
-  // that would be two controls wearing one appearance, which is the thing this
-  // component exists to stop.
-  (
-    | { href: (value: string) => string; onChange?: never }
-    | { onChange: (value: string) => void; href?: never }
-  );
+} & (
+  | { href: (value: string) => string; onChange?: never }
+  | { onChange: (value: string) => void; href?: never }
+);
 
-// `relative`, because the pill is laid over the track rather than drawn on the
-// option. See the measurement below.
-//
-// On a phone the switch has a row of its own (PageHeader), and the track runs
-// the width of it, so it reads as one control across the page rather than
-// three words in the corner of a row. The options share out only the room
-// left over (`flex-auto`, not equal thirds): a third of 343px is too narrow
-// for "Min resultatenhet", which then broke onto two lines.
+// `relative`: the pill is laid over the track. On a phone the options share the leftover width (flex-auto) so "Min resultatenhet" stays on one line.
 const TRACK =
   "relative inline-flex rounded-control border border-border-control bg-surface p-0.5 max-md:flex max-md:w-full";
 
-// What the pill looks like, in the one place both the moving copy and the
-// static fallback read it from. The primary button's pink, flat and without a
-// shadow, so the chosen scope reads as part of the same accent.
-//
-// Its corners are the track's less the 3px it sits inside (the 1px border and
-// the 2px padding), so the two curves run parallel. The mark radius was a pixel
-// rounder, which a white pill hid and a pink one shows.
+// Corners are the track's less the 3px it sits inside (border plus padding), so the curves run parallel.
 const PILL = "rounded-mark action-fill";
 
-// The label's own colour, dimmed, so it reads on the pink pill and on the
-// track alike.
 const Count = ({ count }: { count?: number }) =>
   count ? <span className="ml-1.5 tabular-nums opacity-70">{count}</span> : null;
 
-/**
- * Where the active option is, in the track's own coordinates, and whether the
- * pill should travel to get there.
- *
- * `animate` is derived from whether there was a previous placement, so the
- * first one is a position and every one after it is a move. Both live in the
- * same state on purpose: set apart, the first placement would land in a commit
- * that already had the transition on it, and the pill would open the page by
- * sliding in from the corner.
- */
+/** Where the active option is in the track's coordinates. `animate` is off for the first placement, so the pill does not slide in from the corner. */
 type Placement = { x: number; y: number; w: number; h: number; animate: boolean };
 
 export function CollectionSwitch({ label, value, options, href, onChange }: Collections) {
-  // The pill used to be a background on whichever option was active, so
-  // switching swapped it from one to the other and it simply reappeared in a
-  // different place. As one element laid over the track it travels instead,
-  // which is what says the two options are two positions of one control rather
-  // than two controls that happen to sit together.
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
   const [placement, setPlacement] = useState<Placement | null>(null);
 
   const activeIndex = options.findIndex((o) => o.value === value);
-  // The labels and counts are what decide the pill's width, so they are what a
-  // re-measure watches, not `options`, which is a fresh array every render and
-  // would re-run this effect on all of them.
+  // Watches labels and counts, not `options` (a fresh array every render).
   const shape = options.map((o) => `${o.value}:${o.label}:${o.count ?? ""}`).join("|");
 
   useMeasureEffect(() => {
@@ -108,11 +50,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       setPlacement(null);
       return;
     }
-    // Measured from the track's padding edge, which is where `left: 0` on an
-    // absolutely positioned child resolves, so the track's border (clientLeft)
-    // comes off. Bounding rects and not offsetLeft/offsetWidth: those round to
-    // whole pixels, and the labels are fractional widths, so the pill came out
-    // up to a pixel short or long and the gap either side of it was uneven.
+    // Measured from the track's padding edge (minus clientLeft), with bounding rects: offsetLeft/offsetWidth round to whole pixels.
     const measure = () => {
       const track = el.parentElement;
       if (!track) return;
@@ -127,10 +65,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       }));
     };
     measure();
-    // Widths move without this component re-rendering: a webfont landing after
-    // first paint, or a count going from 9 to 10 in an option to the left of
-    // the active one, which shifts it without changing its size. The track is
-    // observed as well as the option for that second case.
+    // Widths change without a re-render (webfont landing, a count going 9 to 10 to the left), so the track is observed too.
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     if (el.parentElement) ro.observe(el.parentElement);
@@ -139,18 +74,12 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
 
   const item = (active: boolean) =>
     cn(
-      // Above the pill, which is a positioned sibling and would otherwise paint
-      // over the label.
+      // Above the pill, which would otherwise paint over the label.
       "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors max-md:flex-auto max-md:justify-center max-md:whitespace-nowrap",
       active
         ? cn(
             "text-white",
-            // Until the pill has been measured there is nothing laid over the
-            // track, and this is the same shape drawn the old way. It is what
-            // the server renders and what the first client render matches, so
-            // the switch to the real pill one commit later changes no pixels,
-            // without it the active option would arrive from the server with no
-            // background at all and gain one on hydration.
+            // Same shape drawn statically until the pill is measured, so SSR and hydration match.
             !placement && PILL,
           )
         : "text-muted hover:text-foreground",
@@ -172,12 +101,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
         "pointer-events-none absolute left-0 top-0",
         PILL,
         !placement && "opacity-0",
-        // `transform` and `width` together: the two options are rarely the same
-        // width, so a pill that only slid would snap to its new width at one
-        // end of the journey.
-        //
-        // Reduced motion needs nothing here. globals.css cuts every duration
-        // in the app to 0.01ms, so the pill arrives instead of travelling.
+        // `transform` and `width` together: options differ in width. Reduced motion is handled by globals.css.
         placement?.animate && "transition-[transform,width] duration-200 ease-out",
       )}
     />
@@ -187,9 +111,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     itemRefs.current[i] = el;
   };
 
-  // Links when the collections are pages. A <nav> with real hrefs, so they can
-  // be opened in a new tab, prefetched and restored on a reload, none of which
-  // a button pretending to navigate can do.
+  // Real hrefs, so links can be opened in a new tab and prefetched.
   if (href) {
     return (
       <nav aria-label={label} className={TRACK}>

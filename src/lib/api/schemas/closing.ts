@@ -2,11 +2,7 @@
 import { z } from "zod";
 import { NonEmpty, Trimmed } from "./common";
 
-/**
- * The version of the voucher the screen was showing. A review or a comment is
- * about what somebody saw, so a voucher that has changed since the page loaded
- * is refused rather than recorded against something nobody looked at.
- */
+/** The version of the voucher the screen showed: a changed voucher is refused rather than reviewed unseen. */
 const ContentHash = z.string().min(1);
 
 /** POST /api/closing/[year]/vouchers/[voucher]/review. The pass is the actor's. */

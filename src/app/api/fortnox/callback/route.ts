@@ -1,7 +1,5 @@
-// Fortnox OAuth2 redirect target, shared by both flows. Verifies the state
-// nonce, exchanges the authorization code, and then, depending on the mode
-// stashed in the state cookie, either replaces the org's service connection or
-// starts a personal bookkeeping session for the caller.
+// Fortnox OAuth2 redirect target for both flows: verifies the state nonce, exchanges the code, then
+// replaces the service connection or starts a personal bookkeeping session (mode in the state cookie).
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { gate } from "@/lib/api/guard";
@@ -38,9 +36,7 @@ export async function GET(req: Request) {
   const returnTo = state?.returnTo ?? "/expenses?scope=all";
 
   if (error) {
-    // Fortnox says why in `error_description` (which scope, and whether it is
-    // the app, the licence or the user's own rights), and the banner only has
-    // room for the code. Logged so the reason is not lost along with it.
+    // Fortnox gives the reason in `error_description`; the banner only has room for the code, so log it.
     console.warn(
       `[fortnox] ${state?.mode ?? "unknown"} login refused: ${error}`,
       url.searchParams.get("error_description") ?? "(no description)",
@@ -51,8 +47,7 @@ export async function GET(req: Request) {
     return back(returnTo, { fortnox: "error", reason: "invalid_state" });
   }
 
-  // Re-check authority here too: the cookie proves the flow started with us,
-  // not that the person finishing it still has the right to.
+  // Re-check authority: the cookie proves the flow started with us, not that the finisher still has the right.
   const g = await gate(authorityFor(state.mode).can);
   if (!g.ok) return back(returnTo, { fortnox: "error", reason: "forbidden" });
   const user = g.actor;
@@ -73,9 +68,7 @@ export async function GET(req: Request) {
       return back(returnTo, { fortnox: "connected" });
     }
 
-    // Personal login. Refuse it unless it lands in the same Fortnox company as
-    // the service connection. Otherwise a bookkeeper with access to several
-    // companies could quietly post the section's vouchers into the wrong books.
+    // Personal login: refuse unless it is the same Fortnox company as the service connection, or vouchers could land in the wrong books.
     const conn = await getConnection();
     if (!conn) {
       return back(returnTo, { fortnox: "error", reason: "no_service_connection" });

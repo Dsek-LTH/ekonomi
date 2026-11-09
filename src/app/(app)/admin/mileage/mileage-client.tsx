@@ -1,16 +1,5 @@
 "use client";
 
-// Settings → Milersättning. What a kilometre is worth, and from which day.
-//
-// A table rather than a constant in the code because the figure is
-// Skatteverket's and moves at a new year, and a deploy is the wrong way to find
-// that out. Safe to edit for the reason stated on the screen itself: a journey
-// stores the rate it was valued at, so nothing here re-values a claim already
-// filed. See the Milersättning block on Expense in the schema.
-//
-// The rate is entered per *mil*, which is how it is quoted everywhere outside
-// this app, and stored per kilometre, which is how everything inside it
-// calculates. That conversion happens here and nowhere else.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -31,7 +20,7 @@ import type { MileageRateRow } from "@/lib/data/mileage";
 import type { MileageRateInput } from "@/lib/api/schemas/admin";
 import { formatNumber } from "@/lib/ui/format";
 
-/** 250 öre/km → "25,00", the way it is quoted. One mil is ten kilometres. */
+/** 250 öre/km → "25,00", the way it is quoted. */
 const perMil = (orePerKm: number) => formatNumber(oreToSEK(orePerKm * 10), 2, 2);
 
 const perKm = (orePerKm: number) => formatNumber(oreToSEK(orePerKm), 2, 2);
@@ -47,20 +36,9 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   const [showHistory, setShowHistory] = useState(false);
   const [krPerMil, setKrPerMil] = useState("");
   const [validFrom, setValidFrom] = useState("");
-  // Optional, and worth having: the table is read a year later by somebody
-  // asking why the figure changed, and "Skatteverkets schablon 2026" is the
-  // whole answer.
   const [note, setNote] = useState("");
 
-  // The page is one number most of the year: the rate in force today. So that
-  // is what it leads with, and the rest is split by when it applies. A rate
-  // dated ahead is shown beside it, since it is about to matter. The ones it
-  // replaced are history, folded away until asked for. The same function the
-  // claims are valued with picks the current one, so the page cannot disagree
-  // with the arithmetic.
   const day = today();
-  // rateOn hands back the row it was given, typed as the narrower shape it
-  // reads, so it is looked up again to keep the row's own fields.
   const inForce = rateOn(rates, day);
   const current = inForce ? (rates.find((r) => r.validFrom === inForce.validFrom) ?? null) : null;
   const upcoming = rates.filter((r) => r.validFrom > day);
@@ -69,9 +47,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   async function add() {
     const kr = parseSEK(krPerMil);
     if (!(kr > 0) || !validFrom) return;
-    // Kronor per mil in, öre per kilometre out. A mil is ten kilometres, and
-    // the rounding is here so the stored integer is exact rather than a float
-    // that happens to print well.
+    // Kronor per mil in, öre per kilometre out.
     const body: MileageRateInput = {
       orePerKm: Math.round((kr * 100) / 10),
       validFrom,
@@ -106,7 +82,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
     });
   }
 
-  /** Who entered it and why, on one quiet line. */
   function details(r: MileageRateRow) {
     return [r.note, r.createdBy && `${t("col.createdBy")} ${r.createdBy}`]
       .filter(Boolean)
@@ -141,8 +116,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
 
   return (
     <Card>
-      {/* The rate in force, as the headline. The button beside it opens the
-          form directly under it. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-inset py-4">
         {current ? (
           <div className="min-w-0 flex-1">
@@ -162,8 +135,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
             </p>
           </div>
         ) : (
-          // Without one, no mileage claim can be filed, which is worth more
-          // than a muted empty state.
           <p className="min-w-0 flex-1 text-sm text-warning">{t("empty")}</p>
         )}
         <div className="flex items-center gap-1">
@@ -173,8 +144,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
               {t("new")}
             </Button>
           )}
-          {/* Still removable: a rate entered with the wrong figure today is
-              the current one, and has to be taken back from here. */}
           {current && (
             <IconButton
               tone="danger"
@@ -194,9 +163,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
             <DateInput size="sm" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </Field>
           <Field label={t("rate")} hint={t("rateHint")} requirement="required">
-            {/* A schablon is never negative, so no sign button, but the
-                separator is the same problem it is everywhere: a phone offers
-                the one its own locale uses. */}
             <AmountInput size="sm" value={krPerMil} onChange={setKrPerMil} />
           </Field>
           <Field label={t("note")} requirement="optional">

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bottlesAt, openCount, openMl, pickFault, shortfall, type BottleStock } from "./levels";
 
-// The shelf in the examples: one bottle three-quarters gone, two half gone, six
-// still sealed.
 const shelf: BottleStock = { sealed: 6, open: { 80: 1, 40: 2 } };
 
 describe("openCount", () => {
@@ -30,17 +28,12 @@ describe("pickFault", () => {
   });
 
   it("refuses a sealed bottle while an open one stays behind", () => {
-    // The rule the bar asked for: the dregs leave with you, or the fresh
-    // bottle stays. Otherwise the shelf fills with quarter-full bottles nobody
-    // will ever pick over a new one.
     expect(pickFault(shelf, { sealed: 1, open: {} })).toBe("openBottlesFirst");
     expect(pickFault(shelf, { sealed: 1, open: { 80: 1 } })).toBe("openBottlesFirst");
     expect(pickFault(shelf, { sealed: 1, open: { 80: 1, 40: 1 } })).toBe("openBottlesFirst");
   });
 
   it("lets a sealed bottle go once every open one is going too", () => {
-    // Taking the last of the open ones *with* you is the whole point. It is
-    // not "wait until the shelf is clear", it is "take them along".
     expect(pickFault(shelf, { sealed: 2, open: { 80: 1, 40: 2 } })).toBeNull();
   });
 
@@ -56,9 +49,6 @@ describe("pickFault", () => {
   });
 
   it("checks what is there before it checks the order", () => {
-    // Asking for a rung that does not exist is a plainer mistake than the
-    // ordering rule, and saying so first is more use than "open bottles first"
-    // about a bottle nobody has.
     expect(pickFault(shelf, { sealed: 1, open: { 60: 1 } })).toBe("notThatManyOpen");
   });
 });
@@ -71,13 +61,7 @@ describe("bottlesAt", () => {
 });
 
 describe("shortfall", () => {
-  // Availability alone. What `pickFault` adds to it is a rule about choosing,
-  // and nobody chooses which bottle falls off a shelf.
   it("does not make the dregs go first", () => {
-    // The case it exists for: a sealed bottle broken in the cellar while a
-    // 20 % one stands beside it. `pickFault` refuses this, rightly, for stock
-    // being carried to a pub. Refusing it for a breakage would ask somebody to
-    // write down a different accident from the one that happened.
     expect(pickFault(shelf, { sealed: 1, open: {} })).toBe("openBottlesFirst");
     expect(shortfall(shelf, { sealed: 1, open: {} })).toBeNull();
   });

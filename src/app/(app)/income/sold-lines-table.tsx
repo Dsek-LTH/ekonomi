@@ -1,30 +1,9 @@
 "use client";
 
-// The day's sold lines: what the intäktsräkning beside it is a rendering of,
-// and so what the reviewer compares it with.
-//
-// Three levels, each drawn so it reads as one: a block per verksamhet (with
-// the sales routing could not place in a block of their own first, and
-// Zettle's fees last), an account heading inside it with a bar down the left
-// edge that runs through its lines, and the products under that, grouped the
-// way the document groups them (lib/income/sold-lines.ts).
-//
-// Each block is a card of its own, with its column headings under its band,
-// and every block uses the same fixed columns, so they still line up column
-// for column across the gaps.
-//
-// Where the money books is set at the level it is decided:
-//
-//   - the cost centre for a whole verksamhet's day, in its heading's
-//     Kostnadsställe cell. Every line shows its own as well, and one that
-//     differs from the heading's is tagged, so the exceptions stand out;
-//   - the account for a whole account group, in that group's heading. There
-//     is no account column on the lines, since every line under a heading has
-//     that heading's account; a few lines are re-accounted from the bar that
-//     appears when lines are picked, next to "Ge till verksamhet".
-//
-// Every value is text until clicked, then the picker, then text again, so no
-// row is a control's height taller than the rest.
+// The day's sold lines, which the intäktsräkning beside it renders. One card per verksamhet (unplaced sales first,
+// Zettle's fees last) with fixed shared columns; inside it an account heading and its products (lib/income/sold-lines.ts).
+// Cost centre is set per verksamhet in its heading (a line that differs is tagged), account per account group; a few
+// lines are re-accounted from the action bar. Values are text until clicked, so no row is taller than the rest.
 import { createContext, useContext, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -45,25 +24,17 @@ type AccountGroup = Section["accounts"][number];
 
 const figure = (kr: number) => formatNumber(kr, 2, 2);
 
-/**
- * A day already konterad: the same table, nothing in it to pick or change.
- * A context rather than a prop through every row, since every control in the
- * table asks the same question.
- */
+/** A day already konterad: nothing to pick or change. A context because every control in the table asks. */
 const ReadOnly = createContext(false);
 
-/** Which value is a picker right now. One at a time, closed however it ends. */
+/** Which value is a picker right now. One at a time. */
 type Editing =
   | { kind: "lineCostCenter"; id: string }
   | { kind: "blockCostCenter"; id: string }
   | { kind: "groupAccount"; id: string }
   | null;
 
-/**
- * The block's cost centre: the one most of its money-moving lines carry, and
- * whether every one of them does. The heading shows it; a line that differs
- * from it is tagged.
- */
+/** The block's cost centre: the one most of its money-moving lines carry, and whether all do. A line that differs is tagged. */
 function blockCostCenter(lines: readonly IncomeLineRow[]): { code: string | null; mixed: boolean } {
   const counts = new Map<string, number>();
   for (const l of lines) {
@@ -76,11 +47,9 @@ function blockCostCenter(lines: readonly IncomeLineRow[]): { code: string | null
   return { code: top[0] || null, mixed: counts.size > 1 };
 }
 
-/** Every line of an account group, the prefix rows' included. */
 const groupLines = (group: AccountGroup): IncomeLineRow[] =>
   group.rows.flatMap((r) => (r.kind === "line" ? [r.line] : r.kind === "prefix" ? r.lines : []));
 
-/** The fixed columns every block shares, so they line up across the gaps. */
 function Columns({ discounts }: { discounts: boolean }) {
   return (
     <colgroup>
@@ -111,22 +80,15 @@ export function SoldLinesTable({
   t,
 }: {
   lines: IncomeLineRow[];
-  /** A konterad day: the lines are shown, not worked. */
   readOnly?: boolean;
   picked: string[];
   onPick: (lineIds: string[]) => void;
-  /** Open "give to verksamhet" for these lines. */
   onAssign: (lineIds: string[]) => void;
-  /** The account picker's options for a line: its verksamhet's own first. */
   accountOptionsFor: (line: IncomeLineRow) => ComboOption[];
   costCenterOptions: ComboOption[];
-  /** A verksamhet's own cost centres, offered first in its heading's picker. */
   ownCostCenters: (resultUnitId: string | null) => string[];
-  /** Codes of archived cost centres, drawn as a warning where a line has one. */
   inactiveCodes: string[];
-  /** Book these lines to this account. */
   onAccount: (lineIds: string[], account: string) => void;
-  /** Book these lines to this cost centre. */
   onCostCenter: (lineIds: string[], code: string) => void;
   busy: boolean;
   t: Translator;
@@ -141,7 +103,6 @@ export function SoldLinesTable({
   const togglePick = (ids: string[], on: boolean) =>
     onPick(on ? [...new Set([...picked, ...ids])] : picked.filter((id) => !ids.includes(id)));
 
-  /** The verksamhet's own cost centres first, then every other one. */
   const blockOptions = (resultUnitId: string | null): ComboOption[] => {
     const own = new Set(ownCostCenters(resultUnitId));
     return [
@@ -159,7 +120,6 @@ export function SoldLinesTable({
 
   const shared = { editing, setEditing, picked, togglePick, onAssign, inactiveCodes, busy, t };
 
-  /** The column headings, under each block's band rather than once above them all. */
   const headings = (
     <tr className="text-xs text-muted [&>th]:border-b [&>th]:border-border [&>th]:py-1.5 [&>th]:font-medium">
       <th />
@@ -177,8 +137,6 @@ export function SoldLinesTable({
       <section aria-label={t("review.lines")} className="space-y-3">
         <div className="flex items-center justify-between gap-3 px-1">
           <h2 className="text-sm font-semibold">{t("review.lines")}</h2>
-          {/* Every sale on the day at once, which used to sit in the one heading
-            row above all the blocks. */}
           {sales.length > 0 && !readOnly && (
             <Checkbox
               checked={picked.length > 0 && picked.length === sales.length}
@@ -196,10 +154,7 @@ export function SoldLinesTable({
             const ids = section.lines.filter((l) => l.kind === "SALE").map((l) => l.id);
             const allPicked = ids.length > 0 && ids.every((id) => picked.includes(id));
             return (
-              // A card per verksamhet, and the only card: the blocks stand on
-              // the page beside the other cards of the day rather than inside
-              // one more. Scrolls sideways on its own when the column is
-              // narrow.
+              // A card per verksamhet, the only card; scrolls sideways when the column is narrow.
               <div
                 key={section.key}
                 className={cn(
@@ -210,8 +165,6 @@ export function SoldLinesTable({
                 <table className="w-full min-w-[34rem] table-fixed text-sm">
                   <Columns discounts={discounts} />
                   <thead>
-                    {/* The verksamhet: its name, its cost centre for the day, and
-                        what its sales came to. One section of the document. */}
                     <tr
                       className={cn(
                         "[&>td]:py-2",
@@ -300,10 +253,6 @@ export function SoldLinesTable({
           })}
         </div>
 
-        {/* Only once something is picked: an action bar on a day nobody is
-          correcting is a row of controls to read past. Its own card, sticky
-          at the bottom of the day's column from xl, so it stays in reach while
-          the lines it acts on are scrolled through. */}
         {picked.length > 0 && !readOnly && (
           <Card className="xl:sticky xl:bottom-0 xl:z-10 xl:shadow-sm">
             <CardBody className="flex flex-wrap items-center justify-between gap-3">
@@ -345,11 +294,7 @@ export function SoldLinesTable({
   );
 }
 
-/**
- * A value that is text until clicked, then a picker. The same height either
- * way, which is the point: a heading row with a bordered input in it was a
- * row taller than the rest, in a style nothing else in the table had.
- */
+/** A value that is text until clicked, then a picker, at the same height either way. */
 function ValuePicker({
   open,
   onOpen,
@@ -370,7 +315,6 @@ function ValuePicker({
   onPick: (value: string) => void;
   label: string;
   busy: boolean;
-  /** A heading's value: semibold, with the chevron always showing. */
   strong?: boolean;
   children: React.ReactNode;
 }) {
@@ -396,10 +340,7 @@ function ValuePicker({
         openOnMount
         autoFocus
         onClose={onClose}
-        // The text button's own box, not a form field's: the field is 32px
-        // and this row is not, so the row grew while the picker was open and
-        // shrank back when it closed. The search is laid over the trigger at
-        // the trigger's height, so it fits the same box.
+        // The text button's own box, not a form field's (32px): keeps the row height while the picker is open.
         buttonClassName={cn(
           "-mx-1.5 h-6 rounded-control bg-hover px-1.5",
           strong && "font-semibold",
@@ -436,11 +377,7 @@ function ValuePicker({
   );
 }
 
-/**
- * One account group: its heading, then its products. The bar down the left
- * edge, drawn as an inset shadow on the first cell of every row in the group,
- * is what ties the lines to the heading above them.
- */
+/** One account group: its heading, then its products. The bar down the left edge ties the lines to the heading. */
 function GroupRows({
   sectionKey,
   group,
@@ -464,10 +401,7 @@ function GroupRows({
   sectionKey: string;
   group: AccountGroup;
   first: boolean;
-  /**
-   * The block's cost centre, which a line is compared with. Undefined on the
-   * unmatched block, which belongs to nobody, so every line shows its own.
-   */
+  /** The block's cost centre a line is compared with. Undefined on the unmatched block, so every line shows its own. */
   blockCode: string | null | undefined;
   columns: number;
   discounts: boolean;
@@ -491,8 +425,6 @@ function GroupRows({
 
   return (
     <>
-      {/* The account and what the group comes to: one of the voucher's rows,
-          and one of the document's distribution rows, in the same figure. */}
       <tr
         className={cn(
           "bg-canvas/60 [&>td]:py-1.5",
@@ -545,8 +477,7 @@ function GroupRows({
           const ids = row.lines.map((l) => l.id);
           const allPicked = ids.every((id) => picked.includes(id));
           return (
-            // A prefix nobody owns, and every line rung up with it. Said as
-            // the reason the lines are here, and given away as one.
+            // A prefix nobody owns, and every line rung up with it.
             <tr key={key} className={lineRow}>
               <td className={cn(bar, "pl-3 py-1.5")}>
                 {!readOnly && (
@@ -586,8 +517,7 @@ function GroupRows({
         const name = productDisplayName(line);
         const isFee = line.kind === "FEE";
         const code = line.costCenterCode;
-        // Tagged when it says something the heading does not: a different cost
-        // centre. On the unmatched block there is no heading to differ from.
+        // Tagged when it differs from the heading's cost centre (the unmatched block has no heading).
         const differs = blockCode !== undefined && code !== blockCode;
         const inactive = Boolean(code && inactiveCodes.includes(code));
         return (

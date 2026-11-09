@@ -7,14 +7,13 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("stocktake");
 
-// Gated on managing rather than viewing, like the delivery sheet beside it:
-// the page is nothing but a way of writing to the log.
+// Gated on managing, like the delivery sheet.
 export default async function StocktakePage() {
   await requirePage(canManageStock);
   return (
     <StocktakeClient
       products={await getStockLevels()}
-      // Settled on the server, so the two renders agree. See the delivery page.
+      // Settled on the server so both renders agree.
       today={today()}
     />
   );

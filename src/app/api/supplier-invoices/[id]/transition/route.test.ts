@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // A levfaktura's way through the inkorg and the attest.
-//
-// Tested at the route, because what makes each step safe is here: the write
-// restates the status it was decided under, a signature is only ever put on a
-// row that is still unsigned, and the mail goes to the people the step is
-// about. Mocked at the lowest layer, the session and the database, so the gate,
-// the schema, the visibility rule and the capabilities are the real ones.
 
 type Alloc = {
   id: string;
@@ -216,7 +210,6 @@ describe("attest, as the fördelning", () => {
     h.invoice = assigned;
   });
 
-  // What the unit read off the invoice, sent with every fördelning.
   const read = { amount: 125000, dueDate: "2026-11-30" };
 
   it("fördelar and attests in one step, the whole invoice on one cost centre", async () => {

@@ -1,12 +1,6 @@
 "use client";
 
-// Making an event.
-//
-// Two fields, and the reason it is a form at all rather than a text box on a
-// movement: an event is picked from a list afterwards, so "Onsdagspub" and
-// "onsdagspub " cannot become two nights. Creating one is a deliberate act with
-// its own moment, which is also the moment somebody knows what to call it.
-// Renaming and moving one later happen in place on the event's own page.
+// Making an event as a form, so "Onsdagspub" and "onsdagspub " cannot become two nights. Renaming happens in place on the event page.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -37,8 +31,6 @@ export function EventDialog({ onClose }: { onClose: () => void }) {
     });
     if (!made) return;
     onClose();
-    // Straight into it. Making an event is never the errand. The errand is
-    // the crates by the door.
     router.push(`/stock/events/${made.id}`);
   }
 

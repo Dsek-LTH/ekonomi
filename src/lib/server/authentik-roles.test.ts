@@ -8,17 +8,8 @@ import {
   sectionGroups,
 } from "./authentik-roles";
 
-// The mapping is rows now, edited in Inställningar → Roller, so what a
-// deployment grants is not something a unit test can know. Two things still are,
-// and they are the two worth holding:
-//
-//   • the derivation: how a group list becomes roles and result units, which is
-//     code and is what every sign-in runs;
-//   • the defaults: the state the section starts from, which is where every
-//     policy decision this file used to record still lives.
-//
-// So each case below is one of those, and the second kind reads exactly as it
-// did when the mapping was a table in this file: a policy decision written down.
+// Two things a unit test can know: the derivation (group list to roles and result units) and the defaults
+// (the state the section starts from, where each policy decision is written down).
 const DEFAULTS = buildMapping(DEFAULT_GROUP_ROLES, DEFAULT_GROUP_RESULT_UNITS);
 
 const grants = (groups: string[] | undefined) => deriveGrants(DEFAULTS, groups);
@@ -32,13 +23,11 @@ describe("deriveGrants", () => {
   });
 
   it("ignores groups that mean nothing here", () => {
-    // Authentik gains groups for reasons that have nothing to do with this app.
     expect(roles(["authentik Admins", "dsek.medlem", "dchip.ordf"])).toEqual(["ORDINARIE"]);
   });
 
   it("ignores a retired mandate", () => {
-    // Upstream prefixes historic positions `old.`, which puts them outside the
-    // section test. A mandate that ended is not a mandate.
+    // Upstream prefixes historic positions `old.`, which puts them outside the section test.
     expect(roles(["old.dsek.infu.mastare"])).toEqual(["ORDINARIE"]);
   });
 
@@ -57,8 +46,7 @@ describe("deriveGrants", () => {
   });
 
   it("refuses a group outside the section even when a row grants it", () => {
-    // The section test is the one rule no screen can edit around. A row naming
-    // `authentik Admins` can be written; it still confers nothing.
+    // The section test is the one rule no screen can edit around.
     const rogue = buildMapping([{ group: "authentik Admins", role: "SKATTMASTARE" }], []);
     expect(deriveGrants(rogue, ["authentik Admins"]).roles).toEqual(["ORDINARIE"]);
   });
@@ -71,7 +59,6 @@ describe("deriveGrants", () => {
   });
 
   it("grants several roles from one group", () => {
-    // What the table could not say before: a group mapped to a row per role.
     const many = buildMapping(
       [
         { group: "dsek.sex.mastare", role: "SKATTMASTARE" },
@@ -87,9 +74,7 @@ describe("deriveGrants", () => {
   });
 
   it("grants the role and the unit from the same row", () => {
-    // The pair is the whole point: a resultatansvarig who answers for nothing
-    // would hold attest authority over no expense, which is not a state worth
-    // being able to reach.
+    // A resultatansvarig who answers for nothing would hold attest authority over no expense.
     const one = buildMapping([], [{ group: "dsek.x.mastare", unit: "Något" }]);
     expect(deriveGrants(one, ["dsek.x.mastare"])).toEqual({
       roles: ["ORDINARIE", "RESULTATANSVARIG"],
@@ -98,11 +83,7 @@ describe("deriveGrants", () => {
   });
 });
 
-// The half of the derivation that exists to be read by a person: which group
-// made somebody what they are. Its answers have to agree with `deriveGrants`
-// exactly. An explanation that disagrees with the grant it explains is worse
-// than none, which is why the two share a walk, and why the first case here
-// holds them against each other rather than against a literal.
+// The half of the derivation read by a person. Its answers must agree with `deriveGrants` exactly, so the first case holds them against each other.
 describe("explainGrants", () => {
   const why = (groups: string[] | undefined) => explainGrants(DEFAULTS, groups);
 
@@ -123,8 +104,6 @@ describe("explainGrants", () => {
   });
 
   it("blames the result unit's own group for the resultatansvarig role", () => {
-    // The question this whole thing was built to answer: somebody is
-    // resultatansvarig and nobody can think of a mandate that would do that.
     const one = buildMapping([], [{ group: "dsek.x.mastare", unit: "Något" }]);
     const sources = explainGrants(one, ["dsek.x.mastare"]);
     expect(sources.roles).toContainEqual({
@@ -142,15 +121,13 @@ describe("explainGrants", () => {
 
   it("reports the groups of ours that grant nothing, and only those", () => {
     const sources = why(["dsek.ordf", "dsek.medlem", "authentik Admins"]);
-    // Not `authentik Admins`: it is not ours, so it is not ours to report on.
+    // Not `authentik Admins`: not ours to report on.
     expect(sources.silentGroups).toEqual(["dsek.medlem"]);
     expect(sources.groups).toEqual(["dsek.ordf", "dsek.medlem"]);
   });
 
   it("counts a mapped-but-empty group as granting nothing", () => {
-    // What a group added on the settings screen looks like before anyone picks
-    // a role for it. It is as silent as one nobody mapped at all, and the
-    // screen that flags typos should see it the same way.
+    // A group added on the settings screen before a role is picked is as silent as an unmapped one.
     const blank = buildMapping([], []);
     expect(explainGrants(blank, ["dsek.sex.mastare"]).silentGroups).toEqual(["dsek.sex.mastare"]);
   });
@@ -188,8 +165,7 @@ describe("the defaults the section starts from", () => {
   });
 
   it("does not make the skattmästare a resultatansvarig as well", () => {
-    // Admins attest anything; a result unit would add nothing and would put the
-    // treasurer in the resultatansvarig lists on every screen that has one.
+    // Admins attest anything; a result unit would add nothing.
     expect(roles(["dsek.skattm.mastare"])).not.toContain("RESULTATANSVARIG");
     expect(units(["dsek.skattm.mastare"])).toEqual([]);
   });
@@ -198,7 +174,6 @@ describe("the defaults the section starts from", () => {
     expect(roles(["dsek.sex.bar.mstr"])).toContain("STOCKARE");
     expect(roles(["dsek.sex.hov.mstr"])).toContain("STOCKARE");
     expect(roles(["dsek.sex.pub.vice_mastare"])).toContain("STOCKARE");
-    // Sexmästaren keeps the stock *and* answers for the money.
     expect(grants(["dsek.sex.mastare"])).toEqual({
       roles: ["ORDINARIE", "STOCKARE", "RESULTATANSVARIG"],
       resultUnits: ["Sexmästeriet"],
@@ -235,17 +210,8 @@ describe("sectionGroups", () => {
   });
 });
 
-// ── reapplyGrants ───────────────────────────────────────────────────
-//
-// The `tx` it takes is structurally typed, so the whole thing runs against a
-// fake here, which is the point: what is worth holding about this function is
-// not that Prisma works, it is *how many statements it takes to do its job* and
-// that it still only touches people who actually moved.
-//
-// It writes a row per member, and it does it inside an interactive transaction
-// against a five-second timeout, for a section of about a thousand. So the
-// grouping below is not a tidiness: it is the difference between a mapping edit
-// that lands and one that rolls back with nothing to say.
+// ── reapplyGrants ── The `tx` is structurally typed, so this runs against a fake. What is held is how many
+// statements it takes (it runs in a 5s interactive transaction for ~1000 members) and that it only touches movers.
 
 type UpdateCall = { ids: string[]; roles: string[]; resultUnits: string[] };
 
@@ -305,9 +271,7 @@ describe("reapplyGrants", () => {
   });
 
   it("does not care what order a stored role list is in", async () => {
-    // `roles` comes back from Postgres in whatever order it was written, and
-    // deriveGrants builds it from a Set. Comparing them as sequences would
-    // rewrite the whole section every time somebody saved the grid.
+    // `roles` comes back from Postgres in write order and deriveGrants builds it from a Set, so compare as sets.
     const { tx, calls } = fakeTx([member("a", ["dsek.ordf"], ["ORDFORANDE", "ORDINARIE"])], {
       roleRows: [{ group: "dsek.ordf", role: "ORDFORANDE" }],
     });
@@ -316,8 +280,7 @@ describe("reapplyGrants", () => {
   });
 
   it("takes one statement for everybody landing on the same grant", async () => {
-    // The whole reason this is batched. Three hundred members who all become
-    // plain ORDINARIE is one UPDATE, not three hundred.
+    // Three hundred members who all become plain ORDINARIE are one UPDATE.
     const stale = Array.from({ length: 300 }, (_, i) =>
       member(`u${i}`, ["dsek.ordf"], ["ORDINARIE", "ORDFORANDE"]),
     );
@@ -344,8 +307,6 @@ describe("reapplyGrants", () => {
     );
 
     expect(await reapplyGrants(tx)).toBe(3);
-    // Two statements: the pair dropping to bare ORDINARIE, and the one picking
-    // up resultatansvar.
     expect(calls).toHaveLength(2);
 
     const dropped = calls.find((c) => c.ids.includes("loses"))!;
@@ -359,8 +320,7 @@ describe("reapplyGrants", () => {
   });
 
   it("separates grants that differ only in their result units", async () => {
-    // Same roles, different reach: bucketing on the roles alone would hand one
-    // committee's money to the other's head.
+    // Same roles, different reach: bucketing on roles alone would hand one committee's money to the other's head.
     const { tx, calls } = fakeTx(
       [
         member("km", ["dsek.km.mastare"], ["ORDINARIE"]),

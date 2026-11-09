@@ -37,8 +37,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.values = merged;
   }
 
-  // `allowBudgetWrite` walked this id up to its budget, so it existed a moment
-  // ago; this covers it being gone by now.
+  // The id existed when `allowBudgetWrite` walked it up; this covers it being gone since.
   const item = await orNotFound(() => prisma.budgetLineItem.update({ where: { id }, data }));
   if (item instanceof NextResponse) return item;
   return NextResponse.json(item);

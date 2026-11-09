@@ -16,11 +16,7 @@ import { cn } from "@/lib/ui/utils";
 import { useLiveBookkeeping } from "./use-live-bookkeeping";
 import { ExportResolveDialog } from "./export-resolve-dialog";
 
-/**
- * The dot on a button's corner that says something is happening to this utlägg.
- * Amber and pulsing while it is under way (somebody booking it, an export in
- * flight). Red and still when it is stuck and waiting on a person.
- */
+/** Amber and pulsing while under way, red and still when stuck waiting on a person. */
 function CornerDot({ tone }: { tone: "warning" | "danger" }) {
   const fill = tone === "warning" ? "bg-warning" : "bg-danger";
   return (
@@ -40,16 +36,8 @@ function CornerDot({ tone }: { tone: "warning" | "danger" }) {
   );
 }
 
-/**
- * The treasury's column on the section's utlägg: Bokför on an attested one,
- * the review on a konterat one, and the voucher once it is in Fortnox. It used
- * to be a list of its own under Bokföring, the same utlägg cut to the signed
- * ones. Now it is the Utlägg list on Alla, where stage is a tab like on every
- * other list, and this column is what bookkeeping adds to it.
- *
- * `enabled` false polls nothing and adds no column, for every other scope and
- * for readers who are not bookkeeping.
- */
+/** The treasury's column: Bokför on an attested utlägg, review on a konterat one, the voucher once in Fortnox.
+ * `enabled` false polls nothing and adds no column. */
 export function useBookingColumn(
   enabled: boolean,
   /** Konterade by the reader, so not theirs to bokföra (see reviewBlocker). */
@@ -71,7 +59,6 @@ export function useBookingColumn(
     t("bookingNowTitle", { names: list(users.map((u) => u.name)) });
   const reviewingHint = (users: PresentUser[]) =>
     t("reviewingNowTitle", { names: list(users.map((u) => u.name)) });
-  // The lock's own words, for the tooltip and for a screen reader.
   const exportHint = (v: ExportLockView) => {
     const name = v.by?.name ?? t("someone");
     return v.lock === "exporting" ? t("exportingNow", { name }) : t("exportUncertain", { name });
@@ -95,9 +82,7 @@ export function useBookingColumn(
     cell: (e) => (
       <div className="relative">
         {mayBook && e.status === "APPROVED" && (
-          // Somebody else has it open for booking. Said, not enforced: the
-          // button stays a button, and the booking screen asks before saving
-          // over a colleague. See lib/domain/presence.ts.
+          // Said, not enforced: the booking screen asks before saving over a colleague.
           <Tooltip label={bookings[e.id] ? bookingHint(bookings[e.id]) : null}>
             <ButtonLink href={`/expenses/${e.id}/book`} size="sm">
               {t("book")}
@@ -109,14 +94,9 @@ export function useBookingColumn(
         {mayBook &&
           e.status === "BOOKED" &&
           (() => {
-            // Bokföring is done on the utlägg's own page, where the voucher is
-            // looked over first, and not from here: this opens it. A lock left
-            // uncertain is still resolved from here, since it is not bokföring
-            // but finding out whether it already happened.
+            // Bokföring happens on the utlägg's page, not here. An uncertain lock is still resolved from here.
             const locked = live.exporting[e.id];
-            // The reader konterade it, so the two-person rule hands the
-            // bokföring to somebody else. Still drawn, and dead, with the
-            // reason on hover: a missing button said nothing about why.
+            // The reader konterade it: the two-person rule hands bokföring to somebody else. Dead, with the reason on hover.
             if (isOwn(e)) {
               return (
                 <Tooltip label={t("review.ownBooking")}>
@@ -137,8 +117,7 @@ export function useBookingColumn(
                 </Tooltip>
               );
             }
-            // Somebody else granskar it right now. Said, not enforced, the
-            // same as booking: the lock above is what stops a second export.
+            // Somebody else granskar it. Said, not enforced.
             const reviewers = live.reviewing[e.id];
             const hint = locked ? exportHint(locked) : reviewers ? reviewingHint(reviewers) : null;
             return (

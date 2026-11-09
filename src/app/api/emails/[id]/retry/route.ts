@@ -1,6 +1,4 @@
-// POST /api/emails/[id]/retry: try an unsent mail again now, with all its tries
-// given back. For a mail the outbox has given up on, once whatever stopped it
-// (the relay, an address) has been put right. See `retryEmail`.
+// POST /api/emails/[id]/retry: try an unsent mail again now, with all its tries given back. See `retryEmail`.
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { deliverSoon, retryEmail } from "@/lib/server/notify";

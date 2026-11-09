@@ -5,16 +5,8 @@ import Link from "next/link";
 import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
 
-// "Which part of this record?" Underlined links under a nested page's title,
-// for a record with parts of its own: a bokslut year's checklist, vouchers
-// and accounts. See docs/navigation.md.
-//
-// Links rather than a switch, because each part is a page of its own, and
-// underlined because that is what tabs mean: sections of the thing directly
-// below them. Not the band's section tabs, which are the pages of an area of
-// the app, and not the collection switch, which only ever says whose.
+// Underlined links for a record's own parts (docs/navigation.md).
 export interface PageTabsProps {
-  /** Names the row for a screen reader. */
   label: string;
   value: string;
   options: { value: string; label: string; href: string }[];

@@ -2,9 +2,7 @@ import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { serviceAccountAssertion, verifyPushToken, gmailConfig } from "./gmail";
 
-// The two signed tokens the integration deals in: the one the app signs to
-// read the mailbox, and the one Google signs to say a push is genuine. Both
-// checked with a key pair made here, so nothing reaches Google.
+// The two signed tokens: the one the app signs to read the mailbox, and the one Google signs for a push. Checked with a key pair made here.
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();

@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Renewing the service connection (getServiceToken): a refusal from Fortnox is
-// recorded for the settings page, a hiccup is not, and a renewal that goes
-// through clears what was recorded.
-//
-// The database and Fortnox's token endpoint are mocked. The decision about
-// what counts as a refusal, and where it is written, is the real one.
+// getServiceToken: a Fortnox refusal is recorded for the settings page, a hiccup is not.
 
 const h = vi.hoisted(() => ({
   conn: {} as Record<string, unknown>,

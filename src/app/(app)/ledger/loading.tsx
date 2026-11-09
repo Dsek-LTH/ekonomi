@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonPage, SkeletonSheet } from "@/components/ui/skeleton";
 
-// The report parameters stand in their own card as banded rows, then the report
-// itself. Its rows are a ledger, not a list, so they get the sheet treatment.
 export default function Loading() {
   return (
     <SkeletonPage action>

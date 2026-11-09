@@ -18,12 +18,7 @@ export function EmptyState({
   );
 }
 
-// "Nothing here" inside a card or list, where the full EmptyState would be too
-// loud. One centred line where the rows would have been.
-//
-// The spacing is a named variant rather than something a caller layers on with
-// `className`: cn() only concatenates, and Tailwind emits its utilities in scale
-// order, so an appended `py-3` would silently lose to the default `py-10`.
+// The spacing is a named variant: cn() only concatenates, so an appended py-3 would lose to the default py-10.
 const NOTE_PADDING = {
   card: "px-6 py-10", // in place of a card's rows
   compact: "px-4 py-3", // in a sidebar or another narrow column

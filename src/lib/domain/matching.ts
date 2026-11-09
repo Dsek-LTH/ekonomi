@@ -1,46 +1,16 @@
-// When a bank transaction settles an expense.
-//
-// The two have to cancel out exactly: a 250 kr card purchase is +250 on the
-// utlägg and −250 in the bank, so they sum to zero. That rules out a near miss
-// (249,50) and a same-size row in the wrong direction (a refund can only settle
-// a return, which is itself negative).
-//
-// Both sides must be in the same unit. The tolerance is there for the client,
-// which works in SEK floats; the server compares öre integers, where anything
-// that isn't equal differs by at least 1.
+// When a bank transaction settles an expense: the two must cancel out exactly (+250 on the utlägg,
+// -250 in the bank), so a refund can only settle a return. The tolerance is for the client's SEK
+// floats; the server compares öre integers.
 export function cancelsOut(bankAmount: number, grossAmount: number): boolean {
-  if (!grossAmount) return false; // nothing to settle yet
+  if (!grossAmount) return false;
   return Math.abs(bankAmount + grossAmount) < 0.005;
 }
 
-/**
- * Whether an utlägg paid this way may be matched to a bank transaction at all.
- *
- * A match is a statement: *this* row on the section's card is the money that
- * left for *this* purchase, so the purchase is accounted for and the row is
- * not outstanding. An eget utlägg says the opposite: the member's own money
- * left, and the section owes them it back.
- *
- * Both at once is the section paying for one purchase twice: once when the
- * card was swiped, and again into the member's account. So the match belongs
- * to the card purchase and to nothing else, and the two ways an utlägg can
- * acquire one, created with it (the "Redovisa" deep-link from a card
- * purchase) and given one afterwards (the match step), both ask this first.
- * Changing the payment type away from the card withdraws the claim and the
- * match with it; see the PATCH route.
- */
+/** Whether an utlägg paid this way may be matched to a bank transaction at all. A match says the card paid; an eget utlägg says the member did. Both would pay twice, so only card purchases match (changing payment type away from the card withdraws the match, see the PATCH route). */
 export function isMatchable(paymentType: string): boolean {
   return paymentType === "CARD";
 }
 
-// What the picker says when nothing in the list can settle the claim is one
-// line, and every row that cannot be picked carries its reason as a tag. Why
-// matching works the way it does, including that saving a draft is the way on
-// while a purchase is not imported yet (a card purchase cannot be submitted
-// unmatched at all, see `submitBlocker`), is `MatchHelp` in
-// components/transaction-picker.tsx, behind a "?".
-
-/** As much of a bank row as choosing one needs. */
 interface MatchableTransaction {
   id: string;
   amount: number;
@@ -50,26 +20,10 @@ interface MatchableTransaction {
   matchedExpenseRef?: string;
 }
 
-/**
- * How many days apart a row may be from the purchase and still be taken for it
- * when only the amount differs. The bank's Transdag and the receipt's date are
- * usually the same day; a weekend or a slow terminal moves it by one or two.
- */
+/** How many days apart a row may be from the purchase and still be taken for it when only the amount differs. */
 const NEAR_DAYS = 3;
 
-/**
- * Why a row cannot settle this claim.
- *
- * Each is a different sentence to a reader, which is the whole reason they are
- * told apart. A row of the right size pointing the wrong way is not "another
- * amount", it is the same amount going the other way, and saying the former
- * about it sends somebody off to check a figure that was never wrong.
- *
- * A row another utlägg already claims says only that. It is settled, and how
- * far its amount is from this claim is beside the point: a list of matched
- * rows each showing a difference read as if none of them were matched. For a
- * free row, the direction is asked before the size.
- */
+/** Why a row cannot settle this claim. A row already claimed by another utlägg says only that, whatever its amount. For a free row, the direction is asked before the size. */
 type MatchBlock =
   /** Money out where money in is needed, or the reverse. */
   | "direction"
@@ -78,64 +32,21 @@ type MatchBlock =
   /** Would settle it, but another utlägg already claims it. */
   | "taken";
 
-/** A row, and whether picking it would actually settle the claim. */
 export interface MatchCandidate<T> {
   txn: T;
   selectable: boolean;
-  /** Null when it can be picked. See MatchBlock. */
   blocked: MatchBlock | null;
-  /**
-   * How much bigger the row is than the claim, signed, in the same unit as
-   * both. Zero where they cancel out, and meaningless where the direction is
-   * wrong, which is why the reader is told the direction instead.
-   *
-   * Carried rather than worked out again on screen: "6,50 kr mer än utlägget"
-   * is what turns a greyed-out row into a mistyped amount, and the arithmetic
-   * behind it belongs with the rule it comes from.
-   */
+  /** How much bigger the row is than the claim, signed, same unit as both. Meaningless where the direction is wrong. */
   offBy: number;
-  /**
-   * Days between the row and the purchase, either way. Null where either date
-   * is unknown.
-   */
+  /** Days between the row and the purchase, either way. Null where either date is unknown. */
   daysOff: number | null;
-  /**
-   * Very likely this purchase with the amount typed wrong: the right direction,
-   * free, within NEAR_DAYS of it, and only the amount differs. The screen offers
-   * to take the row's amount, which is the one-click fix for the commonest
-   * mistake on this step.
-   */
+  /** Very likely this purchase with the amount typed wrong: right direction, free, within NEAR_DAYS, only the amount differs. The screen offers to take the row's amount. */
   fixable: boolean;
 }
 
-/**
- * Every bank row, ranked for this claim, each saying whether it settles it and
- * why not.
- *
- * Lives here rather than in the wizard because it is the matching rule and not
- * a piece of that screen, and because a rule inside an 800-line component is a
- * rule nothing can test. It was not tested, and it was wrong: it took the
- * amount from the form, where the figure is a *magnitude* and the sign lives on
- * a separate toggle, so `grossAmount < 0` was never true. Every return offered
- * the outgoing rows, never the refund that would settle it, and the continue
- * button stayed dead. A purchase's magnitude and its signed amount are the same
- * number, so nothing showed on the path everyone takes.
- *
- * Nothing is filtered out. It used to drop rows pointing the wrong way, rows
- * another utlägg had claimed, and everything past the five closest, which left
- * one question ("I know this purchase is on the card, why is it not listed?")
- * with four possible answers and the screen offering none of them. The worst of
- * them was silent: somebody else had already redovisat your purchase, and the
- * row simply was not there. Every row is returned now, carrying the reason it
- * cannot be picked, and the screen greys it and says so.
- *
- * @param grossAmount The claim as a *signed* amount: positive for money the
- *   section spent, negative for money coming back to it.
- * @param keepTransactionId The id of the row this claim already holds. It counts
- *   as free rather than taken, so it shows as picked while the claim is being
- *   edited rather than reading as somebody else's. A transaction id, not an
- *   expense id: it is what the screen has in hand.
- */
+/** Every bank row, ranked for this claim, each saying whether it settles it and why not. Nothing is filtered out: a row that cannot be picked carries its reason.
+ * @param grossAmount The claim as a *signed* amount: positive for money spent, negative for money coming back (the wizard's form holds a magnitude and a separate sign toggle).
+ * @param keepTransactionId The transaction id the claim already holds; counts as free so it shows as picked while editing. */
 export function matchCandidates<T extends MatchableTransaction>(
   transactions: readonly T[],
   grossAmount: number,
@@ -145,8 +56,7 @@ export function matchCandidates<T extends MatchableTransaction>(
 ): MatchCandidate<T>[] {
   const day = (iso?: string | null) => (iso ? Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) : NaN);
   const bought = day(purchaseDate);
-  // Money coming back to the section is settled by an incoming row; money it
-  // spent, by an outgoing one.
+  // Money coming back is settled by an incoming row; money spent, by an outgoing one.
   const incoming = grossAmount < 0;
   const magnitude = Math.abs(grossAmount);
 
@@ -171,9 +81,7 @@ export function matchCandidates<T extends MatchableTransaction>(
         txn,
         selectable: blocked === null,
         blocked,
-        // Magnitudes, so the figure reads the same for a purchase and for a
-        // return: what is asked is "how far off is this row", not which way
-        // round the two happen to be signed.
+        // Magnitudes, so a purchase and a return read the same: how far off is this row.
         offBy: Math.round((Math.abs(txn.amount) - magnitude) * 100) / 100,
         daysOff,
         fixable:
@@ -186,19 +94,12 @@ export function matchCandidates<T extends MatchableTransaction>(
     })
     .sort(
       (a, b) =>
-        // Selectable first, then closest by size. That puts a row somebody else
-        // has claimed for exactly this amount directly under the ones that
-        // work, which is where it does the most good: it is the answer to why
-        // the purchase you are looking at cannot be picked.
+        // Selectable first, then closest by size, so a row someone else claimed for exactly this amount
+        // sits under the ones that work. Then by day: same-day with a 3 kr difference is a mistyped purchase.
         Number(b.selectable) - Number(a.selectable) ||
-        // Then by the day, where there is one to go by: a row from the same day
-        // that differs by three kronor is the purchase typed wrong, and one
-        // from last month that differs by one krona is a different purchase.
-        // Ranking by size alone put the second first.
         (a.daysOff ?? Infinity) - (b.daysOff ?? Infinity) ||
         Math.abs(a.offBy) - Math.abs(b.offBy) ||
-        // A stable last resort, so two rows of the same size do not swap places
-        // between renders.
+        // A stable last resort so equal rows do not swap places between renders.
         a.txn.id.localeCompare(b.txn.id),
     );
 }

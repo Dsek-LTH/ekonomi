@@ -8,10 +8,7 @@ import { titled } from "@/lib/server/page-title";
 export const generateMetadata = titled("ledger");
 
 export default async function LedgerPage() {
-  // Any signed-in member: the utfall is the section's own accounting and the
-  // budget beside it is open to everyone, so this matches. Stated rather than
-  // inherited from the layout: "any member" is a policy, and the routes behind
-  // this page (/api/ledger/*) say the same thing on their first line.
+  // Any signed-in member (the routes behind, /api/ledger/*, say the same).
   await requireUser();
 
   const [fortnox, costCenters, fiscal] = await Promise.all([
@@ -19,8 +16,7 @@ export default async function LedgerPage() {
     getCostCenters(),
     getFiscalYear(),
   ]);
-  // Retired cost centres are offered too: a closed year's report still has to
-  // be readable per cost centre after one has been retired.
+  // Retired cost centres are offered too, so a closed year stays readable per cost centre.
   return (
     <LedgerClient
       key={fiscal?.id ?? "none"}

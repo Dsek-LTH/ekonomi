@@ -1,23 +1,7 @@
-// Book an approved expense (POST) or amend a booked voucher before export
-// (PATCH). The [id] param is the expense id.
-//
-// Both handlers do the same work on the same rows and differ only in which
-// status they accept and whether the verification is created or replaced, so
-// everything up to that point is shared below.
-//
-// Two bookkeepers can have the same utlägg open at once (the booking screen
-// says so, see lib/domain/presence.ts, but saying so is not stopping it). So
-// each write restates the version the screen was showing, and the first
-// statement of each transaction is a conditional update on the utlägg that
-// takes its row lock. A second booking of the same utlägg waits on that lock,
-// finds the row moved on once it gets it, and is a 409. It used to reach the
-// unique index on Verification.expenseId and come back as a 500, and a second
-// amend used to simply win.
-//
-// The voucher's date is the utlägg's date. A bokförare who books it on another
-// day is saying the utlägg's date was wrong, so the utlägg is corrected to
-// match, with a reason. See lib/domain/correction.ts for why, and for what
-// that costs the submitter and the attesters.
+// Book an approved expense (POST) or amend a booked voucher before export (PATCH). The shared work is below.
+// Two bookkeepers can have the same utlägg open (lib/domain/presence.ts): each write restates the version its screen showed,
+// and each transaction starts with a conditional update on the utlägg that takes its row lock, so the loser gets a 409.
+// The voucher's date is the utlägg's date. Booking on another day corrects the utlägg, with a reason (lib/domain/correction.ts).
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
@@ -46,11 +30,7 @@ interface NormLine {
   credit: number; // öre
 }
 
-// Validate the voucher lines: each row needs an account, and the verification
-// must balance (debit total == credit total). The *shapes* (strings that are
-// strings, amounts that are non-negative integer öre) are the schema's, and
-// are not re-checked here. A number that arrived as nonsense used to become 0
-// through `Number(x) || 0` and quietly unbalance the voucher.
+// Validate the voucher lines: each row needs an account and the verification must balance. Shapes are the schema's.
 function prepareLines(
   body: BookVoucher,
 ): { ok: true; lines: NormLine[] } | { ok: false; error: string; status: number } {
@@ -66,8 +46,7 @@ function prepareLines(
     }))
     .filter((l) => l.account || l.debit || l.credit);
 
-  // The rule itself is in lib/domain/voucher.ts, so the booking screen can
-  // apply it before offering the button and get the same answer.
+  // The rule is in lib/domain/voucher.ts, so the booking screen gets the same answer.
   const blocker = voucherBlocker(lines);
   if (blocker) return { ok: false, error: `voucher.${blocker}`, status: 422 };
   return { ok: true, lines };
@@ -78,9 +57,8 @@ function revenueLine(lines: NormLine[]): NormLine | undefined {
   return lines.find((l) => isRevenueAccount(l.account));
 }
 
-// The first project number no synced project has, if any. Fortnox would reject
-// the whole voucher on export for it, so it is refused here, at booking, where
-// it can still be fixed. Closed projects still count: see getActiveProjects.
+// The first project number no synced project has. Fortnox would reject the voucher on export, so it is refused at booking.
+// Closed projects still count (getActiveProjects).
 async function unknownProject(lines: NormLine[]): Promise<string | undefined> {
   const numbers = [...new Set(lines.map((l) => l.project).filter(Boolean))] as string[];
   if (numbers.length === 0) return undefined;
@@ -92,16 +70,8 @@ async function unknownProject(lines: NormLine[]): Promise<string | undefined> {
   return numbers.find((n) => !have.has(n));
 }
 
-// The payment row is not the bookkeeper's to choose: a card purchase already
-// left the section's bank, a private outlay is a debt to the member. The UI
-// renders that row as fixed, and this is the same rule on the server. The
-// client is a convenience, not the gate.
-//
-// Milersättning falls on the member-debt side without a branch of its own, and
-// that is the right answer rather than a lucky one: the section owes the
-// claimant their petrol exactly as it owes them a receipt they paid. The test
-// is "did the section's own account already pay for this", which only the card
-// answers yes to.
+// The payment row is not the bookkeeper's to choose: a card purchase already left the section's bank, a private outlay is a debt
+// to the member. The client is a convenience, not the gate. Milersättning falls on the member-debt side: only the card was paid by the section.
 async function checkPaymentLine(
   lines: NormLine[],
   expense: { paymentType: PaymentType; grossAmount: number | null },
@@ -109,8 +79,7 @@ async function checkPaymentLine(
   const settings = await loadBookkeepingSettings();
   const account =
     expense.paymentType === "CARD" ? settings.bankAccount : settings.memberDebtAccount;
-  // Not chosen yet, so there is no payment row to book. Said as such, rather
-  // than as a voucher that is somehow missing its payment line.
+  // Not chosen yet, so there is no payment row to book.
   if (!account) {
     return {
       code:
@@ -139,33 +108,20 @@ async function checkPaymentLine(
   return null;
 }
 
-/**
- * Resolve the cost-center codes used by the lines to their ids, or name the
- * first one that isn't a cost centre.
- *
- * A code that resolves to nothing used to be booked as no cost centre at all:
- * the voucher balanced, the accounts were right, and the line simply carried no
- * kostnadsställe. That is the one field the whole budget-vs-actual side of the
- * app reads. A verification posted without it is money that has left the
- * section and appears in nobody's outcome. PATCH /api/expenses/[id] refuses an
- * unknown code on an allocation; there is no reason the voucher itself should
- * be the laxer of the two.
- */
+/** Resolve the cost-center codes to ids, or name the first one that isn't a cost centre.
+ * A line without one would vanish from the budget-vs-actual side. */
 async function costCenterIdByCode(
   lines: NormLine[],
 ): Promise<{ ok: true; idByCode: Map<string, string> } | { ok: false; code: string }> {
   const codes = [...new Set(lines.map((l) => l.costCenterCode).filter(Boolean))] as string[];
   const ccs = await prisma.costCenter.findMany({ where: { code: { in: codes } } });
   const idByCode = new Map(ccs.map((c) => [c.code, c.id]));
-  // Inactive ones still resolve: a retired cost centre is one nothing new
-  // should be *allocated* to, but a voucher being amended may well be posted
-  // against the one it was always posted against.
+  // Inactive ones still resolve: an amended voucher may be posted against a since-retired centre.
   const unknown = codes.find((c) => !idByCode.has(c));
   return unknown ? { ok: false, code: unknown } : { ok: true, idByCode };
 }
 
-// The rows as Prisma nested-create data. Identical for creating and replacing,
-// which is the whole reason it is a function.
+// The rows as Prisma nested-create data, identical for creating and replacing.
 const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
   lines.map((l, i) => ({
     account: l.account,
@@ -178,9 +134,7 @@ const voucherLineData = (lines: NormLine[], idByCode: Map<string, string>) =>
     sortOrder: i,
   }));
 
-// Authority + the expense. Booking creates a verification in the section's
-// books, so it is bookkeepers only. The status checks below say *which*
-// utlägg, never *who*.
+// Authority + the expense: bookkeepers only. The status checks below say which utlägg, never who.
 async function loadForBooking(id: string) {
   const g = await gate(canBookkeep, "auth.bookkeeperBook");
   if (!g.ok) return { ok: false as const, res: g.res };
@@ -193,7 +147,6 @@ async function loadForBooking(id: string) {
   return { ok: true as const, actor: g.actor, expense };
 }
 
-// The rows, validated against the utlägg they belong to.
 async function prepareVoucher(
   body: BookVoucher,
   expense: { paymentType: PaymentType; grossAmount: number | null },
@@ -240,8 +193,6 @@ async function prepareVoucher(
   };
 }
 
-// The verification's date and heading. The caller may set both, and each falls
-// back to what the utlägg already says.
 function voucherMeta(body: BookVoucher, fallback: { date: Date; description: string }) {
   return {
     date: body.date ? new Date(body.date) : fallback.date,
@@ -251,19 +202,9 @@ function voucherMeta(body: BookVoucher, fallback: { date: Date; description: str
 
 type ForBooking = Extract<Awaited<ReturnType<typeof loadForBooking>>, { ok: true }>["expense"];
 
-/**
- * What the voucher's date does to the utlägg's own.
- *
- * The same day: nothing. An utlägg with no date at all (older rows can be
- * without one): it takes the voucher's, which is filling a gap rather than
- * correcting anybody. Any other day is a correction, and needs a reason, which
- * the utlägg's history shows beside it.
- *
- * Held to what the edit form holds a purchase date to: not in the future. On a
- * milersättning the date also picks the schablon, so a correction across a
- * change of rate would change the amount the attesters signed for. That one
- * has to go back to the submitter instead.
- */
+/** What the voucher's date does to the utlägg's own. Same day: nothing. No date at all: it takes the voucher's.
+ * Any other day is a correction and needs a reason. Held to not in the future. On a milersättning the date picks
+ * the schablon, so a correction across a rate change goes back to the submitter. */
 async function dateCorrection(
   expense: ForBooking,
   date: Date,
@@ -292,7 +233,6 @@ async function dateCorrection(
   return { ok: true, setDate: true, correction: { field: "purchaseDate", from, to } };
 }
 
-/** Write the CORRECTED event, with the reason, for the utlägg's history. */
 async function recordDateCorrection(
   tx: Prisma.TransactionClient,
   expense: ForBooking,
@@ -311,11 +251,8 @@ async function recordDateCorrection(
   });
 }
 
-// A verification for this utlägg already exists. The conditional update above
-// is what normally answers a second booking, so this is the backstop for a row
-// that reached BOOKED some other way: the same answer, a 409, rather than the
-// unique index surfacing as a 500. Duck-typed on Prisma's public error code, as
-// in lib/server/expense-reference.ts.
+// A verification already exists: the backstop for a row that reached BOOKED some other way, a 409 instead of the unique index as a 500.
+// Duck-typed on Prisma's error code, as in lib/server/expense-reference.ts.
 function alreadyBooked(err: unknown): never {
   if (typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2002") {
     throw new StaleWrite();
@@ -323,7 +260,6 @@ function alreadyBooked(err: unknown): never {
   throw err;
 }
 
-// The utlägg's version as this write left it, for the screen that made it.
 async function newVersion(tx: Prisma.TransactionClient, id: string): Promise<string> {
   const row = await tx.expense.findUniqueOrThrow({ where: { id }, select: { updatedAt: true } });
   return row.updatedAt.toISOString();
@@ -348,13 +284,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const voucher = await prepareVoucher(body, expense);
   if (!voucher.ok) return voucher.res;
 
-  // The day of the purchase, not the day somebody got round to booking it. A
-  // voucher dated today for a receipt from March puts the cost in the wrong
-  // month, and in January it puts it in the wrong financial year.
-  //
-  // Today only when the utlägg carries no date at all, which the submission
-  // form does not allow but older rows can still hold. There is nothing better
-  // to reach for in that case, and refusing to book would strand the utlägg.
+  // The day of the purchase, not of booking (wrong month or financial year otherwise). Today only when the utlägg carries no date, which older rows can.
   const { date, description } = voucherMeta(body, {
     date: expense.purchaseDate ?? new Date(),
     description: expense.title,
@@ -371,8 +301,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       // First, and conditional: see the top of the file.
       const flipped = await tx.expense.updateMany({
         where: { id: expense.id, status: "APPROVED", updatedAt: expected },
-        // The version moves on explicitly. A screen still open on the old one
-        // learns from it that this utlägg was booked.
+        // The version moves on explicitly, so a screen open on the old one learns it was booked.
         data: {
           status: "BOOKED",
           updatedAt: new Date(),
@@ -419,9 +348,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           values: { status: { key: `common.status.${expense.status}` } },
         });
   }
-  // Not while it is being exported. The export reads these rows to send them,
-  // and an amend landing in between would file the old voucher in Fortnox
-  // while this app records the new one.
+  // Not while being exported: an amend in between would file the old voucher in Fortnox and record the new one here.
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "free") {
     return fail(
@@ -432,7 +359,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       },
     );
   }
-  // BOOKED, checked above, is the status konteringen sets with its voucher.
   const verification = expense.verification;
   if (!verification) throw new Error(`Expense ${id} is BOOKED but has no verification`);
 
@@ -455,15 +381,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const expected = new Date(body.expectedUpdatedAt);
   const done = await commit(() =>
     prisma.$transaction(async (tx) => {
-      // First, and conditional: see the top of the file. The verification is
-      // not the utlägg, so the utlägg's version is bumped by hand to say that
-      // its voucher changed. It is also what catches an export that got there
-      // first, since that moves the status on.
-      //
-      // The version check also covers the export lock: taking it bumps the
-      // version. A lock abandoned before it sent anything (the only kind the
-      // check above lets through) is cleared, so the export that left it, if it
-      // is only slow rather than gone, finds it gone and sends nothing.
+      // First, and conditional (see the top of the file). The utlägg's version is bumped by hand, which also catches an export that got there first
+      // and clears a lock abandoned before it sent anything, so a slow exporter finds it gone and sends nothing.
       const bumped = await tx.expense.updateMany({
         where: { id: expense.id, status: "BOOKED", updatedAt: expected },
         data: {

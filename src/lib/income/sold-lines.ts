@@ -1,18 +1,7 @@
-// How the review screen lays out a day's sold lines: by the account they are
-// credited to, products grouped inside each one as the intäktsräkning groups
-// them (./product-groups.ts).
-//
-// By account because the accounts are what the voucher's credit rows and the
-// document's "Fördelning" are made of. A section per account, with its
-// subtotal, is the same figures in the same order in all three places, so a
-// reviewer reads the table, the voucher and the PDF as one list rather than
-// adding up a flat one in their head.
-//
-// On the reserv's day there is one more grouping. Its lines are the ones the
-// routing could not place, mostly products rung up with a prefix no
-// verksamhet has ("s0 - Briska Hallon" when nobody owns s0). Those are drawn
-// together under the prefix, so a whole mis-prefixed batch is seen, and moved,
-// as one thing instead of being scattered through the products by name.
+// How the review screen lays out a day's sold lines: sections per credited account (matching the
+// voucher and the document's "Fördelning"), products grouped inside. On the reserv's day, lines with
+// an unowned prefix ("s0 - Briska Hallon") are drawn together under the prefix.
+
 import { byCodePoint, productRows, type GroupableLine, type ProductRow } from "./product-groups";
 import { oreToSEK, sekToOre } from "@/lib/domain/money";
 
@@ -41,10 +30,7 @@ export interface SoldSection<T> {
   rows: SoldRow<T>[];
 }
 
-// A short code, then a dash. Display only: it says why a line is in the reserv,
-// and never decides where anything goes (lib/income/routing.ts does). A space
-// alone is not enough here, unlike in routing, or "Coca cola" would read as
-// the prefix "Coca".
+// A short code then a dash. Display only (routing decides). A space alone is not enough, or "Coca cola" reads as prefix "Coca".
 const PREFIX = /^([A-Za-z0-9]{1,5})\s*[-\u2013\u2014]\s*(.+)$/;
 
 /** The prefix a reserv line was rung up with, and its name without it. */
@@ -59,14 +45,7 @@ function stripPrefix(text: string, key: string): string {
   return split && split.prefix.toLowerCase() === key ? split.rest : text;
 }
 
-/**
- * The day's lines as account sections, in account order.
- *
- * `reserv` is whether the day is the reserv's. Only then are prefixed lines
- * pulled out under their prefix, ahead of the products, since they are what
- * the review of that day is about. On any other day a dash in a product's name
- * is just part of its name.
- */
+/** The day's lines as account sections. `reserv`: only then are prefixed lines pulled out under their prefix; elsewhere a dash is part of the name. */
 export function soldSections<T extends SectionLine>(
   lines: readonly T[],
   reserv: boolean,
@@ -105,9 +84,7 @@ export function soldSections<T extends SectionLine>(
           prefix: unplacedPrefix(under[0].name)!.prefix,
           lines: under,
         });
-        // Grouped by product as everywhere else, with the prefix taken off the
-        // name and, where the till repeated it there, off the variant too:
-        // "s5 - Mat" with "s5 - Billys" reads as "Mat", then "Billys" under it.
+        // Grouped by product with the prefix taken off the name (and the variant, if repeated).
         const stripped = under.map((line) => ({
           ...line,
           name: unplacedPrefix(line.name)!.rest,
@@ -128,8 +105,7 @@ export function soldSections<T extends SectionLine>(
     return {
       account,
       accountName: group[0].accountName,
-      // Summed in öre and back, so a column of kronor with öre in them does not
-      // come out a hair off in floating point.
+      // Summed in öre to avoid floating point drift.
       total: oreToSEK(group.reduce((sum, l) => sum + sekToOre(l.total), 0)),
       rows,
     };
@@ -144,13 +120,7 @@ export interface DayLine extends SectionLine {
   unmatched: boolean;
 }
 
-/**
- * One block of a day's sold lines.
- *
- * `unmatched` holds every sale the routing could not place, whichever
- * verksamhet it currently sits on, drawn first because it is what the review
- * of a day is about. Then one block per verksamhet, by name, then the fees.
- */
+/** One block of a day's sold lines: `unmatched` first (everything routing could not place), then one per verksamhet by name, then the fees. */
 export interface DaySection<T> {
   key: string;
   kind: "unmatched" | "unit" | "fees";

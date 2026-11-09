@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Attesting some of an utlägg's rows rather than all of them.
-//
-// The skattmästare may sign any row, so "Attestera" used to sign every row on
-// the utlägg at once, including units somebody else answers for. With
-// `allocationIds` it signs only the picked ones. Left out, it signs every row
-// the caller may, as before.
-//
-// Mocked at the session and the database, like recall.test.ts.
 
 const h = vi.hoisted(() => ({
   allocations: [] as {

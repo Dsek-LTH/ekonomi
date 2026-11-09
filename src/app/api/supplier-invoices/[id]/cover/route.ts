@@ -1,10 +1,5 @@
-// Serve a levfaktura's attest page, the one that goes in front of it to
-// Fortnox, for the document panel.
-//
-// Drawn per request from the same facts the export uses (invoiceCoverFacts),
-// so what a reader checks in the panel is what Fortnox will get. Not stored:
-// once sent, the invoice can no longer change, so drawing it again says what
-// was sent, dated the day it went.
+// Serve a levfaktura's attest page, drawn per request from invoiceCoverFacts (as the export does)
+// and never stored.
 import { fail, gate } from "@/lib/api/guard";
 import { loadInvoiceFor } from "@/lib/api/supplier-invoice-access";
 import { invoiceCoverFacts, renderInvoiceCover } from "@/lib/server/invoice-cover";
@@ -15,7 +10,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const g = await gate();
   if (!g.ok) return g.res;
 
-  // As private as the invoice it describes.
   const access = await loadInvoiceFor(g.actor, id);
   if (!access.ok) return access.res;
 

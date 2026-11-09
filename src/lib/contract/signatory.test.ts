@@ -11,8 +11,6 @@ describe("rentalTitle", () => {
   });
 
   it("still gives a title when the renter is blank", () => {
-    // The archive list needs something to draw. A row titled "" is a row
-    // nobody can find again.
     expect(rentalTitle("")).toBe("Uthyrning");
     expect(rentalTitle("   ")).toBe("Uthyrning");
   });

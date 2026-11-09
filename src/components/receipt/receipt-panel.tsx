@@ -26,111 +26,35 @@ import {
 import { cn } from "@/lib/ui/utils";
 import { usePhone } from "@/lib/ui/media";
 
-// The receipt as part of the app frame rather than part of the page.
-//
-// Inside the page it was always a card in a column: it started below the page
-// header, ended above the page's bottom padding, and scrolled away with
-// everything else. Beside a voucher table that is the wrong thing. What a
-// receipt is for is being read *while* you work, so here it stands floor to
-// ceiling next to the main column, keeps still while the page scrolls under it,
-// and folds to a rail when the work needs the width instead.
-//
-// It's app chrome, but the receipt in it belongs to whichever page is open, so
-// a page declares one with <ReceiptPanelSource>; the column lives in AppShell
-// and renders nothing at all until some page has.
-
-/**
- * How long the fold takes, both ways. The same number as `--receipt-fold-ms` in
- * globals.css, which draws the motion; this side only has to keep the panel
- * mounted for exactly as long as it is moving.
- */
 const RECEIPT_FOLD_MS = 240;
 
 export const RECEIPT_COLLAPSED_COOKIE = "receipt_collapsed";
 export const RECEIPT_WIDTH_COOKIE = "receipt_width";
 
-/** Narrow enough is still an A4 page at fit-width; past 70% the page it sits
- *  beside stops being usable, which is the thing the panel exists to serve. */
 const MIN_WIDTH = 360;
 const MAX_FRACTION = 0.7;
 export const DEFAULT_WIDTH = 520;
 
-// The panel's own controls, matching the viewer's zoom toolbar in the opposite
-// corner so the two read as one set of tools rather than two.
 const FLOATING_BTN =
   "flex size-7 items-center justify-center rounded-control border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
 
-/**
- * What the dropzone calls the thing it is asking for.
- *
- * The panel was built for receipts and says so in every string, and "Dra hit
- * ditt kvitto" is the wrong sentence on the form that files a contract. Each
- * one falls back to the receipt wording, so the wizard this was written for
- * passes nothing and reads exactly as it did.
- *
- * Mostly the four the dropzone shows; the upload spinner's wording is not
- * among them because it cannot be reached from a page holding its file
- * locally: a picked file is a document to show, so the panel is a viewer by
- * then rather than a dropzone. `addLabel` is the one exception, read once
- * there is already something to show.
- */
 export interface UploadCopy {
-  /** The line above the button, on a screen wide enough to drag onto. */
   lead?: string;
-  /** The same line where dragging is not a thing, so it names the act instead. */
   leadShort?: string;
   fileTypes?: string;
   action?: string;
-  /**
-   * The floating button's title once a document is already showing, and what
-   * the panel says while a file is dragged over that document.
-   *
-   * Defaults to "Ersätt": most callers offer exactly one document and picking
-   * another swaps it. An utlägg's receipts are additive instead, and a button
-   * that adds while still saying it replaces would tell the submitter the
-   * wrong thing about to happen to the document they can already see.
-   */
   addLabel?: string;
 }
 
 type Source = {
-  /**
-   * What there is to read, in reading order, most often the utläggsräkning
-   * and the underlag behind it, sometimes just a receipt the page is still
-   * holding in the browser (the wizard keeps the picked file there until the
-   * utlägg is saved). The panel doesn't care which: showing a receipt is
-   * showing whatever is at these addresses, and "is there one" is this being
-   * non-empty.
-   */
   docs: ViewerDocument[];
-  /**
-   * Offered by a page where the receipt is still being put there, the wizard.
-   * With one of these the panel stays even with nothing to show, and the empty
-   * panel is the dropzone: "where the receipt lives" and "where you put it"
-   * are the same place, so neither needs a step of its own.
-   *
-   * `onFile` is called once per file, in the order they were picked or
-   * dropped. Without `multiple` that is only ever the first one.
-   */
   upload?: {
     onFile: (file: File) => void;
     uploading: boolean;
     copy?: UploadCopy;
     multiple?: boolean;
   };
-  /**
-   * Keeps the panel standing when there is no receipt, saying so in place of
-   * showing one. A page that reads an utlägg alongside its underlag wants the
-   * underlag's absence in the same place the underlag would have been, not as
-   * a notice somewhere in the body, which moves the whole layout depending on
-   * whether a receipt happens to exist.
-   */
   empty?: { title: string; description?: string };
-  /**
-   * Lets the reader put the documents in order and take them off, as a row of
-   * thumbnails along the panel's foot (document-strip.tsx). `keys` is one per
-   * entry in `docs`, in the same order.
-   */
   arrange?: Arrange;
 };
 
@@ -145,12 +69,9 @@ type Ctx = {
   source: Source | null;
   setSource: (s: Source | null) => void;
   collapsed: boolean;
-  /** `persist: false` for a fold the situation asked for, not the reader. */
   setCollapsed: (next: boolean, persist?: boolean) => void;
   width: number;
   setWidth: (w: number) => void;
-  /** The element at the panel's foot that ReceiptPanelFooter renders into,
-   *  while the panel is open. */
   footerSlot: HTMLElement | null;
   setFooterSlot: (el: HTMLElement | null) => void;
 };
@@ -163,48 +84,20 @@ function usePanel(): Ctx {
   return ctx;
 }
 
-/**
- * Whether the folded tab is currently hanging over the page. It's `fixed`, so
- * it takes no width of its own and would otherwise sit on top of whatever
- * reaches the right edge, so the main column has to keep clear of it.
- */
 export function useReceiptTabShowing(): boolean {
   const { source, collapsed } = usePanel();
   return Boolean(source) && collapsed && !isAwaitingUpload(source);
 }
 
-/**
- * Unfold the panel, for a page where choosing something to look at is asking
- * to see it: a row clicked in the levfaktura Inkorg. Not remembered, so it
- * does not overwrite the reader's own choice to keep the panel folded
- * elsewhere.
- */
 export function useRevealReceiptPanel(): () => void {
   const { setCollapsed } = usePanel();
   return useCallback(() => setCollapsed(false, false), [setCollapsed]);
 }
 
-/**
- * Whether the open page has a receipt panel at all, folded or not. The phone's
- * tab bar stands aside on such a page: the panel's own tab, and a form's action
- * bar, both want the foot of the screen.
- */
 export function useReceiptPanelActive(): boolean {
   return Boolean(usePanel().source);
 }
 
-/**
- * A page waiting for a receipt keeps the panel open. There'd be nothing to
- * fold away, and folding is how you'd lose the only way to add one.
- *
- * From md, where the panel is a column beside the form. Below it the panel is
- * the whole screen, and "keeps it open" turned into "cannot be left": a new
- * utlägg on a phone opened onto a full-screen dropzone with no close button,
- * with the form it belongs to behind it and no way through. The reasoning above
- * does not hold there either: the folded tab is still on the edge of the
- * screen, so the way to add one is a tap away rather than lost. See `open` and
- * `controls` in ReceiptPanelColumn.
- */
 const isAwaitingUpload = (source: Source | null) =>
   Boolean(source && source.docs.length === 0 && source.upload);
 
@@ -231,8 +124,6 @@ export function ReceiptPanelProvider({
     if (persist) writeCookie(RECEIPT_COLLAPSED_COOKIE, next ? "1" : "0");
   }, []);
 
-  // Written on pointer-up rather than on every move: a drag is a hundred
-  // widths, and only the one you let go on is a preference.
   const setWidth = useCallback((w: number) => setWidthState(w), []);
 
   const value = useMemo(
@@ -252,19 +143,6 @@ export function ReceiptPanelProvider({
   return <PanelCtx.Provider value={value}>{children}</PanelCtx.Provider>;
 }
 
-/**
- * Declares what the panel should be showing while this page is mounted.
- * Renders nothing. Nothing to show takes the panel away entirely, rather than
- * leaving the last page's receipt standing, unless `onFile` is given, in which
- * case an empty panel is an invitation to upload one.
- *
- * A page gives either a list of `documents` (an utlägg has two, its
- * utläggsräkning and the underlag behind it, and the panel pages between them)
- * or the single-document shorthands: `previewUrl` (one the page is still
- * holding), `documentUrl` (an address the page knows), `receiptId` (a receipt
- * in the archive, whose address is this component's to build), in the order
- * they win. `documents` wins over all of them.
- */
 export function ReceiptPanelSource({
   documents,
   receiptId = null,
@@ -280,54 +158,22 @@ export function ReceiptPanelSource({
   emptyDescription,
   arrange,
 }: {
-  /**
-   * Everything to read, in reading order. An empty list is "there is nothing",
-   * exactly as a null `documentUrl` is, so a page can hand this straight from
-   * whatever computes it without narrowing first.
-   */
   documents?: ViewerDocument[];
   receiptId?: string | null;
-  /**
-   * A stored document that is not a receipt, addressed outright: the rendered
-   * intäktsräkning behind an income report, served by its own route. The panel
-   * shows whatever is at the address; being a receipt was never the part that
-   * mattered to it.
-   */
   documentUrl?: string | null;
-  /**
-   * A receipt the page has but the archive doesn't yet: an object URL for a
-   * file just picked. Shown ahead of `receiptId`, so replacing a stored receipt
-   * shows the new one from the moment it is chosen rather than the old one
-   * until the save goes through.
-   */
   previewUrl?: string | null;
-  /** Describes whichever of the shorthands above was given. */
   mimeType?: string;
   filename?: string;
-  /** Makes the panel accept a receipt as well as show one. Called once per
-   *  file, so a page holding several does not have to unpack a list. */
   onFile?: (file: File) => void;
   uploading?: boolean;
-  /**
-   * Lets one pick or drop bring several files. Off by default: most pages hold
-   * exactly one document, and a picker that let you choose three would quietly
-   * keep the last. An utlägg's receipts are additive, so the wizard turns it on.
-   */
   multiple?: boolean;
-  /** What the dropzone should call the file, where it is not a receipt. See
-   *  UploadCopy. Read only while `onFile` is given. */
   uploadCopy?: UploadCopy;
-  /** Given, the panel stays when there is no receipt and says this instead. */
   emptyTitle?: string;
   emptyDescription?: string;
-  /** Ordering and removing, with a key per document. See Source. */
   arrange?: Arrange;
 }) {
   const { setSource } = usePanel();
 
-  // The same trick as `onFile`: the callbacks through a ref, so a page that
-  // writes them inline does not re-register the source on every render, and
-  // only the keys and the disabled flag decide when it does.
   const arrangeRef = useRef(arrange);
   useEffect(() => {
     arrangeRef.current = arrange;
@@ -344,9 +190,6 @@ export function ReceiptPanelSource({
     };
   }, [arrangeKey]);
 
-  // Through a ref, so a handler redefined on every render of the page doesn't
-  // re-register the source on every render, which would set state during
-  // render forever.
   const handler = useRef(onFile);
   useEffect(() => {
     handler.current = onFile;
@@ -354,9 +197,6 @@ export function ReceiptPanelSource({
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
 
-  // By value, for the same reason `docs` is: a page writes this object inline,
-  // so it is a new one every render, and registering the source on each would
-  // set state in the provider forever.
   const copyKey = JSON.stringify(uploadCopy ?? null);
   const copyRef = useRef(uploadCopy);
   useEffect(() => {
@@ -368,11 +208,6 @@ export function ReceiptPanelSource({
     documents ??
     (shorthand ? [{ src: shorthand, mimeType: mimeType ?? "application/pdf", filename }] : []);
 
-  // The list is compared by value, not by identity: a page that builds it
-  // inline builds a new array every render, and registering the source on each
-  // one would set state in the provider forever. The effect below reads the
-  // current list through a ref, kept fresh by this one, which runs first,
-  // and only the string decides whether it runs at all.
   const docsKey = JSON.stringify(docs);
   const docsRef = useRef(docs);
   useEffect(() => {
@@ -409,26 +244,11 @@ export function ReceiptPanelSource({
   return null;
 }
 
-/**
- * Something a page puts at the foot of the panel, under the document: what to
- * do with the thing being read, beside it, where the eye already is. The
- * levfaktura Inkorg's actions are the one use.
- *
- * A bar under the document rather than over it, because what a document is
- * read for (an invoice's total, its bankgiro, its OCR) is usually at the
- * bottom of the page, the part a floating toolbar would cover.
- *
- * Rendered through a portal, so it stays part of the page that declares it:
- * its state, its handlers and its translations are the page's own, and the
- * panel only lends it the place. Nothing while the panel is folded, which
- * takes the bar with it.
- */
 export function ReceiptPanelFooter({ children }: { children: React.ReactNode }) {
   const { footerSlot } = usePanel();
   return footerSlot ? createPortal(children, footerSlot) : null;
 }
 
-/** Rendered once, by AppShell, as the column to the right of the main one. */
 export function ReceiptPanelColumn() {
   const { source, collapsed, setCollapsed, width, setWidth, setFooterSlot } = usePanel();
   const t = useTranslations("receipt");
@@ -436,39 +256,20 @@ export function ReceiptPanelColumn() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState(false);
-  // How many elements deep a file drag is inside the panel. See dropHandlers.
   const dragDepth = useRef(0);
-  // Which document the thumbnails mark as showing, and the last jump they asked
-  // the viewer for. Only read where the page lets documents be arranged.
   const [currentDoc, setCurrentDoc] = useState(0);
   const [jumpTo, setJumpTo] = useState<{ index: number; seq: number } | null>(null);
 
-  // The fold, which is a piece of motion rather than a piece of state:
-  // `leaving` keeps the panel on screen for as long as it takes to slide off
-  // the edge, `entering` runs the same move backwards when it comes back, and
-  // `arriving` lets the tab it uncovers say, once, that it is where the receipt
-  // went. See the notes by @keyframes receipt-tab-in and receipt-panel-in.
-  //
-  // All three are set by the buttons rather than by watching `collapsed`,
-  // because only some folds are the reader's. A phone folds the panel by itself
-  // the moment a page brings one (see the effect below), and a wide screen
-  // opens it again when an upload lands; animating either would be an answer to
-  // a question nobody asked, on every page load.
   const [leaving, setLeaving] = useState(false);
   const [entering, setEntering] = useState(false);
   const [arriving, setArriving] = useState(false);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // Below md the panel is an overlay over the whole screen rather than a column
-  // beside the page, which changes what "open" is allowed to mean.
   const narrow = usePhone();
   const awaitingUpload = isAwaitingUpload(source);
   const open = !collapsed || (awaitingUpload && !narrow);
 
-  // What to do the moment the panel has something to show. Neither of these is
-  // persisted. It's the situation deciding, not the reader, and their own
-  // preference is waiting untouched for the next page.
   const was = useRef({ source: false, receipt: false, awaiting: false });
   useEffect(() => {
     const now = {
@@ -480,34 +281,17 @@ export function ReceiptPanelColumn() {
     const receiptArrived = now.receipt && !was.current.receipt;
 
     if (window.matchMedia("(max-width: 767px)").matches) {
-      // On a phone the panel is the whole screen, so it may only be open while
-      // it's being *used*, waiting for an upload. Otherwise it folds to the
-      // tab as soon as it appears, or as soon as a receipt lands in it.
-      //
-      // And a page that arrives waiting for one opens it, every time. The fold
-      // after an upload is state in the shell, which outlives the page, so the
-      // second utlägg made in a visit used to open folded: the picker that
-      // greeted the first one was gone, and the receipt was a tap on the tab
-      // that nobody knew to make. "Starts waiting" rather than "appears":
-      // going from an utlägg with a receipt straight to a new one swaps what
-      // the panel shows without it ever being empty in between.
       if ((appeared && !now.awaiting) || receiptArrived) setCollapsed(true, false);
       else if (now.awaiting && !was.current.awaiting) setCollapsed(false, false);
     } else if (receiptArrived && was.current.awaiting) {
-      // On a wide screen one you just uploaded stays up. The panel was open for
-      // you to put it there; folding it the instant it lands is not what a
-      // stored "collapsed" ever meant.
       setCollapsed(false, false);
     }
     was.current = now;
   }, [source, awaitingUpload, setCollapsed]);
 
-  // Let the panel go, one painted frame after it mounted at the edge.
-  //
-  // Two frames, not one: a single rAF can still be coalesced into the commit
-  // that mounted the panel, and a browser that has never painted the starting
-  // value has nothing to transition from, which is the bug this whole dance is
-  // about. The second frame guarantees the first has been seen.
+  // Two frames, not one: a single rAF can still be coalesced into the commit that
+  // mounted the panel, and a browser that has never painted the starting value has
+  // nothing to transition from, which is the bug this whole dance is about.
   useEffect(() => {
     if (!entering) return;
     let inner = 0;
@@ -520,8 +304,6 @@ export function ReceiptPanelColumn() {
     };
   }, [entering]);
 
-  // The overlay below md covers the whole screen, so the page behind it must
-  // not scroll under the finger.
   useEffect(() => {
     if (!open || !source) return;
     const mobile = window.matchMedia("(max-width: 767px)");
@@ -533,54 +315,10 @@ export function ReceiptPanelColumn() {
     };
   }, [open, source]);
 
-  // The drag does not go through React at all.
-  //
-  // It used to call `setWidth` on every pointermove, and `width` lives in the
-  // provider at the root of the app, so a single sweep of the handle was a
-  // hundred-odd context updates, each re-rendering every consumer, and the
-  // viewer's TransformWrapper re-measuring its subtree (getComponentsSizes,
-  // which reads layout) each time. Measured at ~5.4ms of main thread per
-  // pointermove, which a 120Hz trackpad turns into more work than there is
-  // time to do it in, and the drag stuttered.
-  //
-  // The width is one CSS custom property, and the panel is one element that is
-  // already carrying it. So the move handler writes that property directly and
-  // React is told once, on release. Nothing re-renders mid-drag; the browser
-  // does the one thing it cannot avoid, lay the column out, and does it once
-  // per frame rather than once per event.
   const panelRef = useRef<HTMLElement>(null);
   const tabRef = useRef<HTMLButtonElement>(null);
-  /**
-   * Set when the panel is folded away while the focus is still inside it, so
-   * the focus can be handed to the tab rather than dropped.
-   *
-   * Which is what happens every time somebody uses the collapse button: they
-   * are standing on a control that is about to leave the screen. Left alone,
-   * the focus falls to <body> and the next Tab starts again from the top of the
-   * document, which on a phone is a nav bar and half a page away from the thing
-   * they were reading.
-   *
-   * Read at the moment of closing rather than afterwards, because by the time
-   * an effect runs `inert` has already moved the focus out and the question
-   * cannot be asked any more.
-   */
   const handBackFocus = useRef(false);
 
-  /**
-   * The focus follows the panel out, onto the tab that brings it back.
-   *
-   * The tab is already mounted by now (`!open && tab` below, and `open` is
-   * false the moment the fold starts), so this is handing the focus from one
-   * shape of the same object to the other rather than parking it somewhere
-   * arbitrary.
-   *
-   * Only where the panel was holding the focus to begin with. Closed from a
-   * keyboard shortcut while somebody was typing in the form beside it, taking
-   * their focus away would be the rudeness this is meant to prevent.
-   *
-   * A layout effect, so it lands in the same frame the panel starts leaving in
-   * and there is never a paint with the focus on nothing.
-   */
   useLayoutEffect(() => {
     if (open || !handBackFocus.current) return;
     handBackFocus.current = false;
@@ -591,8 +329,6 @@ export function ReceiptPanelColumn() {
 
   const startDrag = (e: React.PointerEvent) => {
     e.preventDefault();
-    // The pointer will leave this 12px strip on the first move; capture keeps
-    // the events coming to it instead of to whatever it passes over.
     e.currentTarget.setPointerCapture(e.pointerId);
     const startX = e.clientX;
     const startWidth = widthRef.current;
@@ -600,16 +336,12 @@ export function ReceiptPanelColumn() {
     document.body.style.userSelect = "none";
     document.body.style.cursor = "col-resize";
 
-    // Coalesced to one write per frame. Pointer events arrive faster than
-    // frames on any modern trackpad, and every width between two paints is a
-    // width nobody sees.
     const paint = () => {
       frame.current = 0;
       widthRef.current = pending.current;
       panelRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
     };
 
-    // Dragging left widens it, hence the reversed delta.
     const onMove = (ev: PointerEvent) => {
       const max = Math.max(MIN_WIDTH, window.innerWidth * MAX_FRACTION);
       pending.current = Math.min(max, Math.max(MIN_WIDTH, startWidth + (startX - ev.clientX)));
@@ -624,8 +356,6 @@ export function ReceiptPanelColumn() {
       document.body.style.cursor = "";
       const final = pending.current;
       widthRef.current = final;
-      // Now, and only now, does React hear about it: one render, one cookie,
-      // and the inline style it renders agrees with what the drag was writing.
       setWidth(final);
       setDragging(false);
       writeCookie(RECEIPT_WIDTH_COOKIE, String(Math.round(final)));
@@ -640,14 +370,8 @@ export function ReceiptPanelColumn() {
   const upload = source.upload;
   const pick = () => fileInput.current?.click();
 
-  // Folding is the reader's, so it gets the motion: the panel leaves toward the
-  // edge, and the tab it uncovers marks itself once.
   const foldAway = () => {
     handBackFocus.current = panelRef.current?.contains(document.activeElement) ?? false;
-    // Whichever way it was already going, it is going this way now. An enter
-    // animation still running would otherwise hold the panel at its resting
-    // place, because a keyframe beats a transition, and it would vanish at the end of
-    // the fold instead of sliding out of it.
     setEntering(false);
     setLeaving(true);
     setArriving(true);
@@ -658,37 +382,18 @@ export function ReceiptPanelColumn() {
     );
   };
 
-  // And back, through the same transition the fold uses rather than an
-  // animation of its own.
-  //
-  // The panel would otherwise mount at its resting place, where a transition
-  // has no previous value to move from and nothing happens at all. It simply
-  // appears. So it mounts held at the edge instead, `entering` keeping it
-  // there, and is let go on the next frame: from there it is the identical
-  // move the fold makes, played the other way.
-  //
-  // `entering` is dropped by the effect below and not on a timer, because what
-  // has to happen first is a *paint*, a frame in which the browser has seen
-  // the panel at the edge. A timeout races that; two frames cannot.
   const unfold = () => {
     setLeaving(false);
     setEntering(true);
     setCollapsed(false);
   };
 
-  // Copied out of the FileList before anything else, because the input's own
-  // list is live and emptied the moment its value is cleared for the next pick.
   const take = (list: FileList | null | undefined) => {
     if (!upload || upload.uploading) return;
     const files = Array.from(list ?? []);
     for (const file of upload.multiple ? files : files.slice(0, 1)) upload.onFile(file);
   };
 
-  // The whole panel takes a drop, not only the empty one: with a receipt
-  // showing, a second dragged onto it is added (or replaces it, on a page that
-  // holds one). Counted rather than toggled, because dragleave fires every time
-  // the pointer crosses into a child, and a flag would flicker off over the
-  // viewer. Only file drags count, so the strip's own reordering is left alone.
   const isFileDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
   const dropHandlers = upload
     ? {
@@ -718,19 +423,10 @@ export function ReceiptPanelColumn() {
       }
     : {};
 
-  // No header, no title: a receipt is recognisably a receipt, and a bar naming
-  // it would cost 48px of the height it came here for. The controls it needs
-  // float in the corner the viewer's own toolbar doesn't use, styled to match
-  // it so the two read as one set of tools.
   const controls = (
-    // Absolute, so the panel's own safe-area padding does not move it: it adds
-    // the inset itself below md, where the panel covers the screen.
+    // Absolute, so the panel's own safe-area padding does not move it: it adds the
+    // inset itself below md, where the panel covers the screen.
     <div className="absolute left-2 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 flex items-center gap-1.5 md:top-2">
-      {/* On a phone this is drawn even while a receipt is still wanted. From md
-          it is not: there the panel is a column beside the form, so an open one
-          costs nothing and folding it away would only hide the dropzone the
-          page is asking you to use. Over the whole screen that same rule is a
-          view with no way out. */}
       {(!awaitingUpload || narrow) && (
         <button
           type="button"
@@ -740,8 +436,6 @@ export function ReceiptPanelColumn() {
           aria-expanded
           className={FLOATING_BTN}
         >
-          {/* Sideways out of the frame on a wide screen; closed outright on a
-              narrow one, where it was covering the page. */}
           <IconChevronRight className="hidden size-4 md:block" />
           <IconX className="size-4 md:hidden" />
         </button>
@@ -773,7 +467,6 @@ export function ReceiptPanelColumn() {
           />
           <DocumentStrip
             items={source.docs.map((d, i) => ({ ...d, key: arrange.keys[i] ?? d.src }))}
-            // Clamped, so taking off the last one never marks a tile that is gone.
             current={Math.min(currentDoc, source.docs.length - 1)}
             onSelect={(index) => {
               setCurrentDoc(index);
@@ -789,8 +482,6 @@ export function ReceiptPanelColumn() {
         <ReceiptViewer documents={source.docs} className="min-h-0 flex-1" />
       )
     ) : !upload ? (
-      // Nothing to show and nowhere to put one: the panel stays and says so,
-      // rather than vanishing and letting the page reflow around its absence.
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center text-muted">
         <IconReceipt className="size-8" />
         <p className="mt-3 text-sm font-medium text-foreground">{source.empty?.title}</p>
@@ -799,9 +490,6 @@ export function ReceiptPanelColumn() {
         )}
       </div>
     ) : (
-      // The empty panel *is* the dropzone. It fills the panel rather than sitting
-      // in it as a box: the whole column is the target, which is what someone
-      // dragging a photo across the screen is aiming at anyway.
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center transition-colors",
@@ -809,12 +497,6 @@ export function ReceiptPanelColumn() {
         )}
       >
         {upload?.uploading ? (
-          // The same tile the dropzone rests in, with the arrow swapped for the
-          // spinner, so starting an upload reads as this one thing getting to
-          // work, rather than a differently-coloured object appearing in its
-          // place. It used to be a brand-filled tile on `animate-pulse`, which
-          // flashed without turning: motion that says "look here" rather than
-          // "still going", and reduced-motion stopped it dead.
           <div role="status" className="flex flex-col items-center">
             <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
               <Spinner size="lg" />
@@ -827,8 +509,6 @@ export function ReceiptPanelColumn() {
             <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
               <IconUpload className="size-6" />
             </span>
-            {/* Dragging is a desktop idea; on a phone the button is the whole
-              interaction, so the wording changes with the screen. */}
             <p className="mt-4 hidden text-sm font-medium md:block">
               {upload?.copy?.lead ?? t("dropzone")}
             </p>
@@ -849,9 +529,6 @@ export function ReceiptPanelColumn() {
     <>
       {controls}
       {body}
-      {/* Over a receipt already showing, the drop needs saying: the empty
-          panel lights up as a whole, but a document fills this one edge to
-          edge and would show nothing. */}
       {over && source.docs.length > 0 && !upload?.uploading && (
         <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 text-center backdrop-blur-sm">
           <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">
@@ -860,8 +537,6 @@ export function ReceiptPanelColumn() {
           <p className="mt-4 text-sm font-medium">{upload?.copy?.addLabel ?? t("replace")}</p>
         </div>
       )}
-      {/* Where a page's ReceiptPanelFooter lands. Takes no room while none
-          does, so every other page's panel is exactly as it was. */}
       <div
         ref={setFooterSlot}
         className="shrink-0 border-t border-border bg-background empty:hidden"
@@ -875,40 +550,13 @@ export function ReceiptPanelColumn() {
           className="hidden"
           onChange={(e) => {
             take(e.target.files);
-            e.target.value = ""; // allow re-selecting the same file
+            e.target.value = "";
           }}
         />
       )}
     </>
   );
 
-  // Folded, it reserves no width at all. The page gets the whole frame, and
-  // the way back is on the edge of the screen. Fixed rather than a column in
-  // the flex row, so nothing has to be given up to keep it reachable.
-  //
-  // It says the word. Two stacked glyphs on a 28px strip in `text-muted` read as
-  // a seam in the layout rather than as a control. The chevron only means
-  // "something is over there" to someone who already knows what, and on a phone
-  // this is the *only* thing anyone ever sees of the receipt, because the panel
-  // folds itself away the moment a page brings one. So: the word, and the
-  // outlined-accent register the app already uses for a control that must be
-  // findable without being the loudest thing on the page (see `accentOutline` in
-  // ui/button.tsx, accent rather than brand, because a border owes 3:1 and the
-  // brand pink cannot pay it).
-  //
-  // Which edge, though, is not the same question at both widths. On a wide
-  // screen it is the right one, because that is the side the panel opens into
-  // and the tab is the panel's own edge showing. A phone has no such side, since
-  // the panel there is the whole screen, so the right edge is just the middle of
-  // the reading column, out of reach of the thumb holding the device and on top
-  // of whatever the page put there. The bottom is where a phone keeps the thing
-  // you can pull up, so that is where this goes: one element, laid out the way
-  // each width wants it rather than one width's answer worn at both.
-  // A phone's way back to the panel: a round button in the bottom corner, the
-  // band a thumb reaches, taking a corner rather than the strip across the
-  // whole foot that this replaced. Gone while a text field has focus, which is
-  // while the keyboard is up and the corner it would take is the last of the
-  // screen. See the `typing` variant in globals.css.
   const fab = (
     <button
       type="button"
@@ -916,11 +564,10 @@ export function ReceiptPanelColumn() {
       aria-label={t("expand")}
       title={t("expand")}
       aria-expanded={false}
-      // The corner inline rather than as utilities: a stylesheet that had not
-      // caught up with them (the dev server has served stale CSS before, see
-      // next.config.ts) left the button at a fixed element's static position,
-      // the top left of the frame. A position is the one thing a floating
-      // button cannot be without.
+      // The corner inline rather than as utilities: a stylesheet that had not caught
+      // up with them (the dev server has served stale CSS before, see next.config.ts)
+      // left the button at a fixed element's static position, the top left of the
+      // frame.
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)", right: "1rem" }}
       className={cn(
         "fixed z-30 flex size-12 typing:hidden items-center justify-center rounded-full border border-accent bg-background text-accent shadow-[var(--shadow-pop)] transition-colors hover:bg-accent-soft md:hidden print:hidden",
@@ -937,60 +584,25 @@ export function ReceiptPanelColumn() {
       type="button"
       onClick={unfold}
       title={t("expand")}
-      // No aria-label: the tab now says what it is, and a label of "Visa
-      // kvittot" over a face reading "Kvitto" is the mismatch WCAG 2.5.3 is
-      // about: someone driving this by voice says what they can see. The
-      // content names it, aria-expanded says what pressing it does, and the
-      // title carries the longer phrasing for a pointer.
       aria-expanded={false}
       className={cn(
-        // From md only. On a phone it was a strip fixed across the foot of
-        // the screen, a row of height over every form and over the keyboard
-        // while typing in one. The phone has the round button in the corner
-        // instead (`fab` above).
         "fixed z-30 hidden items-center justify-center gap-2 md:flex print:hidden",
         "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4",
-        // From md: the tab on the right, beside the column it opens into.
-        // Every override is same-family on purpose, because `cn` joins rather than
-        // merges, so `md:bottom-auto` beating `bottom-0` is Tailwind's variant
-        // ordering doing it, not luck with `inset-*` against `right-*`.
         "md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2",
         "md:flex-col md:gap-1.5 md:rounded-l-panel md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
-        // The right edge stays borderless at both widths. It is off-screen on
-        // a phone and against the frame's edge on a desktop.
         "border-b-0 border-l-0 border-r-0 border-t border-accent md:border-b md:border-l",
         "bg-background text-accent shadow-[var(--shadow-card)] transition-colors hover:bg-accent-soft",
         arriving && "receipt-tab-arriving",
       )}
     >
       <IconReceipt className="size-5 shrink-0 md:size-4" />
-      {/* Sideways from md, where the tab is 38px wide and the word is the point
-          of it. `writing-mode` and not a rotation: rotating would leave the
-          glyphs laid out horizontally in a box the wrong shape, and the parent
-          would still be sized for it. */}
       <span className="text-sm font-medium leading-none tracking-wide md:text-[11px] md:[writing-mode:vertical-rl]">
         {t("tab")}
       </span>
-      {/* Points the way out of the edge it sits on: up off the bottom of a
-          phone, sideways off the right of a desktop. Last in the DOM because
-          that is the order the strip reads in. `order-first` puts it back on
-          top in the column, where the affordance wants to be above the label
-          rather than under it. */}
-      {/* One chevron turned, rather than two icons swapped at the breakpoint:
-          `rotate-90` on the down-chevron is already how this app writes a
-          left-pointing one (shell/app-shell.tsx, the "back to app" link). */}
       <IconChevronDown className="size-4 shrink-0 rotate-180 md:order-first md:rotate-90" />
     </button>
   );
 
-  // Open, it's one element in both layouts, not one per breakpoint: two would
-  // both mount, and each would load and parse the receipt for itself.
-  //
-  // And one element across the fold, too: the aside keeps its place in this
-  // tree while it is leaving, so React keeps the instance and the browser has
-  // something to interpolate from. Returning the tab *instead of* the panel
-  // would mount a new node already sitting off-screen, and there would be no
-  // motion at all, only a disappearance, which is the thing being fixed.
   const leavingNow = leaving && !open;
 
   return (
@@ -998,79 +610,21 @@ export function ReceiptPanelColumn() {
       {(open || leavingNow) && (
         <aside
           ref={panelRef}
-          // `inert`, not `aria-hidden`. The panel stays mounted while it slides
-          // out, and the control that folded it away is still inside it holding
-          // the focus, so `aria-hidden` was hiding a focused element from
-          // assistive technology. Browsers refuse that outright and log it.
-          //
-          // `inert` is the attribute that means what was meant here: out of the
-          // accessibility tree, out of the tab order, and unfocusable, so the
-          // browser moves the focus out for us rather than being asked to
-          // pretend a focused thing is not there.
           inert={leavingNow}
           {...dropHandlers}
-          // The drag writes this same property straight onto the node; this is
-          // the value it starts from and the value React puts back on release.
           style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
           className={cn(
-            // Below md it covers the screen; from md it's a column in the frame.
-            // Covering the screen, it keeps clear of the home indicator, so the
-            // document strip along its foot and the viewer's toolbar stay
-            // above it rather than under it. And clear of the status bar, for
-            // when it is installed to a home screen and the page starts under
-            // the clock.
             "flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 print:hidden",
-            // The motion lives in globals.css beside its own keyframes: the
-            // transition that folds it away, the animation that brings it back,
-            // and the one duration both are timed to.
             "receipt-panel fixed inset-y-0 left-0 right-0 z-40",
-            // Promised while it moves, either way, and taken back after. See
-            // .receipt-panel-moving.
             (entering || leavingNow) && "receipt-panel-moving",
             leavingNow
-              ? // Out towards whichever edge the tab is on: down off the bottom
-                // of a phone, right off the side of a desktop. The panel and
-                // the tab are the same object at two sizes, and a panel that
-                // left one way to become a tab somewhere else would say they
-                // were not.
-                //
-                // On the way out it is `fixed` at both widths, which is what
-                // makes the desktop case cost nothing: out of the flex row, so
-                // the main column takes the width back in the same frame the
-                // panel starts sliding, and the panel itself moves on the
-                // compositor. Shrinking it in place would have been the other
-                // reading, but that resizes the viewer 12 times on the way,
-                // the exact re-measure the drag above goes to such lengths to
-                // avoid. Nothing in here is clickable while it leaves.
-                // From md it leaves from under the header, not over it: 65px is
-                // the header's 64 and its rule (app-header.tsx).
-                "pointer-events-none translate-y-full md:top-[65px] md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
-              : // md:relative, not md:static: the drag handle and the fold
-                // button are positioned against this panel, and `static` would
-                // hand them to whatever ancestor happened to be positioned
-                // instead, which put the handle somewhere off the panel
-                // entirely, with nothing to grab.
-                // No height of its own: it stretches to the row under the
-                // header. It was `h-screen` when it stood the window's full
-                // height, which under the header ran its foot 65px off the
-                // bottom.
-                cn(
+              ? "pointer-events-none translate-y-full md:top-[65px] md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
+              : cn(
                   "md:relative md:inset-auto md:z-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
-                  // In its place in the layout from the first frame, the main
-                  // column giving up the width at once, but held out at the
-                  // edge until the frame after, so there is something to come
-                  // back from.
                   entering && "translate-y-full md:translate-x-full md:translate-y-0",
                 ),
           )}
         >
-          {/* The drag handle is the border itself, widened to something a
-              pointer can actually catch, and it only shows what it is on hover.
-              A permanent stripe down the middle of the screen would read as a
-              divider between two apps rather than something to pull. It sits
-              fully inside the panel: half of it hanging over the edge would be
-              clipped by the shell's own overflow, leaving half the target it
-              looks like. */}
           <div
             onPointerDown={startDrag}
             role="separator"

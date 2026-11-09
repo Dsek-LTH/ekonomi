@@ -3,9 +3,7 @@
 import { useRef } from "react";
 import { useTranslations } from "next-intl";
 
-// Clamp a fully-entered 2-digit segment to [01, max]. Only runs when both
-// digits are present so partial input (e.g. "3" while still typing "03") is
-// left untouched.
+// Clamp a fully-entered 2-digit segment to [01, max]; partial input is left alone.
 function clamp2(twoDigits: string, max: number): string {
   const n = parseInt(twoDigits, 10);
   if (n < 1) return "01";
@@ -40,8 +38,7 @@ export function DateInput({
   className,
   ...props
 }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">) {
-  // The mask itself is ISO in every language; only the letters standing in for
-  // year/month/day change.
+  // The mask is ISO in every language; only the letters for year/month/day change.
   const t = useTranslations("common");
   const ref = useRef<HTMLInputElement>(null);
 

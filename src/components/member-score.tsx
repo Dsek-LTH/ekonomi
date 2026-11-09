@@ -1,13 +1,7 @@
 "use client";
 
-// A redovisningsbetyg on screen: the number, and the breakdown that says why.
-// The same panel on /profile, for the member's own, and on the profile's
-// Medlemmar tab for the treasury. See lib/domain/member-score.ts for what the
-// number measures.
-//
-// The breakdown is not optional decoration. A number nobody can explain reads
-// as a verdict; a number with "these two waited a month" under it reads as
-// something to do.
+// A redovisningsbetyg on screen: the number and the breakdown that says why. Used on /profile and the
+// Medlemmar tab. See lib/domain/member-score.ts for what it measures.
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
@@ -21,10 +15,7 @@ import {
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 
-/**
- * The colour a score is drawn in: red at 0, amber at 50, green at 100, mixed
- * from the theme's own tokens so it follows light and dark.
- */
+/** The colour a score is drawn in: red at 0, amber at 50, green at 100, mixed from the theme's tokens. */
 function scoreColor(value: number): string {
   const v = Math.min(100, Math.max(0, value));
   return v < 50
@@ -32,14 +23,7 @@ function scoreColor(value: number): string {
     : `color-mix(in oklch, var(--color-success) ${(v - 50) * 2}%, var(--color-warning))`;
 }
 
-/**
- * A score from 0 to 100, or "Ny" while there is nothing to go on yet.
- *
- * The figure is filled with a short gradient along the scale, ending at its
- * own colour, so a high score glows green and a low one red. `quiet` for a
- * list of members, where it sits beside every name: smaller, so a page of
- * them reads as a column of figures and not as a row of prizes.
- */
+/** A score from 0 to 100, or "Ny" while there is nothing to go on. `quiet` is smaller, for member lists. */
 export function ScoreNumber({
   value,
   size = "sm",
@@ -90,10 +74,7 @@ function partDetail(t: ReturnType<typeof useTranslations>, key: SubScoreKey, s: 
   }
 }
 
-/**
- * The whole of one member's score. `own` when it is the reader's, which is
- * what decides whether what waits gets a button to go and do it.
- */
+/** The whole of one member's score. `own` when it is the reader's, which gives what waits a button. */
 export function MemberScorePanel({ score, own }: { score: MemberScore; own: boolean }) {
   const t = useTranslations("score");
   const { date } = useFormat();
@@ -257,7 +238,6 @@ const kindKey = (i: ScoreItem) =>
 const recordHref = (record: "expense" | "invoice", id: string) =>
   record === "invoice" ? `/invoices/${id}` : `/expenses/${id}`;
 
-/** Where to go to send it: the draft's own form, or a new utlägg on the card
- *  purchase, the way Bankhändelser's Redovisa opens one. */
+/** Where to go to send it: the draft's own form, or a new utlägg on the card purchase (as Bankhändelser's Redovisa). */
 const waitingHref = (i: ScoreItem) =>
   i.kind === "cardPurchase" ? `/expenses/new?txn=${i.id}` : `/expenses/${i.id}/edit`;

@@ -9,17 +9,9 @@ import { expenseLabel } from "@/lib/domain/reference";
 const bookkeeping = () => gate(canBookkeep, "auth.denied");
 
 /**
- * PATCH /api/bank/:id: body `{ cardId: string | null }`. Put a purchase on a
- * section card, or take it off one. Bookkeeper/admin only.
- *
- * The import can only place a row on a card when the Referens ends in a K####
- * token, and plenty of them don't. Such a purchase belongs to nobody: it never
- * reaches a member's own feed, so the one person who could account for it never
- * sees it. This is how it gets there.
- *
- * `cardLast4` follows the card rather than staying at whatever the CSV said. It
- * is what the row shows and what the search matches, so leaving it behind would
- * mean a purchase that reads as one card's and counts as another's.
+ * PATCH /api/bank/:id: body `{ cardId: string | null }`. Put a purchase on a section card, or take it off one.
+ * Bookkeeper/admin only. For purchases the import could not place (no K#### token in the Referens). `cardLast4`
+ * follows the card, or a row would read as one card's and count as another's.
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -35,10 +27,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   });
   if (!txn) return fail(404, "bank.txnNotFound");
 
-  // A match is only allowed between an utlägg and a transaction on the
-  // submitter's own card (see /api/expenses/[id]/match). Moving the card under
-  // a matched row would leave a match nothing could have made, so the match
-  // comes off first, deliberately, the same way a deletion asks for.
+  // A match needs the submitter's own card (see /api/expenses/[id]/match), so moving the card under a matched row
+  // would leave an impossible match: it comes off first.
   if (txn.matchedExpense) {
     return fail(409, "bank.txnMatched", {
       values: { reference: expenseLabel(txn.matchedExpense) },

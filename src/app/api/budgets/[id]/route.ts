@@ -7,25 +7,7 @@ import { PatchBudget } from "@/lib/api/schemas/budget";
 import { allowBudgetWrite } from "@/lib/budget/access";
 import { getEvaluatedBudget } from "@/lib/data/budget";
 
-// GET /api/budgets/[id]: one budget, evaluated, with the year's outcome beside
-// it. The loading lives in lib/data/budget.ts, which the page server-renders
-// from; this is the same thing over HTTP, for the client to re-fetch after a
-// write.
-//
-// Two things can be left out of it, and the page's own re-fetch after a write
-// leaves out both:
-//
-//   ?actuals=0    the year's outcome. The ledger cannot have changed because
-//                 someone typed a figure into a budget, and reading it is the
-//                 most expensive thing here by a distance: a group-by over the
-//                 whole financial year, paid on every save.
-//   ?evaluated=0  what the formulas come to. The budget screen works those out
-//                 in the browser for every cell it commits already, so sending
-//                 them means evaluating the budget twice and putting every
-//                 line's figure in the response for one of the two.
-//
-// Both default to on, because a caller that has neither in hand, anything
-// reading a budget cold, needs them.
+// ?actuals=0 skips the year's outcome (a costly group-by) and ?evaluated=0 skips formula results (the client computes them). Both default to on.
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate(canAccessBudget);
@@ -40,9 +22,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   return NextResponse.json(budget);
 }
 
-// PATCH /api/budgets/[id]: rename / move year (admin, unlocked), or lock and
-// unlock (skattmästare). The two go through different gates, so they are handled
-// apart rather than folded into one permission check.
+// Rename or move year is admin-only on an unlocked budget, lock and unlock is skattmästare: different gates.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const parsed = await parseBody(req, PatchBudget);
@@ -54,14 +34,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!g.ok) return g.res;
 
     const lock = body.locked;
-    // This branch runs before `allowBudgetWrite`, which is what establishes the
-    // budget exists everywhere else in this file, so locking one that isn't
-    // there reached Prisma unguarded and came back a 500.
+    // Runs before allowBudgetWrite, so a missing budget would reach Prisma and 500.
     const budget = await orNotFound(
       () =>
         prisma.budget.update({
           where: { id },
-          // Cleared together, so "locked" is never half-true.
           data: lock
             ? { lockedAt: new Date(), lockedById: g.actor.id }
             : { lockedAt: null, lockedById: null },
@@ -79,23 +56,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   if (body.name !== undefined) data.name = body.name;
 
-  // The year is more than a label: it decides which financial year's outcome the
-  // budget is held against. It moves this budget alone. Another budget of the
-  // same year is a separate thing and stays where it is.
+  // The year decides which financial year's outcome the budget is held against.
   if (body.year !== undefined) data.year = body.year;
 
-  // A plain date, so it is read back as the day the meeting sat rather than
-  // that day shifted by whatever the reader's timezone is. Sent as YYYY-MM-DD
-  // and stored in a DATE column; the UTC midnight in between is the only way to
-  // get a Date object through Prisma without a zone deciding which day it means.
+  // A plain date: stored as UTC midnight so the reader's timezone cannot shift the day.
   if (body.adoptedAt !== undefined) {
     data.adoptedAt = body.adoptedAt === null ? null : new Date(`${body.adoptedAt}T00:00:00Z`);
   }
 
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
 
-  // `allowBudgetWrite` has established it exists; this covers the gap between
-  // that statement and this one.
   const budget = await orNotFound(
     () => prisma.budget.update({ where: { id }, data }),
     "budget.notFound",
@@ -104,9 +74,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json(budget);
 }
 
-// DELETE /api/budgets/[id]: admin only, and never a locked one. Nothing hangs
-// off a budget, so there is no last-one-standing rule to enforce: a section may
-// have no budget as easily as it may have five.
+// DELETE /api/budgets/[id]: admin only, never a locked budget.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await allowBudgetWrite({ budget: id });

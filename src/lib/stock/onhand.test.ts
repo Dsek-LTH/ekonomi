@@ -52,8 +52,6 @@ describe("onHand", () => {
   });
 
   it("keeps sealed bottles and open ones apart", () => {
-    // Six sealed; one goes out and comes back opened at 60; another goes out
-    // at 60 and comes back at 20.
     const state = onHand(vodka, [
       move({ kind: "PURCHASE", units: 6 }),
       move({ kind: "CHECKOUT", units: -1 }),
@@ -73,8 +71,6 @@ describe("onHand", () => {
   });
 
   it("values the sealed bottles and nothing else", () => {
-    // Opening one is the sealed count falling with no purchase behind it, so
-    // the write-off needs no rule of its own.
     const state = onHand(vodka, [
       move({ kind: "PURCHASE", units: 6, valueDeltaOre: 149_400 }),
       move({ kind: "CHECKOUT", units: -1, valueDeltaOre: -24_900 }),
@@ -123,8 +119,6 @@ describe("impossible", () => {
   });
 
   it("accepts bottles that are open but empty of value", () => {
-    // No sealed bottles and one open: nothing is worth anything, and that is
-    // an ordinary Sunday rather than a fault.
     expect(impossible(vodka, onHand(vodka, [move({ open: { 20: 1 } })]))).toBe(false);
   });
 });
@@ -139,8 +133,6 @@ describe("purchasedMl", () => {
   ];
 
   it("counts what was bought and nothing else", () => {
-    // The number the form asks for is inkopt volym. Servings are turnover on
-    // that form and waste is neither, so neither may reach this total.
     expect(purchasedMl(cans, year)).toBe((24 + 48) * 330);
   });
 
@@ -167,8 +159,6 @@ describe("pureAlcoholMl", () => {
 
 describe("alcoholPerKrona", () => {
   it("is pure alcohol per krona of one whole unit", () => {
-    // 700 ml at 40 % is 280 ml pure alcohol; a bottle costing 200 kr gives
-    // 28 cl for that money, so 0,14 cl for one krona of it.
     expect(alcoholPerKrona({ ...vodka, costPriceOre: 20_000 })).toBeCloseTo(0.14, 6);
   });
 

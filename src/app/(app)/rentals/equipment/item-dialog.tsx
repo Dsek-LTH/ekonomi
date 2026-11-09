@@ -1,17 +1,6 @@
 "use client";
 
-// One dialog for both jobs: `item` is null when adding and a row when editing.
-//
-// The same shape as the stock screen's ProductDialog, which does the same job
-// for the same kind of thing, and for the same reason: a catalogue entry has
-// more fields than fit comfortably beside a list, and a create form and an edit
-// form that drift apart are two places to fix the same mistake.
-//
-// It replaces an inline block that could only add. Editing was not merely
-// missing from the screen, it was unreachable: the API has taken a PATCH for
-// every field since the start, and nothing sent one, so a mistyped replacement
-// value could only be corrected by deleting the row and losing the trail from
-// every contract that had quoted it.
+// One dialog for both jobs: `item` is null when adding and a row when editing (same shape as the stock ProductDialog).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -46,8 +35,7 @@ export function ItemDialog({
 
   const count = Number(quantity);
 
-  // One expression, read twice: it disables the button and it says why. A form
-  // that computes those separately can end up with a dead button and no reason.
+  // One expression disables the button and says why, so they cannot disagree.
   const blocker =
     name.trim() === ""
       ? t("blocker.name")
@@ -61,8 +49,7 @@ export function ItemDialog({
     name: name.trim(),
     description: description.trim() || null,
     quantity: count,
-    // Blank means "priced case by case", which is a real answer and not a zero.
-    // A zero would print "0,00 kr per dag" on a contract.
+    // Blank means "priced case by case", not zero (a zero would print "0,00 kr per dag").
     dailyPriceOre: dailyPrice.trim() === "" ? null : parseOre(dailyPrice),
     replacementValueOre: parseOre(replacement),
   };
@@ -132,10 +119,6 @@ export function ItemDialog({
             />
           </Field>
 
-          {/* Editing an item cannot reach a contract that already quotes it: a
-              rental line copies the description and the values at the moment it
-              is drawn. Said here because it is the question somebody hesitates
-              over before changing a price. */}
           {item && item.usedBy > 0 && <p className="text-xs text-muted">{t("editSafe")}</p>}
         </div>
       </ModalBody>

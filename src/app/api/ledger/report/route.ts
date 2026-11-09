@@ -1,9 +1,6 @@
-// Resultat- and balansrapport over the Fortnox ledger mirror. Returns the
-// available financial years too, so the report page is self-contained.
-// Auth: any signed-in user (it's the org's own accounting).
-//
-// The period comes from lib/ledger/period.ts, shared with /api/ledger/trend so
-// the table and the charts cannot end up describing different spans.
+// Resultat- and balansrapport over the Fortnox ledger mirror, plus the available financial years.
+// Any signed-in user. The period comes from lib/ledger/period.ts, shared with /api/ledger/trend.
+
 import { NextResponse } from "next/server";
 import { gate } from "@/lib/api/guard";
 import { periodOf, resolveLedgerPeriod } from "@/lib/ledger/period";
@@ -19,12 +16,7 @@ import type { ReportKind } from "@/lib/ledger/bas";
 import { prisma } from "@/lib/server/db";
 import { isoDay } from "@/lib/domain/date";
 
-/**
- * What the printed report's header says about where it came from, as Fortnox
- * prints it: the company, its org number, and the last voucher in each series
- * of the year ("A495 B123"), which is how a reader tells how far the books had
- * got when the report was taken.
- */
+/** What the printed report's header says: company, org number and the last voucher per series ("A495 B123"). */
 async function reportMeta(financialYear: number) {
   const [conn, latest] = await Promise.all([
     prisma.fortnoxConnection.findFirst({
@@ -52,8 +44,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const period = await resolveLedgerPeriod(url);
   if (!period) {
-    // Still the whole shape the page reads, empty: it reaches for `budgets`
-    // whether or not there is a report, and crashed on a ledger never synced.
+    // The whole shape the page reads, empty (it reaches for `budgets` regardless).
     return NextResponse.json({
       years: [],
       year: null,
@@ -73,11 +64,8 @@ export async function GET(req: Request) {
   const compare: ComparisonMode =
     compareParam === "PRIOR" || compareParam === "BUDGET" ? compareParam : "NONE";
 
-  // Budget comparison only makes sense for the result report. Balance-sheet
-  // accounts aren’t budgeted. The caller may name which budget to compare
-  // against, and it need not be one of this year’s (see budgetOptions); the
-  // whole list travels back either way, since that is what the report page
-  // builds its picker from.
+  // Budget comparison is for the result report only. The named budget need not be this year's
+  // (see budgetOptions); the whole list travels back for the picker.
   const budgets = kind === "RESULT" ? await budgetOptions() : [];
   let comparison: Map<string, number> | null = null;
   let comparisonApplied: ComparisonMode = "NONE";
@@ -92,10 +80,8 @@ export async function GET(req: Request) {
     else budget = null;
   }
 
-  // Last year's figures as columns of their own (Period föregående år and the
-  // rest), asked for with `prior=1`. Result report only: the balance report's
-  // prior year is its comparison above. Two windows of the prior year: the
-  // period's own days, and its year so far.
+  // Last year's figures as extra columns (`prior=1`), result report only: the period's own days and
+  // its year so far.
   const wantsPrior = kind === "RESULT" && url.searchParams.get("prior") === "1";
   const [prior, priorAccumulated] = wantsPrior
     ? await Promise.all([
@@ -124,19 +110,17 @@ export async function GET(req: Request) {
     years,
     year: selected,
     period: periodOf(period),
-    // The period as days, for the printed header ("2026-01-01 - 2026-03-31").
+    // The period as days, for the printed header.
     periodDates: {
       from: isoDay(period.from),
       to: isoDay(period.to),
     },
     meta,
     report,
-    // What was actually applied: asking for a comparison that has no data
-    // (an unsynced prior year, a year with no budget) reports back as NONE.
+    // What was applied: a comparison with no data reports back as NONE.
     comparison: comparisonApplied,
     comparisonRequested: compare,
-    // Whether last year's columns could be filled: false when they were asked
-    // for and the prior year is not synced.
+    // False when last year's columns were asked for and the prior year is not synced.
     priorAvailable: wantsPrior ? prior != null : null,
     budgets,
     budget,

@@ -1,9 +1,6 @@
 "use client";
 
-// The parts a record's card is built from, shared by the two pages laid out as
-// a document: an utlägg (expenses/[id]) and a levfaktura (invoices/[id]). The
-// fact strip, the ruled sections, the cost distribution and the voucher read
-// the same on both, so they are drawn by the same code.
+// Parts shared by the expense and levfaktura pages (expenses/[id], invoices/[id]).
 import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 import { Amount } from "@/components/ui/amount";
@@ -13,13 +10,7 @@ import { cn } from "@/lib/ui/utils";
 /** The small capitals every label and column head on the card is set in. */
 export const LABEL = "text-xs font-medium text-muted";
 
-/**
- * One part of the card below the strip, ruled off from the part above.
- *
- * `flush` drops the side padding for a table that runs to the card's edges and
- * carries the inset on its own first and last cells, so its columns still line
- * up with the text of every other section.
- */
+/** One ruled section of the card. `flush` drops side padding for a table running to the card's edges. */
 export function InspectorSection({
   title,
   aside,
@@ -33,8 +24,7 @@ export function InspectorSection({
   aside?: React.ReactNode;
   action?: React.ReactNode;
   flush?: boolean;
-  /** The last row of a table carries 8px of padding of its own, so the
-   *  section keeps only 8px under it, to match the 16px above the heading. */
+  /** The last table row has 8px padding of its own, so the section keeps only 8px under it. */
   endsInTable?: boolean;
   children: React.ReactNode;
 }) {
@@ -54,10 +44,7 @@ export function InspectorSection({
   );
 }
 
-/**
- * One cell of the fact strip: a label in small capitals, the value under it.
- * `truncate` for a value that is plain text and may run long (a unit's name).
- */
+/** One cell of the fact strip. `truncate` for plain text that may run long. */
 export function StripCell({
   label,
   className,
@@ -99,25 +86,9 @@ export interface AllocationLine {
 }
 
 /**
- * The cost distribution as an invoice's line items: cost centre, amount, who
- * attested it, and the sum as the last line.
- *
- * The column heads are the section's title, the way they are on paper. The
- * total is added up from the rows rather than copied from the record, so a
- * split that does not match the amount above is visible as two numbers that
- * disagree.
- *
- * On a phone the attest column is dropped and its content gets a line of its
- * own under the row, across both columns. Three columns on 329px of card left
- * the name about 110px, which for a Swedish compound is the first syllable and
- * an ellipsis. It used to sit under the name inside the first column, which
- * was fine for a name but left no room for a row's own "Attestera" or "Dra
- * tillbaka" beside it. The amount stays in its own column at every width,
- * since it is the one thing here that must never be cut.
- *
- * The attest is cut with an ellipsis rather than wrapped, so it is drawn in a
- * box that is `p-0.5` bigger than it looks (`-m-0.5` takes the room back).
- * Without it the clip also cut off a button's focus ring at the box's edge.
+ * The cost distribution as line items with the sum as the last line. The total is added up from the
+ * rows, so a mismatching split is visible. On a phone the attest column becomes a line under the row.
+ * The attest box is `p-0.5` bigger than it looks (`-m-0.5`) so a button's focus ring is not clipped.
  */
 const ATTEST_BOX = "-m-0.5 truncate p-0.5";
 
@@ -126,8 +97,6 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
   const total = lines.reduce((sum, l) => sum + (l.amount ?? 0), 0);
 
   return (
-    // pb-2, not pb-4: the last row carries 8px of its own padding, and the
-    // two together left more room under the table than above it.
     <section className="border-t border-border px-inset pb-2 pt-4">
       <table className="w-full table-fixed text-sm">
         <caption className="sr-only">{caption}</caption>
@@ -142,8 +111,6 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
           {lines.map((l) => (
             <Fragment key={l.id}>
               <tr className="border-t border-border align-top">
-                {/* Less under the row on a phone, where the attest line below
-                    belongs to it. */}
                 <td className="pb-0.5 pr-3 pt-2 sm:pb-2">
                   <div className="truncate">
                     <span className="font-medium tabular-nums">{l.costCenterCode}</span>
@@ -172,8 +139,6 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
         </tbody>
         {lines.length > 1 && (
           <tfoot>
-            {/* The same hairline as between the rows, so the total reads as
-                the last line of the list, set apart by its weight alone. */}
             <tr className="border-t border-border font-semibold">
               <td className="py-2 pr-3">{t("total")}</td>
               <td className="whitespace-nowrap py-2 text-right tabular-nums">
@@ -202,19 +167,8 @@ export interface VoucherLine {
 }
 
 /**
- * A voucher's lines, laid out the way a ledger prints them, a column per
- * thing: account number, account name, cost centre, debit, credit.
- *
- * From sm, a column each for debit and credit. Below it the two become one
- * amount with the side written beside it: a line of a double entry is a debit
- * *or* a credit, never both, so nothing is dropped. The cost centre moves
- * under the account name on a phone for the same reason the allocation
- * table's attest does: a fifth column on 329px leaves the name nothing.
- *
- * Hidden with `hidden`/`sm:table-cell` on both the head and the body, so every
- * row shows the same set and the columns stay in step. The project column only
- * when a line has one: most vouchers carry none, and an empty column would
- * take the name's room for nothing.
+ * A voucher's lines laid out as a ledger prints them. Below sm, debit and credit become one amount
+ * with the side written beside it. The project column shows only when a line has one.
  */
 export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
   const t = useTranslations("common.voucher");

@@ -31,8 +31,7 @@ const base: Email = {
 
 describe("renderHtml", () => {
   it("escapes everything a member typed", async () => {
-    // A title and a comment are the submitter's and attester's own words, and
-    // a mail client renders whatever HTML arrives.
+    // Titles and comments are user words, and a mail client renders whatever HTML arrives.
     const html = await renderHtml({
       ...base,
       blocks: [

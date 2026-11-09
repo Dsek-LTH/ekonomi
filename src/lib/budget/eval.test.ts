@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluate, type LineItemInput, type VariableInput } from "./eval";
 
-// The spreadsheet engine behind every budget figure. A wrong answer here is a
-// wrong number in an adopted budget, so this covers the language itself, the
-// way references resolve across sheets, and what happens when they can't.
-
 // One line item on Sexmästeriet's 5010 account, unless a test says otherwise.
 const line = (expression: string, id = "li1", accountKey = "SEX01:5010"): LineItemInput => ({
   id,
@@ -12,16 +8,10 @@ const line = (expression: string, id = "li1", accountKey = "SEX01:5010"): LineIt
   expression,
 });
 
-// The value the engine computed for one line item.
 const valueOf = (expression: string, variables: VariableInput[] = []) =>
   evaluate(variables, [line(expression)]).lineItems.get("li1");
 
-// Kronor → öre. The engine reports money in öre (see the units note in
-// eval.ts), and a budget is written in kronor, so the assertions below say what
-// the sheet says and this converts. Written out rather than hidden inside
-// `valueOf`, because which numbers here are money and which are not (a
-// variable holding a headcount is not) is exactly the distinction the units
-// change turns on.
+// Kronor to öre: the engine reports money in öre (see the units note in eval.ts), a budget is written in kronor.
 const kr = (n: number) => Math.round(n * 100);
 
 describe("cell values", () => {
@@ -37,8 +27,6 @@ describe("cell values", () => {
   });
 
   it("reads a trailing percent as a fraction", () => {
-    // "67%" is how a share is written in the sheet; downstream formulas
-    // multiply by it.
     expect(valueOf("67%")).toBe(kr(0.67));
     expect(valueOf("100%")).toBe(kr(1));
   });
@@ -46,7 +34,6 @@ describe("cell values", () => {
   it("treats an empty or non-numeric cell as unresolved", () => {
     expect(valueOf("")).toBe(0);
     expect(valueOf("ungefär 300")).toBe(0);
-    // …and says which rows those were, so the sheet can flag them.
     expect(evaluate([], [line("")]).badLineItems).toEqual(["li1"]);
     expect(evaluate([], [line("350")]).badLineItems).toEqual([]);
   });
@@ -74,8 +61,7 @@ describe("arithmetic", () => {
   });
 
   it("refuses to divide by zero rather than returning Infinity", () => {
-    // Infinity would sum into an account total and poison the whole sheet;
-    // NaN marks the one row as bad instead.
+    // NaN marks the one row as bad (Infinity would poison the account total).
     expect(evaluate([], [line("=100/0")]).badLineItems).toEqual(["li1"]);
   });
 });
@@ -110,8 +96,6 @@ describe("account totals", () => {
   });
 
   it("lets a formula read another sheet's account total", () => {
-    // account(CC, KONTO) is what makes a rambudget row follow the sheet it
-    // summarises instead of being retyped.
     const result = evaluate(
       [],
       [
@@ -124,26 +108,21 @@ describe("account totals", () => {
   });
 
   it("reads an account the budget holds but put no rows on as zero", () => {
-    // A budget references accounts that are simply empty this year; that is
-    // not a broken formula.
+    // Empty accounts are not broken formulas.
     const result = evaluate([], [line("=account(SEX01, 9999)")], [], [], ["SEX01:9999"]);
     expect(result.lineItems.get("li1")).toBe(0);
     expect(result.badLineItems).toEqual([]);
   });
 
   it("flags an account the budget doesn't hold at all", () => {
-    // The other half of the rule above: nothing to sum *and* no such account is
-    // a reference to something that isn't there, which reads like any other
-    // unresolved name rather than like a confident zero.
+    // No rows and no such account: unresolved, not a confident zero.
     const result = evaluate([], [line("=account(SEX01, 9999)")], [], [], ["SEX01:5010"]);
     expect(result.lineItems.get("li1")).toBe(0); // unresolved cells hold 0
     expect(result.badLineItems).toEqual(["li1"]);
   });
 
   it("resolves a cost-centre code with Å/Ä/Ö or a hyphen in it", () => {
-    // Codes come from Fortnox and from the settings screen, both of which allow
-    // them (see POST /api/cost-centers). Lexed as an identifier, "NÄRU" became
-    // the two names N and RU and the lookup silently missed.
+    // Codes from Fortnox and settings may hold Ä: NÄRU must not lex as N and RU.
     const result = evaluate(
       [],
       [
@@ -168,8 +147,7 @@ describe("account totals", () => {
   });
 
   it("resolves a variable named with Å/Ä/Ö", () => {
-    // Variable names are never validated, only uppercased, so this is
-    // reachable, and half-lexing one resolved it to a different, missing name.
+    // Names are never validated, so ÅRSAVGIFT must not half-lex into another name.
     expect(valueOf("=ÅRSAVGIFT*2", [{ name: "ÅRSAVGIFT", expression: "150" }])).toBe(kr(300));
   });
 
@@ -200,8 +178,7 @@ describe("editorial adjustments", () => {
   });
 
   it("is visible to formulas that read the account", () => {
-    // The point of folding adjustments in before evaluation: a reference reads
-    // the figure in force, not the one originally adopted.
+    // A reference reads the figure in force, not the adopted one.
     const result = evaluate(
       [],
       [line("1000", "a", "SEX01:5010"), line("=account(SEX01, 5010)", "ref", "RAM:5010")],
@@ -250,17 +227,12 @@ describe("circular references", () => {
 });
 
 describe("a formula is read whole or not at all", () => {
-  // The parser used to stop wherever it stopped understanding and hand back
-  // what it had read so far. Every case below therefore had an answer, a
-  // plausible, confident, wrong one, and nothing anywhere said so.
-
   it("rejects a formula with something left over after it", () => {
     expect(valueOf("=350 kr")).toBe(0);
     expect(evaluate([], [line("=350 kr")]).badLineItems).toEqual(["li1"]);
   });
 
   it("rejects two numbers with nothing joining them", () => {
-    // Read as "100" before, which is the sort of thing you find in March.
     expect(evaluate([], [line("=100 200")]).badLineItems).toEqual(["li1"]);
   });
 
@@ -275,7 +247,6 @@ describe("a formula is read whole or not at all", () => {
   });
 
   it("still accepts the whole language it always did", () => {
-    // The strictness is only about what is left over, nothing valid moved.
     expect(valueOf("=(2+3)*4")).toBe(kr(20));
     expect(valueOf("= 350 * 2 ")).toBe(kr(700));
     expect(valueOf("=6×7")).toBe(kr(42));
@@ -285,8 +256,7 @@ describe("a formula is read whole or not at all", () => {
 
 describe("an unresolvable cell does not pass for zero", () => {
   it("makes the row that reads it unresolved too", () => {
-    // Previously: the broken row was flagged, and the row doubling it quietly
-    // returned 0, a clean number with nothing to suggest it was wrong.
+    // The row doubling a broken row must be flagged too, not return a clean 0.
     const result = evaluate(
       [],
       [line("ungefär 300", "source"), line("=@Lsource:expression*2", "double")],
@@ -309,8 +279,7 @@ describe("an unresolvable cell does not pass for zero", () => {
   });
 
   it("treats an empty general column as empty rather than broken", () => {
-    // Most rows fill in none of the six. Flagging them would poison every
-    // formula that reads across a row.
+    // An empty general column is not broken.
     const rows: LineItemInput[] = [
       { id: "row", accountKey: "SEX01:5010", expression: "100", values: {} },
     ];
@@ -321,8 +290,7 @@ describe("an unresolvable cell does not pass for zero", () => {
 describe("an account total says when it is short a row", () => {
   it("names the account and still sums what resolved", () => {
     const result = evaluate([], [line("=fel kr", "broken"), line("1200", "fine")]);
-    // The figure is the rows that worked, a sheet you cannot read is no help
-    // in finding the row to fix, and the account is marked as partial.
+    // The total is the rows that worked, and the account is marked partial.
     expect(result.accounts.get("SEX01:5010")).toBe(kr(1200));
     expect(result.badAccounts).toEqual(["SEX01:5010"]);
   });
@@ -343,9 +311,7 @@ describe("an account total says when it is short a row", () => {
 
 describe("the cells are part of the fixed point", () => {
   it("reports a cell cycle that never settles", () => {
-    // Two rows defined in terms of each other. The convergence test used to
-    // look at variables and account totals only, so this settled "stable" with
-    // whatever the last pass held and no warning at all.
+    // Rows defined in terms of each other must report circular, not settle as stable.
     const result = evaluate([], [line("=@Lb:expression+1", "a"), line("=@La:expression+1", "b")]);
     expect(result.errors).toEqual(["circular"]);
   });
@@ -363,32 +329,24 @@ describe("the cells are part of the fixed point", () => {
 
 describe("money comes out as exact öre", () => {
   it("sums rows that do not survive being added as kronor", () => {
-    // 0.1 + 0.2 is not 0.3 in binary floating point, and a sheet with a
-    // hundred such rows was quietly out by a fraction of an öre, enough for
-    // an account total to disagree with the rows printed above it, and enough
-    // for a förflyttning that ought to net to zero not to.
+    // 0.1 + 0.2 is not 0.3 in floats: summing integer öre keeps totals equal to the rows above.
     const rows = Array.from({ length: 100 }, (_, i) => line("0,10", `r${i}`));
     const result = evaluate([], rows);
     expect(result.accounts.get("SEX01:5010")).toBe(kr(10));
 
-    // The same sum done the old way, for the record.
     const asFloats = rows.reduce((sum) => sum + 0.1, 0);
     expect(asFloats).not.toBe(10);
   });
 
   it("rounds each row once, where the amount is settled", () => {
-    // A third decimal is not a smaller amount, it is one öre either way. It is
-    // decided per row rather than carried into the total and rounded at the
-    // end, so the total is always exactly the sum of the figures on screen.
+    // Rounded per row, so the total is exactly the sum of the figures on screen.
     const result = evaluate([], [line("=10/3", "a"), line("=10/3", "b"), line("=10/3", "c")]);
     expect(result.lineItems.get("a")).toBe(333);
     expect(result.accounts.get("SEX01:5010")).toBe(999); // not 1000
   });
 
   it("leaves a percentage a ratio rather than scaling it", () => {
-    // The reason the arithmetic is not simply done in öre: scaling the whole
-    // value space would make 67% into 67, and every formula built on a share a
-    // hundred times too large.
+    // Arithmetic is not done in öre: scaling would turn 67% into 67.
     const result = evaluate([{ name: "ANDEL", expression: "67%" }], [line("=1000*ANDEL", "share")]);
     expect(result.vars.get("ANDEL")).toBe(0.67);
     expect(result.lineItems.get("share")).toBe(kr(670));

@@ -1,5 +1,3 @@
-// Rename, retire or delete a LOCAL cost centre. Fortnox-owned ones are managed
-// in Fortnox and re-synced, so they are read-only here.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -10,8 +8,6 @@ import type { CostCenter } from "@/lib/generated/prisma/client";
 
 const admin = () => gate(canAccessSettings, "auth.adminEditCostCenter");
 
-// The row, if it is one this app owns. Same `{ ok }` shape as the gate, so the
-// caller reads it the same way, and gets a `cc` that is actually there.
 type Local = { ok: true; cc: CostCenter } | { ok: false; res: NextResponse };
 
 async function loadLocal(id: string): Promise<Local> {
@@ -38,11 +34,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const body = parsed.data;
   const data: { name?: string; active?: boolean } = {};
   if (body.name !== undefined) data.name = body.name;
-  // The code is left alone on purpose: allocations and voucher lines point at
-  // this row, and the result unit that attests them is derived from the code.
+  // The code is left alone: allocations and voucher lines point at this row, and the result unit is derived from it.
   if (body.active !== undefined) data.active = body.active;
-  // A PATCH that names nothing this route acts on is a malformed request, not
-  // a quiet success. The same answer PATCH /api/budgets/[id] gives.
   if (Object.keys(data).length === 0) return fail(422, "request.nothingToChange");
 
   await prisma.costCenter.update({ where: { id: local.cc.id }, data });
@@ -57,12 +50,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!local.ok) return local.res;
   const { cc } = local;
 
-  // Anything already booked against it has to keep resolving, so a cost centre
-  // in use is retired rather than deleted, the same end state as a Fortnox one
-  // that gets deactivated.
-  // Income's references count too. They are all SetNull, so deleting a cost
-  // centre a verksamhet, a prefix, the fee setting or a waiting day still
-  // names would leave them with none, and the next voucher without one.
+  // Booked rows must keep resolving, so a cost centre in use is retired rather than deleted.
+  // Income's SetNull references count too, or deleting would leave later vouchers without a cost centre.
   const counts = await Promise.all([
     prisma.expenseCostAllocation.count({ where: { costCenterId: cc.id } }),
     prisma.verificationLine.count({ where: { costCenterId: cc.id } }),

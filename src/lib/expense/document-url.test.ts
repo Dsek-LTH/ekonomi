@@ -10,10 +10,7 @@ const submitted = {
 
 describe("expenseDocuments", () => {
   it("puts the cover first and the underlag behind it", () => {
-    // Two documents, not one merged file: the panel stacks them into one
-    // scroll, and the receipt is shown as it was stored rather than laid on a
-    // white A4 sheet. The order is the one they are stapled in for Fortnox, so
-    // scrolling through them reads the thing the section will actually file.
+    // Two documents, not one merged file, in the order they are stapled in for Fortnox.
     expect(
       expenseDocuments({
         ...submitted,
@@ -31,11 +28,7 @@ describe("expenseDocuments", () => {
   });
 
   it("captions the two where the caller has words for them, naming the file", () => {
-    // The panel stacks them, so something has to say where one ends and the
-    // next begins. The words are the caller's: this file is client-safe and
-    // knows nothing about locales. The file it was uploaded as is worth
-    // knowing whether or not there is a second one to distinguish it from
-    // (see underlagCaption).
+    // The panel stacks them, so something says where one ends. The words are the caller's (this file knows no locales).
     const docs = expenseDocuments(submitted, undefined, {
       cover: "Utläggsräkning",
       underlag: "Underlag",
@@ -44,9 +37,6 @@ describe("expenseDocuments", () => {
   });
 
   it("numbers the underlag only once there is more than one", () => {
-    // Most utlägg have exactly one, and a caption counting a document nobody
-    // else exists to be confused with would be answering a question nobody
-    // asked.
     const docs = expenseDocuments(
       {
         ...submitted,
@@ -93,18 +83,12 @@ describe("expenseDocuments", () => {
   });
 
   it("leaves the panel to say there is no underlag", () => {
-    // Not the cover on its own: on the booking screen the empty panel is the
-    // only warning that a voucher is about to be booked with nothing behind it.
+    // Not the cover alone: the empty panel is the only warning that a voucher is about to be booked with nothing behind it.
     expect(expenseDocuments({ ...submitted, receipts: [] })).toEqual([]);
   });
 
   it("shows a draft its receipt and no cover", () => {
-    // A draft has nothing attested and no reference yet, so its cover would be
-    // a page of dashes, and drawing one costs a run of the typesetter every
-    // time somebody opens their own half-finished utlägg.
-    //
-    // Unmarked: with one document there is nothing to choose between, and the
-    // viewer opens on the first when nobody says otherwise.
+    // A draft has nothing attested and no reference yet, so no cover. Unmarked: with one document there is nothing to choose between.
     expect(expenseDocuments({ ...submitted, status: "DRAFT" })).toEqual([
       {
         src: "/api/receipts/rec1",
@@ -128,10 +112,7 @@ describe("expenseDocuments", () => {
   });
 
   it("gives a milersättning one document, the cover it is printed on", () => {
-    // Nothing to photograph about driving your own car, so the journey is a
-    // section of the utläggsräkning rather than a document behind it. Two
-    // pages saying the same reference, submitter and total is what this
-    // replaced.
+    // A milersättning's journey is a section of the utläggsräkning, not a document behind it.
     expect(
       expenseDocuments({
         id: "exp1",
@@ -143,8 +124,7 @@ describe("expenseDocuments", () => {
   });
 
   it("shows a mileage draft that same cover, unlike any other draft", () => {
-    // The one place its journey can be read, so suppressing it until submission
-    // would leave the submitter nothing to check.
+    // The one place its journey can be read, so it is shown before submission.
     expect(
       expenseDocuments({ id: "exp1", status: "DRAFT", paymentType: "MILEAGE", receipts: [] }),
     ).toEqual([{ src: "/api/expenses/exp1/document", mimeType: "application/pdf" }]);

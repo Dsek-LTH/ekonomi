@@ -1,17 +1,6 @@
 "use client";
 
-// One product: what there is of it, and what has happened to it.
-//
-// The page a name in the list opens, and where everything you do *to* a product
-// lives: a delivery, a stocktake, a correction to its details. The nightly in
-// and out is not here: that is done from the log, against whichever products a
-// night happens to touch, and coming to a product page per bottle would be the
-// slower way round.
-//
-// Two halves, in the order somebody wants them. What is on the shelf, spelled
-// out bottle by bottle rather than as a total. "3 sealed, 1 at 60 %" is the
-// sentence you came for. Then the last movements, because the next question
-// after a surprising number is always how it got there.
+// One product: what is on its shelf (bottle by bottle), then its last movements. Everything done to a product lives here (delivery, stocktake, edit); nightly in/out is done from the log.
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -66,16 +55,9 @@ export default function StockProductClient({
   product: StockLevelDto;
   events: ProductEventDto[];
   cellar: CellarRowDto[];
-  /** How many rows of the log point at this product. What delete would take
-   *  with it, which is the one thing the confirmation has to say. */
+  /** How many log rows point at this product: what delete would take with it. */
   movements: number;
-  /**
-   * Every check this product will raise, oldest date first.
-   *
-   * Not claims that anything has gone off. Nothing is written on the crates in
-   * this cellar, so the app knows only that a delivery came in on a day and
-   * that the product keeps so many months. See lib/stock/expiry.ts.
-   */
+  /** Every check this product will raise, oldest first. Not claims that anything went off: the app only knows when a delivery came in and how long the product keeps (lib/stock/expiry.ts). */
   checks: Check[];
   /** What the rest of the shelf is tagged with, for the edit dialog's picker. */
   knownTags: string[];
@@ -98,8 +80,7 @@ export default function StockProductClient({
   const returnTo = useReturnTo();
   const { mutate } = useMutation();
 
-  // A stocktake that found bottles which were really a delivery, made the
-  // delivery it should have been. See api/stock/entries/[id]/to-purchase.
+  // A stocktake that turned out to be a delivery becomes one (api/stock/entries/[id]/to-purchase).
   async function toPurchase(row: CellarRowDto) {
     const count = row.units ?? 0;
     const ok = await confirm({
@@ -117,21 +98,8 @@ export default function StockProductClient({
   }
 
   /**
-   * Record that somebody went and looked at one delivery, and found it fine.
-   *
-   * One at a time, because each of these is a task rather than a fact about the
-   * shelf: a person reads one crate, ticks it off, and moves to the next. That
-   * the cellar cannot tell two crates of the same lager apart is the reason
-   * they are separate tasks and not one, since nobody can be sure the second
-   * says what the first did.
-   *
-   * It does not silence the delivery for good, only until the notice period has
-   * run again, which is right. It is still a crate and it is a month closer to
-   * the date.
-   *
-   * Whatever they found that *had* gone off leaves the shelf as a write-off,
-   * through the button beside this one. That is a movement of stock; this is a
-   * note that somebody looked.
+   * Record that somebody looked at one delivery and found it fine. One at a time, since each crate is a task.
+   * Silences it only until the notice period has run again. What had gone off leaves the shelf as a write-off instead.
    */
   async function markChecked(entryId: string) {
     setChecking(entryId);
@@ -144,16 +112,7 @@ export default function StockProductClient({
     notify.success(t("expiry.checkedDone"));
   }
 
-  /**
-   * Undo a product, and the log with it.
-   *
-   * Two different acts wearing one word. Over a product typed wrong a minute
-   * ago this removes a row nothing points at; over one that has been booked on
-   * for two terms it rewrites what the shelf has been worth and what was
-   * bought. So the question changes with the count rather than the button: the
-   * warning is only true when there is something to warn about, and a dialog
-   * that cries wolf over an empty product is one people stop reading.
-   */
+  /** Undo a product and its log. The warning depends on the count: removing a fresh typo differs from rewriting two terms of history. */
   async function remove() {
     const ok = await confirm({
       title: t("products.removeTitle", { name: product.name }),
@@ -170,8 +129,7 @@ export default function StockProductClient({
       error: t("products.removeFailed"),
     });
     if (gone === null) return;
-    // What it actually took, counted by the transaction rather than by the page:
-    // a night booked between the two is a row this screen never knew about.
+    // Counted by the transaction, not the page: a night booked in between is a row this screen never knew.
     notify.success(
       gone.entries > 0
         ? t("products.removedWithLog", { count: gone.entries })
@@ -188,9 +146,7 @@ export default function StockProductClient({
 
   return (
     <PageShell
-      // Identity only: what sort of drink it is and how it is counted are facts
-      // about the product like any other, and they read better as labelled rows
-      // in the card below than as a clause under the name.
+      // Identity only: type and counting are labelled rows in the card below.
       title={
         <span className="flex items-center gap-2.5">
           <CategoryMark category={product.category} size="lg" />
@@ -210,18 +166,7 @@ export default function StockProductClient({
           )}
         </Notice>
       )}
-      {/* Two columns from lg: what there is of it on the left, larger, with
-          the three things you do to the shelf, and what the product is on the
-          right. The history (its nights, and the cellar) runs across both
-          underneath. It was five cards in one column, and what is in stock,
-          the figure the page is opened for, was the second of them.
-
-          `grid-cols-[minmax(0,1fr)]`, not a bare `grid`. An implicit column is
-          `auto`, whose minimum is the min-content of what sits in it, so the
-          widest thing in any of these cards decides the column's width and the
-          cards then stand wider than the screen. On a phone that was 346px of
-          card in 280px of page, and the whole document scrolled sideways. The
-          `minmax(0, …)` is what lets a column be as narrow as it is given. */}
+      {/* Two columns from lg. `grid-cols-[minmax(0,1fr)]`, not a bare `grid`: an implicit `auto` column is as wide as its widest content, which made cards wider than a phone. */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-6">
           <Card>
@@ -236,9 +181,7 @@ export default function StockProductClient({
                     <Button size="sm" variant="secondary" onClick={() => setCounting(true)}>
                       {t("products.stocktake")}
                     </Button>
-                    {/* Beside the stocktake rather than hidden behind it, because
-                        a broken bottle recorded as a count difference is a
-                        difference nobody can explain a term later. */}
+                    {/* Beside the stocktake: a broken bottle recorded as a count difference cannot be explained later. */}
                     <Button size="sm" variant="ghost" onClick={() => setSpoiling(true)}>
                       {t("products.spoilage")}
                     </Button>
@@ -246,15 +189,8 @@ export default function StockProductClient({
                 ) : undefined
               }
             />
-            {/* Across rather than down. What is in stock is a handful of small
-                numbers that are read together, five rungs and a value, and a
-                stacked list made each one a line to scroll past instead of a
-                figure to take in at a glance. Auto-fitting columns, so a can's
-                two cells and a spirit's six lay themselves out without the page
-                knowing which it is looking at. */}
-            {/* The shelf as a picture first, the way the list shows it,
-                large: the sealed with their count and every opened bottle at
-                its level. The figures below are the same shelf spelled out. */}
+            {/* Across rather than down, auto-fitting so a can's two cells and a spirit's six lay out alike. */}
+            {/* The shelf as a picture first, as the list shows it. */}
             <div className="border-b border-border px-inset py-4">
               <BottleLevels
                 kind={product.kind}
@@ -277,9 +213,7 @@ export default function StockProductClient({
                     dim={bottlesAt(onHand.open, level) === 0}
                   />
                 ))}
-              {/* Sealed and open together, which is an estimate stacked on
-                  estimates for a spirit (see openMl) and exactly the figure the
-                  restaurangrapport asks for. */}
+              {/* Sealed and open together: an estimate for a spirit (see openMl), and the figure the restaurangrapport asks for. */}
               <Detail
                 label={t("product.totalVolume")}
                 value={
@@ -297,28 +231,15 @@ export default function StockProductClient({
           </Card>
 
           {product.impossible && <p className="text-sm text-danger">{t("product.impossible")}</p>}
-          {/* A made-up barcode, from before the field checked: the product
-              cannot be scanned by it, and the next edit will refuse it. Said
-              here with what to do, so it is fixed on purpose rather than
-              discovered by a save that will not go through. */}
+          {/* A made-up barcode from before the field checked: it cannot be scanned and the next edit refuses it. */}
           {product.ean && !validGtin(product.ean) && (
             <Notice>
               <p>{t("barcode.invalidHint")}</p>
             </Notice>
           )}
 
-          {/* The whole best-before feature, and hedged on purpose in every line
-              of it. The app has never seen a crate. It knows a delivery came in
-              on a day and that the product keeps so many months, so what it can
-              honestly ask for is somebody to go and read the label.
-
-              A row per delivery rather than one notice, because that is how the
-              work is done: go down, find the crate that came in on this date,
-              read it, tick it off, and start on the next one. The overview folds
-              these to a single flag; this is where they get worked through.
-
-              Deliveries the shelf has been empty since are not here at all. They
-              are not dismissed, they are gone. */}
+          {/* Best-before is hedged on purpose: the app has never seen a crate, only that a delivery came in and the product keeps so many months.
+              A row per delivery, since the work is going down them ticking each off. Deliveries the shelf has been empty since are gone, not dismissed. */}
           {checks.length > 0 && (
             <Card>
               <CardHeader title={t("expiry.title")} subtitle={t("expiry.hint")} />
@@ -334,16 +255,8 @@ export default function StockProductClient({
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-6">
-          {/* What the product *is*, kept apart from what there is of it. The card
-              below answers "how much have we got"; this one answers the questions
-              that come up when somebody is holding the tin and not sure it is the
-              right one: is this the 33 cl or the 50, is this the one we pay
-              twelve kronor for. Every field the product carries is here, so the
-              page is the whole answer and not a summary of one. */}
+          {/* What the product is, apart from what there is of it: every field, so the page is the whole answer. */}
           <Card>
-            {/* What you can do to a thing belongs to the thing: changing what the
-                product *is* rides the card that says what it is, and the two that
-                move stock ride the card that counts it. */}
             <CardHeader
               title={t("product.details")}
               action={
@@ -405,11 +318,7 @@ export default function StockProductClient({
                 label={t("products.field.systembolagetId")}
                 value={
                   product.systembolagetId ? (
-                    // Linked because the number is only useful as a way back to
-                    // the page it came from: a price, a new vintage, the article
-                    // being delisted. Through their search rather than a stored
-                    // address: the canonical URL carries a slug that changes when
-                    // a product is renamed, and the number does not.
+                    // Linked through their search, not a stored address: the canonical URL has a slug that changes on rename.
                     <a
                       href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
                       target="_blank"
@@ -419,11 +328,7 @@ export default function StockProductClient({
                       {product.systembolagetId}
                     </a>
                   ) : (
-                    // Named, like the missing barcode above it, rather than left
-                    // as a dash. The field is for finding the article's page
-                    // again, and plenty of the cellar is not bought there at all,
-                    // so an empty one is a product with no article number and not
-                    // a product somebody forgot to finish.
+                    // Named rather than a dash: an empty one is a product with no article number, not an unfinished one.
                     <span className="text-muted">{t("product.noSystembolagetId")}</span>
                   )
                 }
@@ -469,10 +374,6 @@ export default function StockProductClient({
         </div>
 
         <div className="lg:col-span-2">
-          {/* What it did at nights, per night. The same shape as the event sheet,
-              because it is the same question asked of one product: what went out,
-              what came back, and what that came to. Anything somebody later
-              changed about a night hangs off that night's own row. */}
           <Card>
             <CardHeader title={t("product.events")} subtitle={t("product.eventsHint")} />
             <EventTable rows={events} kind={product.kind} />
@@ -480,10 +381,6 @@ export default function StockProductClient({
         </div>
 
         <div className="lg:col-span-2">
-          {/* And what has been done to it in the cellar, which is a different
-              sort of event, and a list rather than a per-night fold. Corrections
-              live here rather than in a card of their own: putting a delivery
-              right is the same kind of deliberate act as making one. */}
           <Card>
             <CardHeader
               title={t("product.cellar")}
@@ -537,17 +434,7 @@ export default function StockProductClient({
   );
 }
 
-/** One line of the shelf: what it is, and how many. */
-/**
- * A fact about the product: the word for it, and the thing itself.
- *
- * The same shape as the utlägg's detail card, which is the other place in the
- * app that lists what a thing is, and the same shape for the stock figures as
- * for the reference data, because they are read the same way. They were two
- * components for a while, with the figures set large and uppercase; six of them
- * in a row read as a dashboard shouting at somebody who had come to check a
- * bottle size.
- */
+/** A fact about the product: the word for it, and the thing itself. Same shape as the utlägg's detail card. */
 function Detail({
   label,
   value,
@@ -555,8 +442,7 @@ function Detail({
 }: {
   label: string;
   value: React.ReactNode;
-  /** Nothing on this rung. Kept visible, since an empty rung is information, but
-   *  quiet, so the eye goes to the ones holding something. */
+  /** Nothing on this rung: kept visible but quiet. */
   dim?: boolean;
 }) {
   return (
@@ -571,15 +457,7 @@ function Detail({
   );
 }
 
-/**
- * What the product did at each event it went out to.
- *
- * A row per night rather than per movement, in the shape of the event sheet: out,
- * back, spilled, and what that came to. The chevron appears only on a night
- * somebody has since changed, and says who changed what. A correction to a
- * night's figure belongs to that night, not to a list of every correction ever
- * made to the product.
- */
+/** What the product did at each event it went out to, a row per night. The chevron appears only on a night somebody has since changed. */
 function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
   const t = useTranslations("stock");
   const controls = useTableControls();
@@ -592,8 +470,7 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
     className: "tabular-nums",
     value: pick,
     sortable: true,
-    // Off a phone's row, which is the night, when, and what went (`sold`
-    // below). Out, back and spilled are the night's own sheet.
+    // Off a phone's row: out, back and spilled are the night's own sheet.
     mobile: "hide" as const,
     cell: (r: ProductEventDto) =>
       pick(r) === 0 ? (
@@ -647,14 +524,7 @@ function EventTable({ rows, kind }: { rows: ProductEventDto[]; kind: string }) {
   );
 }
 
-/**
- * Deliveries, stocktakes and the corrections made to them.
- *
- * The cellar's own history, in the order things were written down rather than
- * the order they are about, which is the order somebody reconstructing a
- * figure is following. A correction sits here beside the delivery it puts
- * right, because making a delivery and fixing one are the same sort of act.
- */
+/** Deliveries, stocktakes and the corrections made to them, in the order they were written down. */
 function CellarTable({
   rows,
   canManage,
@@ -701,8 +571,7 @@ function CellarTable({
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       mobile: "meta",
-      // A movement says what it did to the shelf; a correction says what the
-      // figure was and what it became. Both are "the number on this row".
+      // A movement says what it did to the shelf, a correction what the figure was and became.
       cell: (r) =>
         isChange(r) ? (
           <>
@@ -735,8 +604,7 @@ function CellarTable({
       value: (r) => r.actorName,
       sortable: true,
       searchable: true,
-      // Off the phone row: the cell hangs the note off a second line, which a
-      // one-line summary has nowhere to put. Both are on the change feed.
+      // Off the phone row: the note hangs off a second line a one-line summary lacks. Both are on the change feed.
       mobile: "hide",
       cell: (r) => (
         <>
@@ -749,8 +617,7 @@ function CellarTable({
       key: "fix",
       header: "",
       align: "right",
-      // A button, so it goes where the buttons go rather than into the row's
-      // second line.
+      // A button, so it goes with the buttons rather than the row's second line.
       mobile: "actions",
       hidden: !canManage,
       cell: (r) =>
@@ -764,8 +631,7 @@ function CellarTable({
             {t("entry.fix")}
           </Button>
         ) : r.kind === "COUNT" && (r.units ?? 0) > 0 ? (
-          // A count that found more sealed than the log expected: very often
-          // a delivery booked as a stocktake. Offered, not assumed.
+          // A count that found more sealed than expected is often a delivery booked as a stocktake. Offered, not assumed.
           <Button
             variant="link"
             type="button"
@@ -791,18 +657,8 @@ function CellarTable({
 }
 
 /**
- * The best-before schedule for one product: a row per delivery still on the
- * books, oldest date first.
- *
- * A plain list rather than a DataTable. There is nothing to search, nothing to
- * sort (the order is the whole point) and rarely more than a handful of rows,
- * and the errand is to work down them ticking each one off. A table's furniture
- * would be furniture around three facts.
- *
- * Every date on it is an estimate and every line says so. The app has never
- * seen a crate: it knows when a delivery arrived and how long the product
- * keeps, which is enough to send somebody to the cellar and not enough to
- * claim anything about what is down there.
+ * The best-before schedule for one product: a row per delivery still on the books, oldest first.
+ * A plain list, not a DataTable. Every date is an estimate and every line says so (the app has never seen a crate).
  */
 function CheckTable({
   checks,
@@ -847,10 +703,7 @@ function CheckTable({
                 >
                   {check.bestBefore}
                 </span>
-                {/* What the date means, in the tense it deserves. Only a row
-                    that is actually owed gets a colour; the rest are a
-                    schedule, and a page of amber pills is a page nobody
-                    reads. */}
+                {/* Only a row that is actually owed gets a colour. */}
                 {check.quiet ? (
                   <Tag size="sm">{t("expiry.stateChecked", { date: check.checkedAt ?? "" })}</Tag>
                 ) : check.state === "over" ? (
@@ -872,9 +725,7 @@ function CheckTable({
               </p>
             </div>
 
-            {/* Only on a row that is asking. A dismiss button beside a date six
-                months off would invite somebody to clear the list rather than
-                to answer it. */}
+            {/* Only on a row that is asking. */}
             {canManage && due && (
               <div className="flex shrink-0 gap-2">
                 <Button

@@ -37,9 +37,7 @@ describe("linePricing", () => {
   });
 
   it("rounds once, on the line, so quantity does not move the error", () => {
-    // 3 × 3,33 kr = 9,99 kr, a third off. Rounding a discounted unit price
-    // first would give 3 × 222 = 666 öre and a total of 333; rounding the line
-    // gives 333 off 999, which is the figure anybody checking would arrive at.
+    // 3 × 3,33 kr: rounding the line (333 off 999) not the unit price (3 × 222).
     expect(linePricing({ quantity: 3, unitPriceOre: 333, discountPercent: 33 })).toEqual({
       grossOre: 999,
       discountPercent: 33,
@@ -54,8 +52,7 @@ describe("linePricing", () => {
   });
 
   it("treats a half-typed number as nothing rather than NaN", () => {
-    // The form holds these as strings, so an empty box arrives as NaN. One of
-    // them must not turn the whole total into "NaN kr" while somebody types.
+    // The form holds strings, so an empty box arrives as NaN and must not poison the total.
     expect(linePricing(line({ quantity: NaN })).grossOre).toBe(0);
     expect(linePricing(line({ unitPriceOre: NaN })).grossOre).toBe(0);
     expect(linePricing(line({ discountPercent: NaN })).discountPercent).toBe(0);
@@ -78,8 +75,6 @@ describe("rentalPricing", () => {
   });
 
   it("discounts each line on its own terms", () => {
-    // The speakers at half because they are going to another section, the mixer
-    // at full because it is not.
     expect(
       rentalPricing([
         line({ quantity: 2, unitPriceOre: 25_000, discountPercent: 50 }),

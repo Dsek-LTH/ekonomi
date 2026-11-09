@@ -1,9 +1,3 @@
-// The gear catalogue, as the settings screen and the rental form read it.
-//
-// Two callers with two different needs, so two functions rather than one with a
-// flag. The settings screen wants a count of how many contracts point at each
-// item, so the dialog can say where it is used. The rental form only picks
-// from the list, and has no use for the counts.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -21,7 +15,6 @@ export interface RentalItemRow {
   usedBy: number;
 }
 
-/** What the rental form picks from: one option per item still on offer. */
 export interface RentalItemOption {
   id: string;
   name: string;
@@ -30,10 +23,7 @@ export interface RentalItemOption {
   quantity: number;
 }
 
-// Name order, not insertion order. A catalogue is read by looking for a thing
-// you already have in mind, and `sortOrder` exists for a list somebody has
-// arranged deliberately, which this is not yet. It is on the model so that it
-// can become one without a migration.
+// Name order: `sortOrder` exists for hand-arranged lists, which this is not yet.
 const BY_NAME = [{ sortOrder: "asc" as const }, { name: "asc" as const }];
 
 export async function getRentalItemRows(): Promise<RentalItemRow[]> {

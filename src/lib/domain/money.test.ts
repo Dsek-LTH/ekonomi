@@ -23,8 +23,7 @@ describe("oreToSEK", () => {
   });
 
   it("treats a missing amount as zero rather than NaN", () => {
-    // Nullable columns reach this straight from Prisma, and a NaN here would
-    // propagate silently into a sum.
+    // Nullable columns reach this straight from Prisma; NaN would propagate into a sum.
     expect(oreToSEK(null)).toBe(0);
     expect(oreToSEK(undefined)).toBe(0);
   });
@@ -38,18 +37,13 @@ describe("sekToOre", () => {
   });
 
   it("survives the float multiplications that öre storage exists to avoid", () => {
-    // 19.99 * 100 is 1998.9999999999998 in binary floating point. Without the
-    // rounding this is where a one-öre discrepancy enters the ledger.
+    // 19.99 * 100 is 1998.9999999999998: without rounding a one-öre discrepancy enters the ledger.
     expect(sekToOre(19.99)).toBe(1999);
     expect(sekToOre(0.29)).toBe(29);
   });
 
   it("rounds a half-öre down, because the float is already below the half", () => {
-    // 1.005 * 100 is 100.49999999999999, so Math.round gives 100 rather than
-    // the 101 decimal arithmetic would. Pinned rather than fixed: an amount in
-    // SEK has at most two decimals, so a half-öre never arrives from the UI or
-    // from the bank, and "round half up on a value that isn't really a half"
-    // would cost a decimal library for a case that cannot occur.
+    // 1.005 * 100 is 100.49999999999999, so this rounds to 100. Pinned, not fixed: SEK has at most two decimals.
     expect(sekToOre(1.005)).toBe(100);
   });
 });
@@ -63,15 +57,13 @@ describe("parseSEK", () => {
   });
 
   it("reads a return as a negative amount", () => {
-    // Nothing types one of these, and the database holds them: a stored return
-    // is read here before a screen shows its magnitude.
+    // Stored returns are signed and are read here before a screen shows its magnitude.
     expect(parseSEK("-250")).toBe(-250);
     expect(parseSEK("-1 234,50")).toBe(-1234.5);
   });
 
   it("falls back to zero on anything unreadable", () => {
-    // The field is free text, so this runs on every keystroke of a half-typed
-    // amount. Zero is what the submit gate then refuses to send.
+    // Runs on every keystroke of a half-typed amount; zero is what the submit gate refuses.
     expect(parseSEK("")).toBe(0);
     expect(parseSEK("abc")).toBe(0);
     expect(parseSEK("-")).toBe(0);
@@ -94,8 +86,7 @@ describe("isAmountInput", () => {
     expect(isAmountInput("0,01")).toBe(true);
   });
 
-  // Every one of these is a keystroke on the way to an amount, so refusing them
-  // would mean a field nobody can type a decimal into.
+  // Each is a keystroke on the way to an amount.
   it("takes half-typed input", () => {
     expect(isAmountInput("")).toBe(true);
     expect(isAmountInput("12")).toBe(true);
@@ -103,8 +94,7 @@ describe("isAmountInput", () => {
     expect(isAmountInput("12,5")).toBe(true);
   });
 
-  // The point of the rule: a third decimal is not a finer amount, it is one
-  // sekToOre rounds away. 12,505 would be stored as 12,51 without a word.
+  // A third decimal is not a finer amount: sekToOre would round 12,505 away silently.
   it("stops at two decimals", () => {
     expect(isAmountInput("12,505")).toBe(false);
     expect(isAmountInput("12.5678")).toBe(false);
@@ -118,9 +108,7 @@ describe("isAmountInput", () => {
   });
 
   it("refuses everything the keyboard cannot type", () => {
-    // A magnitude, and only a magnitude. No sign, because no phone keypad has
-    // one and the direction of an utlägg is a control of its own; no operator,
-    // because a receipt of several lines is several rows.
+    // A magnitude only: no sign (no phone keypad has one), no operator.
     expect(isAmountInput("-100")).toBe(false);
     expect(isAmountInput("100+200")).toBe(false);
     expect(isAmountInput("100-50")).toBe(false);
@@ -137,16 +125,14 @@ describe("round trip", () => {
 
 describe("groupForm", () => {
   it("groups a figure the way it is read", () => {
-    // A non-breaking space between the thousands, which is what Swedish uses
-    // and what the guard therefore has to take back when it is pasted.
+    // A non-breaking space is what Swedish uses and must be taken back when pasted.
     expect(groupForm("1234.5")).toBe("1\u00a0234,50");
     expect(groupForm("700")).toBe("700");
     expect(isAmountInput(groupForm("1234.5"))).toBe(true);
   });
 
   it("leaves a field with nothing in it alone", () => {
-    // Including the moment between the separator and the öre, where formatting
-    // would rewrite what somebody is still typing.
+    // Including between the separator and the öre, where formatting would rewrite what is being typed.
     expect(groupForm("")).toBe("");
     expect(groupForm(" ")).toBe(" ");
   });
@@ -154,8 +140,7 @@ describe("groupForm", () => {
 
 describe("commaForm", () => {
   it("shows back a comma whatever separator was typed", () => {
-    // The point of it: a phone's decimal pad offers its own locale's
-    // separator, so a Swedish member with an English phone can only type ".".
+    // A phone's decimal pad may offer only ".", so it is accepted and shown as a comma.
     expect(commaForm("12.50")).toBe("12,50");
     expect(commaForm("12,50")).toBe("12,50");
   });

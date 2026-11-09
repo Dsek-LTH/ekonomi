@@ -1,18 +1,7 @@
 "use client";
 
-// The stock: one list of what the bar keeps, and what is on the shelf of it.
-//
-// It used to be two screens. This one grouped products by drink type and showed
-// what was on hand; Lagerprodukter listed the same products, searchable, and
-// carried the actions. Two answers to "what have we got" is a pair that drifts,
-// and the moment a product got a page of its own the split had nothing left to
-// justify it, so they are one list now, and what you do to a product you do on
-// the product.
-//
-// A list, not a dashboard: search, the drink type as a filter, and a row that
-// opens the thing it names. What needs attention is said on the row rather than
-// gathered into a banner, because a warning away from its subject has to name
-// it and then be kept in step with it.
+// The stock: one list of what the bar keeps and what is on its shelf. Search, drink type as a filter, a row that opens the product.
+// What needs attention is said on the row, not gathered into a banner.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -56,14 +45,7 @@ export default function StockClient({
   canManage,
 }: {
   levels: StockLevelDto[];
-  /**
-   * Which products want somebody to go and read a crate, by product id.
-   *
-   * Keyed rather than folded into the level, because it answers a different
-   * question from the rest of the row: everything else here is what the shelf
-   * holds on the date being looked at, and a check is a thing to do this week.
-   * See lib/stock/expiry.ts.
-   */
+  /** Which products want somebody to go and read a crate, by product id. Separate from the level: always as of today. See lib/stock/expiry.ts. */
   checks: Record<string, Check>;
   /** The day the figures are as of, when it is not today. */
   asOf?: string;
@@ -81,15 +63,7 @@ export default function StockClient({
   const { pending, mutate } = useMutation();
   const [adding, setAdding] = useState(false);
 
-  /**
-   * Read every product's log forward again.
-   *
-   * For the two things a write cannot settle by itself: a valuation rule that
-   * has changed since the rows were written, and rows written before there was
-   * a rule at all. It is asked for rather than run on a schedule because it
-   * rewrites stored figures, and it says what it did afterwards because a
-   * maintenance action that reports nothing is one nobody can tell worked.
-   */
+  /** Read every product's log forward again, for a changed valuation rule or rows written before one existed. Asked for, since it rewrites stored figures. */
   async function revalue() {
     const ok = await confirm({
       title: t("revalue.title"),
@@ -116,42 +90,23 @@ export default function StockClient({
     );
   }
 
-  /**
-   * The date lives in the URL, not in state. See the page.
-   *
-   * Today carries no parameter. The field always shows a day, because a date
-   * box reading nothing invites the question "as of when, then?", but asking
-   * for today is asking for the ordinary page, so the address stays clean, the
-   * query stays unfiltered, and the notice about looking at the past does not
-   * fire for the present.
-   */
+  /** The date lives in the URL, not state. Today carries no parameter, so the address stays clean and the past-date notice does not fire. */
   const setDate = (value: string) =>
     router.push(!value || value === today ? "/stock" : `/stock?date=${value}`);
 
-  // Moving average cost across the whole shelf, summed from the rows the list
-  // is drawn from, so a total and its parts cannot disagree.
+  // Moving average cost across the whole shelf, summed from the rows the list is drawn from.
   const totalValueOre = levels.reduce((sum, l) => sum + l.onHand.valueOre, 0);
-  // A product needs a look when its log does not add up, or when something on
-  // the shelf may be past its best: the two things the flags column says. The
-  // "Behöver ses över" tab is these rows.
-  // A barcode with the wrong check digit too: one made up to get past the
-  // field before it checked, which the shelf cannot be scanned by.
+  // A product needs a look when its log does not add up, something may be past its best, or its barcode has a wrong check digit.
   const needsLook = (p: StockLevelDto) =>
     p.impossible || checks[p.id] !== undefined || badBarcode(p);
   const needsAttention = levels.filter(needsLook).length;
 
-  // Every tag anything on the shelf carries. The picker in the product dialog
-  // offers them, and the filter below narrows by them.
+  // Every tag on the shelf, for the product dialog's picker and the filter.
   const tags = tagsInUse(levels);
 
   /**
-   * Two dimensions, narrowed at once: what kind of drink, and what the cellar
-   * has labelled it. Picking within one is an "or" (Öl or Vin), picking across
-   * them is an "and" (a spirit that is also a whisky).
-   *
-   * The values are prefixed because the two filters share one list of picks,
-   * in the state and in the address, and a tag someone types called "OL" would
-   * otherwise be the same string as the drink type.
+   * Two dimensions narrowed at once: drink kind and cellar label. Within one is an "or", across them an "and".
+   * Values are prefixed since both share one list of picks and a tag "OL" would collide with a drink type.
    */
   const filters: ClientSelectFilter<StockLevelDto>[] = [
     {
@@ -162,9 +117,7 @@ export default function StockClient({
         predicate: (p: StockLevelDto) => p.category === c,
       })),
     },
-    // Only where something is actually due. A filter that can only ever return
-    // nothing is a control that reads as broken, the same reason the tag filter
-    // below waits for a tag.
+    // Only where something is due: a filter that can only return nothing reads as broken.
     ...(Object.keys(checks).length > 0
       ? [
           {
@@ -184,8 +137,7 @@ export default function StockClient({
           },
         ]
       : []),
-    // Nothing to offer until something is tagged, and an empty dropdown is a
-    // control that reads as broken.
+    // Nothing to offer until something is tagged.
     ...(tags.length > 0
       ? [
           {
@@ -209,9 +161,7 @@ export default function StockClient({
       searchable: true,
       mobile: "title",
       cell: (p) => <span className="font-medium">{p.name}</span>,
-      // On a phone the drink type's mark goes before the name, since the
-      // category column is not on the row there. On a wider screen the column
-      // says it, mark and word, and a mark here as well said it twice.
+      // On a phone the mark goes before the name, since the category column is not on the row there.
       mobileCell: (p) => (
         <span className="flex min-w-0 items-center gap-2.5">
           <CategoryMark category={p.category} />
@@ -220,12 +170,7 @@ export default function StockClient({
       ),
     },
     {
-      // What one of them holds: a bottle's nominal size or a can's, whichever
-      // the product is counted in. Not the same question as the litres column
-      // further right: that one is the shelf, this one is the thing on it, and
-      // it is the column somebody scanning the list for "the 33 or the 50"
-      // reads. Through unitVolume so the list and the product page pick the
-      // field the same way, including a recorded 0 meaning nobody has said.
+      // A bottle's nominal size or a can's. Through unitVolume so the list and the product page pick the field the same way (a recorded 0 means nobody has said).
       key: "size",
       header: t("products.col.size"),
       align: "right",
@@ -239,12 +184,7 @@ export default function StockClient({
       },
     },
     {
-      // What a krona buys of this bottle, in pure alcohol: the ratio somebody
-      // reaches for when two products look similar on the shelf but are not
-      // similar in what they cost per drop. A fact about the product itself,
-      // worked out from its own size and cost price, so it sits with size
-      // rather than with the value column further right, which is what the
-      // *whole* shelf of it is worth today.
+      // What a krona buys of this bottle in pure alcohol, from its own size and cost price (not the shelf's value).
       key: "alcoholPerKrona",
       header: t("products.col.alcoholPerKrona"),
       align: "right",
@@ -264,15 +204,13 @@ export default function StockClient({
     {
       key: "category",
       header: t("products.col.category"),
-      // Searchable on the translated name, so typing "starköl" finds it rather
-      // than only the enum nobody sees.
+      // Searchable on the translated name, so "starköl" finds it.
       value: (p) => t(`category.${p.category}`),
       sortable: true,
       searchable: true,
       // Off a phone's row, where the mark goes before the name instead.
       mobile: "hide",
-      // Its mark beside its name, so the column is scanned by kind before it
-      // is read. See components/stock/category-mark.tsx.
+      // Its mark beside the name (components/stock/category-mark.tsx).
       cell: (p) => (
         <span className="flex items-center gap-2">
           <CategoryMark category={p.category} />
@@ -283,9 +221,7 @@ export default function StockClient({
     {
       key: "tags",
       header: t("products.col.tags"),
-      // Searchable, so the box at the top of the list finds a whisky by the
-      // word on it and not only by the name of the bottle. Not sortable: a list
-      // of labels has no order anybody would be looking for.
+      // Searchable so a whisky is found by the word on it. Not sortable.
       value: (p) => p.tags.join(" "),
       searchable: true,
       mobile: "hide",
@@ -300,8 +236,6 @@ export default function StockClient({
       value: (p) => p.onHand.units,
       sortable: true,
       mobile: "meta",
-      // Drawn: the sealed with their count, and each opened bottle filled to
-      // its level. See components/stock/bottle-levels.tsx.
       cell: (p) => <BottleLevels kind={p.kind} sealed={p.onHand.units} open={p.onHand.open} />,
     },
     {
@@ -326,8 +260,6 @@ export default function StockClient({
       className: "tabular-nums",
       value: (p) => p.onHand.valueOre,
       sortable: true,
-      // Opposite the name on a card: what the shelf is worth is the figure
-      // somebody opened this for.
       mobile: "trailing",
       cell: (p) =>
         p.onHand.valueOre > 0 ? (
@@ -341,14 +273,7 @@ export default function StockClient({
       header: "",
       align: "right",
       mobile: "status",
-      // Said on the row rather than gathered into a banner, which is this
-      // page's whole rule: a warning away from its subject has to name it and
-      // then be kept in step with it.
-      //
-      // The wording is careful, because the app does not know a real date and
-      // must not sound as if it does. Nothing is written on a crate here. What
-      // it knows is that a delivery from March exists and the product keeps
-      // nine months, so what it says is "go and look", not "this has expired".
+      // Said on the row, not in a banner. The app knows no real date, so the wording is "go and look", not "this has expired".
       cell: (p) => {
         const check = checks[p.id];
         return (
@@ -387,11 +312,7 @@ export default function StockClient({
     <PageShell
       title={t("title")}
       width="wide"
-      // The day the whole page is true on, in the header beside the title:
-      // every row and the stock value move with it, so it is which view of
-      // the shelf this is rather than a filter on some of it. The reset sits
-      // beside it, because someone who has gone back to September needs an
-      // obvious way back to today. See PageShell's `view`.
+      // The day the whole page is true on, in the header (see PageShell's `view`). The reset sits beside it so there is a way back to today.
       view={
         <div className="flex items-center gap-2">
           <label htmlFor="stock-as-of" className="shrink-0 text-sm text-muted">
@@ -433,9 +354,7 @@ export default function StockClient({
           columns={columns}
           rows={levels}
           controls={controls}
-          // The work queue beside the whole list, the way Attest splits
-          // "Väntar" from "Alla". The count is only drawn when there is
-          // something in it, so a shelf in order shows a plain tab.
+          // The work queue beside the whole list; the count is drawn only when there is something in it.
           tabs={[
             { value: "ALL", label: t("tabs.all") },
             {
@@ -446,19 +365,12 @@ export default function StockClient({
             },
           ]}
           filter={filters}
-          // The sum of the Värde column, at the right of the tab row: the
-          // figure this page is opened for, kept beside the rows it is the
-          // total of rather than on a card of its own. On a
-          // past day it is that day's value, like every row. What it is made
-          // of and how it has moved is the statistics page's job.
+          // The sum of the Värde column (that day's value on a past day), beside the rows it totals.
           summary={
             <>
               <span className="text-muted">{t("asOf.value")}</span>
               <span className="font-semibold tabular-nums">{formatOreKr(totalValueOre)}</span>
-              {/* Beside the figure it repairs, which is the only place it
-                  means anything. It cannot re-price the shelf: every row
-                  carries the cost it was booked at, so this can only settle
-                  what the rules already imply. See the route. */}
+              {/* Beside the figure it repairs. It cannot re-price the shelf: each row carries the cost it was booked at. See the route. */}
               {canManage && (
                 <IconButton
                   label={t("revalue.action")}
@@ -472,30 +384,14 @@ export default function StockClient({
             </>
           }
           rowKey={(p) => p.id}
-          // The row opens the product. Everything you can do to one lives
-          // there, so this list carries no buttons of its own beyond adding.
+          // The row opens the product; everything you can do to one lives there.
           rowHref={(p) => `/stock/${p.id}`}
           searchPlaceholder={t("products.search")}
           action={
             canManage ? (
-              // Two buttons, so on a phone they take half the row each rather
-              // than huddling at its left end. The toolbar stretches whatever
-              // it is handed; this says how to divide what it gets.
-              //
-              // `flex-wrap`, because half a row is not always enough of one. A
-              // button's label is `whitespace-nowrap`, so "Registrera leverans"
-              // beside "Ny produkt" has a min-content width of about 340px and
-              // `flex-1` cannot take it below that: on a 360px phone the pair
-              // ran off the side of the card. Wrapped they are two full-width
-              // buttons, which is what a phone wanted from them anyway.
+              // Two buttons sharing the row on a phone. `flex-wrap` because "Registrera leverans" beside "Ny produkt" has a min-content of about 340px, wider than half a 360px phone.
               <div className="flex flex-wrap items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
-                {/* The two sheets that write to every product at once, a
-                    pallet's delivery and the end of term's stocktake, under one
-                    "Registrera". They sit beside "new product" rather than on a
-                    product because that is what they are not about. One menu
-                    rather than two buttons: they are the same kind of errand,
-                    done a few times a term, and the toolbar's one primary
-                    action reads as that with only one thing beside it. */}
+                {/* The sheets that write to every product at once, under one "Registrera", beside "new product" because they are not about one product. */}
                 <Menu label={t("register.label")} variant="secondary">
                   <MenuItem onClick={() => router.push("/stock/delivery")}>
                     <IconBox className="size-4" />

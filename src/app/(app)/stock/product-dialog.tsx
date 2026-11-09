@@ -1,11 +1,6 @@
 "use client";
 
-// The form a product is created and corrected in.
-//
-// Its own file because two screens open it: the list, for a new product, and a
-// product's own page, for an existing one. It used to sit inside the list,
-// which is where it lived when the list was the only place a product could be
-// looked at.
+// The form a product is created and corrected in, opened from the list (new) and from the product page (existing).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -98,22 +93,12 @@ export function ProductDialog({
   product: StockProductDto | null;
   /** A name to start from, for a product being invented mid-sheet. */
   name?: string;
-  /** A barcode to start from, for one invented by scanning something the
-   *  cellar has never seen. */
+  /** A barcode to start from, for one invented by scanning an unknown code. */
   ean?: string;
-  /**
-   * The tags other products already carry, offered in the picker.
-   *
-   * Handed in rather than fetched: every screen that opens this dialog is
-   * already holding the products, so the vocabulary is there for the taking and
-   * a request of its own would only ask the server what the page knows. A
-   * caller with no products passes none, and then the only tags on offer are
-   * the ones typed here.
-   */
+  /** The tags other products already carry, offered in the picker. Handed in because every opening screen already holds the products. */
   knownTags?: string[];
   onClose: () => void;
-  /** Told the id of a product this dialog has just made, for a caller that
-   *  asked for one and wants to carry on with it. */
+  /** Told the id of a product this dialog has just made, for a caller that wants to carry on with it. */
   onCreated?: (id: string) => void;
 }) {
   const t = useTranslations("stock");
@@ -123,58 +108,32 @@ export function ProductDialog({
     product ? draftOf(product) : { ...emptyDraft(), name: name ?? "", ean: ean ?? "" },
   );
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((p) => ({ ...p, [k]: v }));
-  // Asking whether it really has no barcode, before it is taken as having
-  // none. See the box under the barcode field.
+  // Asked before a product is taken as having no barcode (see the box under the barcode field).
   const [askingNoBarcode, setAskingNoBarcode] = useState(false);
   const ownCode = product && isInternalCode(product.ean) ? product.ean : null;
 
   const isVolume = d.kind === "VOLUME";
 
-  /**
-   * The tags on offer: what the rest of the shelf says, less what this product
-   * already carries.
-   *
-   * Off the list rather than crossed out on it, because the ones it carries are
-   * the chips sitting directly above the picker. What is left is what there is
-   * to add.
-   */
+  /** The tags on offer: the rest of the shelf's, less what this product already carries (those are the chips above the picker). */
   const tagOptions = cleanTags(knownTags).filter((tag) => !hasTag(d.tags, tag));
   const tagsFull = d.tags.length >= MAX_TAGS;
-  // The route refuses one longer than this, so the offer to make it says so
-  // instead of being a row that quietly does nothing when pressed.
+  // The route refuses a longer tag, so the offer says so instead of doing nothing when pressed.
   const tooLong = (text: string) => text.trim().length > MAX_TAG;
 
-  /** Picked from the list or typed into it; both arrive here. A tag the product
-   *  already carries, however it is spelled, is not a second tag. */
+  /** Picked from the list or typed; a tag the product already carries, however spelled, is not a second tag. */
   const addTag = (text: string) => {
     if (tagsFull || tooLong(text) || hasTag(d.tags, text)) return;
     set("tags", cleanTags([...d.tags, text]));
   };
 
-  // The article number is optional, so an empty box is fine. Something typed
-  // that is not an article number is a mistake worth stopping, not worth
-  // silently storing as nothing.
+  // The article number is optional, but something typed that is not one is a mistake worth stopping.
   const sbFault =
     d.systembolagetId.trim() !== "" && parseSystembolagetId(d.systembolagetId) === null;
 
   /**
-   * What is still missing before this is a product.
-   *
-   * All of it is required, and each part for a reason the feature actually
-   * depends on rather than for tidiness. A barcode, because scanning is how
-   * stock gets registered and a product nobody can scan is one somebody types
-   * thirteen digits to find. A strength and a size, because the restaurangrapport
-   * is litres and pure alcohol, and a product missing either quietly leaves
-   * itself out of the return. A cost, because the shelf's value is the sum of
-   * what things cost and one unpriced product makes the total a guess. And for
-   * a spirit the bottle size is what its rungs are fractions of. Without it
-   * every level is worth nothing and a night's arithmetic comes to zero.
-   *
-   * Everything not on this list is optional and says so in its own hint: the
-   * article number, the shelf life, the tags.
-   *
-   * The same rule the route refuses on, so the button is never live for
-   * something the server would reject.
+   * What is still missing before this is a product. Required: a barcode (scanning registers stock), strength and size
+   * (the restaurangrapport is litres and pure alcohol), a cost (the shelf's value), and for a spirit the bottle size
+   * (its rungs are fractions of it). Mirrors the route's rule, so the button is never live for something the server rejects.
    */
   const blockerFault =
     d.name.trim() === ""
@@ -195,15 +154,7 @@ export function ProductDialog({
                     ? "costRequired"
                     : null;
 
-  /**
-   * Why the save button is dead, in one sentence, or null when it is not.
-   *
-   * The sentence used to be drawn inside the branch that gives a spirit its
-   * bottle size, so it was shown for a bottle of vodka and for nothing else. A
-   * can of beer with no barcode yet had a dead button and no word anywhere
-   * about which box was still empty, and filling in every empty box you can
-   * see is a reasonable thing to do about that.
-   */
+  /** Why the save button is dead, in one sentence, or null. Shown for every product kind so an empty box is never unexplained. */
   const blocker = blockerFault
     ? t(`fault.${blockerFault}`)
     : sbFault
@@ -215,28 +166,19 @@ export function ProductDialog({
       name: d.name.trim(),
       kind: d.kind,
       category: d.category,
-      // The button is dead until `blocker` is null, and `blockerFault` is
-      // exactly the check that these are all there, so the fallbacks below are
-      // for the compiler rather than for anything that can happen.
+      // The button is dead until `blocker` is null, so the fallbacks below are for the compiler.
       abv: num(d.abv) ?? 0,
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
       costPriceOre: Math.round((num(d.costPrice) ?? 0) * 100),
-      // Optional, and null rather than undefined when cleared: a product that
-      // turns out not to go off has to be able to stop raising checks, and
-      // undefined in a PATCH means "leave it alone".
+      // Null, not undefined, when cleared: undefined in a PATCH means "leave it alone".
       shelfLifeMonths: int(d.shelfLifeMonths) || null,
-      // Said to have none: the route gives it the section's own (or keeps the
-      // one it has), so nothing is sent for the field itself.
+      // Said to have none: the route gives it the section's own (or keeps the one it has), so nothing is sent for the field.
       ean: d.noBarcode ? undefined : d.ean.trim(),
       noBarcode: d.noBarcode || undefined,
-      // Whatever was pasted, reduced to the article number. The route takes
-      // only digits. Null rather than undefined so clearing the field clears
-      // the column; undefined in a PATCH means "leave it alone".
+      // Reduced to the article number (the route takes only digits). Null clears the column, undefined leaves it alone in a PATCH.
       systembolagetId: parseSystembolagetId(d.systembolagetId),
-      // Always sent, empty list included: on a PATCH that is what takes the
-      // last tag off a product, and leaving the field out would mean "no
-      // change" instead.
+      // Always sent, empty list included: on a PATCH that takes the last tag off.
       tags: d.tags,
     };
     const saved = await mutate<{ id: string }>(
@@ -264,16 +206,8 @@ export function ProductDialog({
           <Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus />
         </Field>
 
-        {/* FieldGroup, not Field: the box holds a button as well as the input,
-            and a <label> forwards a click anywhere in its area to the first
-            labelable element inside it, which on a phone is the difference
-            between tapping the scanner and opening the keyboard. */}
-        {/* A barcode, or the product said outright to have none. Not an
-            empty field the form lets past: a keg had no barcode, the field
-            would not take nothing, and a made-up number went in. Now there is
-            an honest way, and the check digit (lib/stock/barcode.ts) stops the
-            made-up one. Choosing "none" asks once more first, so it is not the
-            quick way past a barcode somebody could not be bothered to scan. */}
+        {/* FieldGroup, not Field: a <label> forwards a click to the first labelable element, so tapping the scanner would open the keyboard. */}
+        {/* A barcode, or the product said to have none (a keg has none). Choosing "none" asks once more first; the check digit (lib/stock/barcode.ts) stops made-up numbers. */}
         {d.noBarcode ? (
           <FieldGroup label={t("products.field.ean")}>
             <p className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-muted">
@@ -288,15 +222,8 @@ export function ProductDialog({
           >
             <SuffixedInput
               inputMode="numeric"
-              // Named, and told outright that it is not a credential. The same
-              // treatment the payout fields in Min profil needed, for the same
-              // reason and one of its own: an unnamed numeric box that wants
-              // thirteen digits is the shape of a card number, so a password
-              // manager offers to fill one in. `autoComplete="off"` is the
-              // standard half; managers routinely ignore it, so 1Password's own
-              // opt-out says it again in the one language it does read. If
-              // another manager starts guessing here, it will have an attribute
-              // of its own to add beside this one.
+              // An unnamed numeric box wanting thirteen digits looks like a card number to password managers.
+              // `autoComplete="off"` is often ignored, so 1Password's own opt-out is set too.
               name="product-ean"
               autoComplete="off"
               data-1p-ignore
@@ -305,15 +232,9 @@ export function ProductDialog({
               inputClassName="tabular-nums"
               placeholder="7312040017072"
               aria-label={t("products.field.ean")}
-              // The box gives up its right padding so the button can sit near the
-              // edge, and the button gives up its vertical margin so it does not
-              // set the box's height, 32px of tappable button inside a field
-              // that still measures the same as the ones above and below it.
+              // The box gives up its right padding for the button, which gives up its vertical margin so the field keeps its neighbours' height.
               className="pr-1"
               suffix={
-                /* Read it off the tin rather than off the tin and then into the
-                   box. Thirteen digits copied by eye is the one part of making a
-                   product that a machine does better. */
                 <IconButton
                   label={t("scan.action")}
                   title={t("scan.action")}
@@ -333,8 +254,7 @@ export function ProductDialog({
               if (!(d.noBarcode || askingNoBarcode)) setAskingNoBarcode(true);
               else {
                 setAskingNoBarcode(false);
-                // Back to typing one: the section's own code is not one to
-                // keep in the field, it would be refused as typed.
+                // Back to typing one: the section's own code would be refused as typed.
                 setD((p) => ({
                   ...p,
                   noBarcode: false,
@@ -367,12 +287,7 @@ export function ProductDialog({
           )}
         </div>
 
-        {/* Takes a pasted product URL as readily as the bare number: the number
-            is only ever found on the product's page, so the address bar is what
-            the person filling this in actually has. Reduced to digits on save.
-            No hint saying so: the field is marked Frivilligt, the placeholder
-            shows what a number looks like, and a paragraph under it repeating
-            both was the longest thing on a form of short ones. */}
+        {/* Takes a pasted product URL as well as the bare number (the number is only found on the product's page). Reduced to digits on save. */}
         <Field
           label={t("products.field.systembolagetId")}
           error={sbFault ? t("products.field.systembolagetIdInvalid") : undefined}
@@ -386,15 +301,8 @@ export function ProductDialog({
           />
         </Field>
 
-        {/* FieldGroup, not Field: a combobox's trigger is a <button>, and a
-            <label> forwards a click anywhere in its box to the first labelable
-            element inside it, so wrapping one in Field means clicking the
-            empty space beside it pops the menu open. Field's own note says so.
-          */}
+        {/* FieldGroup, not Field: a combobox trigger is a <button>, and a <label> would pop the menu open on a click beside it. */}
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* The hint says what the choice means, which the two names alone
-              do not: Styckvara is counted in whole things, Nivåvara in sealed
-              bottles and how full the opened ones are. */}
           <FieldGroup
             label={t("products.field.kind")}
             hint={t(`kindHint.${d.kind}`)}
@@ -411,10 +319,7 @@ export function ProductDialog({
             />
           </FieldGroup>
           <FieldGroup label={t("products.field.category")} requirement="required">
-            {/* Eight drink types with names like "Alkoholdrycksliknande
-                preparat": long enough that a native select is a scroll, and
-                exactly what a searchable field is for, type "sta" for
-                starköl. */}
+            {/* A searchable field: long names like "Alkoholdrycksliknande preparat" make a native select a scroll. */}
             <Combobox
               value={d.category}
               onChange={(v) => set("category", v as DrinkCategory)}
@@ -430,9 +335,7 @@ export function ProductDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("products.field.abv")} requirement="required">
-            {/* The unit inside the box rather than in the label, because it is
-                the one field where the wrong reading (0,4 for 40 %) is a
-                plausible number that nothing downstream would question. */}
+            {/* The unit is inside the box: the wrong reading (0,4 for 40 %) is a plausible number nothing downstream would question. */}
             <SuffixedInput
               value={d.abv}
               onChange={(e) => set("abv", e.target.value)}
@@ -454,9 +357,7 @@ export function ProductDialog({
 
         {isVolume ? (
           <>
-            {/* The whole a level is a fraction of. Nothing is weighed any more
-                A bottle is judged by eye at 80, 60, 40 or 20 per cent, so
-                this is all a spirit needs. */}
+            {/* The whole a level is a fraction of: a bottle is judged by eye at 80, 60, 40 or 20 per cent. */}
             <Field label={t("products.field.nominalMl")} requirement="required">
               <Input
                 value={d.nominalMl}
@@ -475,15 +376,7 @@ export function ProductDialog({
           </Field>
         )}
 
-        {/* How long it keeps, which is a fact about the product and the only
-            place one can live: nothing is written on the crates in this cellar,
-            they get mixed on the shelf, and they come off it in whatever order
-            somebody reaches. Months, because that is the unit the answer is
-            known in. Nobody says a beer keeps 274 days.
-
-            Optional, and meant to be: a spirit does not go off, and a product
-            left empty here raises no checks at all rather than inheriting a
-            default nobody believes. See lib/stock/expiry.ts. */}
+        {/* Shelf life in months. Optional: a spirit does not go off, and empty raises no checks. See lib/stock/expiry.ts. */}
         <Field
           label={t("products.field.shelfLife")}
           hint={t("products.field.shelfLifeHint")}
@@ -497,10 +390,7 @@ export function ProductDialog({
           />
         </Field>
 
-        {/* Last: everything above the shelf life is what a product has to be
-            before it can exist, and a tag is how somebody finds it afterwards.
-            FieldGroup, not Field: what it labels is a row of chips and a
-            picker, not one control. */}
+        {/* Last: a tag is how a product is found afterwards. FieldGroup, not Field: it labels a row of chips and a picker. */}
         <FieldGroup
           label={t("products.field.tags")}
           hint={t("products.field.tagsHint")}
@@ -517,11 +407,7 @@ export function ProductDialog({
               }
               removeLabel={(tag) => t("products.field.tagRemove", { tag })}
             />
-            {/* A picker that also invents: the list is every tag the cellar
-                already uses, so "whisky" is picked rather than typed a second
-                time and spelled differently, and something genuinely new is
-                offered as itself. Resets to empty after each pick, since what
-                it holds is not a value but the next thing to add. */}
+            {/* A picker that also invents. Resets to empty after each pick, since it holds the next thing to add. */}
             <Combobox
               value=""
               onChange={addTag}
@@ -546,8 +432,7 @@ export function ProductDialog({
         </FieldGroup>
       </div>
 
-      {/* The reason travels with the button rather than sitting at the foot of
-          a body you would have to scroll to reach. See ModalFooter. */}
+      {/* The reason travels with the button. See ModalFooter. */}
       <ModalFooter blocker={blocker}>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="secondary" onClick={onClose}>

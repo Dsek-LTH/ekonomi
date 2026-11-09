@@ -3,9 +3,7 @@ import type { LedgerReport, ReportAccount, ReportSection } from "@/lib/ledger/re
 import { reportToCsv } from "./report-view";
 import type { ResultColumn } from "./report-types";
 
-// Pins the CSV the Utfall page downloads, column for column, across the
-// options that change its shape. Written before reportToCsv was simplified, so
-// the simplification had to produce the same bytes.
+// Pins the CSV the Utfall page downloads, column for column, across the options that change its shape.
 
 const t = (key: string) => `[${key}]`;
 

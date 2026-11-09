@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Saving the gear catalogue, and the field it once dropped: the quantity. The
-// schema accepted it and the dialog sent it, but neither route wrote it, so
-// "Antal" came back as whatever the row already held. Availability is counted
-// against that number, which makes it the one field here that must not be lost
-// quietly.
+// Saving the gear catalogue, including the quantity (availability is counted against it, so it must not be lost).
 
 const h = vi.hoisted(() => ({
   create: vi.fn(),
@@ -27,8 +23,6 @@ vi.mock("@/lib/server/current-user", () => ({
 vi.mock("@/lib/server/db", () => ({
   prisma: {
     rentalItem: {
-      // Looked up by name in the POST, which wants no clash, and by id in the
-      // DELETE, which wants the row.
       findUnique: vi.fn(async ({ where }: { where: { id?: string } }) =>
         where.id ? h.found : null,
       ),
@@ -96,7 +90,6 @@ describe("the gear catalogue routes", () => {
   });
 
   it("deletes an item for real, even one a contract has quoted", async () => {
-    // Nothing is retired any more. The contract keeps its own copy of the line.
     h.found = { id: "i1" };
     const res = await DELETE(new Request("http://test/api/rental-items/i1", { method: "DELETE" }), {
       params: Promise.resolve({ id: "i1" }),

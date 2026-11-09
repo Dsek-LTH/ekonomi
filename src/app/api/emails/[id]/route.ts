@@ -1,6 +1,4 @@
-// GET /api/emails/[id]: one mail's subject and both bodies, for the preview in
-// the log. Fetched one at a time because the bodies are most of a row's
-// weight, and a page of the log only needs the lines above them.
+// GET /api/emails/[id]: one mail's subject and both bodies, fetched one at a time because bodies are most of a row's weight.
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getEmailBody } from "@/lib/data/emails";

@@ -1,23 +1,13 @@
-// Serve the utläggsräkning, the cover page naming who attested what.
-//
-// The cover *alone*. The underlag is a document of its own and the panel pages
-// to it (lib/expense/document-url.ts); stapling the two together is something
-// done on the way to Fortnox and nowhere else, because that is the one place
-// that needs a single file. See lib/server/pdf-merge.ts.
-//
-// The same two answers the income document route gives, for the same reason. A
-// booked utlägg has its cover in storage and it is read from there, because
-// those bytes are what went to Fortnox and must never be re-made: the page
-// names attestations, and re-rendering after a reopen would quietly produce a
-// different document from the one already filed. Anything not yet booked has no
-// stored cover and gets one drawn on the way past, kept by nobody.
+// Serve the utläggsräkning, the cover page naming who attested what, alone (the underlag is paged separately,
+// lib/expense/document-url.ts, and stapled on only on the way to Fortnox, lib/server/pdf-merge.ts).
+// A booked utlägg's stored cover is served, since those bytes went to Fortnox and must never be re-made.
+// Anything not yet booked gets one drawn on the way past.
 import { fail, gate } from "@/lib/api/guard";
 import { denyExpenseView } from "@/lib/api/expense-access";
 import { renderExpenseDocument, type DocumentFailure } from "@/lib/expense/document";
 import { prisma } from "@/lib/server/db";
 import { getObjectBuffer } from "@/lib/server/storage";
 
-/** One mapping from "why there is no document" to an HTTP answer. */
 function documentFailure(failure: DocumentFailure) {
   switch (failure.reason) {
     case "expenseNotFound":
@@ -47,8 +37,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!expense) return fail(404, "expense.notFound");
 
-  // A cover is exactly as private as the utlägg it describes. It is that
-  // utlägg, restated. Same gate the receipts are behind.
+  // A cover is exactly as private as the utlägg it describes. Same gate as the receipts.
   const hidden = await denyExpenseView(g.actor, expense);
   if (hidden) return fail(404, "expense.notFound");
 
@@ -71,9 +60,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }
     filename = expense.documentFilename ?? "utlaggsrakning.pdf";
   } else {
-    // A cover that will not draw is now only the cover's problem: the underlag
-    // is its own document in the panel and is still there to read. Loud in the
-    // log, and this page alone says so on screen.
+    // A cover that will not draw is only the cover's problem: the underlag is still in the panel. Loud in the log.
     const rendered = await renderExpenseDocument(id);
     if (!rendered.ok) {
       console.error(`[expense] ${id}: the cover page could not be drawn`, rendered);
@@ -86,9 +73,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return new Response(new Uint8Array(cover), {
     headers: {
       "Content-Type": "application/pdf",
-      // A stored cover is fixed, but an unbooked one is drawn per request from
-      // attestations that are still moving, so this is held briefly and never
-      // written to disk.
+      // An unbooked cover is drawn per request from moving attestations, so held briefly and never written to disk.
       "Cache-Control": "private, max-age=60",
       "Content-Disposition": `inline; filename="${encodeURIComponent(filename)}"`,
     },

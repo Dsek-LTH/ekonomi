@@ -1,9 +1,4 @@
-// The database half of a milersättning: reading the rate table, and valuing a
-// journey against it.
-//
-// Kept apart from claim.ts, which is pure and shared with the browser. This is
-// the file that knows about Prisma; everything it decides, it decides by asking
-// that one.
+// The database half of a milersättning (claim.ts is pure and shared with the browser).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -11,14 +6,7 @@ import { valueJourney, type JourneyInput } from "./claim";
 import type { MileageRateLike } from "./rate";
 import { isoDay } from "@/lib/domain/date";
 
-/**
- * Every rate ever recorded, newest first.
- *
- * All of them rather than the one in force today: a journey is valued at the
- * rate that applied on the day it was driven, and one filed in January may have
- * been driven in December. The table has one row a year, so "all of them" is a
- * handful.
- */
+/** Every rate ever recorded, newest first: a journey is valued at the rate of the day it was driven. */
 export async function getMileageRates(): Promise<MileageRateLike[]> {
   const rows = await prisma.mileageRate.findMany({
     orderBy: { validFrom: "desc" },
@@ -28,13 +16,8 @@ export async function getMileageRates(): Promise<MileageRateLike[]> {
 }
 
 /**
- * Value a journey against the rate table, for a save that is about to store it.
- *
- * Returns the rate as well as the amount, because both go onto the utlägg: the
- * amount is what is claimed, and the rate is what makes that amount checkable a
- * year later when the schablon has moved. A journey that cannot be valued (a
- * day no rate covers, readings that do not go forward) comes back with nulls,
- * and `claimBlocker` is what refuses to send it.
+ * Value a journey against the rate table before saving. Returns the rate too, so the amount stays checkable after the
+ * schablon moves. An unvaluable journey comes back with nulls, which `claimBlocker` refuses to send.
  */
 export async function valueForStorage(
   journey: Pick<JourneyInput, "date" | "odometerStart" | "odometerEnd">,

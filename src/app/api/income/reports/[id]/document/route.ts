@@ -1,11 +1,6 @@
-// Serve the intäktsräkning for a report, booked or not.
-//
-// Two ways to answer, and which one applies says what the report is. A booked
-// report has its document in storage and it is streamed from there, browser ←
-// Next ← MinIO, the same proxy model receipts use. Those bytes are evidence
-// and must never be re-made. A draft has none: it is rendered here, on the way
-// past, and thrown away. Reviewing a term of takings therefore stores nothing,
-// which is the point (see lib/income/document.ts).
+// Serve the intäktsräkning for a report. Booked: streamed from storage (browser <- Next <- MinIO,
+// as receipts) and never re-made. Draft: rendered on the way past and stored by nobody.
+
 import { fail, gate } from "@/lib/api/guard";
 import { canViewBookkeeping } from "@/lib/domain/permissions";
 import { renderIncomeDocument, type DocumentFailure } from "@/lib/income/document";
@@ -19,8 +14,7 @@ function documentFailure(failure: DocumentFailure) {
     case "reportNotFound":
       return fail(404, "income.reportNotFound");
     case "legacyReport":
-      // Booked before the per-day voucher with its document stored then, so
-      // reaching here means the stored copy is gone, not that it needs drawing.
+      // Stored then, so reaching here means the stored copy is gone.
       return fail(404, "income.documentMissing");
     case "renderFailed":
       return fail(502, "income.renderFailed", { values: { detail: failure.detail } });
@@ -32,8 +26,7 @@ function documentFailure(failure: DocumentFailure) {
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
-  // The whole section's takings, day by day: bookkeeping's business, and the
-  // same gate the pages that link here are behind.
+  // Bookkeeping's business, the same gate as the pages that link here.
   const g = await gate(canViewBookkeeping, "auth.denied");
   if (!g.ok) return g.res;
 
@@ -46,10 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   // ── Booked: the stored bytes, and only those ──
 
   if (report.documentKey) {
-    // Two very different failures, told apart deliberately: the same
-    // distinction the receipt route makes. Storage being unreachable is an
-    // outage; an object storage says is not there is a verifikat that has gone
-    // missing, and someone has to know.
+    // Storage unreachable is an outage; a missing object is a lost verifikat (as the receipt route).
     let obj;
     try {
       obj = await getObjectStream(report.documentKey);
@@ -73,7 +63,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     return new Response(obj.body, { headers });
   }
 
-  // ── Draft: rendered for this look, and kept by nobody ──
+  // ── Draft: rendered for this look ──
 
   const user = await loadUser(g.actor.id);
   if (!user) return fail(401, "auth.signedOut");
@@ -87,9 +77,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return new Response(new Uint8Array(rendered.bytes), {
     headers: {
       "Content-Type": "application/pdf",
-      // Held by the browser for a few minutes, so stepping back to a day you
-      // just looked at costs nothing. Private and short: a draft is unbooked
-      // takings, and pdflatex is the only thing standing behind this number.
+      // Kept by the browser a few minutes; private and short since a draft is unbooked takings.
       "Cache-Control": "private, max-age=300",
       "Content-Disposition": `inline; filename="${encodeURIComponent(rendered.filename)}"`,
     },

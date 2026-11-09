@@ -19,9 +19,6 @@ import { cn } from "@/lib/ui/utils";
 import type { QueueAction } from "@/lib/domain/queue";
 import type { UnitInvoice, UpcomingItem, WaitingOwn } from "@/lib/data/dashboard";
 
-// A count's tag reuses the app's status colours rather than inventing a second
-// language: purple is the authority chain, danger is "it came back" or "it is
-// late", amber is "waiting on you", and the brand hue is the treasury's work.
 type CountAction = QueueAction | "PURCHASES" | "OVERDUE" | "MEMBERS_BEHIND";
 
 const COUNT_TONE: Record<CountAction, React.ComponentProps<typeof Tag>["tone"]> = {
@@ -35,8 +32,6 @@ const COUNT_TONE: Record<CountAction, React.ComponentProps<typeof Tag>["tone"]> 
   MEMBERS_BEHIND: "warning",
 };
 
-// Where each count is worked through. A count and the way there is what the
-// dashboard owes: the lists of the things themselves are those pages.
 const COUNT_HREF: Record<CountAction, string> = {
   FIX: expensesHref("mine", "draft"),
   SUBMIT: expensesHref("mine", "draft"),
@@ -48,7 +43,6 @@ const COUNT_HREF: Record<CountAction, string> = {
   MEMBERS_BEHIND: "/profile/members",
 };
 
-// Where each date in the calendar is looked at.
 const CALENDAR_HREF: Record<UpcomingItem["kind"], (id: string) => string> = {
   deadline: (id) => `/expenses/${id}`,
   invoice: (id) => `/invoices/${id}`,
@@ -57,25 +51,17 @@ const CALENDAR_HREF: Record<UpcomingItem["kind"], (id: string) => string> = {
   stockEvent: (id) => `/stock/events/${id}`,
 };
 
-/** How many of your own waiting utlägg are named before the link to the rest. */
 const WAITING_SHOWN = 6;
 
-/** Dates in Kalender before the rest wait behind "show more". */
 const CALENDAR_SHOWN = 6;
 
-/** Result units drawn as bars before the link to the whole budget. */
 const BUDGET_SHOWN = 5;
 
-/** A deadline this close is shown in amber. */
 const DUE_SOON_DAYS = 3;
 
 const LINK =
   "inline-flex items-center gap-0.5 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current";
 
-/**
- * One line under Din tur: one thing that is late or due, or a count standing
- * for many. Built in page.tsx, which also keeps the two from overlapping.
- */
 export type TurnRow =
   | { kind: "draft" | "cardPurchase" | "invoiceOverdue"; id: string; title: string; days: number }
   | { kind: "deadline"; id: string; title: string; inDays: number }
@@ -83,9 +69,7 @@ export type TurnRow =
       kind: "count";
       action: CountAction;
       count: number;
-      /** Some of the same kind are named above, so this is "the other N". */
       more?: boolean;
-      /** For ATTEST: how many have waited past a week. */
       stale?: number;
     };
 
@@ -94,7 +78,6 @@ function turnHref(r: TurnRow): string {
     case "count":
       return COUNT_HREF[r.action];
     case "cardPurchase":
-      // Straight into an utlägg for that purchase, matched already.
       return `/expenses/new?txn=${r.id}`;
     case "invoiceOverdue":
       return `/invoices/${r.id}`;
@@ -103,19 +86,14 @@ function turnHref(r: TurnRow): string {
   }
 }
 
-/** The result units off pace with their cost budget. See page.tsx. */
 export interface BudgetFlags {
   budgetId: string | null;
-  /** Every unit (the treasury) or the ones the viewer answers for. */
   scope: "all" | "own";
   ownCount: number;
-  /** How much of the year has gone, in percent. */
   elapsed: number;
-  /** Every unit with a cost budget, the ones off pace first. */
   units: { name: string | null; pace: "OVER" | "AHEAD" | "ON_TRACK"; used: number }[];
 }
 
-// See page.tsx for what this page is for.
 export function DashboardClient({
   firstName,
   lateCount,
@@ -129,21 +107,14 @@ export function DashboardClient({
   score,
 }: {
   firstName: string;
-  /** Everything of the viewer's that is late, named in Din tur or not. */
   lateCount: number;
-  /** No clearing and account number on file, so nothing can be paid out. */
   payoutMissing: boolean;
   turn: TurnRow[];
   waiting: WaitingOwn[];
-  /** Dates coming up that ask nothing of the viewer by themselves. */
   calendar: UpcomingItem[];
-  /** Null for a viewer who answers for no budget. */
   budget: BudgetFlags | null;
-  /** No utlägg of their own and no invoices: a first visit. */
   fresh: boolean;
-  /** The latest in the viewer's own result units. Empty for most. */
   invoices: UnitInvoice[];
-  /** The viewer's own redovisningsbetyg. */
   score: number | null;
 }) {
   const t = useTranslations("dashboard");
@@ -155,11 +126,8 @@ export function DashboardClient({
 
   return (
     <PageShell
-      // The person, not the page's name: the phone's top bar and the nav
-      // already say Översikt, and this is the one page that is about them.
       title={t("greeting", { name: firstName })}
       width="content"
-      // Not on a phone, where the tab bar's + is the same menu one thumb away.
       aside={
         <div className="max-md:hidden">
           <NewExpenseMenu size="sm" />
@@ -167,9 +135,6 @@ export function DashboardClient({
       }
     >
       <div className="flex flex-col gap-6">
-        {/* Phones only, until the app is on the home screen or the card is
-            closed. The dashboard is where an installed app opens (start_url
-            in app/manifest.ts), so it is where the offer belongs. */}
         <InstallHint />
         {payoutMissing && (
           <Link href="/profile" className="hover:underline">
@@ -184,10 +149,6 @@ export function DashboardClient({
           budget={budget}
           calendar={calendar}
         />
-        {/* Two columns from lg: what is yours to do, wide, and beside it what
-            is coming and how the money is doing. The same two whatever there
-            is, so the page does not change shape with the data. Without
-            anything for the side, the main pair stands side by side instead. */}
         <div className="grid items-start gap-6 lg:grid-cols-3">
           <div
             className={cn(
@@ -195,8 +156,6 @@ export function DashboardClient({
               side.length > 0 ? "lg:col-span-2" : "lg:col-span-3 lg:grid-cols-2",
             )}
           >
-            {/* Before the first utlägg, the guide to making one takes the
-                place of two empty cards. */}
             {fresh && turn.length === 0 ? (
               <FirstRun />
             ) : (
@@ -208,19 +167,12 @@ export function DashboardClient({
           </div>
           {side.length > 0 && <div className="grid items-start gap-6">{side}</div>}
         </div>
-        {/* Still worth reading with work already waiting (an attester's first
-            visit), but after it, at the foot rather than between the cards. */}
         {fresh && turn.length > 0 && <FirstRun />}
       </div>
     </PageShell>
   );
 }
 
-/**
- * The page's figures at a glance, each a way into where it is worked through.
- * Two by two on a phone, one row from md. The fourth is the budget for whoever
- * watches one, and otherwise the dates coming up.
- */
 function Tiles({
   turn,
   lateCount,
@@ -270,9 +222,6 @@ function Tiles({
           href={budget.budgetId ? `/budget/${budget.budgetId}` : "/budget"}
           label={t("budget")}
           value={t("budgetValue", { off, total: budget.units.length })}
-          // What is wrong, in red, when something is: a unit past its whole
-          // year's budget. Otherwise how far the year has got, which is what
-          // "ahead of pace" is measured against.
           note={over > 0 ? t("over", { count: over }) : t("elapsed", { elapsed: budget.elapsed })}
           alert={over > 0}
         />
@@ -301,7 +250,6 @@ function StatTile({
   label: string;
   value: React.ReactNode;
   note: string;
-  /** The note is something to act on, in the danger colour. */
   alert?: boolean;
 }) {
   return (
@@ -320,8 +268,6 @@ function StatTile({
   );
 }
 
-// Everything that is the viewer's move, in one list. Late things first, each
-// saying how late, then what is due soon, then the counts.
 function TurnCard({ rows, score }: { rows: TurnRow[]; score: number | null }) {
   const t = useTranslations("dashboard.turn");
   const tScore = useTranslations("score");
@@ -333,8 +279,6 @@ function TurnCard({ rows, score }: { rows: TurnRow[]; score: number | null }) {
       <CardHeader
         title={t("title")}
         action={
-          // The member's own score, where they look every day. Doing what is
-          // in this card is what raises it. The breakdown is on the profile.
           <Link href="/profile" title={tScore("ownTitle")} className="inline-flex">
             <ScoreNumber value={score} />
           </Link>
@@ -400,8 +344,6 @@ function TurnCard({ rows, score }: { rows: TurnRow[]; score: number | null }) {
   );
 }
 
-// The viewer's own utlägg that have left them: who has each one now, and for
-// how long. Answers "where did mine get to" without opening the list.
 function WaitingCard({ rows }: { rows: WaitingOwn[] }) {
   const t = useTranslations("dashboard.waiting");
   const shown = rows.slice(0, WAITING_SHOWN);
@@ -448,13 +390,11 @@ function WaitingCard({ rows }: { rows: WaitingOwn[] }) {
   );
 }
 
-// Dates coming up that are not a task by themselves, as an agenda: the day on
-// the left, what happens on the right. The nearest few, and the rest on asking.
 function CalendarCard({ items }: { items: UpcomingItem[] }) {
   const t = useTranslations("dashboard.calendar");
   const [all, setAll] = useState(false);
   const locale = useLocale();
-  // The dates are plain days. Read them as UTC so no time zone moves them.
+  // Read them as UTC so no time zone moves them.
   const [day, month] = useMemo(
     () => [
       new Intl.DateTimeFormat(locale, { day: "numeric", timeZone: "UTC" }),
@@ -474,7 +414,6 @@ function CalendarCard({ items }: { items: UpcomingItem[] }) {
           return (
             <li key={`${i.kind}-${i.id}`}>
               <Row href={CALENDAR_HREF[i.kind](i.id)}>
-                {/* A leaf off a calendar: the month small over the day. */}
                 <span className="flex w-10 shrink-0 flex-col items-center rounded-control border border-border py-0.5 leading-tight">
                   <span className="text-[10px] uppercase text-muted">{month.format(date)}</span>
                   <span className="text-sm font-semibold tabular-nums">{day.format(date)}</span>
@@ -501,9 +440,6 @@ function CalendarCard({ items }: { items: UpcomingItem[] }) {
   );
 }
 
-// Each unit as a bar of its cost budget used, with a tick where the year has
-// got to: a bar past its tick is spending ahead of the year. The furthest gone
-// first, and the rest of them on the budget itself.
 function BudgetCard({ budget }: { budget: BudgetFlags }) {
   const t = useTranslations("dashboard.budget");
   const href = budget.budgetId ? `/budget/${budget.budgetId}` : "/budget";
@@ -581,7 +517,6 @@ function BudgetCard({ budget }: { budget: BudgetFlags }) {
                             : "bg-success",
                       )}
                     />
-                    {/* Where the year has got to. */}
                     <span
                       style={{ left: `${budget.elapsed}%` }}
                       className="absolute -inset-y-0.5 w-px bg-foreground/50"
@@ -604,8 +539,6 @@ function BudgetCard({ budget }: { budget: BudgetFlags }) {
   );
 }
 
-// For an utskottsmästare, the latest invoices in their units, by name and
-// where each one is. Amounts and dates are on the list, one click away.
 function InvoicesCard({ invoices }: { invoices: UnitInvoice[] }) {
   const t = useTranslations("dashboard.invoices");
   return (
@@ -633,8 +566,6 @@ function InvoicesCard({ invoices }: { invoices: UnitInvoice[] }) {
   );
 }
 
-// "idag", "imorgon", "om 5 dagar", "för 2 dagar sedan", in the reader's
-// language. The day counts come from the server, so both renders agree.
 function useRelativeDays() {
   const locale = useLocale();
   return useMemo(() => {
@@ -643,8 +574,7 @@ function useRelativeDays() {
   }, [locale]);
 }
 
-// "4 nov.", for a plain day from the server, read as UTC so no time zone
-// moves it.
+// "4 nov.", for a plain day from the server, read as UTC so no time zone moves it.
 function useShortDate() {
   const locale = useLocale();
   return useMemo(() => {
@@ -667,7 +597,6 @@ function CountTag({
   );
 }
 
-// A row in a list rather than a button: a stack of buttons reads as a toolbar.
 function Row({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link
@@ -680,9 +609,6 @@ function Row({ href, children }: { href: string; children: React.ReactNode }) {
   );
 }
 
-// What a functionary who has never seen this app needs: not four zeroes, but
-// the shape of the whole path and where their part of it ends. Step four names
-// the payout account, the thing that actually strands people.
 function FirstRun() {
   const t = useTranslations("dashboard.firstRun");
   const steps = [1, 2, 3, 4] as const;
@@ -696,9 +622,6 @@ function FirstRun() {
         <ol className="mt-8 grid gap-6 sm:grid-cols-2">
           {steps.map((n) => (
             <li key={n} className="flex gap-4">
-              {/* Numbered because the order is the information: this is a path,
-                  not a feature list. In the brand's pink, as the home-screen
-                  steps in the app tour are. */}
               <StepNumber n={n} size="md" />
               <div className="min-w-0">
                 <p className="font-medium">{t(`step${n}Title`)}</p>

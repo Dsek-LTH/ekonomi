@@ -1,12 +1,9 @@
-// Result units, their prefixes, their resultatansvariga, and which cost centres
-// those prefixes currently claim.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import { resultUnitForCode, getPrefixes } from "@/lib/server/result-units";
 import type { ResultUnit, ResultUnitCostCenter } from "@/lib/domain/types";
 
-// Just the units, for a picker that only needs to name one.
 export async function getResultUnitOptions(): Promise<{ id: string; name: string }[]> {
   return prisma.resultUnit.findMany({
     select: { id: true, name: true },
@@ -14,21 +11,12 @@ export async function getResultUnitOptions(): Promise<{ id: string; name: string
   });
 }
 
-// Result units with their prefixes, their resultatansvariga, and the cost centres
-// each one currently owns. The cost centres are resolved from the prefixes, so
-// the list always reflects what a code would actually match right now.
 export async function getResultUnits(): Promise<ResultUnit[]> {
   const [resultUnits, costCenters, prefixes, accounts, ansvariga] = await Promise.all([
     prisma.resultUnit.findMany({
       include: {
         prefixes: { orderBy: { value: "asc" } },
-        // The Authentik groups that make someone answer for this unit. A
-        // foreign key now rather than a name written in a file, which is why
-        // there is no longer a "mapped to a unit that does not exist" case for
-        // the screen to report. The database will not hold one.
         groups: { select: { group: true }, orderBy: { group: "asc" } },
-        // The income half, read here so a unit is one object on the screen that
-        // edits it. Nothing outside the income section reads it.
         income: {
           include: {
             defaultCostCenter: { select: { id: true, code: true } },
@@ -43,12 +31,8 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
       orderBy: { code: "asc" },
     }),
     getPrefixes(),
-    // Only to name the accounts the product prefixes point at, and to let the
-    // screen say when one is not in the chart at all.
     prisma.account.findMany({ select: { number: true, name: true } }),
-    // Everyone who answers for anything. Derived from the Authentik group list
-    // at sign-in, so this is a report of who currently holds the mapped groups
-    // not something the screen can edit.
+    // Derived from Authentik groups at sign-in, so read-only here.
     prisma.user.findMany({
       where: { resultUnits: { isEmpty: false } },
       select: { id: true, name: true, resultUnits: true },
@@ -84,7 +68,6 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
       ownerGroups: c.groups.map((g) => g.group),
       owners: ansvarigaOf.get(c.name) ?? [],
       costCenters: members,
-      // Retired cost centres shouldn't inflate the headline count.
       costCenterCount: members.filter((cc) => cc.active).length,
       income: c.income && {
         id: c.income.id,
@@ -105,9 +88,7 @@ export async function getResultUnits(): Promise<ResultUnit[]> {
   });
 }
 
-// Cost centres no prefix claims, surfaced in the settings tab so an unassigned
-// code doesn't quietly become un-attestable by anyone but an admin. Inactive
-// ones are included (flagged), since they're grouped separately in the UI.
+// Cost centres no prefix claims (inactive ones included, flagged), so an unassigned code is not silently un-attestable.
 export async function getUnassignedCostCenters(): Promise<ResultUnitCostCenter[]> {
   const [costCenters, prefixes] = await Promise.all([
     prisma.costCenter.findMany({

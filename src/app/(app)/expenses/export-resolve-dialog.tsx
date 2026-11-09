@@ -12,15 +12,8 @@ import type { ResolveExport } from "@/lib/api/schemas/expense";
 
 type Outcome = ResolveExport["outcome"];
 
-/**
- * Say what Fortnox actually holds for an export that ended without an answer.
- *
- * The person has looked, and the app has not been able to. So the dialog asks
- * the question the way they found the answer: is the voucher there or not.
- * Either answer lets go of the lock. "It is there" records the export with the
- * number they read off it. "It is not" makes the utlägg exportable again, which
- * is the answer that files it twice if it is wrong, so it asks how they know.
- */
+/** Asks whether the voucher exists in Fortnox. "It is not there" makes the utlägg exportable again,
+ * which files it twice if wrong, so it asks how they know. */
 export function ExportResolveDialog({
   expenseId,
   label,
@@ -29,7 +22,6 @@ export function ExportResolveDialog({
   onResolved,
 }: {
   expenseId: string;
-  /** The utlägg's reference, for the heading. */
   label: string;
   /** Whose export it was. Null if they have since been removed. */
   by: string | null;

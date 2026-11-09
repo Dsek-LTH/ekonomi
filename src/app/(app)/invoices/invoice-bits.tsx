@@ -1,7 +1,5 @@
 "use client";
 
-// The small pieces every levfaktura screen draws the same way: the status, the
-// due date, and what to call an invoice nobody has named yet.
 import { useTranslations } from "next-intl";
 import { Tag } from "@/components/ui/status-pill";
 import { INVOICE_STATUS_TONE, daysUntilDue } from "@/lib/domain/supplier-invoice";
@@ -15,19 +13,12 @@ export function InvoiceStatusPill({ status }: { status: SupplierInvoiceStatus })
   return <Tag tone={INVOICE_STATUS_TONE[status]}>{t(status)}</Tag>;
 }
 
-/** How close it is to due: plain more than a week out, warned within the
- *  week, alarmed inside three days and once passed. */
+/** Plain over a week out, warned within the week, alarmed inside three days and once passed. */
 function dueTone(days: number | null): "plain" | "warning" | "danger" {
   if (days == null || days > 7) return "plain";
   return days < 3 ? "danger" : "warning";
 }
 
-/**
- * The due date itself, coloured by how close it is. An invoice's deadline is
- * the thing on these screens that costs money when missed, so the colour says
- * it at a glance, and the words ("om 3 dagar") are on hover for whoever wants
- * the count.
- */
 export function DueLabel({ dueDate, className }: { dueDate: string | null; className?: string }) {
   const t = useTranslations("invoices.due");
   const { date } = useFormat();
@@ -57,9 +48,6 @@ export function DueLabel({ dueDate, className }: { dueDate: string | null; class
   );
 }
 
-/** What an invoice is called: what its unit said it is for, as an utlägg is
- *  called by its title. Before it is fördelad it has only its number, and
- *  the supplier is the treasury's to settle, so it is never the name. */
 export function useInvoiceTitle() {
   const t = useTranslations("invoices");
   return (i: { reference: string | null; description: string | null }) =>

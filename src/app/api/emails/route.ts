@@ -5,8 +5,7 @@
 //   ?q=<text>             subject, or the recipient's name or address
 //   ?take=<n>             how many rows, newest first (a page at the least)
 //
-// Settings only. A mail says what happened to somebody's utlägg, with the
-// comment left on it, so the log is as private as the utlägg are.
+// Settings only: a mail carries the comments left on somebody's utlägg.
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { getEmailLog, type EmailFilter } from "@/lib/data/emails";

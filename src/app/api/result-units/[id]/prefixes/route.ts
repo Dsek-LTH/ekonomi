@@ -1,9 +1,6 @@
 // Add a cost-centre code prefix to a result unit (admin only).
 // Body: { value: string }, e.g. "SKT", which claims SKT01, SKT02, …
-//
-// Prefixes must stay non-overlapping across all result units, so a code can only
-// ever match one. The check lives here because the database cannot express
-// "no row is a prefix of another".
+// Prefixes must not overlap across result units; checked here since the database cannot express it.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";

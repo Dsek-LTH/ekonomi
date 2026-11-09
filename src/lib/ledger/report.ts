@@ -1,19 +1,10 @@
-// Fortnox-style reports over the local ledger mirror: a resultatrapport
-// (3000-8999) and a balansrapport (1000-2999), for a month range within a
-// financial year.
-//
-// Two groupings, per the report's own control:
-//   SUMMED:    BAS section → account. Cost centres are summed away.
-//   SPECIFIED: cost centre → BAS section → account.
-//
-// Amounts leave this module in SEK, already oriented for display (see lib/bas):
-// income and equity read positive, costs read negative.
+// Fortnox-style reports over the local ledger mirror: resultatrapport (3000-8999) and balansrapport
+// (1000-2999) for a month range. SUMMED groups BAS section, account; SPECIFIED groups cost centre, section,
+// account. Amounts leave in SEK oriented for display (income and equity positive, costs negative).
 import { prisma } from "@/lib/server/db";
 import { NO_CC, costCenterMatcher } from "./cost-center-filter";
 import { oreToSEK } from "@/lib/domain/money";
-// The wire shapes live in ./report-shape, which the ledger screen imports
-// too. They are the contract between this module and that one, and a
-// contract written down twice is not one.
+// Wire shapes live in ./report-shape.
 export type {
   GroupMode,
   LedgerReport,
@@ -30,8 +21,7 @@ import type {
 } from "./report-shape";
 import { accountRangeFor, orient, sectionsFor, type BasSection, type ReportKind } from "./bas";
 
-// One account within one cost centre, in raw öre (debit − credit) before the
-// display orientation is applied.
+// One account within one cost centre, in raw öre (debit - credit) before display orientation.
 interface Cell {
   account: string;
   accountName: string;
@@ -45,9 +35,7 @@ interface Cell {
   priorAccumulated: number | null; // the prior year's start to a year before `to`
 }
 
-// The figures a cell carries only when somebody asked for them. Each arrives as
-// its own map, and each is null rather than zero where it was not asked for,
-// so "no comparison" and "a comparison of nothing" stay different things.
+// Figures a cell carries only when asked for, null (not zero) otherwise.
 const EXTRAS = ["comparison", "prior", "priorAccumulated"] as const;
 type Extra = (typeof EXTRAS)[number];
 const NO_EXTRAS: Record<Extra, null> = { comparison: null, prior: null, priorAccumulated: null };
@@ -63,9 +51,7 @@ function inRange(account: string, kind: ReportKind): boolean {
 async function movements(financialYear: number, from: Date, to: Date): Promise<Map<string, Cell>> {
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "accountName", "costCenterCode", "costCenterName"],
-    // The row's own year and date, not the voucher's (same values, but this
-    // way the sum is an indexed scan of one table rather than a join over the
-    // whole ledger. See LedgerRow in schema.prisma.
+    // The row's own year and date give an indexed scan of one table (LedgerRow in schema.prisma).
     where: { financialYear, date: { gte: from, lte: to } },
     _sum: { debit: true, credit: true },
   });
@@ -87,13 +73,8 @@ async function movements(financialYear: number, from: Date, to: Date): Promise<M
   return out;
 }
 
-// Opening balance per account + cost centre at the start of the period.
-//
-// The year's #IB is an account-level fact. #OIB gives the per-cost-centre split
-// when the exporter emits it; when it doesn't, the whole opening balance lands
-// in the "no cost centre" bucket rather than being silently spread around. Any
-// part of an account's #IB not covered by its #OIB rows lands there too, so the
-// buckets always add back up to the account total.
+// Opening balance per account + cost centre. #OIB gives the per-cost-centre split; whatever #IB it does not
+// cover lands in the "no cost centre" bucket so the buckets add up to the account total.
 async function openingBalances(
   financialYear: number,
   periodStart: Date,
@@ -130,7 +111,6 @@ async function openingBalances(
     const split = list.filter((b) => b.costCenterCode !== NO_CC);
     const name = total?.accountName ?? split[0]?.accountName ?? "";
     for (const s of split) add(account, name, s.costCenterCode, s.opening);
-    // Remainder (or the whole thing, when there is no #OIB detail).
     const covered = split.reduce((s, b) => s + b.opening, 0);
     const remainder = (total?.opening ?? 0) - covered;
     if (remainder !== 0 || split.length === 0) {
@@ -138,8 +118,6 @@ async function openingBalances(
     }
   }
 
-  // A period starting mid-year carries the movements from the year's start up
-  // to the day before it.
   if (periodStart > yearStart) {
     const before = new Date(periodStart);
     before.setUTCDate(before.getUTCDate() - 1);
@@ -159,12 +137,9 @@ interface ReportOptions {
   yearStart: Date; // the financial year's own first day
   costCenterCodes?: string[]; // only these cost centres; see cost-center-filter
   group: GroupMode;
-  // Raw öre net (debit − credit) per `${account}|${costCenterCode}` to show
-  // alongside the period, prior year or budget. See lib/ledger/comparison.
+  // Raw öre net per `${account}|${costCenterCode}` to show alongside the period (lib/ledger/comparison),
+  // and the prior year as columns of their own.
   comparison?: Map<string, number> | null;
-  // The prior year as columns of their own: its matching period, and its year
-  // so far. Separate from `comparison` because a result report can hold both
-  // these and a budget at once.
   prior?: Map<string, number> | null;
   priorAccumulated?: Map<string, number> | null;
 }
@@ -174,8 +149,6 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
   const isBalance = kind === "BALANCE";
 
   const cells = new Map<string, Cell>();
-  // Every source writes one field of a cell. A cell first seen in a later
-  // source starts with only that field, the rest at zero.
   const merge = (
     src: Map<string, Cell>,
     field: "opening" | "movement" | "accumulated",
@@ -196,20 +169,16 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
 
   const period = await movements(financialYear, from, to);
   merge(period, "movement", (c) => c.movement);
-  // Only the balance report carries balances forward; result accounts restart
-  // at zero each financial year.
+  // Only the balance report carries balances forward.
   if (isBalance) {
     merge(await openingBalances(financialYear, from, yearStart), "opening", (c) => c.opening);
   } else {
-    // Ackumulerat: the year so far, up to the period's end. The period itself
-    // when it starts on the year's first day, so that needs no second query.
+    // Ackumulerat: the year so far, up to the period's end.
     const sinceYearStart =
       from > yearStart ? await movements(financialYear, yearStart, to) : period;
     merge(sinceYearStart, "accumulated", (c) => c.movement);
   }
 
-  // Each asked-for extra lands on its cell, creating one where only the extra
-  // has something (an account used last year and not this one).
   for (const field of EXTRAS) {
     const map = opts[field];
     if (!map) continue;
@@ -233,8 +202,6 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
     }
   }
 
-  // Fill in cost-centre names the ledger rows didn't supply (balance-only
-  // accounts have no rows to denormalise a name from).
   const missingNames = [...cells.values()].filter((c) => c.costCenterCode && !c.costCenterName);
   if (missingNames.length) {
     const known = await prisma.costCenter.findMany({
@@ -250,8 +217,6 @@ export async function getLedgerReport(opts: ReportOptions): Promise<LedgerReport
     const matches = costCenterMatcher(opts.costCenterCodes);
     list = list.filter((c) => matches(c.costCenterCode));
   }
-  // Drop rows that carry nothing at all. An account touched only outside the
-  // period would otherwise show up as a row of zeroes.
   list = list.filter(
     (c) =>
       c.movement !== 0 ||
@@ -296,7 +261,6 @@ function groupByCostCenter(list: Cell[]) {
     byCc.set(c.costCenterCode, bucket);
   }
   return [...byCc.values()].sort((a, b) => {
-    // Named cost centres first (by code), the unattributed bucket last.
     if (!a.code) return 1;
     if (!b.code) return -1;
     return a.code.localeCompare(b.code);
@@ -390,8 +354,7 @@ function buildGroup(
   };
 }
 
-// A sum of figures that may be absent: null when none of them is there, so a
-// column nobody asked for stays empty rather than reading as zero.
+// A sum of figures that may be absent: null when none is there.
 function sumOrNull<T>(items: T[], pick: (item: T) => number | null): number | null {
   return items.some((i) => pick(i) != null) ? items.reduce((s, i) => s + (pick(i) ?? 0), 0) : null;
 }

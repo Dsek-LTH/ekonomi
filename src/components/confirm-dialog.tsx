@@ -9,21 +9,9 @@ import { IconAlert } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { DialogLayer } from "@/components/ui/modal";
 
-// One reusable confirmation dialog for every destructive / irreversible action,
-// replacing window.confirm() and ad-hoc inline confirm UI. Use via useConfirm():
-//
-//   const confirm = useConfirm();
-//   const ok = await confirm({ title, message, tone: "danger" });
-//   if (!ok) return;
-//
-// Some actions have to be explained to whoever they land on (sending an utlägg
-// back, reopening an attested one, undoing an export) and the comment they
-// carry is the same "are you sure" question, asked in words. So it's collected
-// here rather than in a second dialog of its own:
-//
-//   const ok = await confirm({ …, comment: { label, required: true } });
-//   if (!ok) return;
-//   send(ok.comment);
+// One reusable confirmation dialog for every destructive or irreversible action. Use via useConfirm():
+//   const ok = await confirm({ title, message, tone: "danger", comment: { label, required: true } });
+// With a comment, `ok.comment` holds the written reason.
 
 interface ConfirmOptions {
   title: string;
@@ -55,10 +43,7 @@ interface Pending extends ConfirmOptions {
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const [pending, setPending] = useState<Pending | null>(null);
-  // Whatever had focus when the dialog opened. A modal takes focus away from
-  // the control that summoned it, and has to give it back: without this, a
-  // keyboard user who cancels a delete is returned to the top of the document
-  // and has to find their way back down the list to the row they were on.
+  // Whatever had focus when the dialog opened, to give it back on close.
   const openerRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const messageId = useId();
@@ -81,9 +66,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         cur?.resolve(ok ? { comment: comment.trim() } : false);
         return null;
       });
-      // Back where they were. `isConnected` because the answer may have removed
-      // the very row whose button opened this. Focusing a detached node puts
-      // focus on <body>, which is where it would have gone anyway.
+      // `isConnected` because the answer may have removed the row whose button opened this.
       const opener = openerRef.current;
       openerRef.current = null;
       if (opener?.isConnected) opener.focus();
@@ -93,11 +76,8 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
   const missingComment = Boolean(pending?.comment?.required) && comment.trim() === "";
 
-  // Enter confirms, except while a comment is being written, where Enter is a
-  // new paragraph and the keyboard way out is ⌘/Ctrl+Enter.
-  //
-  // Escape, the focus trap and the scroll lock are `DialogLayer`'s, which is
-  // also where the reason each of them stacks is written down.
+  // Enter confirms, except while a comment is being written (⌘/Ctrl+Enter then). Escape, focus trap and
+  // scroll lock are `DialogLayer`'s.
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
@@ -116,23 +96,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {pending && (
         <DialogLayer
           onDismiss={() => settle(false)}
-          // Centred at every width, unlike `Modal`: this is a sentence and two
-          // buttons, not a form, so there is nothing to gain from a phone sheet.
           className="flex items-center justify-center p-4"
         >
           <Card
             role="alertdialog"
             aria-modal="true"
-            // What a screen reader announces on arrival. Without these it says
-            // "dialog" and then reads whatever focus landed on, which for a
-            // destructive confirm is the word "Ta bort" with none of the
-            // sentence that explains what is about to be removed.
+            // Announced by screen readers on arrival.
             aria-labelledby={titleId}
             aria-describedby={pending.message ? messageId : undefined}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              // p-5 rather than the card inset: a dialog is read at arm's
-              // length from its own edges, not laid out against a page column.
               "w-full p-5",
               // A textarea in a max-w-sm box is a slot, not somewhere to write.
               pending.comment ? "max-w-md" : "max-w-sm",
@@ -176,8 +149,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 {pending.cancelLabel ?? t("cancel")}
               </Button>
               <Button
-                // Focus belongs in the comment box when there is one. The
-                // confirm button is the last step there, not the first.
+                // Focus belongs in the comment box when there is one.
                 autoFocus={!pending.comment}
                 variant={pending.tone === "danger" ? "danger" : "primary"}
                 size="sm"

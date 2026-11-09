@@ -1,16 +1,7 @@
 "use client";
 
-// A row of thumbnails along the foot of the receipt panel, for a page where
-// the documents are still being put together (the utlägg form). Tap one to
-// look at it, drag one to put it somewhere else, take one off with its cross,
-// add another with the last tile. The order is the order the viewer stacks
-// them and the order they are stapled behind the cover for Fortnox.
-//
-// The drag is the voucher editor's (components/voucher-editor.tsx), turned on
-// its side: a pointer drag, so it works with a finger as well as a mouse; the
-// tile follows the hand, the others make way as it passes them, it stays where
-// it is let go, and Escape puts the row back. A press that never moves is a
-// tap, which is how one tile both selects and drags.
+// The order is the order the viewer stacks them and the order they are stapled behind
+// the cover for Fortnox.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { IconPlus, IconReceipt, IconX } from "@/components/ui/icons";
@@ -23,7 +14,6 @@ export interface StripItem {
   filename?: string;
 }
 
-// How far a press has to travel before it is a drag rather than a tap.
 const SLOP = 5;
 
 interface Drag {
@@ -32,10 +22,8 @@ interface Drag {
   startIndex: number;
   index: number;
   keys: string[];
-  /** One tile's width plus the gap. */
   step: number;
   before: string[];
-  /** Past the slop: a drag, not a tap. */
   moving: boolean;
 }
 
@@ -49,7 +37,6 @@ export function DocumentStrip({
   disabled,
 }: {
   items: StripItem[];
-  /** Which one the viewer has in view. */
   current: number;
   onSelect: (i: number) => void;
   onReorder: (keys: string[]) => void;
@@ -61,11 +48,7 @@ export function DocumentStrip({
   const drag = useRef<Drag | null>(null);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [draggedBy, setDraggedBy] = useState(0);
-  // Whether the press has turned into a drag. The ref says so to the handlers;
-  // this says so to the render.
   const [moving, setMoving] = useState(false);
-  // The handlers below are registered once per drag; these keep them reading
-  // the page's current callbacks rather than the ones from when it started.
   const handlers = useRef({ onReorder, onSelect });
   useEffect(() => {
     handlers.current = { onReorder, onSelect };
@@ -101,7 +84,6 @@ export function DocumentStrip({
     };
     const up = () => {
       const d = drag.current;
-      // Never moved: it was a tap, on whichever tile it started on.
       if (d && !d.moving) handlers.current.onSelect(d.startIndex);
       end();
     };
@@ -148,11 +130,6 @@ export function DocumentStrip({
 
   return (
     <div className="shrink-0 border-t border-border bg-background px-3 py-2.5">
-      {/* The padding is room inside the scrollport for what stands outside a
-          tile: the selected one's ring and the remove button over its corner.
-          A box that scrolls on one axis clips on both, so without it they were
-          cut off at the edges. The negative margin gives the same room back,
-          so the tiles still line up with the hint under them. */}
       <ul
         className="-mx-1.5 -mt-1.5 flex items-start gap-2 overflow-x-auto px-1.5 pb-0.5 pt-1.5"
         aria-label={t("documents")}
@@ -168,8 +145,6 @@ export function DocumentStrip({
               <button
                 type="button"
                 onPointerDown={(e) => press(e, item.key)}
-                // The keyboard's way in: Enter or Space selects, since the
-                // press above only ever fires for a pointer.
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -202,7 +177,6 @@ export function DocumentStrip({
               >
                 <Thumb item={item} />
               </button>
-              {/* Clear of the tile's border and ring, which a badge at 2px sat on. */}
               <span className="pointer-events-none absolute bottom-1 left-1 rounded-mark bg-background/90 px-1 text-[10px] font-medium tabular-nums">
                 {i + 1}
               </span>
@@ -240,9 +214,6 @@ export function DocumentStrip({
   );
 }
 
-// The picture itself where the browser can draw it, and a plain tile saying
-// what it is where it cannot: a PDF, or an iPhone's HEIC that could not be
-// made a JPEG when it was picked (lib/ui/heic) and waits for the server to.
 function Thumb({ item }: { item: StripItem }) {
   const [failed, setFailed] = useState(false);
   const image = item.mimeType.startsWith("image/") && !/hei[cf]/.test(item.mimeType);

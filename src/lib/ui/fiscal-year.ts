@@ -2,11 +2,7 @@
 // which reads it, and the picker, which writes it. See docs/navigation.md.
 import { owningRoute } from "./routes";
 
-/**
- * The cookie the pick is kept in. A session cookie, with no max-age: the
- * year stays put while somebody works, and a new session opens on the
- * current year again, which is the default.
- */
+/** Cookie holding the pick. A session cookie, so a new session opens on the current year. */
 export const FISCAL_YEAR_COOKIE = "fiscal_year";
 
 /** One of Fortnox's financial years, as the header offers it. */
@@ -26,13 +22,8 @@ export function fiscalYearLabel(y: FiscalYear): string {
 }
 
 /**
- * The pages the year narrows. Everywhere else the picker stands greyed out, so
- * the header keeps its shape and the reader can see the year does not apply.
- * The bokslut template is under /closing but is the same every year, so it is
- * listed as an exception.
- *
- * The Inkorg stays in: its list is not narrowed, but an invoice made from it
- * is made in the year, so the reader has to be able to pick it there.
+ * The pages the year narrows; elsewhere the picker is greyed out. The bokslut template under /closing is an exception,
+ * and the Inkorg stays in because invoices made from it are made in the year.
  */
 const APPLIES = [
   "/dashboard",
@@ -50,11 +41,7 @@ export function fiscalYearApplies(path: string): boolean {
   return owningRoute(path, EXCEPT) === null && owningRoute(path, APPLIES) !== null;
 }
 
-/**
- * Whether a `YYYY-MM-DD` (or an ISO timestamp) falls in the year. For the
- * lists cut in the browser; the server ones ask the database with the same
- * bounds (see lib/server/fiscal-year.ts).
- */
+/** Whether a `YYYY-MM-DD` (or ISO timestamp) falls in the year. For browser-side lists; the server uses lib/server/fiscal-year.ts. */
 export function inFiscalYear(y: FiscalYear, date: string | null | undefined): boolean {
   if (!date) return false;
   const day = date.slice(0, 10);
@@ -62,11 +49,8 @@ export function inFiscalYear(y: FiscalYear, date: string | null | undefined): bo
 }
 
 /**
- * Whether a date somebody is entering lies outside the year they have picked.
- * Something new is made in the year being looked at, so it shows up in the
- * list it was made from. False while there is no year, or the date is not
- * whole yet: the field has its own word for a half-typed date. The routes ask
- * the same through lib/api/fiscal-year.ts.
+ * Whether a date being entered lies outside the picked year. False while there is no year or the date is incomplete.
+ * Routes ask the same through lib/api/fiscal-year.ts.
  */
 export function outsideFiscalYear(y: FiscalYear | null, date: string | null | undefined): boolean {
   if (!y || !date || !/^\d{4}-\d{2}-\d{2}/.test(date)) return false;

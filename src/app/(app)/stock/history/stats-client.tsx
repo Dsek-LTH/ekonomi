@@ -1,10 +1,6 @@
 "use client";
 
-// The shelf as a period rather than as a moment.
-//
-// The list answers "what have we got"; this answers what it has been worth,
-// what it is made of, and what went through it. Every figure is read off the
-// same log the list reads, so the two cannot disagree about anything.
+// The shelf as a period: what it was worth, what it is made of and what went through it, read off the same log as the list.
 import { IconChart, IconList } from "@/components/ui/icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -50,23 +46,9 @@ export default function StockStatsClient({
   const t = useTranslations("stock");
   const router = useRouter();
 
-  /**
-   * The dates as they are being typed, which is not the same thing as the
-   * period being asked about.
-   *
-   * A date is typed a digit at a time, and "2026" is not a day. Asking the
-   * server on every keystroke would send it four questions nobody has, and each
-   * answer would come back with the field reset to whatever survived the
-   * parsing: the field cannot be typed in at all. So the text lives here, and
-   * the address is only touched when the value is a whole date or has been
-   * cleared. The same rule the list toolbars hold. See lib/data/list-query.ts.
-   */
+  /** The dates as typed. A date is typed digit by digit, so the address is only touched when the value is a whole date or cleared (lib/data/list-query.ts). */
   const [dates, setDates] = useState({ from, to });
-  // And when the address changes by some other route (Rensa, or the back
-  // button) the text follows it. Adjusted during the render that brings the new
-  // value, which is what React documents for a state that mirrors a prop: an
-  // effect would do the same thing a frame later, with the old date on the
-  // screen in between.
+  // When the address changes by another route (Rensa, back) the text follows, adjusted during render (React's pattern for state mirroring a prop).
   const [asked, setAsked] = useState({ from, to });
   if (asked.from !== from || asked.to !== to) {
     setAsked({ from, to });
@@ -78,17 +60,7 @@ export default function StockStatsClient({
     if (value === "" || isWholeDate(value)) ask({ [field]: value });
   }
 
-  /**
-   * The periods worth a button.
-   *
-   * Counted back from today rather than from the start of a week or a month:
-   * "the last six months" is the question somebody actually has, and a period
-   * that jumped to 1 January every time the year turned would answer a
-   * different one in December than in February.
-   *
-   * "Allt" is both fields empty, which is also the address with nothing in it:
-   * the whole log, from whenever the first thing was bought.
-   */
+  /** The periods worth a button, counted back from today ("the last six months") rather than from a calendar boundary. "Allt" is both fields empty. */
   const back = (months: number, days = 0): string => {
     const d = new Date(`${today}T12:00:00Z`);
     d.setUTCMonth(d.getUTCMonth() - months);
@@ -102,12 +74,10 @@ export default function StockStatsClient({
     { key: "year", from: back(12) },
     { key: "all", from: "" },
   ];
-  // Which button is lit: the one whose period is the one being shown. A date
-  // typed by hand lights none of them, which is the truth.
+  // Lit when its period is the one shown; a hand-typed date lights none.
   const current = to && to !== today ? "" : (ranges.find((r) => r.from === from)?.key ?? "");
 
-  /** Every filter is a parameter, so changing one is a navigation. Empty means
-   *  absent: an address carries the questions asked and no others. */
+  /** Every filter is a parameter, so changing one is a navigation. Empty means absent. */
   function ask(next: Partial<{ from: string; to: string; cats: string[]; tags: string[] }>) {
     const now = { from, to, cats: categories as string[], tags, ...next };
     const p = new URLSearchParams({ view: "stats" });
@@ -131,8 +101,7 @@ export default function StockStatsClient({
       value: formatOreKr(-flow.wastedOre),
       tone: flow.wastedOre > 0 ? "text-warning" : "",
     },
-    // Negative is worth looking at: the shelf held less than the log said, and
-    // nothing else on this card accounts for the difference.
+    // Negative means the shelf held less than the log said, which nothing else on this card accounts for.
     {
       key: "adjusted",
       value: formatOreKr(flow.adjustmentOre),
@@ -144,8 +113,7 @@ export default function StockStatsClient({
     <PageShell
       title={t("stats.title")}
       width="wide"
-      // The other view of the same history, for the same period. See
-      // ../history/views.ts.
+      // The other view of the same history, same period (../history/views.ts).
       views={{
         label: t("history.viewLabel"),
         value: "stats",
@@ -157,13 +125,8 @@ export default function StockStatsClient({
       }}
     >
       <div className="space-y-5">
-        {/* One row above the charts, which is where a filter belongs: what is
-            being asked is read before what came back. */}
         <Card>
           <CardBody className="space-y-3">
-            {/* The periods people actually ask for, ahead of the two dates:
-                most visits want one of these five and never touch a date at
-                all. */}
             <FieldGroup label={t("stats.period")}>
               <SegmentedControl
                 size="sm"
@@ -188,12 +151,7 @@ export default function StockStatsClient({
                 />
               </FieldGroup>
               <FieldGroup label={t("stats.to")}>
-                {/* Today, when nobody has said otherwise, rather than an empty
-                    box: a period with a blank end invites "up to when, then?",
-                    and today is the answer the figures were computed with.
-                    Asking for today is asking for the ordinary page, so it is
-                    not put in the address. The stock list settles its own date
-                    the same way. */}
+                {/* Today when nobody has said otherwise, not put in the address. */}
                 <DateInput
                   size="sm"
                   value={dates.to || today}
@@ -252,18 +210,13 @@ export default function StockStatsClient({
           </CardBody>
         </Card>
 
-        {/* `minmax(0,1fr)` for the one column this is below lg: an implicit
-            grid column is `auto`, and an `auto` track is never narrower than
-            the min-content of the card standing in it. See the product page. */}
+        {/* `minmax(0,1fr)`: an implicit `auto` track is never narrower than its card's min-content. See the product page. */}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <Card>
             <CardHeader title={t("stats.flowTitle")} subtitle={t("stats.flowHint")} />
             <CardBody className="grid grid-cols-2 gap-4">
               {tiles.map((tile) => (
-                // `min-w-0`, because a grid track is as wide as its content
-                // unless told otherwise and a six-figure sum in `text-xl` has
-                // no space to break at: without it the two columns push the
-                // card off the side of a phone rather than wrapping.
+                // `min-w-0`: a grid track is as wide as its content, so a six-figure `text-xl` sum would push the card off a phone.
                 <div key={tile.key} className="min-w-0">
                   <p className="text-xs text-muted">{t(`stats.flow.${tile.key}`)}</p>
                   <p
@@ -276,18 +229,9 @@ export default function StockStatsClient({
             </CardBody>
           </Card>
 
-          {/* The chart's own numbers, in a table: five bands cannot be read to
-              the krona, and a figure somebody wants to check should not have to
-              be hovered for. */}
           <Card>
             <CardHeader title={t("stats.mixTitle")} subtitle={t("stats.mixHint")} />
-            {/* A name and three figures. On anything but a phone that is one
-                line; on a phone the three figures are 240px of fixed columns
-                against a 300px card, which left the drink type squeezed to a
-                letter and a half and then pushed the row off the edge anyway.
-                So the row wraps: `flex-wrap` with a floor under the name, and
-                the figures drop to a line of their own, still right-aligned by
-                the `ml-auto` that keeps them there on one line too. */}
+            {/* On a phone the three figures (240px of fixed columns) do not fit a 300px card, so the row wraps with the figures on their own line. */}
             <CardBody className="space-y-2">
               {stats.holdings.map((h) => {
                 const share = shown > 0 ? (h.valueOre / shown) * 100 : 0;
@@ -329,9 +273,7 @@ export default function StockStatsClient({
             {stats.movers.length === 0 ? (
               <p className="text-sm text-muted">{t("stats.nothing")}</p>
             ) : (
-              // Wrapping on a phone for the same reason the mix above does, and
-              // with more of a case for it: a product name is the row, and a
-              // product name truncated to "Norr…" is a row that says nothing.
+              // Wraps on a phone: a product name truncated to "Norr…" says nothing.
               stats.movers.map((m) => (
                 <div key={m.id} className="flex flex-wrap items-center gap-x-3 text-sm">
                   <span

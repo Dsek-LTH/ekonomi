@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import { owningRoute } from "./routes";
 
 describe("owningRoute", () => {
-  // The app's sections, as app-shell derives them from the nav. Only the stock
-  // three share a prefix, and they are the reason this exists.
+  // The app's sections as app-shell derives them. Only the stock three share a prefix.
   const sections = [
     "/dashboard",
     "/expenses",
@@ -33,8 +32,7 @@ describe("owningRoute", () => {
   });
 
   it("gives a nested section to itself and not to the one above it", () => {
-    // The bug this replaced: the sidebar lit Produkter *and* Tillfällen here,
-    // because /stock is a prefix of /stock/events.
+    // /stock is a prefix of /stock/events, but only one should light.
     expect(owner("/stock/events")).toBe("/stock/events");
     expect(owner("/stock/history")).toBe("/stock/history");
   });

@@ -15,8 +15,6 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("salesSettings");
 
-// Inställningar → Försäljning: everything income needs, on one page and in the
-// order it is set up. See income-settings-client.tsx.
 export default async function AdminIncomePage() {
   await requirePage(canAccessSettings);
   const t = await getTranslations("admin.income");
@@ -27,10 +25,6 @@ export default async function AdminIncomePage() {
     incomeSetupSteps(),
   ]);
 
-  // Cost centres something here already points at stay offered even once
-  // retired, so retiring one does not make its settings unsaveable. Likewise
-  // the accounts, so a retired one still shows as what it is rather than as an
-  // empty picker.
   const assigned = [
     ...resultUnits.flatMap((u) =>
       u.income?.defaultCostCenterCode ? [u.income.defaultCostCenterCode] : [],

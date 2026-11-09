@@ -1,10 +1,5 @@
 "use client";
 
-// The tags a product carries, drawn as chips.
-//
-// One component for the three places they appear (the list's row, the product's
-// own page, and the form where they are set) so a tag looks the same wherever
-// it is read, and so the removable version cannot drift into a second shape.
 import { IconX } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 
@@ -17,9 +12,7 @@ export function TagChips({
   tags: string[];
   /** Makes each chip removable. Omitted, they are text. */
   onRemove?: (tag: string) => void;
-  /** The accessible name of one chip's remove button, given the tag. Required
-   *  with `onRemove`, since a row of buttons all called "Ta bort" says nothing
-   *  about which one anybody is on. */
+  /** The accessible name of one chip's remove button, given the tag. Required with `onRemove`. */
   removeLabel?: (tag: string) => string;
   className?: string;
 }) {
@@ -31,9 +24,6 @@ export function TagChips({
           key={tag}
           className={cn(
             "flex items-center gap-1 rounded-control border border-border bg-surface px-2 text-xs text-muted",
-            // Room for the button when there is one, and a plain pill when
-            // there is not. The height is the same either way, so a form and a
-            // page do not draw two different chips.
             onRemove ? "h-6 pr-1" : "h-6",
           )}
         >

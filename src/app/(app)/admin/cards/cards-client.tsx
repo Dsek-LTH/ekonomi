@@ -1,13 +1,5 @@
 "use client";
 
-// Settings → Guild cards. Assigning a card to a member is what makes their
-// card purchases show up on their own bank feed, and assigning it a result unit
-// is what lets that unit's resultatansvarig read them.
-//
-// The same shape as every other list in settings: one table, its create
-// button on the toolbar, and the form that button opens just under it. It was
-// a list with the "new card" field parked in an empty header and a gap between
-// each card and its holder, with nothing saying what the dropdown was.
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -47,8 +39,6 @@ export function CardsClient({
   const userOptions = users.map((u) => ({ value: u.id, label: u.name }));
   const unitOptions = resultUnits.map((u) => ({ value: u.id, label: u.name }));
 
-  // A card on nobody is a card whose purchases reach nobody's own list, so it
-  // is the one worth a tab of its own.
   const tabs: ClientTabFilter<SectionCard> = [
     { value: "all", label: t("tab.all") },
     { value: "noHolder", label: t("tab.noHolder"), predicate: (c) => !c.holderId },
@@ -76,7 +66,6 @@ export function CardsClient({
     await mutate(`/api/cards/${card.id}`, {
       key: `holder-${card.id}`,
       method: "PATCH",
-      // "" clears it. See PatchCard.
       body: { holderId },
       error: t("assignFailed"),
       success: holder
@@ -90,7 +79,6 @@ export function CardsClient({
     await mutate(`/api/cards/${card.id}`, {
       key: `unit-${card.id}`,
       method: "PATCH",
-      // "" clears it. See PatchCard.
       body: { resultUnitId },
       error: t("unitAssignFailed"),
       success: unit
@@ -178,8 +166,6 @@ export function CardsClient({
       value: (c) => c.txCount,
       sortable: true,
       align: "right",
-      // To the purchases themselves, on the section's feed searched for the
-      // card's number, which is what Bank's search reads.
       cell: (c) =>
         c.txCount > 0 ? (
           <Link

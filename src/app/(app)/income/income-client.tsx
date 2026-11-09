@@ -1,13 +1,5 @@
 "use client";
 
-// One of Intäkter's two lists, Zettle or Swish: every day of takings, the
-// stage as a tab, the way Utlägg is (docs/navigation.md).
-//
-// A row opens the day's own page (./[source]/[id]), where it is konterad, and
-// later granskad and bokförd by somebody else. Nothing is worked in the list
-// itself beyond what is the same for many days at once: konterar every day
-// that needs nobody, and bokför every konterad day the reader may granska.
-// The days that need somebody say why in the Behöver dig column.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -58,12 +50,9 @@ export default function IncomeClient({
   reports: IncomeReportRow[];
   tab: IncomeTab;
   defaultTab: IncomeTab;
-  /** May fetch, kontera and bokföra. */
   canBook: boolean;
-  /** May undo: unexport, reopen, delete a booked day. Drafts any bookkeeper may delete. */
   canManage: boolean;
   viewerId: string;
-  /** Past the two-person rule (REVIEW_OWN_BOOKING). */
   exemptOwn: boolean;
   settings: IncomeSettingsRow;
   accounts: AccountRecord[];
@@ -90,8 +79,6 @@ export default function IncomeClient({
     dayVoucher({ report: r, settings, accounts, costCenters, projects });
   const own = (r: IncomeReportRow) => !exemptOwn && r.bookedBy.includes(viewerId);
 
-  // What the two bulk actions act on: days nobody needs to look at, and
-  // konterade days this reader may granska.
   const clean = reports.filter((r) => {
     if (r.status !== "DRAFT" || r.legacy) return false;
     const f = lineFindings(r, costCenters);
@@ -99,11 +86,7 @@ export default function IncomeClient({
   });
   const reviewable = reports.filter((r) => r.status === "BOOKED" && !own(r));
 
-  /**
-   * Many days one at a time, in date order, stopping at the first that fails:
-   * a failure halfway reads as "these went, that one stopped it" rather than
-   * as fifty requests in flight with no account of them.
-   */
+  /** Many days one at a time, in date order, stopping at the first that fails, so a failure halfway reads as "these went, that stopped it". */
   async function runAll(days: IncomeReportRow[], step: "book" | "export", key: string) {
     let done = 0;
     for (const r of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
@@ -171,7 +154,6 @@ export default function IncomeClient({
     predicate: incomeTabHolds(value, fiscal),
   }));
 
-  /** What a day still needs, in words, or that it needs nothing. */
   function needs(r: IncomeReportRow) {
     if (r.status === "EXPORTED") {
       return r.voucherLabel ? <span className="tabular-nums">{r.voucherLabel}</span> : "-";
@@ -317,8 +299,7 @@ export default function IncomeClient({
       )}
 
       {reports.length === 0 && canBook ? (
-        // Nothing yet, so bringing days in is the only thing to do here, and
-        // the form is the page rather than a dialog behind a button.
+        // Nothing yet, so bringing days in is the only thing to do: the form is the page.
         <FetchPanel
           source={source}
           ready={ready}

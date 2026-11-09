@@ -1,21 +1,11 @@
-// The state carried across a Fortnox OAuth round trip, and who is allowed to
-// start one.
-//
-// Both halves of the flow need this: /api/fortnox/connect writes the cookie and
-// sends the browser off, /api/fortnox/callback reads it back and re-checks the
-// same authority. It lives here rather than in either route because a route
-// module is an HTTP entry point: its exports are the methods the framework
-// calls, and importing one route from another makes an entry point into a
-// library as well.
+// State carried across a Fortnox OAuth round trip, and who may start one. Shared by
+// /api/fortnox/connect and /callback (not a route export, so neither route is imported as a library).
 import { canAccessSettings, canLogInToFortnox } from "@/lib/domain/permissions";
 import type { FortnoxAuthMode } from "@/lib/fortnox";
 
 export const STATE_COOKIE = "fortnox_oauth_state";
 
-/**
- * The mode, the anti-CSRF nonce and where to return afterwards all ride in one
- * httpOnly cookie; only the nonce goes to Fortnox as `state`.
- */
+/** Mode, anti-CSRF nonce and return path ride in one httpOnly cookie; only the nonce goes to Fortnox as `state`. */
 interface OAuthState {
   nonce: string;
   mode: FortnoxAuthMode;
@@ -32,7 +22,6 @@ export function decodeState(raw: string | undefined): OAuthState | null {
     const parsed = JSON.parse(raw) as Partial<OAuthState>;
     if (typeof parsed.nonce !== "string") return null;
     const mode = parsed.mode === "user" ? "user" : "service";
-    // Only same-origin paths, never let the callback bounce to another site.
     const returnTo =
       typeof parsed.returnTo === "string" &&
       parsed.returnTo.startsWith("/") &&
@@ -45,10 +34,8 @@ export function decodeState(raw: string | undefined): OAuthState | null {
   }
 }
 
-// Who may start which flow. The service connection is org-wide infrastructure
-// and lives in the settings; a personal login only ever affects the person
-// making it, so the whole treasury can do their own. Shared with the callback,
-// which re-checks the same rule when the flow comes back.
+// Who may start which flow. The service connection is org-wide, so it is a settings matter;
+// a personal login affects only its owner. The callback re-checks the same rule.
 export function authorityFor(mode: FortnoxAuthMode) {
   return mode === "service"
     ? {

@@ -1,20 +1,12 @@
 "use client";
 
-// A row of tabs that scrolls sideways once it is wider than its box, which on
-// a phone is most of them: six utlägg stages do not fit 343px.
-//
-// Two things a bare `overflow-x-auto` does not do. It does not say there is
-// more: the last tab is simply cut, and "Att bo" reads as a broken label. So
-// each side with more to show is marked, and `.scroll-strip` in globals.css
-// fades that side out. And it does not keep the current tab in view: open the
-// list on its fifth stage and the line under it is off past the edge. So the
-// row is scrolled to the active tab whenever that changes.
+// A tab row that scrolls sideways when wider than its box. Marks sides with more to show (`.scroll-strip` in
+// globals.css fades them) and scrolls the active tab into view.
 import { useLayoutEffect, useRef } from "react";
 
 /**
- * `ref` is the box that scrolls. Its children are the tabs, unless `items`
- * names the element that holds them (the section tabs' list). Either way the
- * scrolling box must be `relative`, so a tab's offsetLeft is measured from it.
+ * `ref` is the scrolling box, which must be `relative` (tab offsetLeft is measured from it). Its children are the
+ * tabs, unless `items` names the element that holds them.
  */
 export function useScrollStrip(
   ref: React.RefObject<HTMLElement | null>,
@@ -25,18 +17,19 @@ export function useScrollStrip(
     const el = ref.current;
     if (!el) return;
     const mark = () => {
-      // A pixel of slack, because widths are fractional and a row that fits
-      // can still report itself half a pixel short of its content.
+      // A pixel of slack: fractional widths can report half a pixel short.
       const more = el.scrollWidth - el.clientWidth > 1;
       el.toggleAttribute("data-more-start", more && el.scrollLeft > 1);
-      el.toggleAttribute("data-more-end", more && el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+      el.toggleAttribute(
+        "data-more-end",
+        more && el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
+      );
     };
     mark();
     el.addEventListener("scroll", mark, { passive: true });
     const ro = new ResizeObserver(mark);
     ro.observe(el);
-    // The tabs grow without the row itself resizing: a badge count arriving,
-    // a font landing.
+    // The tabs can grow without the row resizing (badge count, font load).
     if (items?.current) ro.observe(items.current);
     return () => {
       el.removeEventListener("scroll", mark);
@@ -44,9 +37,7 @@ export function useScrollStrip(
     };
   }, [ref, items]);
 
-  // Moved on the row itself, not with scrollIntoView, which would also scroll
-  // the page to bring the row into view and drag it under the sticky band.
-  // Jumped there on the first draw, slid there after.
+  // Scroll the row itself, not scrollIntoView, which would drag it under the sticky band. Jump on first draw, slide after.
   const placed = useRef(false);
   useLayoutEffect(() => {
     const el = ref.current;

@@ -12,11 +12,9 @@ export default async function StockEventPage({ params }: { params: Promise<{ id:
   const user = await requirePage(canViewStock);
   const [event, products, changes] = await Promise.all([
     getStockEvent(id),
-    // Levels, not just products: the sheet has to know what is on the shelf
-    // before it can offer bottles to take off it.
+    // Levels, not just products: the sheet offers bottles to take off the shelf.
     getStockLevels(),
-    // The night in order, which is the reading the sheet cannot give: the sheet
-    // shows where the figures ended up, this shows how they got there.
+    // The night in order: how the figures got where the sheet shows them.
     getStockChanges({ eventId: id, take: 100 }),
   ]);
   if (!event) notFound();

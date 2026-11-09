@@ -1,12 +1,5 @@
 "use client";
 
-// The outbox, read as a log: every mail the app has written, newest first,
-// with where each one got to. Opening a row shows the mail as it was sent.
-//
-// Two places draw it. Inställningar → E-post shows the whole log, searchable.
-// The person dialog under Användare shows one member's, with a way to send
-// them a test mail above it: "did they get it" and "send them one and see" are
-// the same visit. See lib/data/emails.ts for the reading side.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -39,12 +32,7 @@ const STATUS_TONE: Record<EmailStatus, "success" | "neutral" | "warning" | "dang
   FAILED: "danger",
 };
 
-export function EmailLog({
-  recipient,
-}: {
-  /** One member's mail, with the test form above it. Absent for the whole log. */
-  recipient?: { id: string; name: string };
-}) {
+export function EmailLog({ recipient }: { recipient?: { id: string; name: string } }) {
   const t = useTranslations("admin.email");
   const [filter, setFilter] = useState<EmailFilter>("");
   const [q, setQ] = useState("");
@@ -60,7 +48,6 @@ export function EmailLog({
     debounceMs: q ? 250 : 0,
   });
 
-  // A narrower question starts from the top again.
   const narrow =
     <T,>(set: (v: T) => void) =>
     (v: T) => {
@@ -141,7 +128,6 @@ export function EmailLog({
       {open && (
         <EmailDialog
           key={open.id}
-          // The row as the latest reload has it, so a retry shows its outcome.
           row={data?.rows.find((r) => r.id === open.id) ?? open}
           onClose={() => setOpen(null)}
           onRetried={reload}
@@ -195,7 +181,6 @@ function LogRow({
   );
 }
 
-/** One mail as it was written, with what became of it and a retry if unsent. */
 function EmailDialog({
   row,
   onClose,
@@ -214,7 +199,6 @@ function EmailDialog({
   const { data, error } = useQuery<{ subject: string; text: string; html: string | null }>(
     `/api/emails/${row.id}`,
   );
-  // A mail written before HTML existed has only its text.
   const shown = data && !data.html ? "text" : view;
 
   const retry = async () => {
@@ -226,7 +210,6 @@ function EmailDialog({
     });
     if (ok) {
       onRetried();
-      // The send runs after the response; ask again once it has had a moment.
       setTimeout(onRetried, 3000);
     }
   };
@@ -289,9 +272,8 @@ function EmailDialog({
         )}
         {data &&
           (shown === "html" ? (
-            // Sandboxed with nothing allowed: no scripts, no forms, no
-            // navigating the app from inside a mail. The mail is ours, but it
-            // carries text members wrote, and the frame has no need to trust it.
+            // Sandboxed with nothing allowed: no scripts, no forms, no navigating the
+            // app from inside a mail.
             <iframe
               title={row.subject}
               sandbox=""
@@ -317,7 +299,6 @@ function EmailDialog({
   );
 }
 
-/** Send one member a made-up mail of any kind, marked as a test. */
 function TestEmailForm({
   recipient,
   onSent,
@@ -340,8 +321,6 @@ function TestEmailForm({
     });
     if (ok) {
       onSent();
-      // The mail goes out after the response; ask again once it has had a
-      // moment, so the row turns from queued to sent (or failed) on its own.
       setTimeout(onSent, 3000);
     }
   };

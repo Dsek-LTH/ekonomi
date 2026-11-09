@@ -37,8 +37,7 @@ import { useBookingPresence } from "./book/use-booking-presence";
 import { useConfirm } from "@/components/confirm-dialog";
 import { PersonName } from "@/components/ui/avatar";
 
-/** What bokföring this utlägg has to know, for whoever may do it. Worked out
- *  on the server; see bookkeepingReview in page.tsx. */
+/** What bokföring needs to know, worked out on the server (bookkeepingReview in page.tsx). */
 export interface BookkeepingReview {
   warnings: ReviewWarning[];
   /** Konterat by the reader, so the two-person rule gives it to somebody else. */
@@ -113,19 +112,16 @@ function ExpenseDetail({
   // Attest and its withdrawal on each row, wherever there is more than one
   // cost centre to tell apart. With one, the header's buttons are the same act.
   const perRow = expense.allocations.length > 1;
-  // Which row's button was pressed, so the spinner lands on that one.
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   async function onRow(id: string, act: () => Promise<unknown>) {
     setRowBusy(id);
     await act();
     setRowBusy(null);
   }
-  const documents = expenseDocuments(
-    expense,
-    `${tReceipt("alt")} - ${expense.title}`,
-    // The panel stacks the two into one scroll, so each is captioned.
-    { cover: tReceipt("coverLabel"), underlag: tReceipt("underlagLabel") },
-  );
+  const documents = expenseDocuments(expense, `${tReceipt("alt")} - ${expense.title}`, {
+    cover: tReceipt("coverLabel"),
+    underlag: tReceipt("underlagLabel"),
+  });
   const matched = bankTransactions.find((t) => t.id === expense.matchedTransactionId);
 
   // Somebody else sending it to Fortnox right now, or an export that ended
@@ -134,10 +130,8 @@ function ExpenseDetail({
   const live = useLiveBookkeeping(can.canExport);
   const { list } = useFormat();
   const confirm = useConfirm();
-  // Who else granskar this konterat utlägg right now. Announced only by
-  // somebody who could bokföra it from here, so not by whoever konterade it.
-  // Advisory, like the booking screen's: the export lock is what stops a
-  // second export. No version to compare against, since nothing is typed here.
+  // Who else granskar this konterat utlägg. Announced only by someone who could bokföra it from here.
+  // Advisory: the export lock stops a second export.
   const reviewers = useBookingPresence(
     can.canExport && !review?.ownBooking ? expense.id : null,
     null,
@@ -158,13 +152,10 @@ function ExpenseDetail({
 
   return (
     <PageShell
-      // The same width as the form that made it, so opening an utlägg after
-      // filling one in does not shrink the page into a narrow column.
+      // The same width as the form that made it.
       width="content"
       title={expense.title}
-      // Before it is submitted there is no reference to show, and the status
-      // pill below already says so, the name alone, not a gap where a number
-      // would be.
+      // Before submission there is no reference: the name alone, not a gap.
       subtitle={
         <span className="inline-flex flex-wrap items-center gap-x-2">
           {expense.reference && `${expense.reference} - `}
@@ -173,23 +164,8 @@ function ExpenseDetail({
       }
       back="/expenses"
     >
-      {/* The receipt is the app's panel now, not a card in this page. The page
-          declares it and the shell stands it beside all of this, full height.
-
-          Two documents, not one: the utläggsräkning (the cover page naming
-          who attested what) and the underlag behind it, with the panel's pager
-          between them. They are in the order they are stapled in for Fortnox,
-          which is what makes paging through them a reading of the thing the
-          section will actually file; a document you cannot see until it is in
-          somebody else's system is one nobody checks.
-
-          It opens on the second of them all the same. The receipt is what
-          somebody comes to this page to look at. The cover is generated from
-          data already on screen beside it, so the panel lands there and the
-          cover is a page back.
-
-          A draft has no cover worth drawing and shows its receipt alone.
-          See lib/expense/document-url.ts. */}
+      {/* The panel is declared here and stood beside the page by the shell: the utläggsräkning then the underlag (Fortnox stapling order),
+      opening on the underlag. A draft shows its receipt alone (lib/expense/document-url.ts). */}
       <ReceiptPanelSource
         documents={documents}
         emptyTitle={tReceipt("alt")}
@@ -207,8 +183,7 @@ function ExpenseDetail({
         </Notice>
       )}
 
-      {/* What is worth a second look on the voucher before it goes. None of it
-          stops the bokföring: each is something a person may have meant. */}
+      {/* Voucher warnings: none stops the bokföring. */}
       {review && review.warnings.length > 0 && (
         <Notice>
           <p className="font-medium">{tBookkeeping("review.warningsTitle")}</p>
@@ -220,8 +195,6 @@ function ExpenseDetail({
         </Notice>
       )}
 
-      {/* The inspector. One card, read top to bottom; see detail-sections.tsx
-          for why it is not a stack of cards. */}
       <Card>
         <ExpenseSummary
           expense={expense}
@@ -232,8 +205,7 @@ function ExpenseDetail({
               fortnox={fortnox}
               exportBlock={exportBlock}
               onExport={async () => {
-                // Somebody else is looking it over too. Not a lock, but the
-                // one bokföring it first should know they are doing so.
+                // Somebody else is looking it over too. Not a lock.
                 if (
                   reviewers.length > 0 &&
                   !(await confirm({
@@ -254,8 +226,7 @@ function ExpenseDetail({
               onApprove={() => mutations.transition("approve")}
               approveAll={attestable > 1 ? attestable : null}
               onWithdrawAttest={() => mutations.withdrawAttest()}
-              // How many rows are already signed, so the confirmation can say
-              // what taking it back actually costs somebody else.
+              // How many rows are signed, so the confirmation can say what taking it back costs somebody else.
               onRecall={() =>
                 mutations.recall(expense.allocations.filter((a) => a.approvedById).length)
               }
@@ -275,9 +246,7 @@ function ExpenseDetail({
             expense={expense}
             matched={matched}
             bankTransactions={bankTransactions}
-            // Whose card the purchase was on, which is the submitter's,
-            // matching someone else's utlägg means offering their
-            // transactions, and the route refuses any other.
+            // The submitter's card, since matching someone else's utlägg offers their transactions and the route refuses any other.
             cardHolderId={expense.submitterId}
             canMatch={can.canMatch}
             matching={mutations.matching}
@@ -315,7 +284,6 @@ function ExpenseDetail({
         <TimelineSection revisions={expense.revisions} />
       </Card>
 
-      {/* The send refreshes the page, which puts the reminder in the history. */}
       {reminding && (
         <ReminderDialog expenseIds={[expense.id]} onClose={() => setReminding(false)} />
       )}
@@ -323,15 +291,8 @@ function ExpenseDetail({
   );
 }
 
-/**
- * The bank side of a card purchase, in one place whatever state it is in.
- *
- * Matched, it is a one-row table in the allocation's columns (see below), so
- * the bank's figure sits straight above the allocation's and the two can be
- * checked against each other and the receipt without leaving the page. Taking
- * the match off is a button at the end of that row. Unmatched, it is the
- * picker for whoever may match, and a plain sentence for whoever may not.
- */
+/** The bank side of a card purchase. Matched, a one-row table in the allocation's columns so the figures can be checked
+ * against each other. Unmatched, the picker for whoever may match. */
 function BankSection({
   expense,
   matched,
@@ -351,18 +312,11 @@ function BankSection({
 }) {
   const t = useTranslations("expenses.detail");
   const { date } = useFormat();
-  // Which row was clicked. `matching` says a write is in flight but not which
-  // one, and the list stays on screen throughout, so without this the click
-  // looks ignored.
+  // Which row was clicked: `matching` doesn't say which, and the list stays on screen.
   const [picked, setPicked] = useState<string | null>(null);
 
   if (matched) {
-    // Laid out in the allocation table's columns, so the bank's figure sits
-    // straight above the allocation's, but drawn as a statement line rather
-    // than as one more row of the card: the line itself on a tinted, rounded
-    // ground, with the card mark and number at its head. The two tables are
-    // read against each other, and the eye has to tell at once which is the
-    // bank's and which is ours.
+    // In the allocation table's columns, but drawn as a statement line on a tinted ground so the bank's figure is told from ours at once.
     const remove = canMatch ? (
       <Button variant="secondary" size="sm" loading={matching} onClick={() => onMatch(null)}>
         {t("removeMatch")}
@@ -375,8 +329,7 @@ function BankSection({
     );
     return (
       <section className="border-t border-border px-inset pb-4 pt-4">
-        {/* `border-separate`: corners on a cell are ignored under the
-            collapsed borders a table has by default. */}
+        {/* `border-separate`: corner radii on a cell are ignored under collapsed borders. */}
         <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
           <caption className="sr-only">{t("bankTransaction")}</caption>
           <thead>
@@ -400,8 +353,6 @@ function BankSection({
                     </span>
                   )}
                 </div>
-                {/* On a phone the third column is gone, so what it holds
-                    comes under the description, as the attest does below. */}
                 <div className="mt-1 flex items-center justify-between gap-3 pl-6 sm:hidden">
                   {when}
                   {remove}
@@ -432,14 +383,9 @@ function BankSection({
   }
 
   return (
-    // How matching works is behind the "?" beside the heading, the same as on
-    // the form, rather than a paragraph above the list.
     <InspectorSection title={t("bankTransaction")} aside={<MatchHelp />}>
       <div className="space-y-3">
-        {/* Every row on this member's card, the claimed ones included. They
-            used to be filtered out here, so a purchase somebody else had
-            already redovisat simply was not in the list and the reason was
-            unfindable. The picker names the utlägg holding them. */}
+        {/* Every row on this member's card, claimed ones included: the picker names the utlägg holding them. */}
         <TransactionPicker
           candidates={matchCandidates(
             bankTransactions.filter((t) => t.cardHolderId === cardHolderId),

@@ -1,23 +1,7 @@
 "use client";
 
-// The events, as a timeline.
-//
-// A night is a thing rather than a label on a movement: you make one, open it,
-// and register against it. So it needs a place to be listed, and the list's
-// job is to get somebody into the right one: the pub they ran last night is
-// almost always the top one. That one is tinted and carries the way back into
-// its sheet; the rest are rows under their month, read top to bottom in the
-// order they happened. They were cards three to a row, which the eye had to
-// zigzag through to find a date, each with the same calendar icon saying
-// nothing.
-//
-// What a row says about a night is its arithmetic, because there is nothing
-// else to say. There is no status: an event is never closed and never
-// finished, and nothing here can say whether a night is done. A row used to
-// carry a "still out" badge that meant to, but its condition was
-// `out > back + spilled`, which is the definition of the sold figure standing
-// beside it, so it lit on every night that sold anything. Telling the two
-// apart needs something the log does not record.
+// The events as a timeline: the latest night is tinted and links into its sheet, the rest are rows under their month.
+// There is no status: an event is never closed, and the log cannot say whether a night is done.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -59,7 +43,6 @@ export default function EventsClient({
   const latestId = events[0]?.id;
   const q = query.trim().toLowerCase();
 
-  /** The shown nights under their month, in the order they arrive. */
   const months = useMemo(() => {
     const out: { key: string; label: string; events: StockEventDto[] }[] = [];
     for (const e of events) {
@@ -91,8 +74,6 @@ export default function EventsClient({
 
   return (
     <PageShell title={t("event.title")} width="content">
-      {/* The list's own frame even with nothing in it: the search and the way
-          to make the first one stay where they always are. */}
       <>
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1 sm:max-w-sm">
@@ -119,8 +100,6 @@ export default function EventsClient({
                     return (
                       <li key={e.id} className={cn("relative", latest && "bg-accent-soft/30")}>
                         <div className="flex items-center gap-4 px-inset py-3">
-                          {/* The day as a block, so the column of them reads
-                              as a calendar down the left. */}
                           <span className="flex w-10 shrink-0 flex-col items-center leading-none">
                             <span className="text-lg font-semibold tabular-nums">
                               {day.getDate()}
@@ -148,9 +127,7 @@ export default function EventsClient({
                             </span>
                           )}
                           {latest ? (
-                            // Above the stretched link, so it is its own
-                            // target rather than the row's. On a phone the
-                            // tinted row is the button.
+                            // Above the stretched link, so it is its own target (on a phone the tinted row is the button).
                             <span className="relative z-10 hidden shrink-0 sm:block">
                               <ButtonLink href={`/stock/events/${e.id}`} size="sm">
                                 {canManage ? t("event.continue") : t("event.open")}

@@ -1,11 +1,7 @@
-// The frame-budget overview: every cost centre's income/cost/result, grouped by
-// result unit with subtotals and a grand total. Rows link into their sheet.
-//
-// The rows come from the comparison join (lib/budget/compare.ts), which is what
-// puts a cost centre the other side budgets for, or spent on, in this table
-// even though this budget has no sheet for it. Such a row has nothing of its own
-// to show and nowhere to click through to, and says so. When nothing is being
-// compared the join holds one side, and the table is exactly this budget.
+// The frame-budget overview: every cost centre's income, cost and result grouped by result
+// unit with subtotals and a grand total. Rows come from the comparison join
+// (lib/budget/compare.ts), so a cost centre only the other side has appears without a sheet
+// to open.
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet, type Totals } from "@/lib/budget/compare";
@@ -22,9 +18,7 @@ import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
 
 const numCls = "px-3 py-1.5 text-right tabular-nums";
 
-// A sheet with both sides totalled once; the rows, the subtotals and the grand
-// total all read from these. `impact` is how much of `own.result` comes from
-// editorial changes rather than from the adopted figures.
+// A sheet with both sides totalled once. `impact` is how much of `own.result` comes from editorial changes.
 type Row = { sheet: JoinedSheet; own: Totals; other: Totals; impact: number };
 type Pair = { own: Totals; other: Totals; impact: number };
 
@@ -52,11 +46,8 @@ export function Rambudget({
   onPick,
 }: {
   comparison: Comparison;
-  /** The sheet in THIS budget a joined row belongs to, if it has one. */
   ccIdOf: (key: string) => string | undefined;
-  /** What editorial changes have done to that sheet's result. */
   impactOf: (key: string) => number | undefined;
-  /** Whether the budget has any at all. No column until it does. */
   showImpact: boolean;
   onPick: (id: string) => void;
 }) {
@@ -74,16 +65,10 @@ export function Rambudget({
   const groups = groupByResultUnit(rows, (r) => resultUnitOfSheet(r.sheet));
 
   return (
-    // The card is its own scrollport from lg up: the table scrolls inside it
-    // while the header block stays put at the top, and the page itself does
-    // not move. It is as tall as the window allows (the page sizes its parent
-    // to the window, see budget-client.tsx) and no taller than its rows.
-    // Below lg it keeps its natural height and flows with the page, a nested
-    // vertical scroller on a phone is more trouble than it is worth.
+    // From lg the card is its own scrollport, sized to the window (see budget-client.tsx).
+    // Below lg it flows with the page: a nested scroller on a phone is more trouble.
     <div className="rambudget budget-grid overflow-x-auto rounded-panel border border-border bg-background lg:max-h-full lg:overflow-y-auto">
       <table className="w-full border-collapse text-sm">
-        {/* Column names and the grand total both sit here; the whole block pins
-            as one from lg up. See `.rambudget thead` in globals.css. */}
         <thead>
           <tr className="border-b border-border text-xs text-muted">
             <th className="px-3 py-2 text-left font-medium">{tAlloc("costCenter")}</th>
@@ -92,9 +77,7 @@ export function Rambudget({
             </th>
             <th className={cn("font-medium", numCls)}>{t("costs")}</th>
             <th className={cn("font-medium", numCls)}>{t("result")}</th>
-            {/* What the adopted budget said, beside what it says now. A transfer
-                nets to nothing across its resultUnit, so this column is mostly
-                deviations, which is the point of it. */}
+
             {showImpact && (
               <th title={t("changesHint")} className={cn("font-medium", numCls)}>
                 {t("changes")}
@@ -133,8 +116,6 @@ export function Rambudget({
                     )}
                     onClick={id ? () => onPick(id) : undefined}
                   >
-                    {/* Under its result unit's heading, so the short name where
-                        one is set, with the full name on hover. */}
                     <td
                       className="px-3 py-1.5"
                       title={row.sheet.shortName ? row.sheet.name : undefined}
@@ -147,8 +128,7 @@ export function Rambudget({
                           {nameUnderUnit(row.sheet)}
                         </>
                       )}
-                      {/* Only the other side has this one. There is no sheet
-                          here to open, and nothing budgeted to put beside it. */}
+
                       {!id && <span className="ml-2 text-xs">- {t("notInThisBudget")}</span>}
                     </td>
                     <Amounts
@@ -170,11 +150,9 @@ export function Rambudget({
   );
 }
 
-// The numeric tail of a row, the same four/six cells whether it's one cost
-// centre, a result unit subtotal or the grand total. `soft` picks the lighter
-// divider used on the cost-centre rows. `data-rule="l"` marks the cells that
-// carry a left divider; it only does anything in <thead>, where the pinned
-// cells have to redraw their own rules (see globals.css).
+// The numeric tail of a row. `soft` picks the lighter divider. `data-rule="l"` marks cells
+// with a left divider, which only matters in <thead> where pinned cells redraw their rules
+// (see globals.css).
 function Amounts({
   own,
   other,
@@ -198,8 +176,7 @@ function Amounts({
       </td>
       <td className={numCls}>{fmt(own.cost)}</td>
       <td className={cn(numCls, diffClass(own.result, true))}>{fmtSigned(own.result)}</td>
-      {/* Blank rather than a zero where nothing has been changed: a column of
-          "0" would read as a finding, and the finding is that there is none. */}
+
       {showImpact && (
         <td className={cn(numCls, impact !== 0 && diffClass(impact, true))}>
           {impact === 0 ? "" : fmtSigned(impact)}

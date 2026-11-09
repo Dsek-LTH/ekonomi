@@ -1,12 +1,6 @@
-// Taking, moving on and letting go of an utlägg's export lock.
-//
-// The lock is three columns on Expense (see the schema for why it is stored
-// rather than held). Its identity is the moment it was taken, `exportClaimedAt`,
-// to the millisecond: every write after the first is conditional on that exact
-// value, so an export whose lock was taken over, or let go of by hand, finds
-// out at its next step instead of carrying on as if it still held it.
-//
-// lib/domain/export-claim.ts decides what a lock means. This only writes.
+// Taking, moving on and letting go of an utlägg's export lock. Its identity is `exportClaimedAt` to the
+// millisecond: every write after the first is conditional on that exact value, so an export whose lock was
+// taken over finds out at its next step. lib/domain/export-claim.ts decides what a lock means.
 import "server-only";
 
 import type { NextResponse } from "next/server";
@@ -21,13 +15,8 @@ export type ExportClaim = { expenseId: string; token: Date };
 type Taken = { ok: true; claim: ExportClaim } | { ok: false; res: NextResponse };
 
 /**
- * Take the lock for exporting `expenseId`, or say why not.
- *
- * Read and written in one transaction with the row held (FOR UPDATE), so two
- * presses at the same moment are put in a line: the first takes the lock, and
- * the second, once it gets the row, reads the lock the first one wrote and is
- * refused. The transaction lasts a read and a write, not the export: the
- * Fortnox calls happen after it has committed, with the lock in the row.
+ * Take the lock for exporting `expenseId`, or say why not. Read and written in one transaction with the row
+ * held (FOR UPDATE); the Fortnox calls happen after it commits.
  */
 export function claimExport(expenseId: string, userId: string): Promise<Taken> {
   return prisma.$transaction(async (tx): Promise<Taken> => {
@@ -63,8 +52,7 @@ export function claimExport(expenseId: string, userId: string): Promise<Taken> {
       return { ok: false, res: fail(409, "expense.exportUncertain", { values: { name } }) };
     }
     if (row.exportClaimState) {
-      // Free only because it was abandoned before anything was sent. Taken
-      // over, which is safe (see CLAIM_ABANDONED_MS), and worth a line.
+      // Free only because it was abandoned before anything was sent, so taken over (CLAIM_ABANDONED_MS).
       console.warn(
         `[export] ${expenseId}: taking over a lock abandoned at ${row.exportClaimedAt?.toISOString()}`,
       );
@@ -83,14 +71,7 @@ export function claimExport(expenseId: string, userId: string): Promise<Taken> {
   });
 }
 
-/**
- * Say, before asking Fortnox for the voucher, that it is about to be asked.
- *
- * Written and committed before the request goes, so that from this moment on a
- * crash leaves a lock that says "a voucher may exist" rather than one that
- * looks safe to take over. False when the lock is no longer ours, and then
- * nothing must be sent.
- */
+/** Say, and commit, before asking Fortnox for the voucher that it is about to be asked. False when the lock is no longer ours: send nothing. */
 export async function markSent({ expenseId, token }: ExportClaim): Promise<boolean> {
   const { count } = await prisma.expense.updateMany({
     where: { id: expenseId, exportClaimedAt: token, exportClaimState: "CLAIMED" },
@@ -107,11 +88,7 @@ export async function markUncertain({ expenseId, token }: ExportClaim): Promise<
   });
 }
 
-/**
- * Let go of the lock, because it is certain no voucher was made. Only ever
- * this export's own lock: a lock that has since been taken over is somebody
- * else's to let go of.
- */
+/** Let go of the lock because no voucher was made. Only this export's own lock. */
 export async function releaseExport({ expenseId, token }: ExportClaim): Promise<void> {
   await prisma.expense.updateMany({
     where: { id: expenseId, exportClaimedAt: token },
@@ -126,14 +103,7 @@ export const CLEARED = {
   exportClaimState: null,
 } as const;
 
-/**
- * Every utlägg with an export lock that means something right now, for the
- * Bokföring list. A lock that has lapsed (abandoned before it sent anything)
- * is left out: it stops nobody.
- *
- * Including the reader's own. An export they started in another tab locks the
- * button here too, and an uncertain one of theirs is theirs to look into.
- */
+/** Every utlägg with an export lock that means something now, for the Bokföring list. Lapsed locks are left out; the reader's own are included. */
 export async function activeExports(): Promise<Record<string, ExportLockView>> {
   const rows = await prisma.expense.findMany({
     where: { exportClaimState: { not: null } },

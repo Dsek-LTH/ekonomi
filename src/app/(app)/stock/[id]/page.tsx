@@ -18,23 +18,15 @@ export default async function StockProductPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const user = await requirePage(canViewStock);
 
-  // The shelf comes from the same loader the list uses rather than a query of
-  // its own: one projection of the log, so a product cannot read one way here
-  // and another there.
-  // Two histories, because the product has been through two different sorts of
-  // thing: nights it went out to, and what was done to it in the cellar. See
-  // the data layer for why that is the split rather than movements-versus-edits.
+  // From the same loader as the list, so a product reads the same in both.
+  // Two histories: nights it went out to, and what was done to it in the cellar.
   const [levels, events, cellar, movements, checks] = await Promise.all([
     getStockLevels(),
     getProductEvents(id),
     getProductCellar(id),
-    // Not derivable from the two histories above: one is capped at 60 rows and
-    // the other only covers nights. What the delete confirmation has to name is
-    // every row that would go, so it is counted outright.
+    // Counted outright: the histories above are capped, and the delete confirmation must name every row that would go.
     getProductMovementCount(id),
-    // The whole schedule for this product, not just what is owed: the page
-    // lists what is coming as well, which is what makes it something to work
-    // through rather than a second copy of the overview's flag.
+    // The whole schedule, not just what is owed: the page lists what is coming too.
     getProductChecks(id),
   ]);
 
@@ -49,9 +41,7 @@ export default async function StockProductPage({ params }: { params: Promise<{ i
       movements={movements}
       checks={checks ?? []}
       expiryUnset={checks === null}
-      // What the rest of the shelf calls things, for the edit dialog's tag
-      // picker. Off the levels this page already has rather than a query of
-      // its own.
+      // Tags the rest of the shelf uses, for the edit dialog's tag picker.
       knownTags={tagsInUse(levels)}
       canManage={canManageStock(user.capabilities)}
     />

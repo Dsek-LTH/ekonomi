@@ -2,11 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { effectiveKind, isResultAccount } from ".";
 
-// Which accounts a budget may hold, and which side of the sheet they sit on.
-// Both used to be one lenient rule ("3xxx is income, everything else is a
-// cost"), which quietly accepted a bank account as an expense and let a
-// per-account override put a cost under Intäkter.
-
 describe("isResultAccount", () => {
   it("takes the resultaträkning, 3xxx through 8xxx", () => {
     for (const code of ["3010", "4010", "5800", "6071", "7010", "8410"]) {
@@ -15,9 +10,7 @@ describe("isResultAccount", () => {
   });
 
   it("refuses the balansräkning", () => {
-    // 1930 is the bank account. It was pickable, and `effectiveKind` called it
-    // a cost, so a section's cash could sit in a column of expenses with
-    // nothing on the page to say it did not belong there.
+    // 1930 is a bank account: balance accounts are not budgeted.
     expect(isResultAccount("1930")).toBe(false);
     expect(isResultAccount("1510")).toBe(false);
     expect(isResultAccount("2440")).toBe(false);
@@ -49,15 +42,11 @@ describe("effectiveKind", () => {
   });
 
   it("still answers for a balance account already on a sheet", () => {
-    // Total on purpose. New ones are refused, but a sheet saved before that
-    // rule has to keep rendering, and it reads exactly as it did then.
+    // Total: a sheet saved before the rule must keep rendering.
     expect(effectiveKind("1930")).toBe("COST");
   });
 
   it("is the code's answer and nothing else's", () => {
-    // There is no second argument any more. An override used to win here, set
-    // by dragging an account card to the other section, which is how a cost
-    // account came to be budgeted as income.
     expect(effectiveKind.length).toBe(1);
   });
 });

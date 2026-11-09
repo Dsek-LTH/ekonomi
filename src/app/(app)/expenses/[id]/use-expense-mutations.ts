@@ -53,14 +53,7 @@ export function useExpenseMutations(expenseId: string) {
     return data !== null;
   }
 
-  /**
-   * Taking a dispens back, confirmed because of what it costs the other person.
-   *
-   * The utlägg is late by definition (a dispens is only ever granted on one
-   * that is), so revoking puts it back behind a deadline that has already
-   * passed: nobody can submit it again without a new dispens. That is not an
-   * undo, and the dialog says so before it happens.
-   */
+  /** Taking a dispens back, confirmed: the utlägg is late by definition, so nobody can submit it again without a new dispens. */
   async function revokeDeadlineWaiver() {
     const ok = await confirm({
       title: tDetail("revokeDeadlineWaiver"),
@@ -86,17 +79,8 @@ export function useExpenseMutations(expenseId: string) {
     return transition("withdraw_attest", undefined, row ? [row.id] : undefined);
   }
 
-  /**
-   * The submitter taking their whole claim back, to a draft.
-   *
-   * Always confirmed, and the wording depends on what it costs. On an utlägg
-   * nobody has touched it is an undo; on one somebody has already attested in
-   * part it also throws those signatures away, and somebody about to correct a
-   * payment type should know they are asking a colleague to sign again.
-   *
-   * `attested` is how many rows are signed. The caller counts them, since it
-   * is the one holding the utlägg.
-   */
+  /** The submitter taking their whole claim back, to a draft. Always confirmed, worded by what it costs (attested signatures are thrown away).
+   * `attested` is counted by the caller. */
   async function recall(attested: number) {
     const ok = await confirm({
       title: t("recall.title"),
@@ -130,18 +114,12 @@ export function useExpenseMutations(expenseId: string) {
     });
     if (!data) return;
     setDeleted(true);
-    // Not a push: the utlägg this page describes is gone, and pushing left it
-    // sitting behind its own list on the Back button.
+    // Not a push: the utlägg is gone, and pushing left it behind its own list on Back.
     returnTo("/expenses");
   }
 
-  /**
-   * Bokföring: the konterat utlägg's voucher sent to Fortnox, from its own
-   * page, which is where it is looked over first. The page refreshes into its
-   * exported state. Fortnox names the voucher, so the confirmation is built
-   * from the answer rather than given up front, and a receipt that would not
-   * attach is said in the same breath.
-   */
+  /** Bokföring: the voucher sent to Fortnox from the utlägg's own page. The confirmation is built from the answer
+   * (Fortnox names the voucher), and a receipt that would not attach is said with it. */
   async function exportToFortnox(label: string): Promise<boolean> {
     const data = await action.mutate<{ label: string; attachWarning: string | null }>(
       url("/export"),

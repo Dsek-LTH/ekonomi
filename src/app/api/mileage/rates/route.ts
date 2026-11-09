@@ -1,10 +1,4 @@
-// The mileage rate table: what a kilometre is worth, from a given day.
-//
-// Admin only, and deliberately so: this is the one figure that decides how
-// much money a milersättning is worth, and it is Skatteverket's rather than
-// anybody's judgement. A claim already filed is never re-valued by a change
-// here: each claim carries the rate it was valued at (see `mileageOrePerKm`
-// on Expense), which is what makes editing this table safe at all.
+// Admin only: this decides what a milersättning is worth. Claims carry the rate they were valued at (mileageOrePerKm on Expense), so edits never re-value them.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -20,9 +14,7 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const { orePerKm, validFrom, note } = parsed.data;
 
-  // Two rates starting on the same day is not a period anybody could resolve,
-  // and the column says so too, caught here so the answer is a sentence
-  // rather than a unique-constraint 500.
+  // Two rates starting the same day cannot be resolved; caught here so the answer is a sentence, not a unique-constraint 500.
   const clash = await prisma.mileageRate.findUnique({
     where: { validFrom: new Date(validFrom) },
   });

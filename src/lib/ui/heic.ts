@@ -1,18 +1,10 @@
-// An iPhone photo made into something every browser can draw, at the moment it
-// is picked. The new-utlägg wizard holds documents in the browser until the
-// save (see expenses/new), and outside Safari a HEIC there cannot be shown at
-// all, so the reader picked a receipt and got a grey "HEIC" tile back.
-//
-// The server converts HEIC too (lib/server/images.ts), and still has to: not
-// every upload comes through here. This one is about the preview.
+// Converts an iPhone HEIC to JPEG at pick time so the wizard can preview it outside Safari.
+// The server converts too (lib/server/images.ts) and still has to; this is only for the preview.
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 
 /**
- * `file` as a JPEG if it is a HEIC, otherwise `file` itself. Never throws: a
- * HEIC this cannot convert is returned as it came, for the server to try.
- *
- * Decided by the file's own first bytes, not `file.type`, which some browsers
- * leave empty for a HEIC.
+ * `file` as a JPEG if it is a HEIC, else `file`. Never throws: an unconvertible HEIC is returned for the server to try.
+ * Detected from the first bytes, since some browsers leave `file.type` empty.
  */
 export async function displayableFile(file: File): Promise<File> {
   try {
@@ -20,8 +12,7 @@ export async function displayableFile(file: File): Promise<File> {
     const type = sniffReceiptType(head);
     if (type !== "image/heic" && type !== "image/heif") return file;
 
-    // libheif as WebAssembly is about 700 kB gzipped, loaded only by somebody
-    // who has picked a HEIC.
+    // libheif as WebAssembly is ~700 kB gzipped, loaded only on a HEIC pick.
     const { default: decode } = await import("heic-decode");
     const { width, height, data } = await decode({
       buffer: new Uint8Array(await file.arrayBuffer()),

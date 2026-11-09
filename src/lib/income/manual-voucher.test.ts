@@ -16,12 +16,13 @@ describe("voucherBasis", () => {
     expect(voucherBasis([...lines].reverse(), total)).toBe(voucherBasis(lines, total));
     // Split differently across lines, same rows.
     expect(
-      voucherBasis([line("3000", "cafe", 400), line("3000", "cafe", 600), ...lines.slice(1)], total),
+      voucherBasis(
+        [line("3000", "cafe", 400), line("3000", "cafe", 600), ...lines.slice(1)],
+        total,
+      ),
     ).toBe(voucherBasis(lines, total));
   });
 
-  // What the fingerprint is for: any correction that changes the voucher
-  // makes a kontering written before it stale.
   it("changes when a line's account, cost centre or amount does", () => {
     const base = voucherBasis(lines, total);
     expect(voucherBasis([line("3001", "cafe", 1000), ...lines.slice(1)], total)).not.toBe(base);

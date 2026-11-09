@@ -1,11 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Ticking a bokslut checklist item, and writing its notes.
-//
-// Pinned: an item the app answers by itself cannot be ticked by hand, an item
-// is only reachable through its own year, and only whoever works the books
-// may write. Mocked at the session and the database.
-
 const h = vi.hoisted(() => ({
   capabilities: ["BOOKKEEPING"] as string[],
   item: { financialYear: 1, check: null as string | null } as {

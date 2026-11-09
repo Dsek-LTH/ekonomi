@@ -1,12 +1,5 @@
 "use client";
 
-// Fakturor: every levfaktura the reader may see, the stage as a tab and whose
-// as the scope switch, the same as Utlägg. Each row opens the invoice's own
-// page, where the unit attests it and the treasurer completes it and exports
-// it to Fortnox. See page.tsx.
-//
-// The rows arrive whole and are cut here (there are a few dozen open at a
-// time), but the tab is still in the URL, so a link lands on the same stage.
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -26,9 +19,7 @@ import {
   type InvoiceTab,
 } from "./scope";
 
-// Undated by arrival, after every dated one: an invoice its unit has not
-// fördelat yet has no due date, and is not more urgent than one due tomorrow.
-// Among themselves they keep the order they came in.
+// Invoices not yet fördelade have no due date and sort after dated ones.
 const dueKey = (r: SupplierInvoiceRow) => r.dueDate || `9999-${r.receivedAt}`;
 
 export function InvoicesClient({
@@ -39,20 +30,15 @@ export function InvoicesClient({
   fiscal,
 }: {
   rows: SupplierInvoiceRow[];
-  /** The header's räkenskapsår, which narrows every tab. */
   fiscal: FiscalYear | null;
-  /** Whose invoices these are, settled by the server. See page.tsx. */
   scope: InvoiceScope;
   scopes: InvoiceScope[];
-  /** The stage in the URL, or the scope's own. */
   tab: InvoiceTab;
 }) {
   const t = useTranslations("invoices");
   const title = useInvoiceTitle();
   const local = useTableControls({ tab, sortKey: "dueDate", sortDir: "asc" });
-  // The table holds its stage in state, so a new scope (the switch, or Back to
-  // the other one) has to hand it the stage the URL now asks for. The search
-  // and the sort carry over, as on Utlägg.
+  // The table keeps its stage in state, so a new scope must be handed the URL's stage.
   const [shownScope, setShownScope] = useState(scope);
   if (shownScope !== scope) {
     setShownScope(scope);
@@ -61,9 +47,7 @@ export function InvoicesClient({
   const controls = useUrlTab(local, invoiceDefaultTab(scope));
   const setScope = useScopeSwitch(controls.tab, (s) => invoiceDefaultTab(s as InvoiceScope));
 
-  // Each stage's count is the invoices on it that wait on the reader, the
-  // same test the nav's count asks (lib/data/nav-counts.ts), so the two add
-  // up. A stage nothing waits on carries no count.
+  // Counts use the same test as the nav (lib/data/nav-counts.ts).
   const tabs: ClientTabFilter<SupplierInvoiceRow> = useMemo(
     () =>
       INVOICE_TABS.map((value) => {
@@ -82,7 +66,6 @@ export function InvoicesClient({
   );
 
   const columns: Column<SupplierInvoiceRow>[] = [
-    // Our number, "LEV26-0012", the way the utlägg list leads with its DEK.
     {
       key: "reference",
       header: t("col.reference"),
@@ -93,9 +76,6 @@ export function InvoicesClient({
       className: "whitespace-nowrap tabular-nums text-muted",
       cell: (r) => r.reference ?? "-",
     },
-    // What it is for, as the unit said it. Before it is fördelad, who sent it
-    // in, since that is all there is to tell it by. The supplier and its
-    // number are searched as well, for the treasury looking one up.
     {
       key: "description",
       header: t("col.description"),

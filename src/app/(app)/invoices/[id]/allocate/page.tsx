@@ -11,18 +11,9 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("allocateInvoice");
 
-// Fördela a levfaktura: the unit's step, as editing an utlägg is the
-// submitter's. Which cost centres take how much, and the amount, due date and
-// description it is split against. Sent, the unit's own rows are signed with
-// it, and the reader is back on the record. Only while the invoice waits for
-// it; otherwise the record says where it stands.
-//
-// The PDF is read here, the first time anybody needs what it says. What it
-// says is only offered: the unit has the invoice beside the form.
 export default async function InvoiceAllocatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePage(canSeeInvoices);
-  // Whether it is theirs to fördela before anything is read off its PDF.
   const found = await getInvoice(id, user);
   if (!found) return <InvoiceMissing />;
   if (!found.can.canAllocate) redirect(`/invoices/${id}`);
@@ -33,9 +24,6 @@ export default async function InvoiceAllocatePage({ params }: { params: Promise<
   const { invoice } = data;
   const scanned = reading.fields;
 
-  // What the form opens on: what the invoice already says (a fördelning sent
-  // back keeps what was sent), failing that what the PDF says, and for the
-  // description the subject of the mail it was forwarded in.
   const defaults = {
     amount: invoice.amount ?? (scanned.amount == null ? null : scanned.amount / 100),
     rounding: invoice.rounding,

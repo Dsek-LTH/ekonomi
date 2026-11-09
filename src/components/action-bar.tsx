@@ -1,20 +1,11 @@
 "use client";
 
-// The bar pinned to the foot of a long form or sheet: what it comes to, what
-// is still missing, and the way out. The utlägg form's, first, and the
-// stocktake sheet's.
+// The bar pinned to the foot of a long form or sheet: totals, what is missing, and the way out.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/ui/utils";
 
-/**
- * Pinned to the foot of the form: what this utlägg comes to, what is still
- * missing before it can be sent, and the two ways out.
- *
- * The missing list is the answer to the question a disabled button raises. It
- * names fields rather than pointing at them, because on a phone they are a
- * scroll away and a list is something to work down.
- */
+/** Pinned to the foot of the form: what this utlägg comes to, what is missing before it can be sent, and the two ways out. */
 export function ActionBar({
   summary,
   missing,
@@ -41,28 +32,12 @@ export function ActionBar({
   submit?: { label: string; onClick: () => void; disabled: boolean; loading: boolean };
 }) {
   const { stuck: pinned, sentinel } = useStuck();
-  // Pinned only from md. On a phone the bar is the last thing in the form and
-  // scrolls with it. Pinned, it wrapped to three lines over a screen the
-  // keyboard had already halved, sat on the field being typed in, and made
-  // every scroll of the form a scroll past something that did not move.
+  // Pinned only from md. On a phone it scrolls with the form (pinned, it covered the field being typed in).
   const wide = useWide();
   const stuck = pinned && wide;
   return (
-    // Set off from what scrolls under it three ways, as a floating bar has to
-    // be: the form fades out above it into the page's own colour, the bar
-    // blurs whatever is still behind it, and it casts its shadow upwards,
-    // onto the content, rather than down onto the edge of the screen.
-    //
-    // The fade is drawn above the bar rather than given room: it overlaps the
-    // form instead of pushing the bar 32px further from it. And the negative
-    // bottom margin hands back most of the main column's bottom padding
-    // (shell/app-shell.tsx), which is there so a page's last card clears the
-    // end of the scroll. This bar is that last thing, and it already clears
-    // it, so the padding was only a second gap under it.
-    //
-    // All of that only while something is actually under it (`stuck`). On a
-    // form short enough to end above the fold the bar is simply the last thing
-    // on the page, and a fade there only dimmed the card above it.
+    // While `stuck` only: the form fades out above the bar, the bar blurs what is behind it, and the negative
+    // bottom margin hands back the main column's bottom padding (shell/app-shell.tsx).
     <>
       <div
         className={cn(
@@ -78,10 +53,7 @@ export function ActionBar({
         )}
         <div
           className={cn(
-            // A column on a phone: what it comes to and what is missing across
-            // the whole width, then the two buttons sharing a row under it.
-            // Side by side, the text was the one thing allowed to shrink, and
-            // two buttons left it a sliver to wrap "Saknas: …" into.
+            // A column on a phone, the buttons sharing a row under the text.
             "pointer-events-auto flex flex-col gap-3 rounded-panel border border-border px-inset py-3 transition-shadow md:flex-row md:flex-wrap md:items-center md:gap-x-4",
             stuck
               ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
@@ -137,15 +109,7 @@ function useWide() {
   return wide;
 }
 
-/**
- * Whether the bar is pinned to the foot of the screen with the form going on
- * under it, as against resting at the end of a page that fits.
- *
- * Told by a pixel placed where the bar would sit if it were not sticky: while
- * that is on screen the bar is where it belongs anyway, and once it has gone
- * off the bottom the bar is holding on over content. Observed against the
- * viewport, which also accounts for whatever scroll container clips it.
- */
+/** Whether the bar is pinned over the form, as against resting at the end of a page that fits. Told by a pixel placed where the bar would sit unstuck. */
 function useStuck() {
   const [node, setNode] = useState<HTMLDivElement | null>(null);
   const [stuck, setStuck] = useState(false);

@@ -1,10 +1,5 @@
-// Every step can find what it points at, and has its words.
-//
-// A target is a `data-tour` attribute somewhere in the UI, and a step whose
-// target is missing is skipped without a sound (components/shell/guide.tsx).
-// That is right at runtime, where a reader without a control should not hear
-// about it, and wrong after a refactor that dropped the attribute: the step
-// would vanish for everybody and nothing would say so.
+// Every step finds what it points at and has its words. A step with a missing `data-tour` target is
+// skipped silently at runtime (components/shell/guide.tsx), so a dropped attribute would go unnoticed.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -21,12 +16,8 @@ function sources(dir: string): string[] {
 const CODE = sources(join(process.cwd(), "src")).join("\n");
 const anchors = new Set([...CODE.matchAll(/data-tour="([^"]+)"/g)].map((m) => m[1]));
 
-// Some anchors are named from a value at the call site, `data-tour={`tab:${opt.value}`}`
-// in the tab and switch components and the nav's group rows. Those count as
-// there when the component names them that way: which tabs a page has is the
-// page's business, and a step pointing at one it lacks is simply left out. The
-// value itself must still be written somewhere, as the tab's `value: "attest"`
-// or the group's `label: "groupStock"`, so a misspelt one is caught.
+// Some anchors are named from a value at the call site (`data-tour={`tab:${opt.value}`}`) and count as
+// there; the value itself must still be written somewhere (a tab's `value`, a group's `label`).
 const PREFIXES = [...CODE.matchAll(/data-tour=\{`([a-z-]+:)\$\{/g)].map((m) => m[1]);
 const exists = (name: string) =>
   anchors.has(name) ||

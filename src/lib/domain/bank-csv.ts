@@ -1,14 +1,7 @@
-// Parser for the bank's "Transaktionsrapport" CSV (Swedbank/Sparbanken
-// Företagskonto export). The file is Windows-1252 encoded with CRLF, opens with
-// a `*`-comment line, then a header row:
-//   Radnr,Clnr,Kontonr,Produkt,Valuta,Bokfdag,Transdag,Valutadag,Referens,Text,Belopp
-// The card used is the trailing "K####" inside the Referens field (not always
-// present). Amounts are SEK with a sign; negative = outgoing.
-//
-// A row is dated by Transdag (the day the purchase happened) not Bokfdag, the
-// day the bank settled it. The two differ by a day or three on card purchases,
-// and Transdag is the one that matches the receipt a member hands in. Rows
-// without a Transdag (fees, interest) fall back to Bokfdag.
+// Parser for the bank's "Transaktionsrapport" CSV (Swedbank/Sparbanken Företagskonto export): Windows-1252, CRLF,
+// a `*`-comment line, then the header row. The card is the trailing "K####" in Referens (not always present).
+// Amounts are SEK with a sign; negative = outgoing. A row is dated by Transdag (matches the member's receipt),
+// not Bokfdag; rows without Transdag (fees, interest) fall back to Bokfdag.
 import { createHash } from "node:crypto";
 import { amountToOre, splitCsvLine } from "@/lib/domain/csv";
 
@@ -26,8 +19,7 @@ interface ParseResult {
   skippedRows: number; // data rows that couldn't be parsed
 }
 
-// Pull "K1234" off the end of the Referens, returning the 4 digits and the
-// description with that token removed.
+// Pull "K1234" off the end of the Referens: the 4 digits and the description without the token.
 function extractCard(referens: string): { description: string; cardLast4?: string } {
   const m = referens.match(/\s+K(\d{4})\s*$/);
   if (!m) return { description: referens.trim() };
@@ -75,8 +67,7 @@ export function parseBankCsv(text: string): ParseResult {
     const { description, cardLast4 } = extractCard(referens);
     if (cardLast4) cardSet.add(cardLast4);
 
-    // Occurrence index disambiguates genuinely-identical same-day purchases
-    // while keeping re-imports stable (same file → same indices → same hashes).
+    // The occurrence index disambiguates identical same-day purchases while keeping re-imports stable.
     const naturalKey = `${kontonr}|${bokfdag}|${transdag}|${referens}|${cols[10].trim()}`;
     const occ = occurrence.get(naturalKey) ?? 0;
     occurrence.set(naturalKey, occ + 1);

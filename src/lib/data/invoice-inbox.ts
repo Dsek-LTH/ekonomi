@@ -1,16 +1,6 @@
-// The levfaktura Inkorg as its pages read it: every document no invoice has
-// yet that the viewer may see. Not narrowed by the räkenskapsår: a document
-// has no date of its own until somebody reads one off it, and one uploaded
-// while another year is picked must still be there.
-//
-// Two readers. Triage sees all of it: what waits to be given to a unit, and
-// what is with the units. A resultatansvarig sees what was given to the units
-// they answer for, which is their errand: fördela it, which makes it an
-// invoice, or say it is not theirs. The rule is documentCapabilities, asked
-// here as a filter.
-//
-// Each document is the file, who sent it and when, and nothing read off it.
-// What the PDF says is read when its unit opens the fördelning.
+// Every document no invoice has yet that the viewer may see. Not narrowed by räkenskapsår: a
+// document has no date until one is read off it. Triage sees all; a resultatansvarig sees what
+// was given to their units (rule: documentCapabilities).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -26,14 +16,11 @@ export interface InboxDocument {
   filename: string;
   mimeType: string;
   receivedAt: string; // ISO
-  /** Who put it here: the member whose mail carried it, or the uploader. */
   fromName: string | null;
   fromAddress: string | null;
   subject: string | null;
-  /** What the forwarder wrote above the forwarded mail. */
   note: string | null;
-  /** Who the forwarded mail was from before it was forwarded: the supplier,
-   *  usually. What the fördelning's cost centre suggestion goes on. */
+  /** Who the forwarded mail was from, usually the supplier. Basis for the cost centre suggestion. */
   originalFrom: string | null;
   /** YYYY-MM-DD, as triage entered it when sending it to a unit, or "". */
   dueDate: string;
@@ -45,17 +32,12 @@ export interface InboxDocument {
   can: DocumentCapabilities;
 }
 
-/**
- * Whether the Inkorg is the viewer's page at all: triage's, the admins', and
- * any resultatansvarig's, whose units may be given something. The role rather
- * than the units, as the frame's other links ask it.
- */
+/** Whether the Inkorg is the viewer's page at all: triage, admins, any resultatansvarig. */
 export const canSeeInvoiceInbox = (v: Pick<Viewer, "roles" | "capabilities">): boolean =>
   canTriageInvoices(v.capabilities) ||
   isAdmin(v.capabilities) ||
   v.roles.includes("RESULTATANSVARIG");
 
-/** Whether the viewer sees every document, whoever it was given to. */
 const seesAll = (v: InvoiceViewerCtx) =>
   canTriageInvoices(v.capabilities) || isAdmin(v.capabilities);
 
@@ -109,8 +91,6 @@ function view(
   };
 }
 
-/** Every document in the Inkorg the viewer may see, the oldest first: the
- *  order they are dealt with, the way any inbox is. */
 export async function getInboxDocuments(viewer: Viewer): Promise<InboxDocument[]> {
   const v = await invoiceViewerOf(viewer);
   const docs = await prisma.supplierInvoiceDocument.findMany({
@@ -121,7 +101,6 @@ export async function getInboxDocuments(viewer: Viewer): Promise<InboxDocument[]
   return docs.map((d) => view(v, d));
 }
 
-/** One document in the Inkorg, as the viewer may see it, or null. */
 export async function getInboxDocument(id: string, viewer: Viewer): Promise<InboxDocument | null> {
   const v = await invoiceViewerOf(viewer);
   const d = await prisma.supplierInvoiceDocument.findFirst({
@@ -131,11 +110,7 @@ export async function getInboxDocument(id: string, viewer: Viewer): Promise<Inbo
   return d ? view(v, d) : null;
 }
 
-/**
- * How many documents wait on the viewer, for the count beside the Inkorg's
- * link: for triage the ones nobody has been given yet, and for anyone the ones
- * given to a unit they answer for.
- */
+/** Documents waiting on the viewer: for triage those nobody has been given, for anyone those given to their units. */
 export async function countInboxDocuments(viewer: Viewer): Promise<number> {
   const v = await invoiceViewerOf(viewer);
   const OR: Prisma.SupplierInvoiceDocumentWhereInput[] = [];

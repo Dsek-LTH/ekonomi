@@ -1,23 +1,11 @@
 import { canBookkeep, hasAttestRole } from "./permissions";
 import type { Capability, Expense, Role } from "./types";
 
-// Exactly what deciding a queue needs: who is asking, and what they may do.
-// Narrower than `User` on purpose. A pure function that takes the whole record
-// invites callers to pass a whole record, and then the next reader cannot tell
-// which fields matter. Both `User` and `CurrentUser` satisfy it structurally.
+// Exactly what deciding a queue needs: who is asking, and what they may do. `User` and `CurrentUser` both satisfy it.
 type Viewer = { id: string; roles: Role[]; capabilities: Capability[] };
 
-// What the dashboard is: one question, "what needs you now", answered for
-// whoever is asking.
-//
-// The old dashboard had a section per role, so a skattmästare who also owners a
-// result unit got two of everything and a third role would have added a third
-// block. This asks the question per *utlägg* instead: given this viewer, is
-// this one waiting on them, and for what? A person with every role in the
-// section still gets one list.
-//
-// Language-neutral, like ExpenseEvent: the action is an enum and the UI renders
-// the Swedish. `domain/` stays pure: no database, no formatting, no clock.
+// "What needs you now", answered per utlägg for the viewer (not a section per role, which doubled up
+// for people with several roles). Language-neutral: the action is an enum and the UI renders the Swedish.
 
 export type QueueAction =
   | "FIX" // came back to you with changes requested
@@ -31,14 +19,8 @@ export interface QueueItem {
   action: QueueAction;
 }
 
-// Ordered by whose money is stuck and for how long it has been stuck.
-//
-// The submitter's own blockers come first: an utlägg that came back, or never
-// left, is money the section owes someone that nothing else in the system is
-// going to move. Attest is next, because a resultatansvarig is the only person
-// who can clear it and they come in specifically to do so. Bookkeeping last,
-// it is real work, but it happens in planned sittings rather than in response
-// to a notification, and skattmästeriet has its own screens for it.
+// Ordered by whose money is stuck: the submitter's own blockers first, then attest (only the
+// resultatansvarig can clear it), then bookkeeping, which happens in planned sittings.
 const URGENCY: Record<QueueAction, number> = {
   FIX: 0,
   SUBMIT: 1,
@@ -47,22 +29,18 @@ const URGENCY: Record<QueueAction, number> = {
   EXPORT: 4,
 };
 
-// The one thing this expense needs from this viewer, or null if it is waiting
-// on somebody else. An utlägg can only ever be waiting on one person at a time,
-// which is why this returns a single action rather than a list.
+// The one thing this expense needs from this viewer, or null. An utlägg waits on one person at a time.
 export function queueActionFor(expense: Expense, user: Viewer): QueueAction | null {
   const mine = expense.submitterId === user.id;
 
-  // The submitter's own court. Checked first: if it is yours and it is stuck,
-  // that is the thing you came here to see, whatever else you are in the section.
+  // The submitter's own court, checked first.
   if (mine) {
     if (expense.status === "CHANGES_REQUESTED") return "FIX";
     if (expense.status === "DRAFT") return "SUBMIT";
   }
 
-  // Someone else's, and you hold the ownership over one of its kostnadsställen.
-  // `canAttest` is computed per allocation against the viewer, so this never
-  // has to re-derive authority. It only has to check it has not been used yet.
+  // Someone else's, and you hold ownership over one of its kostnadsställen. `canAttest` is computed per
+  // allocation, so only check it has not been used yet.
   if (
     expense.status === "PENDING_APPROVAL" &&
     hasAttestRole(user.capabilities) &&
@@ -79,10 +57,8 @@ export function queueActionFor(expense: Expense, user: Viewer): QueueAction | nu
   return null;
 }
 
-// Everything waiting on this viewer, most urgent first, oldest first inside one
-// action. Oldest-first is deliberate: a queue sorted newest-first quietly buries
-// the utlägg that has been waiting three weeks, which is the one someone is
-// actually annoyed about.
+// Everything waiting on this viewer, most urgent first, oldest first inside one action (newest first
+// would bury the utlägg waiting three weeks).
 export function buildQueue(expenses: Expense[], user: Viewer): QueueItem[] {
   return expenses
     .flatMap((expense) => {

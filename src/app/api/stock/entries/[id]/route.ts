@@ -1,25 +1,7 @@
-// Correcting a row that belongs to the cellar rather than to a night: a
-// delivery, a stocktake, a write-off.
-//
-// The case this exists for: somebody books 200 bottles of Fireball meaning 20.
-// Until now the only way out was a second row of −180, which left the log
-// saying the guild once bought two hundred bottles it never bought, and made
-// putting it right an arithmetic problem at the moment somebody has already
-// shown they are not doing arithmetic well.
-//
-// So the row is changed. What it said before, and who changed it, goes to
-// StockChange, which is what keeps an editable ledger checkable, and is read
-// as a feed on the product's own page.
-//
-// A count is no obstacle to any of this, which is worth saying because it once
-// was. A stocktake states what was on the shelf on a day, so once its own
-// difference is worked out again (see lib/server/stock-replay.ts) correcting
-// a delivery from before it cannot move anything after it. Everything before a
-// count genuinely stops mattering, which is what an inventering has always
-// meant.
-//
-// The one thing it will not do is move stock into an impossible place: the
-// shelf is checked against what the row would become, not against what it was.
+// Correcting a row that belongs to the cellar rather than a night (delivery, stocktake, write-off).
+// The row is changed in place; the before-state and who changed it go to StockChange. The shelf is
+// checked against what the row would become (lib/server/stock-replay.ts re-derives later counts).
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { fail, gate } from "@/lib/api/guard";
@@ -45,9 +27,7 @@ const shown = (e: {
 }): number => {
   if (e.kind === "WASTE") return Math.abs(e.spilledQty);
   if (e.level === 0) return Math.abs(e.units);
-  // Widened to `number` because `level` is a column and not one of the four
-  // literals until something has checked it, which nothing here needs to: a
-  // rung the record has no entry for reads as nothing, which is the answer.
+  // Widened to `number`: `level` is a column, and an unknown rung reads as nothing.
   const at: Record<number, number> = openOf(e);
   return Math.abs(at[e.level] ?? 0);
 };
@@ -79,8 +59,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const entry = await prisma.stockEntry.findUnique({ where: { id }, select: ENTRY });
   if (!entry) return fail(404, "stock.entryNotFound");
-  // A night's figures are the sheet's business, and it has its own rules about
-  // what may go in a cell.
+  // A night's figures are the sheet's business.
   if (entry.eventId) return fail(422, "stock.onTheSheet");
 
   const product = await prisma.stockProduct.findUnique({
@@ -99,9 +78,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const was = shown(entry);
   const qty = parsed.data.qty;
 
-  // What the row becomes. Only its size changes; which rung and which direction
-  // it was are what it *is*, and a row that changed those would be a different
-  // movement wearing an old row's history.
+  // Only the size changes: rung and direction are what the row is.
   const sign =
     entry.kind === "CHECKOUT" || entry.kind === "WASTE" || entry.kind === "SPOILAGE" ? -1 : 1;
   const open: OpenBottles = {};
@@ -127,8 +104,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
     });
 
-    // The shelf, as it now stands. Checked after the fact rather than before
-    // because a row's effect is only knowable against everything else.
+    // The shelf as it stands, checked after because a row's effect depends on the rest.
     await assertPossible(tx, product);
 
     await tx.stockChange.create({
@@ -193,8 +169,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }).catch((e: Error) => e.message);
 
   if (gone !== true) return fail(422, typeof gone === "string" ? gone : NEGATIVE_STOCK);
-  // 204 rather than `{ ok: true }`: the row is gone, there is nothing the
-  // caller learns from a body, and the screen refreshes. See lib/api/guard.ts,
-  // which names the three shapes a handler answers with and rules this one out.
+  // 204 rather than `{ ok: true }` (lib/api/guard.ts rules that shape out).
   return new Response(null, { status: 204 });
 }

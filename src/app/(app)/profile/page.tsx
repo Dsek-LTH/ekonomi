@@ -13,8 +13,7 @@ export const generateMetadata = titled("profile");
 export default async function ProfilePage() {
   const user = await requireUser();
 
-  // The only place the treasury's own Fortnox login is read for display. The
-  // sidebar no longer carries a copy of it.
+  // The only place the treasury's own Fortnox login is read for display.
   const showsFortnox = canLogInToFortnox(user.capabilities);
   const [payout, fortnoxSession, holdsCard, saved, score] = await Promise.all([
     prisma.user.findUnique({
@@ -30,8 +29,7 @@ export default async function ProfilePage() {
     getMemberScore(user.id),
   ]);
 
-  // Only the emails this member could actually be sent. A switch for mail
-  // about attesting, offered to somebody who never attests, would do nothing.
+  // Only emails this member could actually be sent.
   const reaches = {
     everyone: true,
     attesters: hasAttestRole(user.capabilities) || isAdmin(user.capabilities),

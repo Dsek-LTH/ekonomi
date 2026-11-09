@@ -1,26 +1,19 @@
 "use client";
 
-// Cropping a new profile picture before it is uploaded: the photo inside a
-// round frame, dragged to place and zoomed with the slider (or the wheel, or
-// the arrow keys and +/-). What is inside the frame is drawn to a 512px square
-// here and sent; the server makes the stored 256px WebP of it
-// (api/profile/avatar).
-//
-// The crop is done in the browser because that is where the photo already is.
-// Sending the original and a rectangle would upload a phone photo of several
-// megabytes to keep a few hundred kilobytes of it.
-//
-// A photo the browser cannot draw (HEIC outside Safari) cannot be cropped
-// here. It can still be sent as it is, and the server takes the middle square.
+// Crops a new profile picture in the browser before upload: dragged and zoomed (slider, wheel,
+// arrow keys and +/-), drawn to a 512px square and sent; the server makes the stored 256px WebP
+// (api/profile/avatar). A photo the browser cannot draw (HEIC outside Safari) is sent as it is and
+// the server takes the middle square.
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@/components/shell/use-mutation";
 
-// The frame, in CSS px. The picture under it is placed in the same units.
+// The frame, in CSS px.
 const VIEW = 280;
-// What is sent: twice the stored size, so the server's downscale is clean.
+// Twice the stored size, so the server's downscale is clean.
 const OUT = 512;
 const MAX_ZOOM = 4;
 
@@ -39,7 +32,7 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
     const el = new Image();
     el.onload = () => {
       setImg(el);
-      // Centred, at the smallest size that still fills the frame.
+      // Smallest size that still fills the frame.
       const s = VIEW / Math.min(el.naturalWidth, el.naturalHeight);
       setAt({
         zoom: 1,
@@ -52,11 +45,10 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // px of frame per px of photo at zoom 1: the photo's short side fills it.
+  // px of frame per px of photo at zoom 1.
   const base = img ? VIEW / Math.min(img.naturalWidth, img.naturalHeight) : 1;
 
-  // Kept covering the frame: never so far over that an edge of the photo shows
-  // inside the circle's square.
+  // Kept covering the frame.
   const clamp = useCallback(
     (p: Placement): Placement => {
       if (!img) return p;
@@ -72,9 +64,7 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
     [img, base],
   );
 
-  // Zoomed about the frame's centre, so what you are looking at stays put.
-  // Handed the zoom it is going from, so the wheel listener below needs no
-  // copy of it of its own.
+  // Zoomed about the frame's centre. Takes the zoom it is going from, so the wheel listener needs no copy.
   const zoomTo = useCallback(
     (zoom: number | ((from: number) => number)) =>
       setAt((p) => {
@@ -126,8 +116,7 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
     }
   };
 
-  // The wheel zooms rather than scrolls the dialog. A native listener, since
-  // React's is passive and cannot cancel the scroll.
+  // A native listener, since React's is passive and cannot cancel the scroll.
   const frame = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = frame.current;
@@ -178,9 +167,7 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
           <p className="text-sm text-muted">{t("cannotPreview")}</p>
         ) : (
           <div className="flex flex-col items-center gap-5">
-            {/* Focusable and keyed: the arrows move the picture and +/- zoom
-                it, so the crop does not need a pointer. No ARIA role is a
-                draggable 2D frame, which is what the rule is asking for. */}
+            {/* Focusable: arrows move the picture, +/- zoom. */}
             {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
             <div
               ref={frame}
@@ -210,8 +197,6 @@ export function AvatarDialog({ file, onClose }: { file: File; onClose: () => voi
                   }}
                 />
               )}
-              {/* The round frame: everything outside the circle dimmed, so
-                  the square corners that are cut off read as cut off. */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_999px_rgb(0_0_0/0.45)] ring-2 ring-white/80"

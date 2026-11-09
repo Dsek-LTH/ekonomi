@@ -1,12 +1,5 @@
-// The year so far, per result unit and cost centre: what was budgeted and what
-// the ledger says happened. For the dashboard, where most members first find
-// out that the budget and its utfall exist at all.
-//
-// The figures are the report page's own. The budget is the one `resolveBudget`
-// picks for the year (the locked one, failing that the latest), evaluated by
-// `budgetComparison`, and the utfall is the Fortnox ledger mirror. So a number
-// here is the number /ledger shows for the same cost centre, never a second
-// opinion on it. The arithmetic is lib/budget/overview.ts.
+// Budget (`resolveBudget`'s pick) vs ledger utfall per result unit and cost centre, the same
+// figures as /ledger. Arithmetic in lib/budget/overview.ts.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";

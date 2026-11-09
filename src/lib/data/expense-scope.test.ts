@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { expenseScopeWhere, scopeIncludes, type ExpenseScope } from "./expense-scope";
 
-// Who may see which utlägg. This rule used to be written out three times: as a
-// list filter, as a check inside the detail loader, and again in the API, so
-// these tests pin the one statement of it that all three now derive from.
-//
-// `expenseScopeOf` itself reads result unit ownerships from the database and is
-// out of scope here; what is tested is everything derived from the scope value.
-
 const BOOKKEEPING: ExpenseScope = { everything: true };
 
 const ordinaryMember: ExpenseScope = {
@@ -24,8 +17,6 @@ const resultUnitHead: ExpenseScope = {
 
 describe("expenseScopeWhere", () => {
   it("filters nothing for a bookkeeping role", () => {
-    // The empty filter has to compose into any `where` without a special case
-    // at the call site. That is what lets the loaders apply it unconditionally.
     expect(expenseScopeWhere(BOOKKEEPING)).toEqual({});
   });
 
@@ -53,9 +44,7 @@ describe("expenseScopeWhere", () => {
   });
 
   it("never returns an empty OR, which would match nothing", () => {
-    // An `OR: []` in Prisma matches no rows at all. Every restricted scope must
-    // therefore carry at least the submitter clause, otherwise a member with
-    // no result units would lose sight of their own utlägg.
+    // An `OR: []` matches no rows, so a restricted scope must always carry the submitter clause.
     for (const scope of [ordinaryMember, resultUnitHead]) {
       const where = expenseScopeWhere(scope);
       expect(where.OR?.length ?? 0).toBeGreaterThan(0);
@@ -63,9 +52,6 @@ describe("expenseScopeWhere", () => {
   });
 });
 
-// The three cases below all resolve from the scope alone. Only a resultatansvarig
-// asking about someone else's utlägg reaches for the database, which is why
-// that one case is absent here.
 describe("scopeIncludes", () => {
   const someoneElses = { id: "exp-1", submitterId: "someone-else" };
 
@@ -79,8 +65,7 @@ describe("scopeIncludes", () => {
   });
 
   it("refuses a member with no resultUnits someone else's, without a query", async () => {
-    // The short circuit is the point: no prefixes means no allocation can
-    // match, so the query is skipped rather than run to learn nothing.
+    // No prefixes: no allocation can match, so the query is skipped.
     expect(await scopeIncludes(ordinaryMember, someoneElses)).toBe(false);
   });
 });

@@ -1,7 +1,4 @@
 // Request bodies for everything under /api/supplier-invoices.
-//
-// Shared with the pages, so the shape a screen sends and the shape the route
-// accepts are one definition. See lib/api/parse.ts.
 import { z } from "zod";
 import { MAX_ROUNDING, ocrDigits } from "@/lib/domain/supplier-invoice";
 import { Clearable, Id, IsoDate, Ore, Trimmed } from "./common";
@@ -12,14 +9,11 @@ const Text = (max: number) => Clearable(Trimmed.max(max)).optional();
 /** Öresutjämning in öre, either sign, under a krona. See costTotal. */
 const Rounding = Clearable(z.number().int().min(-MAX_ROUNDING).max(MAX_ROUNDING)).optional();
 
-/** A BAS account is four digits. Whether Fortnox has it is Fortnox's to say
- *  at export, the same as for a voucher booked here. */
+/** A BAS account is four digits; whether Fortnox has it is checked at export. */
 const AccountNumber = Trimmed.regex(/^\d{4}$/);
 
 /**
- * One row of the unit's fördelning: a cost centre, and its share when the
- * invoice is split. One row on its own carries no amount, being the whole
- * invoice. See attestBlocker.
+ * One row of the unit's fördelning: a cost centre, and its share when split. A single row carries no amount. See attestBlocker.
  */
 export const KonteringRow = z.object({
   costCenterCode: Trimmed.min(1),
@@ -40,12 +34,8 @@ export const InvoiceLine = z.object({
 export type InvoiceLine = z.infer<typeof InvoiceLine>;
 
 /**
- * PATCH /api/supplier-invoices/[id]: the treasurer's kontering, a field at a
- * time.
- *
- * Every field optional, because this patches: absent means "leave it". Not
- * the fördelning, which is the unit's and is sent with its attest. The
- * kontering's lines are sent whole, and replace whatever was saved.
+ * PATCH /api/supplier-invoices/[id]: the treasurer's kontering, a field at a time. Absent means "leave it". Lines are
+ * sent whole and replace the saved ones; the fördelning is sent with its attest instead.
  */
 export const PatchSupplierInvoice = z.object({
   description: Text(200),
@@ -57,9 +47,7 @@ export const PatchSupplierInvoice = z.object({
   amount: Clearable(Ore).optional(),
   /** Öresutjämning in öre, either sign, under a krona. */
   rounding: Rounding,
-  /** Saved as digits alone, however it was typed or pasted. Whether Fortnox
-   *  will take it is asked at Spara (exportBlocker), so a wrong one stays in
-   *  the field to be corrected rather than vanishing. */
+  /** Saved as digits alone; whether Fortnox accepts it is asked at Spara (exportBlocker). */
   ocr: Clearable(Trimmed.max(40).transform((v) => ocrDigits(v) || null)).optional(),
   bankgiro: Text(20),
   plusgiro: Text(20),
@@ -74,16 +62,9 @@ export const PatchSupplierInvoice = z.object({
 export type PatchSupplierInvoice = z.infer<typeof PatchSupplierInvoice>;
 
 /**
- * POST /api/supplier-invoices/[id]/transition.
- *
- * `assign` moves it to another result unit. `attest` carries the fördelning
- * when the invoice is waiting for one, and nothing when another unit is
- * signing its share of a split. `redistribute` reopens a split while other
- * units are still signing it. `book` marks the treasury's kontering done,
- * once what is saved is enough to send. `request_changes` requires a comment,
- * which the route checks: it is the only thing the person it goes back to has
- * to go on. Sending it back to the Inkorg is its own route (../return), and
- * sending it to Fortnox is ../export.
+ * POST /api/supplier-invoices/[id]/transition. `attest` carries the fördelning when the invoice is waiting for one, and
+ * nothing when another unit is signing its share. `request_changes` requires a comment (checked by the route).
+ * Returning to the Inkorg is ../return and sending to Fortnox is ../export.
  */
 export const TransitionSupplierInvoice = z.object({
   action: z.enum([
@@ -110,11 +91,7 @@ export const TransitionSupplierInvoice = z.object({
 });
 export type TransitionSupplierInvoice = z.infer<typeof TransitionSupplierInvoice>;
 
-/**
- * POST /api/supplier-invoices: a document in a unit's Inkorg, fördelad, which
- * is what makes it an invoice. The same fördelning an invoice sent back is
- * given again through `attest` above.
- */
+/** POST /api/supplier-invoices: a document in a unit's Inkorg, fördelad, which makes it an invoice. */
 export const CreateSupplierInvoice = z.object({
   documentId: Id,
   rows: z.array(KonteringRow).min(1).max(20),

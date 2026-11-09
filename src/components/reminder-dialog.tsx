@@ -1,13 +1,7 @@
 "use client";
 
-// Remind whoever some things are waiting on: an utlägg from its own page, or
-// several picked on a list, utlägg or card purchases with no utlägg yet.
-//
-// It asks the server who a reminder would reach before offering to send it,
-// and says so: "Maja Holm" under each utlägg, and which of the picked ones
-// will not be reminded about and why. Sending somebody a mail on your behalf
-// is the one thing here you cannot take back, so the names are on screen
-// before the button is. See lib/server/reminders.ts.
+// Remind whoever some things are waiting on (an utlägg from its page, or several picked on a list). Asks
+// the server who a reminder would reach before offering to send (lib/server/reminders.ts).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -41,8 +35,7 @@ export function ReminderDialog({
   if (transactionIds.length) query.set("transactions", transactionIds.join(","));
   const { data, error } = useQuery<ReminderPreview>(`/api/reminders?${query}`);
 
-  // Each person once, however many of the picked utlägg wait on them: that is
-  // how many mails go out.
+  // Each person once: that is how many mails go out.
   const people = new Set(data?.items.flatMap((i) => i.recipients.map((r) => r.id)) ?? []).size;
   const picked = expenseIds.length + transactionIds.length;
 

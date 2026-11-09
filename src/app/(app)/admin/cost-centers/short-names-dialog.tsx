@@ -1,9 +1,5 @@
 "use client";
 
-// The suggested short names, for a person to look over before any of them is
-// saved. The rule that made them (lib/domain/cost-center-short-name.ts) only
-// proposes: each row can be dropped or reworded here, and nothing is stored
-// until Spara. See `shortName` on CostCenter in the schema.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -29,8 +25,6 @@ export function ShortNamesDialog({
   const t = useTranslations("admin.costCenters");
   const tCommon = useTranslations("common");
   const { pending, mutate } = useMutation();
-  // Every suggestion starts ticked, with the rule's wording: the common case is
-  // to look down the list and save it. Keyed by cost centre id.
   const [rows, setRows] = useState(() =>
     Object.fromEntries(suggestions.map((s) => [s.cc.id, { on: true, name: s.shortName }])),
   );
@@ -81,8 +75,6 @@ export function ShortNamesDialog({
           {suggestions.map(({ cc }) => {
             const row = rows[cc.id];
             return (
-              // The full name over the field, so what is being shortened is
-              // in sight while the short name is worded.
               <div key={cc.id} className="flex items-start gap-3 px-3 py-2.5">
                 <Checkbox
                   checked={row.on}

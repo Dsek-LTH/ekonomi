@@ -1,40 +1,9 @@
 "use client";
 
-// Drawing an uthyrningsavtal.
-//
-// The one place in the app where a contract comes into being. Everything else
-// under /contracts files an agreement that was signed somewhere else; this page
-// takes answers and draws a document out of them, which the counterparty then
-// reads and signs. Its sibling is contracts/upload, and each offers the other
-// at the foot so a wrong turn costs nothing.
-//
-// Three blocks, each one subject, in the order the conversation goes: who the
-// two parties are, when, and what for how much.
-//
-// The parties share a row, in the shape the document draws them, with our side
-// already answered and nothing to choose: the section does not sign its own
-// rentals (only the renter does, see rental-contract.typ), so there is no
-// signatory to pick here any more. Ours used to be a fourth card at the foot,
-// so the form asked who represents the renter, then the period, then the
-// gear, and then who represents us: one subject split in half by three
-// others. That is the same fault this form was reorganised to fix once
-// before, when it asked for the renter's organisation, then our own
-// signatory, then the person signing for the renter. And it asked for three
-// things the app already knew: a title (the renter, plus the fact that it is
-// a rental), tags (archive machinery for filing a sponsoravtal) and notes
-// (worth having, worth nothing at this moment). All three are gone. See
-// lib/contract/signatory.ts.
-//
-// Widths are container queries throughout, not viewport breakpoints. This form
-// sits beside a panel you can drag, so its width changes while the viewport
-// does not move at all, which is the same reason AllocationEditor is written
-// that way and the reason `sm:` was the wrong question here.
-//
-// It is also the edit screen. contracts/[id]/edit hands it the contract as
-// `existing`, the way an utlägg's edit page hands the wizard its utlägg, and
-// until somebody has signed, a rental is changed by filling in the form it was
-// drawn on again. One form means the new contract and the edited one cannot
-// disagree about what a rental is made of.
+// Drawing an uthyrningsavtal: the only place a contract comes into being (contracts/upload files ones signed elsewhere).
+// Blocks: the two parties, when, and what for how much. The section does not sign its own rentals (see rental-contract.typ),
+// so there is no signatory to pick (lib/contract/signatory.ts). Widths are container queries: the panel beside this form
+// can be dragged. Also the edit screen: contracts/[id]/edit passes the contract as `existing`.
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -117,19 +86,13 @@ export function NewRentalClient({
   const router = useRouter();
   const { mutate, pending } = useMutation();
 
-  // Everything typed, kept in localStorage while a new rental is being drawn,
-  // so a reload does not empty the form. See lib/ui/use-local-draft.ts.
-  //
-  // Editing an existing rental keeps plain state instead: the server already
-  // holds that one, and a local copy outliving somebody else's change would put
-  // stale terms back on the screen. The utlägg wizard makes the same split.
+  // Everything typed is kept in localStorage while a new rental is drawn (lib/ui/use-local-draft.ts). Editing keeps plain
+  // state: the server holds that one and a stale local copy would put old terms back.
   const [form, setForm, , forgetDraft] = useLocalDraft<RentalForm>(
     DRAFT_KEY,
     {
       counterpartyId: existing?.counterpartyId ?? null,
-      // The renter's name as an edited contract already states it, when there
-      // is no directory row to pick: one drawn before the directory existed, or
-      // picked from a row since deleted. Kept until somebody picks another.
+      // The renter's name as an edited contract states it when there is no directory row (older or deleted). Kept until another is picked.
       statedCounterparty:
         existing && !counterparties.some((c) => c.id === existing.counterpartyId)
           ? (existing.counterparty ?? "")
@@ -144,9 +107,7 @@ export function NewRentalClient({
       pickupAt: existing?.rental?.pickupAt.slice(0, 10) ?? "",
       returnAt: existing?.rental?.returnAt.slice(0, 10) ?? "",
       purpose: existing?.rental?.purpose ?? "",
-      // Utrustning och pengar. No money field here: every figure below the
-      // lines is worked out from them, discounts included. See
-      // rental/pricing.ts.
+      // Utrustning och pengar. No money field: every figure below the lines is worked out (rental/pricing.ts).
       lines: existing?.rental ? existing.rental.lines.map(lineFromRow) : [makeLine()],
     },
     !existing,
@@ -166,8 +127,6 @@ export function NewRentalClient({
     purpose,
     lines,
   } = form;
-  // One setter per field, named as the separate states they replace, so the
-  // markup below reads the same as before.
   const field =
     <K extends keyof RentalForm>(key: K) =>
     (value: RentalForm[K]) =>
@@ -191,8 +150,7 @@ export function NewRentalClient({
     [setForm],
   );
 
-  // Hyrestagaren, picked from the directory rather than typed. See
-  // upload-client.tsx, which does the same thing for the archive form.
+  // Hyrestagaren is picked from the directory (as in upload-client.tsx).
   const [counterpartyOptions, setCounterpartyOptions] = useState(counterparties);
   const [newCounterpartyName, setNewCounterpartyName] = useState<string | null>(null);
   const counterparty =
@@ -201,9 +159,7 @@ export function NewRentalClient({
   const signaturesValid =
     Number.isInteger(signatures) && signatures >= 1 && signatures <= MAX_SIGNATURES;
 
-  // The renter's particulars, copied from the directory row they were picked
-  // from (or blanked, when the pick is cleared). One place for both the
-  // picker and a renter created on the spot, so the two fill the same fields.
+  // The renter's particulars, copied from the directory row on pick (blanked when cleared); shared by the picker and create-on-the-spot.
   function takeCounterparty(c: CounterpartyOption | undefined) {
     setStatedCounterparty("");
     setCounterpartyId(c?.id ?? null);
@@ -225,9 +181,7 @@ export function NewRentalClient({
     setNewCounterpartyName(null);
   }
 
-  // What is free over the chosen period, stamped with the dates it was fetched
-  // for and read back only while those still match the fields, so a stale
-  // answer is impossible rather than merely unlikely.
+  // What is free over the chosen period, stamped with the dates it was fetched for and read back only while they match.
   const [fetched, setFetched] = useState<
     { from: string; to: string; rows: Map<string, Availability> } | undefined
   >(undefined);
@@ -253,16 +207,12 @@ export function NewRentalClient({
           rows: new Map(rows.map((a) => [a.itemId, a])),
         }),
       )
-      // A failed check leaves the form saying nothing rather than saying
-      // everything is free. The create route checks again server-side, so the
-      // worst case is a refusal at submit rather than a double booking.
+      // A failed check shows nothing rather than "all free"; the create route checks again server-side.
       .catch(() => undefined);
     return () => abort.abort();
   }, [pickupAt, returnAt, periodReady, existing]);
 
-  /** What is left of an item, counting what this form has already claimed on
-   *  its other lines. Without that, a form listing the Soundboks twice would
-   *  draw both rows as fine and be refused at submit. */
+  /** What is left of an item, counting what this form has already claimed on its other lines. */
   const freeFor = (itemId: string, exceptId: string): number | undefined => {
     const a = free?.get(itemId);
     if (!a) return undefined;
@@ -278,8 +228,7 @@ export function NewRentalClient({
     0,
   );
 
-  // The same function the create route runs over the same lines, so the figure
-  // on the screen and the figure in the database cannot come apart.
+  // The same function the create route runs, so screen and database cannot disagree.
   const pricing = rentalPricing(
     filled.map((l) => ({
       quantity: Number(l.quantity) || 0,
@@ -287,10 +236,7 @@ export function NewRentalClient({
       discountPercent: effectiveDiscountPercent(l, toOre),
     })),
   );
-  /** Every line off at 100 per cent, which is how a free loan is written.
-   *  Always percent, regardless of what a line's discount is typed as: "off
-   *  by however much this happens to cost" is a percentage, not a kr figure
-   *  to work out first. */
+  /** Every line off at 100 per cent (a free loan). Always percent, whatever a line's discount is typed as. */
   const lendFree = () =>
     setLines(lines.map((l) => ({ ...l, discount: "100", discountUnit: "percent" })));
 
@@ -314,17 +260,8 @@ export function NewRentalClient({
     filled.length > 0 &&
     !anyShort;
 
-  // ── The document, drawn as it is described ─────────────────────
-  //
-  // The panel beside this form shows the contract itself, redrawn whenever an
-  // answer that appears on it changes. It goes through the same builder and the
-  // same template the saved contract will, so what is on screen is the document
-  // rather than an impression of it.
-  //
-  // Keyed on a string of exactly the fields the document prints. Comparing the
-  // draft by value rather than by identity is what stops a redraw on every
-  // keystroke in a field the document does not show, and on every render caused
-  // by something else entirely.
+  // The panel shows the contract through the same builder and template as the saved one, keyed on exactly the fields the
+  // document prints so unrelated keystrokes do not redraw it.
   const draft = {
     counterparty: counterparty.trim(),
     counterpartyOrgNo: orgNo.trim(),
@@ -349,9 +286,7 @@ export function NewRentalClient({
   const draftKey = JSON.stringify(draft);
 
   const [preview, setPreview] = useState<string | null>(null);
-  // Revoked when it is replaced and when the page goes, because otherwise the
-  // browser holds every rendering the form ever produced for the life of the
-  // tab, and this one produces a new one every few seconds.
+  // Revoked when replaced and on unmount: a new rendering is produced every few seconds.
   useEffect(() => {
     if (!preview) return;
     return () => URL.revokeObjectURL(preview);
@@ -359,8 +294,7 @@ export function NewRentalClient({
 
   useEffect(() => {
     const abort = new AbortController();
-    // Long enough that typing a sentence into "Ändamål" is one render rather
-    // than fifteen, short enough that it still feels like it is following you.
+    // Debounce: typing a sentence is one render, not fifteen.
     const timer = setTimeout(() => {
       fetch("/api/contracts/rental/preview", {
         method: "POST",
@@ -370,17 +304,14 @@ export function NewRentalClient({
       })
         .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
         .then((blob) => setPreview(URL.createObjectURL(blob)))
-        // A preview that would not draw leaves the last one standing rather
-        // than blanking the panel. Nothing here is the contract; the document
-        // that matters is drawn again on save, by the route, from the row.
+        // A preview that fails leaves the last one standing; the real document is drawn on save.
         .catch(() => undefined);
     }, 600);
     return () => {
       abort.abort();
       clearTimeout(timer);
     };
-    // The draft's contents, not its identity: a new object every render would
-    // redraw the document forever.
+    // The draft's contents, not its identity (a new object every render would redraw forever).
   }, [draftKey]);
 
   async function save() {
@@ -394,8 +325,7 @@ export function NewRentalClient({
       pickupAt,
       returnAt,
       purpose: purpose.trim(),
-      // No rent is sent. The route runs the same pricing over the lines it is
-      // given, so there is one place the subtraction happens.
+      // No rent is sent: the route runs the same pricing over the lines.
       lines: filled.map((l) => ({
         itemId: l.itemId,
         description: l.description.trim(),
@@ -409,8 +339,7 @@ export function NewRentalClient({
       signatureCount: signatures,
     };
 
-    // The same body either way. An edit sends the whole form again, and the
-    // route replaces what the contract said and redraws the document.
+    // An edit sends the whole form again; the route replaces the contract and redraws the document.
     if (existing) {
       const saved = await mutate(`/api/contracts/${existing.id}/rental`, {
         method: "PUT",
@@ -428,8 +357,7 @@ export function NewRentalClient({
       refresh: false,
     });
     if (created) {
-      // Spent: the contract exists now. Only the stored copy goes, so the form
-      // does not blank itself in the frame before the page changes.
+      // Only the stored copy goes, so the form does not blank in the frame before the page changes.
       forgetDraft();
       router.push(`/contracts/${created.id}`);
     }
@@ -441,10 +369,7 @@ export function NewRentalClient({
       width="content"
       back={existing ? `/contracts/${existing.id}` : "/rentals"}
     >
-      {/* The contract, beside the form that describes it. No `onFile`: there is
-          nothing to upload here, the document is drawn rather than attached,
-          and a dropzone would invite somebody to add a PDF that has no place on
-          a contract this app writes itself. */}
+      {/* The contract beside the form. No `onFile`: the document is drawn, not attached. */}
       <ReceiptPanelSource
         previewUrl={preview}
         mimeType="application/pdf"
@@ -457,17 +382,7 @@ export function NewRentalClient({
         {items.length === 0 && <Notice tone="warning">{t("rental.emptyCatalogue")}</Notice>}
 
         {/* ── Parterna, side by side ───────────────────────────── */}
-        {/*
-            The two parties on one row, in the order and the shape the document
-            puts them in, because the document is open in the panel beside this
-            form and a form whose blocks do not correspond to the page it draws
-            makes the reader do the mapping.
-
-            Our side is answered already and cannot be typed over. It is shown
-            rather than hidden because it is printed on the contract, and a
-            form that never mentions the section produces a document that
-            suddenly does.
-        */}
+        {/* The parties share a row in the shape the document draws them; our side is shown but cannot be typed over. */}
         <Card>
           <CardHeader title={t("rental.parties")} subtitle={t("rental.counterpartyHint")} />
           <CardBody className="@container">
@@ -476,10 +391,7 @@ export function NewRentalClient({
               <div className="@container space-y-4">
                 <h3 className="text-[13px] font-medium text-foreground">{t("rental.lessor")}</h3>
 
-                {/* Static, and drawn as text rather than as disabled inputs: a
-                    greyed-out field reads as something that is broken or that
-                    you have not earned, and this is neither. It is simply not
-                    a question. */}
+                {/* Static text, not disabled inputs: it is not a question. */}
                 <div className="space-y-0.5 rounded-control bg-surface px-4 py-3 text-sm">
                   <p className="font-medium">{SECTION.name}</p>
                   {SECTION.orgNo && (
@@ -494,9 +406,7 @@ export function NewRentalClient({
               </div>
 
               {/* ── Hyrestagaren ────────────────────────────────── */}
-              {/* Its own container, so the grids below measure this column
-                  rather than the card. At half the width a row of three would
-                  otherwise stay three across in 300px. */}
+              {/* Its own container, so the grids below measure this column rather than the card. */}
               <div className="@container space-y-4">
                 <h3 className="text-[13px] font-medium text-foreground">
                   {t("rental.counterparty")}
@@ -533,11 +443,7 @@ export function NewRentalClient({
                       aria-label={t("rental.renterOrg")}
                     />
                   </FieldGroup>
-                  {/* One field for both, because the renter is a company,
-                      another section or a private person and the question is
-                      the same either way. Required here and optional in the
-                      archive: a contract the section may have to enforce over a
-                      broken speaker needs somebody it can actually name. */}
+                  {/* One field for organisationsnummer and personnummer. Required here (a rental may need enforcing), optional in the archive. */}
                   <Field label={t("rental.renterOrgNo")} requirement="required">
                     <Input
                       value={orgNo}
@@ -547,11 +453,6 @@ export function NewRentalClient({
                   </Field>
                 </div>
 
-                {/* Where a claim would be served. An email address is where you
-                    ask nicely; this is where you send something that has to
-                    arrive. The postal code and the town share a row because
-                    that is how the two are read, and how the document sets
-                    them. */}
                 <Field label={t("rental.renterAddress")} requirement="required">
                   <Input
                     value={address}
@@ -580,9 +481,6 @@ export function NewRentalClient({
                   </Field>
                 </div>
 
-                {/* How to reach them other than by post. Optional, filled in
-                    from the directory when a counterparty is picked, and
-                    printed under the address when given. */}
                 <div className="grid gap-4 @md:grid-cols-2">
                   <Field label={t("party.email")} requirement="optional">
                     <Input
@@ -648,9 +546,7 @@ export function NewRentalClient({
                 <DateInput value={returnAt} onChange={(e) => setReturnAt(e.target.value)} />
               </Field>
             </div>
-            {/* Kept, and optional. The villkor say the gear must be used "på
-                det sätt den är avsedd för", and that clause needs something to
-                point at. */}
+            {/* Optional. The villkor say the gear must be used "på det sätt den är avsedd för"; that clause needs a stated purpose. */}
             <Field
               label={t("rental.purpose")}
               hint={t("rental.purposeHint")}
@@ -667,41 +563,17 @@ export function NewRentalClient({
             title={t("rental.sectionEquipment")}
             subtitle={free === undefined ? t("rental.pickDatesFirst") : undefined}
           />
-          {/* Flush against the card's own border, the same way the voucher
-              sheet sits in its card (components/voucher-editor.tsx, used from
-              book-client.tsx): a table reads as a sheet, not as a field, and
-              padding around it would say it was one. */}
           <RentalLines
             items={items}
             value={lines}
             onChange={setLines}
             freeFor={freeFor}
             toOre={toOre}
-            // One spare row kept ready, same as the form started with. A
-            // rental is rarely more than a handful of lines, so three (the
-            // voucher sheet's count, for an account/cost-centre grid written
-            // line by line) would sit mostly empty.
+            // One spare row, as the form started with (a rental is rarely more than a handful of lines).
             blankRows={1}
           />
           <CardBody className="@container space-y-5 border-t border-border">
-            {/* What it comes to, set like the foot of an invoice: the lines,
-                what comes off them, and the rent, read down one column.
-                
-                There used to be two prices on this card, one on every line and
-                a "Hyra" field beside them that was typed by hand and quietly
-                won. Nothing said which the renter would be charged, and lending
-                gear for nothing meant typing a 0 over a column of real prices,
-                which recorded the reason nowhere. Now the lines are the price
-                and the only figure anybody decides is what comes off them. */}
-            {/* The foot of the invoice: what the lines come to, what came off
-                them, and what is owed. Right-aligned under the column it is the
-                sum of, so the arithmetic is followed down one place.
-
-                Every figure here is worked out. Nothing on this block is typed,
-                because the discounts are on the lines now. There used to be a
-                "Hyra" field beside the rows that was typed by hand and quietly
-                won, so a rental had two prices on one screen and nothing said
-                which the renter would be charged. */}
+            {/* Every figure here is worked out; nothing is typed (discounts are on the lines). */}
             <div className="flex justify-end">
               <div className="w-full max-w-xs space-y-2.5">
                 <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -725,11 +597,7 @@ export function NewRentalClient({
                   </span>
                 </div>
 
-                {/* What is at stake, which is not a price and is the one
-                    figure the liability clause points at. In the same
-                    footer as what is owed rather than on the table itself:
-                    it used to sit under the lines as a total of its own,
-                    which made two footers for one card. */}
+                {/* What is at stake is the figure the liability clause points at, shown in the same footer as what is owed. */}
                 {totalReplacementOre > 0 && (
                   <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
                     <span>{t("rental.totalReplacement")}</span>
@@ -737,10 +605,6 @@ export function NewRentalClient({
                   </div>
                 )}
 
-                {/* The common case in one press. Most of what this section
-                    lends goes to another section for nothing, and setting every
-                    row to 100 by hand is the sort of repetition that ends up
-                    with one row missed. */}
                 {pricing.subtotalOre > 0 && pricing.totalOre > 0 && (
                   <div className="flex justify-end">
                     <Button variant="link" type="button" className="text-xs" onClick={lendFree}>
@@ -759,9 +623,7 @@ export function NewRentalClient({
             <Button
               variant="secondary"
               onClick={() => {
-                // Cancelling a new rental throws its draft away, which is what
-                // the word says. An edit has no draft, and the key it would
-                // remove belongs to a new rental somebody may be drawing.
+                // Cancelling a new rental discards its draft; an edit has no draft, and its key belongs to a new rental.
                 if (!existing) forgetDraft();
                 router.push(existing ? `/contracts/${existing.id}` : "/rentals");
               }}

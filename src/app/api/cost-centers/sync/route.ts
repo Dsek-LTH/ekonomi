@@ -1,4 +1,3 @@
-// Sync the selectable cost centres from Fortnox (active ones become selectable).
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { syncCostCenters } from "@/lib/fortnox/sync";

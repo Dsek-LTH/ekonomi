@@ -1,9 +1,6 @@
 // Add gear to the catalogue.
 //
-// Gated on CONTRACT_MANAGE rather than SETTINGS, even though the screen lives
-// under Inställningar. The catalogue is not configuration of the app, it is a
-// list of the section's things, and the people who write uthyrningsavtal are
-// the people who know what a speaker costs to replace.
+// Gated on CONTRACT_MANAGE, not SETTINGS: the catalogue is the section's things, not app configuration.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canManageRentals } from "@/lib/domain/permissions";
@@ -20,9 +17,7 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.res;
   const d = parsed.data;
 
-  // Names are unique, so that a rental contract cannot list "Högtalare" twice
-  // at two replacement values. Checked here for the message; the column's
-  // constraint is what actually holds it.
+  // Names are unique so a contract cannot list "Högtalare" twice at two values. Checked here for the message.
   const existing = await prisma.rentalItem.findUnique({
     where: { name: d.name },
     select: { id: true },

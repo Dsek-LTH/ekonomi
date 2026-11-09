@@ -1,12 +1,5 @@
-// Sending a levfaktura back to the Inkorg: the unit's "Inte vår", or triage
-// taking one back that went to the wrong place.
-//
-// It stops being an invoice. Every invoice belongs to a unit, and this one no
-// longer has one, so its documents go back to the Inkorg and the invoice goes.
-// The reason goes with the documents, with the unit it came back from, so the
-// Inkorg can say why it is there again. Only while nothing on it is signed
-// (isInvoiceReturnable): its history up to here is the unit looking at it, and
-// that is what the reason now says.
+// Send a levfaktura back to the Inkorg ("Inte vår", or triage). Only while nothing on it is signed
+// (isInvoiceReturnable). The invoice goes, its documents return with the reason.
 import { prisma } from "@/lib/server/db";
 import { isInvoiceReturnable } from "@/lib/domain/supplier-invoice";
 import { gate } from "@/lib/api/guard";

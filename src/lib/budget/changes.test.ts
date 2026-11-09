@@ -27,8 +27,6 @@ const income = (accountId: string, amount: number, over: Partial<ResolvedEntry> 
   entry({ accountId, amount, kind: "INCOME", ...over });
 
 describe("resultImpact", () => {
-  // Both kinds are budgeted as positive magnitudes, so the sign has to be put
-  // back before they can meet in one sum.
   it("lifts the result by added income and drops it by added cost", () => {
     expect(resultImpact("INCOME", 500)).toBe(500);
     expect(resultImpact("COST", 500)).toBe(-500);
@@ -110,7 +108,6 @@ describe("validateChange", () => {
       expect(v.ok).toBe(false);
       if (v.ok) return;
       expect(v.error).toBe("notNeutral");
-      // Signed, because which way it moved is the useful half.
       expect(v.values?.net).toBe("-300");
     });
 
@@ -128,8 +125,7 @@ describe("validateChange", () => {
       expect(v.values?.scopes).toBe("Sexmästeriet, Källarmästeriet");
     });
 
-    // Kronor typed by hand and summed as doubles: two that should cancel can
-    // miss by a fraction of an öre, and that is not a real imbalance.
+    // Float sums that should cancel can miss by a fraction of an öre.
     it("treats a sub-öre residue as balanced", () => {
       expect(validateChange("FORFLYTTNING", [cost("a", 0.1), cost("b", -0.1)])).toEqual({
         ok: true,
@@ -145,8 +141,7 @@ describe("scopeKey", () => {
     );
   });
 
-  // The one thing this key exists to prevent: two unrelated orphan sheets
-  // sharing a bucket and so being allowed to fund each other.
+  // Two unrelated orphan sheets must not share a bucket and fund each other.
   it("gives an unlinked sheet a resultatenhet of its own", () => {
     expect(scopeKey({ id: "s1", costCenter: null })).toBe("blad:s1");
     expect(scopeKey({ id: "s2", costCenter: null })).toBe("blad:s2");
@@ -170,17 +165,13 @@ describe("scopeLabel", () => {
 });
 
 describe("parseAmount", () => {
-  // Kronor in, öre out. This is the one place on the editorial-change path
-  // where what somebody typed becomes an amount, so it is the one place the
-  // conversion happens, see the units note in lib/budget/eval.ts.
+  // The one place typed kronor become öre (see the units note in lib/budget/eval.ts).
   it("reads a plain number as öre", () => {
     expect(parseAmount("500")).toBe(50_000);
   });
 
   it("takes a number as already being öre", () => {
-    // Not something typed: an amount coming back from the API, which stores
-    // and returns öre. Converting it again would multiply it by a hundred
-    // every time a change was reopened for editing.
+    // A number passed in is öre from the API: converting again would multiply by a hundred.
     expect(parseAmount(50_000)).toBe(50_000);
   });
 
@@ -195,8 +186,7 @@ describe("parseAmount", () => {
   });
 
   it("rounds a third decimal away rather than carrying it", () => {
-    // Öre is the resolution money is kept at; a fraction of one is not a
-    // smaller amount, it is a different one.
+    // A fraction of an öre is a different amount, not a smaller one.
     expect(parseAmount("10,005")).toBe(1001);
     expect(parseAmount("10,004")).toBe(1000);
   });
@@ -228,7 +218,6 @@ describe("adjustmentsByAccount", () => {
     expect(got.get("b")).toBe(-100);
   });
 
-  // The whole reason every figure goes through here.
   it("leaves a revoked change out of the figures", () => {
     const got = adjustmentsByAccount([
       { ...active, entries: [{ accountId: "a", amount: 500 }] },

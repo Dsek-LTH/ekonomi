@@ -1,29 +1,5 @@
 "use client";
 
-// Settings → Roles. The two halves of authority, as two views of one screen
-// because they are one question read from either end.
-//
-//   Grupper       which Authentik group makes you what here
-//   Behörigheter  what each of those roles may then do
-//
-// Everything else in the app derives from these two tables: a sign-in runs the
-// first (lib/server/authentik-roles.ts) and every gate reads the second
-// (lib/server/capabilities.ts). They used to be two cards stacked on one page,
-// a list of every group in the section above a grid wider than the overlay,
-// and neither could be read without scrolling past the other.
-//
-// It counts. Beside every group is how many people hold it, and beside every
-// role how many people are in it, so "give ORDINARIE bookkeeping access" reads
-// as the ~1000 people it actually is before it is saved rather than after. The
-// counts come from User.authentikGroups (the group list as it stood at each
-// person's last sign-in) which is also what lets a mapped group nobody holds
-// be shown as what it almost certainly is: a typo, which grants nothing and
-// says nothing while it does.
-//
-// And it confirms. Not everything. A tickbox that stopped to ask every time
-// would train the reader to click through it, but the two changes that are
-// hard to walk back: one that reaches a lot of people, and one that takes
-// something away from a role the reader holds themselves.
 import { Fragment, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
@@ -47,18 +23,10 @@ import { isSectionGroup } from "@/lib/domain/group-name";
 import type { AuthorityData, GroupRow } from "@/lib/data/authority";
 import type { Capability, Role } from "@/lib/domain/types";
 
-/** How many people a change has to reach before it is worth stopping over. */
 const MANY = 25;
 
-/** Whether a row confers anything at all. */
 const grants = (g: GroupRow) => g.roles.length > 0 || g.resultUnits.length > 0;
 
-/**
- * Which part of the app each capability is about, so the grid reads as six
- * short blocks rather than eighteen rows in a list. A Record over the whole
- * union, so a capability added later is a compile error here until it is
- * given a heading, rather than a row the grid quietly leaves out.
- */
 const AREA_OF: Record<Capability, Area> = {
   ADMIN: "expenses",
   ATTEST_VIEW: "expenses",
@@ -104,8 +72,6 @@ export function RolesClient({
   return (
     <PageShell
       title={t("title")}
-      // Two views of the same authority: by who, or by what. A view toggle,
-      // not the scope switch, which only ever says whose (docs/navigation.md).
       views={{
         label: t("viewLabel"),
         value: view,
@@ -116,10 +82,6 @@ export function RolesClient({
         onChange: (v) => setView(v as View),
       }}
     >
-      {/* The counts on this screen are counts of people we have seen. Somebody
-          who has not signed in since their group list started being kept is in
-          none of them, and a number that quietly excluded a third of the
-          section would be worse than no number. */}
       {membersWithoutGroups > 0 && (
         <Notice tone="info">{t("staleCounts", { count: membersWithoutGroups })}</Notice>
       )}
@@ -137,8 +99,6 @@ export function RolesClient({
   );
 }
 
-// ── Grupper ───────────────────────────────────────────────────────
-
 function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "resultUnits">) {
   const t = useTranslations("admin.roles");
   const tRole = useTranslations("common.role");
@@ -154,8 +114,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
   );
   const roleOptions = ROLES.map((r) => ({ value: r, label: tRole(r) }));
 
-  // The new link, built up in the panel under the toolbar and saved in one go,
-  // so a group is never on the list granting nothing in between.
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<{ group: string; roles: Role[]; unitIds: string[] }>({
     group: "",
@@ -163,9 +121,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
     unitIds: [],
   });
 
-  // What to pick from: the groups people actually sit in that grant nothing
-  // yet, biggest first. Picking rather than typing is what keeps a misspelt
-  // group, which grants nothing and says nothing while it does, off the list.
   const candidates = useMemo(
     () =>
       groups
@@ -179,10 +134,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
     [groups, t],
   );
 
-  // The tabs open on what this screen is for, the groups that grant something.
-  // Every group anyone holds is the second tab: most of them mean nothing here
-  // and are meant not to. A grant that reaches nobody gets a tab of its own,
-  // since it is almost always a misspelling and the one slice worth hunting.
   const mapped = groups.filter(grants);
   const tabs: ClientTabFilter<GroupRow> = [
     { value: "mapped", label: t("filter.mapped"), badge: mapped.length, predicate: grants },
@@ -201,8 +152,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
     await put(row.group, row.holders, roles, resultUnitIds);
   }
 
-  // Both writes answer with how many people's roles they re-derived, which is
-  // worth saying: it is what makes a grant you just saved real.
   function saved(data: unknown) {
     const affected = (data as { affected?: number }).affected ?? 0;
     notify.success(affected > 0 ? t("savedAffecting", { count: affected }) : t("saved"));
@@ -275,9 +224,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
       cell: (g) => (
         <span className="flex flex-wrap items-center gap-2">
           <code className="font-mono text-sm">{g.group}</code>
-          {/* A row that grants something to nobody is the silent failure this
-              screen exists to end: almost always a misspelling, and invisible
-              from the inside because the grant simply never fires. */}
           {grants(g) && g.holders === 0 && <Tag tone="warning">{t("probablyTypo")}</Tag>}
         </span>
       ),
@@ -297,9 +243,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
       mobile: "meta",
       mobileCell: (g) => g.roles.map((r) => tRole(r)).join(", "),
       header: t("colRoles"),
-      // Searchable by what it grants as well as by name: "who is Kassör" is
-      // the same question from the other end, and the group answering it is
-      // the one thing the reader does not know.
       value: (g) => g.roles.map((r) => tRole(r)).join(" "),
       searchable: true,
       cell: (g) => (
@@ -341,8 +284,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
       align: "right",
       mobile: "actions",
       className: "w-14",
-      // Only a row that grants something has a mapping to delete. The rest are
-      // here because people hold them, and there is nothing of ours to remove.
       cell: (g) =>
         grants(g) && (
           <IconButton
@@ -381,8 +322,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
               <Combobox
                 size="sm"
                 className="w-full sm:w-72"
-                // A typed name is not among the candidates, so it is added for
-                // the picker to show it as chosen.
                 options={
                   draft.group && !candidates.some((c) => c.value === draft.group)
                     ? [
@@ -397,9 +336,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
                 }
                 value={draft.group}
                 onChange={(group) => setDraft({ ...draft, group })}
-                // A group nobody has signed in with yet is not in the list, so
-                // its name can still be typed. That is the case a typo hides
-                // in, so it is the exception rather than the way in.
                 onCreate={(group) => setDraft({ ...draft, group: group.trim().toLowerCase() })}
                 createLabel={(text) => t("useGroup", { group: text })}
                 placeholder={t("pickGroup")}
@@ -443,8 +379,6 @@ function GroupsView({ groups, resultUnits }: Pick<AuthorityData, "groups" | "res
   );
 }
 
-// ── Behörigheter ──────────────────────────────────────────────────
-
 function CapabilitiesView({
   roleCapabilities,
   roleHolders,
@@ -456,8 +390,7 @@ function CapabilitiesView({
   const confirm = useConfirm();
   const { mutate } = useMutation();
 
-  // The grid as a set of "ROLE\0CAPABILITY" keys, one membership test per box.
-  // NUL rather than a space because no member of either enum can contain one.
+  // Keys are "ROLE\0CAPABILITY": NUL because no enum member can contain one.
   const ticked = useMemo(
     () => new Set(roleCapabilities.map((r) => `${r.role}\u0000${r.capability}`)),
     [roleCapabilities],
@@ -468,7 +401,6 @@ function CapabilitiesView({
     const on = ticked.has(`${role}\u0000${capability}`);
     const next = on ? capsOf(role).filter((c) => c !== capability) : [...capsOf(role), capability];
 
-    // Two questions worth stopping for, and no others.
     const holders = roleHolders[role] ?? 0;
     if (!on && holders >= MANY) {
       const ok = await confirm({
@@ -505,9 +437,6 @@ function CapabilitiesView({
       <p className="border-b border-border px-inset py-3 text-sm text-muted">
         {t("capabilitiesSubtitle")}
       </p>
-      {/* Wide by nature (eight roles across) so it scrolls inside its own box,
-          with the capability column held still so a tick is never read
-          against a row that has scrolled out of sight. */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
           <thead>
@@ -539,8 +468,6 @@ function CapabilitiesView({
                 </tr>
                 {CAPABILITIES.filter((c) => AREA_OF[c] === area).map((capability) => (
                   <tr key={capability} className="border-b border-border last:border-0">
-                    {/* One line per capability: the explanation is a tap away
-                        rather than a second line under every row. */}
                     <th
                       scope="row"
                       className="sticky left-0 z-10 bg-background px-inset py-2 text-left font-medium"
@@ -566,9 +493,6 @@ function CapabilitiesView({
           </tbody>
         </table>
       </div>
-      {/* The one thing the grid cannot say, said next to it. Somebody will
-          come here looking for an attest tickbox, and its absence is a
-          decision rather than an oversight. */}
       <p className="border-t border-border px-inset py-3 text-xs text-muted">{t("attestNote")}</p>
     </Card>
   );

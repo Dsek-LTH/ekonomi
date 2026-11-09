@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Putting an utlägg's documents in order. The list has to be all of them,
-// once each: a partial one would leave the rest wherever their old positions
-// fall among the new, and the PDF Fortnox gets would come out shuffled.
+// The order list has to be all documents, once each, or the merged PDF comes out shuffled.
 
 const h = vi.hoisted(() => ({
   expense: null as null | { id: string; status: string; receipts: { id: string }[] },

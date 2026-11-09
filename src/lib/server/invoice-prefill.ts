@@ -1,13 +1,6 @@
-// Filling a levfaktura's fields from its PDF. Where the three ways a PDF
-// arrives (a hand upload, a forwarded mail, a document added later) all end up.
-//
-// The PDF is read once, when it arrives, and what it said is kept on the
-// document (SupplierInvoiceDocument.scan). Making an invoice from it later
-// fills from that.
-//
-// Only ever into empty fields. A value somebody typed is never replaced by one
-// read off a page, and what was read is recorded in `prefilled`, so the page
-// can mark it and the treasurer knows what to check before export.
+// Filling a levfaktura's fields from its PDF. The PDF is read once on arrival and kept on the document
+// (SupplierInvoiceDocument.scan). Only into empty fields: what was read is recorded in `prefilled` so the
+// page can mark it for the treasurer to check.
 import "server-only";
 
 import { parseInvoiceText, type InvoiceTextFields } from "@/lib/domain/invoice-text";
@@ -25,8 +18,7 @@ export async function readInvoicePdf(
   return parseInvoiceText(await pdfLines(bytes), { ownOrgNo: SECTION.orgNo });
 }
 
-/** The invoice columns a prefill can write, and what each is called in
- *  `prefilled`. */
+/** The invoice columns a prefill can write, and what each is called in `prefilled`. */
 const COLUMNS = {
   amount: "amount",
   dueDate: "dueDate",
@@ -46,13 +38,9 @@ type Current = Partial<
 };
 
 /**
- * The write that fills what `current` lacks from `fields`, ready to spread
- * into a create or an update, with `prefilled` extended to match. Empty when
- * there is nothing to fill.
- *
- * `supplier` is the register's match for the scan (supplierMatcher), which
- * names the supplier and picks it for the export step. The name counts as
- * read off the PDF, since it is only as right as the number it was matched by.
+ * The write that fills what `current` lacks from `fields`, to spread into a create or update, with
+ * `prefilled` extended. Empty when there is nothing to fill. `supplier` is the register's match for the scan
+ * (supplierMatcher); the name counts as read off the PDF, being only as right as the number it matched by.
  */
 export function prefillData(
   current: Current,

@@ -26,8 +26,7 @@ import { useFormat } from "@/lib/ui/use-format";
 import { EvidenceTag } from "../../evidence-cell";
 import { ReviewTag } from "../../review-tag";
 
-// Written out rather than built from the flag, so that every key is one the
-// messages test can find (src/i18n/messages.test.ts).
+// Written out so the messages test finds every key (src/i18n/messages.test.ts).
 const FLAG_HINT: Record<VoucherFlag, string> = {
   outsideYear: "outsideYearHint",
   possibleDuplicate: "possibleDuplicateHint",
@@ -42,7 +41,6 @@ export default function ClosingVoucherClient({
 }: {
   year: ClosingYear;
   voucher: ClosingVoucherDetail;
-  /** The pass this viewer reviews in, or null when they review in neither. */
   ownPass: ReviewPass | null;
 }) {
   const t = useTranslations("closing.voucher");

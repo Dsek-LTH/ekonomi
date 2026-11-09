@@ -1,22 +1,9 @@
-// Turning mail in the levfaktura inkorg mailbox into documents in the Inkorg.
-//
-// Called from two places: the Pub/Sub push (api/inbound/gmail), seconds after
-// a mail arrives, and the cron job (api/cron/gmail-sync), which renews Gmail's
-// watch and also syncs, so a push that never came is picked up within the
-// hour. Both run `syncInbox`, which reads everything since the history id it
-// last finished at. Running it twice at once is safe: each mail is claimed by
-// writing its InboundMail row first, and its Gmail id is unique.
-//
-// What one mail becomes:
-//
-//   • from outside dsek.se, or not verified by Gmail: a REJECTED row saying
-//     why, and nothing else. Triage sees the latest of them in the Inkorg.
-//   • no PDF at all: refused too, with that reason, since every invoice needs
-//     one and the Inkorg holds only documents;
-//   • one PDF, and a note that settles whose it is (autoAssign in
-//     lib/domain/inbound-mail.ts): a document given to that unit at once, in
-//     its Inkorg for it to fördela;
-//   • anything else: its PDFs in the Inkorg, for triage to give to a unit.
+// Turning mail in the levfaktura inkorg mailbox into Inkorg documents. Run by the Pub/Sub push
+// (api/inbound/gmail) and the cron job (api/cron/gmail-sync). Safe to run twice at once: each mail is
+// claimed by writing its InboundMail row first (unique Gmail id).
+// Outside dsek.se or unverified, or no PDF: REJECTED with a reason. One PDF with a note that settles whose
+// it is (autoAssign in lib/domain/inbound-mail.ts): straight into that unit's Inkorg. Otherwise the PDFs
+// go to the Inkorg for triage.
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -51,8 +38,6 @@ type Config = NonNullable<ReturnType<typeof gmailConfig>>;
 // The same ceiling a hand upload has (lib/server/document-upload.ts).
 const MAX_BYTES = 25 * 1024 * 1024;
 
-// ── Reading a message ─────────────────────────────────────────────
-
 const headerValues = (part: GmailPart, name: string): string[] =>
   (part.headers ?? [])
     .filter((h) => h.name.toLowerCase() === name.toLowerCase())
@@ -66,8 +51,7 @@ function* walk(part: GmailPart): Generator<GmailPart> {
 const decode = (data: string | undefined) =>
   data ? Buffer.from(data, "base64url").toString("utf8") : "";
 
-/** The mail's text: its first text/plain part, or its HTML with the tags
- *  taken out when it has no plain one. Attachments are not text. */
+/** The mail's text: its first text/plain part, or its HTML with the tags removed. */
 function bodyText(payload: GmailPart): string {
   const inline = [...walk(payload)].filter((p) => !p.filename);
   const plain = inline.find((p) => p.mimeType === "text/plain");
@@ -83,8 +67,7 @@ function bodyText(payload: GmailPart): string {
     .replace(/&gt;/g, ">");
 }
 
-/** The PDFs attached, by what they say they are. Whether they really are is
- *  checked against their bytes once fetched. */
+/** The PDFs attached, by what they say they are (checked against their bytes once fetched). */
 const pdfParts = (payload: GmailPart) =>
   [...walk(payload)].filter(
     (p) =>
@@ -92,8 +75,6 @@ const pdfParts = (payload: GmailPart) =>
       (p.mimeType === "application/pdf" || p.filename.toLowerCase().endsWith(".pdf")) &&
       (p.body?.size ?? 0) <= MAX_BYTES,
   );
-
-// ── One message ───────────────────────────────────────────────────
 
 export type MessageOutcome = "accepted" | "rejected" | "skipped";
 
@@ -137,8 +118,7 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
       })
     : null;
 
-  // The claim. Whoever writes this row first processes the mail; the other
-  // gets a unique-constraint error and leaves it.
+  // The claim: whoever writes this row first processes the mail.
   let mailId: string;
   try {
     const row = await prisma.inboundMail.create({
@@ -166,8 +146,7 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
 
   const written: string[] = [];
   try {
-    // The documents first, into storage, each fetched and checked against its
-    // own bytes. Something called faktura.pdf that is not one is left out.
+    // Documents first, each checked against its own bytes. A faktura.pdf that is not a PDF is left out.
     const docs: { documentId: string; key: string; filename: string; size: number }[] = [];
     for (const part of pdfParts(top)) {
       const bytes = part.body?.attachmentId
@@ -194,9 +173,7 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
     const forwarderUnitIds = owned
       ? ctx.units.filter((u) => owned.names.includes(u.name)).map((u) => u.id)
       : [];
-    // Only what the forwarder wrote routes it. The PDF is not read until its
-    // unit fördelar it, so what it prints (an "Er referens" naming a cost
-    // centre, say) is not looked at here.
+    // Only what the forwarder wrote routes it. The PDF is not read until its unit fördelar it.
     const auto: AutoAssignment | null = autoAssign({
       text: [note, subject].filter(Boolean).join("\n"),
       units: ctx.units,
@@ -214,16 +191,6 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
       inboundMailId: mailId,
     });
 
-    // What the mail becomes.
-    //
-    //   no PDF                  refused: there is nothing to make an invoice
-    //                           of, and a link to a supplier's portal is a PDF
-    //                           somebody has to fetch by hand anyway;
-    //   one PDF, unit named     a document in that unit's Inkorg, straight
-    //                           away;
-    //   anything else           its PDFs in the Inkorg, for triage. Several PDFs
-    //                           may be an invoice and its specification, or two
-    //                           invoices, and an unclear unit is a person's call.
     if (docs.length === 0) {
       await prisma.inboundMail.update({
         where: { id: mailId },
@@ -266,15 +233,12 @@ async function processMessage(c: Config, gmailId: string, ctx: AssignCtx): Promi
     });
     return "accepted";
   } catch (err) {
-    // Undo the claim and whatever reached storage, so the next sync tries
-    // this mail again from the start rather than finding it half done.
+    // Undo the claim and whatever reached storage, so the next sync retries the mail from the start.
     for (const key of written) await deleteObjectBestEffort(key);
     await prisma.inboundMail.delete({ where: { id: mailId } }).catch(() => {});
     throw err;
   }
 }
-
-// ── The mailbox ───────────────────────────────────────────────────
 
 const STATE = "singleton";
 
@@ -285,12 +249,8 @@ export interface SyncResult {
 }
 
 /**
- * Read everything that has arrived since the last sync. Null when the
- * integration is off.
- *
- * The history id only moves forward once every message up to it has been
- * handled. A mail that fails stops the sync where it is, with the error
- * recorded, and the next push or cron run tries it again.
+ * Read everything that has arrived since the last sync. Null when the integration is off. The history id
+ * only moves forward once every message up to it is handled; a failing mail stops the sync there.
  */
 export async function syncInbox(): Promise<SyncResult | null> {
   const c = gmailConfig();
@@ -301,9 +261,7 @@ export async function syncInbox(): Promise<SyncResult | null> {
   let ids: string[];
   let next: string;
   const fromScratch = async (days: number) => {
-    // The current id before the listing, never after: a mail arriving between
-    // the two is then read twice (and skipped the second time) rather than not
-    // at all.
+    // The current id before the listing, so a mail arriving between is read twice rather than not at all.
     next = await currentHistoryId(c);
     ids = await recentMessages(c, days);
   };
@@ -313,8 +271,7 @@ export async function syncInbox(): Promise<SyncResult | null> {
     try {
       ({ ids, historyId: next } = await messagesAddedSince(c, state.historyId));
     } catch (err) {
-      // Gmail keeps about a week of history. Further back than that, the
-      // week's mail is listed instead, which the unique Gmail id dedupes.
+      // Gmail keeps about a week of history; further back the week's mail is listed (deduped by Gmail id).
       if (!(err instanceof GmailError && err.status === 404)) throw err;
       await fromScratch(7);
     }
@@ -340,10 +297,7 @@ export async function syncInbox(): Promise<SyncResult | null> {
   return result;
 }
 
-/**
- * Renew Gmail's watch when it is two days from running out, or was never set.
- * Daily from the cron job, so a missed day or two costs nothing.
- */
+/** Renew Gmail's watch when it is two days from running out, or was never set. */
 export async function renewWatch(
   now = new Date(),
 ): Promise<{ renewed: boolean; expiresAt: Date | null } | null> {
@@ -357,8 +311,7 @@ export async function renewWatch(
   const w = await watch(c);
   await prisma.gmailSync.update({
     where: { id: STATE },
-    // The first watch also says where reading starts, so mail that was in the
-    // mailbox before the integration was switched on is not swept in.
+    // The first watch also says where reading starts, so older mail is not swept in.
     data: {
       watchExpiresAt: w.expiration,
       ...(state.historyId ? {} : { historyId: w.historyId }),

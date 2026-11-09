@@ -8,17 +8,9 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("counterparties");
 
-// Dokument → Motparter. The organisations and people the section has agreed
-// with before, so a new contract can pick one rather than have its
-// counterparty fields typed in again. See lib/contract/section.ts for why
-// the section's own side of a contract is not here too: it is the one party
-// that never changes, so it is a constant in the code rather than a row a
-// person maintains.
-//
-// canManageRentals rather than canManageContracts, the same choice
-// rental-items/page.tsx makes for the gear catalogue: it already means "has
-// RENTAL_MANAGE or CONTRACT_MANAGE", which is the union of everyone who
-// files a contract from either door, and CONTRACT_MANAGE alone still passes.
+// Dokument → Motparter: organisations and people the section has agreed with, so a new contract can pick one. The
+// section's own side is a constant (lib/contract/section.ts). canManageRentals, not canManageContracts: it means
+// RENTAL_MANAGE or CONTRACT_MANAGE, the union of everyone who files a contract.
 export default async function CounterpartiesPage() {
   await requirePage(canManageRentals);
   const t = await getTranslations("contracts.counterparties");

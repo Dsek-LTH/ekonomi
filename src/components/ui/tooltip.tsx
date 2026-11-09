@@ -5,30 +5,15 @@ import { createPortal } from "react-dom";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { cn } from "@/lib/ui/utils";
 
-// A short hint on hover, shown at once.
-//
-// For when a `title` is too slow. The browser's own tooltip waits about a
-// second before it appears, and for something the reader is meant to glance at
-// in passing (who has this utlägg open, say) a second is long enough that they
-// have already moved on. This opens the moment the pointer arrives, and on
-// keyboard focus too, since hover is not something a keyboard has.
-//
-// Portalled and `position: fixed`, like InfoHint and the menus, so a table's
-// horizontal scroll box cannot clip it and a sticky column cannot paint over it.
-// See lib/ui/anchored-panel.ts.
-//
-// The text is not announced from here. A tooltip that only exists while hovered
-// is no way to tell a screen reader anything, so the trigger carries the same
-// words itself (an sr-only span, an aria-label), and this stays aria-hidden.
+// Opens at once on hover and focus (a `title` waits about a second). Portalled and fixed (lib/ui/anchored-panel.ts).
+// aria-hidden: the trigger carries the same words itself.
 export function Tooltip({
   label,
   align = "end",
   className,
   children,
 }: {
-  /** What to show. Null renders the children alone, with no hover behaviour. */
   label: string | null;
-  /** Which edge of the trigger the tooltip lines up with. */
   align?: "start" | "end";
   className?: string;
   children: React.ReactNode;
@@ -63,9 +48,7 @@ export function Tooltip({
             ref={panel}
             aria-hidden
             style={placeAnchored(rect, { wanted: 40, align, minHeight: 0 })}
-            // Over everything, dialogs included, like the other portalled
-            // panels. Not interactive: the pointer passes straight through, so
-            // it can never sit between the reader and what they were reaching.
+            // Over dialogs. Not interactive, so it never sits between the reader and what they reached for.
             className="pointer-events-none z-[210] w-max max-w-72 rounded-control border border-border bg-background px-2.5 py-1.5 text-xs text-foreground shadow-[var(--shadow-pop)]"
           >
             {label}

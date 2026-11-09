@@ -1,14 +1,3 @@
-// The rentals list, as the uthyrningsansvarig reads it.
-//
-// A second list over the same Contract rows the archive reads, not a second
-// table. That is how this app already works: /expenses and /approvals are
-// purpose-built lists over one set of utlägg, because
-// what a list is *for* decides its columns and its order, and neither of those
-// is a property of the row.
-//
-// What differs from lib/data/contracts.ts is the whole point of the page. The
-// archive answers "which agreements do we have", ordered by when they were
-// filed. This answers "where is the gear", ordered by what needs doing.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -21,38 +10,22 @@ export interface RentalRow {
   id: string;
   title: string;
   counterparty: string;
-  /** ISO days. */
   pickupAt: string;
   returnAt: string;
   returnedAt: string | null;
   checkedAt: string | null;
-  /** Derived against the page's one `today`, so every row is judged on the
-   *  same day. */
+  /** Judged against the page's single `today`. */
   state: RentalState;
   priceOre: number;
-  /** How many things are on the contract, for the one-line summary. */
   lineCount: number;
-  /** Whether the drawn document is in the archive yet. */
   hasDocument: boolean;
 }
 
 /**
- * One page of rentals.
- *
- * The state filter is applied in memory, after the query, and that is a
- * deliberate trade. `rentalState` is derived from four columns and today's
- * date, so it cannot be a `where` clause without reimplementing the rule in
- * SQL, and a rule written twice is a rule that will disagree with itself. A
- * section has hundreds of rentals rather than millions, so reading the matching
- * contracts and filtering them here costs nothing and keeps one definition of
- * "overdue".
- *
- * Revisit if that stops being true. The fix is a generated column, not a second
- * copy of the rule.
+ * One page of rentals. The state filter runs in memory: `rentalState` is derived from four columns
+ * and today, and writing it again in SQL would let the two rules disagree.
  */
 export async function getRentalPage(q: ListQuery, today: string): Promise<RowPage<RentalRow>> {
-  // A rental is a CONTRACT row with a RentalDetails relation attached — not
-  // its own `kind` any more; see prisma/schema/contract.prisma.
   const and: Prisma.ContractWhereInput[] = [{ rental: { isNot: null } }];
 
   if (q.q) {
@@ -71,9 +44,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
 
   const rows = await prisma.contract.findMany({
     where: { AND: and },
-    // By when the gear is due, soonest first. The archive orders by when a
-    // contract was filed, which is the right order for filing and the wrong one
-    // for a store room: what matters here is what comes back next.
+    // By when the gear is due, soonest first (the archive orders by filing date).
     orderBy: [{ rental: { returnAt: "asc" } }, { id: "asc" }],
     select: {
       id: true,
@@ -94,8 +65,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
   });
 
   const all: RentalRow[] = rows
-    // `rental` is non-null by the where clause above; this narrows it for the
-    // compiler rather than asserting it.
+    // `rental` is non-null by the where clause; this narrows it for the compiler.
     .filter((c): c is typeof c & { rental: NonNullable<typeof c.rental> } => c.rental !== null)
     .map((c) => {
       const facts = {
@@ -124,13 +94,7 @@ export async function getRentalPage(q: ListQuery, today: string): Promise<RowPag
   return { rows: matching.slice(skip, skip + take), total: matching.length };
 }
 
-/**
- * The counts behind the tabs, so "Att göra (3)" is answerable without opening
- * it.
- *
- * Cheap because it reads the same small set the list does. Shares the derived
- * rule rather than counting in SQL, for the reason above.
- */
+/** The counts behind the tabs. Shares the derived rule rather than counting in SQL. */
 export async function getRentalStateCounts(today: string): Promise<Record<RentalState, number>> {
   const rows = await prisma.rentalDetails.findMany({
     select: {

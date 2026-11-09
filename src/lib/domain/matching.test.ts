@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cancelsOut, isMatchable, matchCandidates } from "./matching";
 
-// A bank transaction settles an utlägg only when the two cancel exactly: the
-// purchase is +250 on the utlägg and −250 in the bank.
+// A bank transaction settles an utlägg only when the two cancel exactly (+250 on the utlägg, -250 in the bank).
 describe("cancelsOut", () => {
   it("matches a purchase against the money leaving the account", () => {
     expect(cancelsOut(-250, 250)).toBe(true);
@@ -13,23 +12,19 @@ describe("cancelsOut", () => {
   });
 
   it("refuses a row of the right size in the wrong direction", () => {
-    // Two outgoing amounts do not settle each other, however equal they look in
-    // a list, and a refund can only settle a return.
+    // Two outgoing amounts do not settle each other, and a refund can only settle a return.
     expect(cancelsOut(-250, -250)).toBe(false);
     expect(cancelsOut(250, 250)).toBe(false);
   });
 
   it("refuses a near miss", () => {
-    // The mistyped amount is the case this exists to catch: 249,50 against a
-    // 250 kr utlägg stays unselectable, which is what tells the submitter the
-    // amount is wrong rather than the transaction missing.
+    // A mistyped amount (249,50 against 250 kr) stays unselectable: that tells the submitter the amount is wrong.
     expect(cancelsOut(-249.5, 250)).toBe(false);
     expect(cancelsOut(-250.01, 250)).toBe(false);
   });
 
   it("has nothing to settle against a zero amount", () => {
-    // A draft with no amount typed yet would otherwise match every zero-sum
-    // pairing.
+    // A draft with no amount would otherwise match every zero-sum pairing.
     expect(cancelsOut(0, 0)).toBe(false);
     expect(cancelsOut(-250, 0)).toBe(false);
   });
@@ -40,33 +35,25 @@ describe("cancelsOut", () => {
   });
 
   it("works just as well on the server's öre integers", () => {
-    // Same function, both units: in öre anything unequal is off by at least 1,
-    // which is far outside the tolerance.
+    // Same function, both units: in öre anything unequal is off by at least 1.
     expect(cancelsOut(-25000, 25000)).toBe(true);
     expect(cancelsOut(-24999, 25000)).toBe(false);
   });
 });
 
-// Who is allowed to hold a match at all. The section's card is the only payer
-// a bank row can settle for. An eget utlägg matched to one would have the
-// section paying for the purchase twice.
+// Only the section's card can be settled by a bank row; an eget utlägg matched to one would be paid twice.
 describe("isMatchable", () => {
   it("lets a card purchase account for the row on the card", () => {
     expect(isMatchable("CARD")).toBe(true);
   });
 
   it("refuses an eget utlägg", () => {
-    // The bug this exists to stop: "Redovisa" on a card purchase opened the
-    // wizard with the transaction already matched, and switching the payment
-    // type to "eget utlägg" kept the match, so the member was reimbursed for
-    // money that had already left the section's card, and the purchase counted
-    // as accounted for on the way out.
+    // Switching the payment type away from the card must not keep the match.
     expect(isMatchable("REIMBURSEMENT")).toBe(false);
   });
 
   it("refuses anything it does not recognise", () => {
-    // The routes hand it whatever is stored on the row. A payment type added
-    // later is not matchable until this says it is.
+    // The routes hand it whatever is stored on the row: a new payment type is not matchable until this says so.
     expect(isMatchable("")).toBe(false);
     expect(isMatchable("card")).toBe(false);
   });
@@ -79,7 +66,6 @@ describe("matchCandidates", () => {
     matchedExpenseId,
   });
 
-  // A card statement with money going both ways.
   const rows = [
     txn("out-250", -250),
     txn("out-249", -249.5),
@@ -98,13 +84,7 @@ describe("matchCandidates", () => {
     expect(found[0].blocked).toBeNull();
   });
 
-  // The bug this exists for. A return is money coming back, so it is settled
-  // by an *incoming* row. The wizard used to hand this the amount from the
-  // form, which is a magnitude with the sign held on a separate toggle, so
-  // `grossAmount < 0` was never true: a return offered the outgoing rows, and
-  // the refund that would settle it was filtered out. Since a return is always
-  // a card purchase, and a card purchase cannot be submitted unmatched, no
-  // return could be completed at all.
+  // A return is settled by an incoming row. The wizard's form holds a magnitude with the sign on a toggle, so `grossAmount < 0` was never true.
   it("settles money coming back with an incoming row", () => {
     const found = matchCandidates(rows, -250);
     expect(found[0].txn.id).toBe("in-250");
@@ -112,28 +92,21 @@ describe("matchCandidates", () => {
   });
 
   it("keeps a row pointing the wrong way, and names the direction", () => {
-    // Same size, other way round. It used to be dropped, which made a +250 row
-    // invisible to a +250 claim and left "the purchase is right there and it is
-    // not in the list" with no answer at all. Told apart from a wrong amount on
-    // purpose: the figure is identical, so "annat belopp" would send somebody
-    // off to check a number that was never wrong.
+    // Same size, other way round: told apart from a wrong amount, since the figure is not wrong.
     const wrong = find(matchCandidates(rows, 250), "in-250");
     expect(wrong.selectable).toBe(false);
     expect(wrong.blocked).toBe("direction");
   });
 
   it("keeps a near miss, and says how far off it is", () => {
-    // An empty list would say "no card purchase looks like this"; the greyed
-    // 249,50 with "0,50 kr mindre" on it says which digit was mistyped.
+    // A greyed 249,50 with "0,50 kr mindre" says which digit was mistyped.
     const near = find(matchCandidates(rows, 250), "out-249");
     expect(near.blocked).toBe("amount");
     expect(near.offBy).toBe(-0.5);
   });
 
   it("measures offBy as magnitudes, whichever way the claim points", () => {
-    // A return of 250 against an incoming 260 is 10 kr over, the same as a
-    // purchase of 250 against an outgoing 260. The reader is asking how far off
-    // the row is, not which way the two are signed.
+    // A return of 250 against an incoming 260 is 10 kr over, like a purchase against an outgoing 260.
     expect(find(matchCandidates([txn("a", -260)], 250), "a").offBy).toBe(10);
     expect(find(matchCandidates([txn("a", 260)], -250), "a").offBy).toBe(10);
   });
@@ -147,10 +120,7 @@ describe("matchCandidates", () => {
   });
 
   it("keeps a row another utlägg claims, and says so", () => {
-    // The one that used to be silent. Somebody else redovisade your purchase
-    // and the row was simply gone, so the answer to "where is it?" was a hint
-    // guessing at an unimported bank file. It now sits directly under the rows
-    // that work, because it is the answer.
+    // Claimed by another utlägg: sits directly under the rows that work, since it is the answer to "where is it?".
     const taken = [txn("theirs", -250, "e2"), txn("free", -250)];
     const found = matchCandidates(taken, 250);
     expect(find(found, "theirs").blocked).toBe("taken");
@@ -160,33 +130,28 @@ describe("matchCandidates", () => {
   });
 
   it("counts this claim's own row as free rather than taken", () => {
-    // Editing a claim: the row it already holds has to read as pickable, or the
-    // selection it is showing would be greyed out under the cursor.
+    // Editing a claim: the row it already holds must read as pickable.
     const taken = [txn("mine", -250, "e1"), txn("free", -250)];
     expect(find(matchCandidates(taken, 250, "mine"), "mine").selectable).toBe(true);
   });
 
   it("reports a claimed row as taken whatever its amount", () => {
-    // A matched row is settled. Its distance from this claim is not news.
     expect(find(matchCandidates([txn("t", -300, "e2")], 250), "t").blocked).toBe("taken");
     expect(find(matchCandidates([txn("t", 300, "e2")], 250), "t").blocked).toBe("taken");
   });
 
   it("settles nothing while there is no amount to settle", () => {
-    // Zero is not a direction, and nothing cancels it out.
     expect(matchCandidates(rows, 0).every((c) => !c.selectable)).toBe(true);
   });
 
   it("returns the whole statement, not a handful of it", () => {
-    // The cap was five, silently. A transaction that happened to be sixth
-    // closest was missing with nothing to say it existed; the screens search
-    // and scroll instead.
+    // Nothing is capped: a sixth-closest row must still be listed.
     const many = Array.from({ length: 20 }, (_, i) => txn(`t${i}`, -100 - i));
     expect(matchCandidates(many, 250)).toHaveLength(20);
   });
 
   it("orders two rows of the same size the same way twice", () => {
-    // Otherwise a list re-sorts under the pointer between renders.
+    // Stable order between renders.
     const same = [txn("b", -250), txn("a", -250)];
     expect(idsOf(matchCandidates(same, 250))).toEqual(idsOf(matchCandidates(same, 250)));
   });

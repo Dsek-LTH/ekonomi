@@ -1,13 +1,3 @@
-// Reminders, sent by hand: about utlägg, and about card purchases with no
-// utlägg yet. See lib/server/reminders.ts.
-//
-//   GET  ?expenses=a,b&transactions=c,d   who a reminder about these would
-//                                         reach, for the dialog to show
-//                                         before anything is sent
-//   POST { expenseIds, transactionIds, message? }   send it
-//
-// Both gated on SEND_REMINDERS, and both only ever see what the sender could
-// open themselves.
 import { NextResponse } from "next/server";
 import { canSendReminders } from "@/lib/domain/permissions";
 import { MAX_REMINDER_ITEMS, type ReminderPreview } from "@/lib/domain/reminders";
@@ -17,7 +7,6 @@ import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { SendReminders } from "@/lib/api/schemas/expense";
 
-/** The plan as the dialog reads it: the mail each one would carry stays here. */
 const forClient = (plan: ReminderPlan): ReminderPreview => ({
   items: plan.items.map(({ id, subject, label, target, recipients }) => ({
     id,

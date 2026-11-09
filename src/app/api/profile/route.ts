@@ -1,12 +1,9 @@
-// The signed-in member's own profile: payout bank details for reimbursements.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { PatchProfile } from "@/lib/api/schemas/admin";
 
-// PATCH /api/profile: update the current user's Swedish clearing + account
-// number. An empty string clears a field.
 export async function PATCH(req: Request) {
   const g = await gate();
   if (!g.ok) return g.res;

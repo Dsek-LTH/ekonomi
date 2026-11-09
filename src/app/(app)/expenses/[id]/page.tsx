@@ -15,12 +15,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("expense");
 
-/**
- * What the bokföring of a konterat utlägg has to know, for whoever may do it:
- * what is worth a second look on the voucher (none of it stops the bokföring),
- * and whether the two-person rule hands it to somebody else. This page is
- * where it is bokförd, so this is where it is asked.
- */
+/** What bokföring of a konterat utlägg has to know: voucher warnings (none stop it) and whether the two-person rule hands it to somebody else. */
 async function bookkeepingReview(
   expense: Expense,
   user: Parameters<typeof exportReviewBlocker>[1],
@@ -51,32 +46,15 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const user = await requireUser();
 
-  // Two waves, because the second depends on the first. The bank rows this page
-  // may show are the *submitter's* card purchases, whoever made the purchase,
-  // not whoever is looking at it. That is the rule the match route enforces
-  // (bank.txnNotExpenseCard), and loading the viewer's instead offered a
-  // bookkeeper their own transactions on somebody else's utlägg: a list where
-  // every row was refused on arrival.
-  //
-  // A page ships what it asks for, so asking for the whole feed would publish
-  // the whole feed to anyone who can open an utlägg. The one exception is the
-  // transaction this utlägg is already matched to: a bookkeeper looking at
-  // someone else's card purchase still has to see what it was matched against,
-  // so it is named explicitly rather than reached by widening the rule.
+  // Two waves: the bank rows are the submitter's card purchases (the rule bank.txnNotExpenseCard enforces),
+  // plus the one transaction this utlägg is already matched to.
   const [expense, fortnox] = await Promise.all([
     getExpense(id, user),
-    // With the user id, so the status carries their own Fortnox login and not
-    // just the section's connection. Exporting needs both, and without this the
-    // page couldn't tell that half of it was missing.
+    // With the user id, so the status carries their own Fortnox login (exporting needs both).
     getFortnoxStatus(user.id),
   ]);
 
-  // What this viewer may do with this utlägg, worked out here rather than
-  // again in the browser. `canAttest` is already stamped per allocation by the
-  // loader; this is the rest of the same question, asked in the same place.
-  //
-  // Before the bank rows, because it decides which of them this page is allowed
-  // to carry.
+  // What this viewer may do, decided before the bank rows since it decides which the page may carry.
   const can = expense
     ? expenseCapabilities(expense, {
         id: user.id,
@@ -89,14 +67,8 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
   const bankTransactions = !expense
     ? []
     : can?.canMatch
-      ? // Candidates for the picker: the submitter's own unmatched purchases,
-        // plus whatever this utlägg already points at.
-        await getBankTransactions({ cardHolderId: expense.submitterId, alsoIds: matched })
-      : // Everyone else who may see this page (a resultatansvarig, a
-        // bookkeeper on a signed utlägg) gets the one row it is matched to and
-        // no browsing. They have no picker to fill, and a page ships what it
-        // asks for.
-        await getBankTransactionsByIds(matched);
+      ? await getBankTransactions({ cardHolderId: expense.submitterId, alsoIds: matched })
+      : await getBankTransactionsByIds(matched);
 
   const review = expense && can?.canExport ? await bookkeepingReview(expense, user) : null;
 

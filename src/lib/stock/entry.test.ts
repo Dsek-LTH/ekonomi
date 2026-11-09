@@ -29,14 +29,10 @@ describe("entryFault", () => {
   });
 
   it("refuses a row that moves nothing", () => {
-    // It would sit in the log forever saying that on some date somebody moved
-    // no vodka.
     expect(entryFault(entry({}), UNIT)).toBe("nothingMoved");
   });
 
   it("refuses a purchase that takes stock away", () => {
-    // The sign is what everyone reading the log later goes by; a serving
-    // entered as a purchase reads as a delivery.
     expect(entryFault(entry({ kind: "PURCHASE", units: -12 }), UNIT)).toBe("purchaseNotPositive");
   });
 
@@ -50,8 +46,6 @@ describe("entryFault", () => {
   });
 
   it("lets a count go either way", () => {
-    // Which is the entire point of counting: the shelf is allowed to disagree
-    // with the log in both directions.
     expect(entryFault(entry({ kind: "COUNT", units: 4 }), UNIT)).toBeNull();
     expect(entryFault(entry({ kind: "COUNT", units: -6 }), UNIT)).toBeNull();
   });
@@ -64,9 +58,6 @@ describe("entryFault", () => {
   });
 
   it("refuses putting a bottle onto the ladder anywhere but a return", () => {
-    // A level is judged when a bottle is looked at, and a bottle is looked at
-    // when it comes back. Everything else may take bottles off a rung; only a
-    // return may put one on.
     expect(entryFault(entry({ kind: "CHECKOUT", open: { 40: 1 } }), VOLUME)).toBe(
       "levelsOnReturnOnly",
     );
@@ -76,9 +67,6 @@ describe("entryFault", () => {
   });
 
   it("lets a count and a correction move a bottle up", () => {
-    // A count is somebody standing at the shelf judging every bottle, which is
-    // the same act as judging a returning one, and a correction exists to undo
-    // whatever the log got wrong.
     expect(entryFault(entry({ kind: "COUNT", open: { 60: 1 } }), VOLUME)).toBeNull();
     expect(
       entryFault(entry({ kind: "CORRECTION", open: { 60: 1 }, correctsId: "x" }), VOLUME),
@@ -90,11 +78,6 @@ describe("entryFault", () => {
   });
 
   it("refuses a delivery that arrives part-used", () => {
-    // Everything bought arrives sealed. A purchase touching a rung is far more
-    // likely to be somebody in the wrong form than a crate of half-drunk gin.
-    //
-    // Upward, the ladder rule catches it first and says the more useful thing:
-    // a level is judged on a return, and this is not one.
     expect(entryFault(entry({ kind: "PURCHASE", units: 6, open: { 40: 1 } }), VOLUME)).toBe(
       "levelsOnReturnOnly",
     );
@@ -108,8 +91,6 @@ describe("entryFault", () => {
   });
 
   it("refuses a correction that names nothing", () => {
-    // Without a target it is just another movement, and the log loses the one
-    // thing that made it a correction.
     expect(entryFault(entry({ kind: "CORRECTION", units: -1 }), UNIT)).toBe(
       "correctionNeedsTarget",
     );
@@ -118,18 +99,11 @@ describe("entryFault", () => {
 });
 
 describe("entryFault, on a spill", () => {
-  // A spill is the one kind that moves no stock: what was dropped left the
-  // cellar when it was checked out, and taking it off the shelf again would
-  // remove it twice. Its quantity lives in a column of its own, so every rule
-  // about the shelf columns has to be answered before them rather than by them.
   it("accepts one that only says what was destroyed", () => {
     expect(entryFault({ kind: "WASTE", units: 0, spilledQty: 2 }, { kind: "UNIT" })).toBeNull();
   });
 
   it("does not read an untouched shelf as nothing happening", () => {
-    // The bug this exists for: a spill fell through to the "moves nothing"
-    // rule and every one of them came back as `nothingMoved`, because the row
-    // was, correctly, moving no stock at all.
     expect(entryFault({ kind: "WASTE", units: 0, spilledQty: 1 }, { kind: "VOLUME" })).not.toBe(
       "nothingMoved",
     );
@@ -153,19 +127,11 @@ describe("entryFault, on a spill", () => {
   });
 
   it("lets one be taken back", () => {
-    // Undoing a spill somebody entered twice. It is the same shape pointing the
-    // other way, and it needs no `reversal` flag: a spill has no sign rule,
-    // having no stock to move.
     expect(entryFault({ kind: "WASTE", units: 0, spilledQty: -2 }, { kind: "UNIT" })).toBeNull();
   });
 });
 
 describe("entryFault, on a cellar write-off", () => {
-  // The other half of a spill, and a separate kind because the two happened in
-  // two places. A bottle broken at a pub was already off the shelf when it hit
-  // the floor; one broken in the cellar never left it. So this one moves stock,
-  // and falls through every rule a checkout does rather than being answered
-  // ahead of them.
   it("takes stock off the shelf", () => {
     expect(entryFault({ kind: "SPOILAGE", units: -2 }, { kind: "UNIT" })).toBeNull();
     expect(
@@ -174,8 +140,6 @@ describe("entryFault, on a cellar write-off", () => {
   });
 
   it("insists on the sign its meaning fixes", () => {
-    // Stock destroyed that turned up as an addition would read as a delivery to
-    // everybody who came after it.
     expect(entryFault({ kind: "SPOILAGE", units: 2 }, { kind: "UNIT" })).toBe("removalNotNegative");
     expect(entryFault({ kind: "SPOILAGE", units: 0, open: { 40: 1 } }, { kind: "VOLUME" })).toBe(
       "levelsOnReturnOnly",

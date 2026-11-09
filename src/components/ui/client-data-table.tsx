@@ -1,19 +1,6 @@
 "use client";
 
-// A list narrowed in the browser rather than by the database.
-//
-// For the handful of screens where that is the right thing: the admin cost
-// centre list, the budget index, the dashboard's two panels. Each holds every
-// row it will ever show (a few dozen), so a round trip per keystroke would buy
-// nothing, and the state can stay in the component instead of the URL.
-//
-// It does the filtering, the sorting and the cut, then hands DataTable the page
-// that came out. DataTable itself renders and never chooses: that separation is
-// the point, because the two used to be one component behind a `server` flag,
-// and on the server side every `predicate` here was quietly never called.
-//
-// Anything paged by the database uses DataTable directly with
-// `useUrlTableControls`.
+// Filters, sorts and cuts in the browser, for lists that hold every row they will show. DataTable only renders.
 import { useMemo } from "react";
 
 import { isWholeDate } from "@/lib/data/list-query";
@@ -26,12 +13,7 @@ import {
 } from "./data-table";
 import type { ClientControls } from "@/lib/data/use-list-query";
 
-/**
- * A tab, and the rows it selects.
- *
- * The predicate is what makes this the browser's version: it is called, here,
- * on every row. An option without one (e.g. "Alla") matches everything.
- */
+/** A tab and the rows it selects. An option without a predicate (e.g. "Alla") matches everything. */
 export type ClientTabOption<T> = TabOption & { predicate?: (row: T) => boolean };
 export type ClientTabFilter<T> = ClientTabOption<T>[];
 
@@ -41,22 +23,15 @@ export type ClientSelectFilter<T> = {
   options: { value: string; label: string; predicate?: (row: T) => boolean }[];
 };
 
-/** One of them, or several over different dimensions of the same rows. See
- *  DataTable's `SelectFilters`, whose option values these are. */
 type ClientSelectFilters<T> = ClientSelectFilter<T> | ClientSelectFilter<T>[];
 
 const asFilters = <T,>(filter: ClientSelectFilters<T> | undefined): ClientSelectFilter<T>[] =>
   filter ? (Array.isArray(filter) ? filter : [filter]) : [];
 
-// One collator for every sort, rather than an implicit one per comparison.
 const collator = new Intl.Collator("sv");
 
-// Compose every active filter (column (text/date), tab and dropdown) into a
-// single predicate. Text columns match if any one contains the query; each date
-// column must fall within the from/to range; a dropdown's picked options are
-// OR-ed and the dropdowns are AND-ed with each other (a drink type *and* a tag
-// is a narrowing); then the tab predicate. A row is kept only if it passes them
-// all.
+// Every active filter composed into one predicate: text columns match if any contains the query, date columns must be in range,
+// a dropdown's picked options are OR-ed and the dropdowns AND-ed, then the tab.
 function buildRowFilter<T>(
   cols: Column<T>[],
   controls: ClientControls,
@@ -69,16 +44,13 @@ function buildRowFilter<T>(
     cols.flatMap((c) => (c[flag] && c.value ? [c.value] : []));
 
   const search = q ? pick("searchable") : [];
-  // Half-typed dates are ignored, the same way parseListQuery drops them from a
-  // URL: "2026-0" as an upper bound excludes the whole of 2026, so a list would
-  // empty itself between the fifth keystroke and the tenth.
+  // Half-typed dates are ignored (as parseListQuery does): "2026-0" as an upper bound would empty the list.
   const after = isWholeDate(from) ? from : "";
   const before = isWholeDate(to) ? to : "";
   const dates = after || before ? pick("dateRange") : [];
   const within = (v: string) => (!after || v >= after) && (!before || v <= before);
   const tabPred = activeTab?.predicate;
-  // One group of predicates per dropdown, and a dropdown with nothing picked
-  // drops out rather than matching nothing.
+  // A dropdown with nothing picked drops out rather than matching nothing.
   const groups = asFilters(filter)
     .map((f) =>
       f.options
@@ -94,12 +66,7 @@ function buildRowFilter<T>(
     (tabPred?.(row) ?? true);
 }
 
-/**
- * The rows the table shows, in the order it shows them, across every page:
- * the tab, the search, the dates and the dropdowns applied, then the sort. For
- * a page that has to know what is next in the table, the same answer the table
- * itself gives rather than a guess from the whole list.
- */
+/** The rows the table shows across every page, in its order: for a page that needs to know what is next. */
 export function visibleRows<T>({
   columns,
   rows,
@@ -147,27 +114,20 @@ export function ClientDataTable<T>({
   empty,
 }: {
   columns: Column<T>[];
-  /** Every row the list will ever show, not a page. */
   rows: T[];
   controls: ClientControls;
   tabs?: ClientTabFilter<T>;
   filter?: ClientSelectFilters<T>;
-  /** A figure about the whole list, see DataTable's own `summary`. */
   summary?: React.ReactNode;
-  /** What you can do to this list, see DataTable's own `action`. */
   action?: React.ReactNode;
-  /** What `action` opened in place, see DataTable's own `actionPanel`. */
   actionPanel?: React.ReactNode;
   searchPlaceholder?: string;
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
-  /** See DataTable's `rowScroll`. */
   rowScroll?: boolean;
-  /** What sits under a row when opened, see DataTable's own `expansion`. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
-  /** Passed straight to DataTable, a string, see its note there. */
   empty?: string;
 }) {
   const cols = useMemo(() => columns.filter((c) => !c.hidden), [columns]);
@@ -181,8 +141,6 @@ export function ClientDataTable<T>({
     [rows, cols, tabs, filter, controls.tab, query, dateFrom, dateTo, picks, sortKey, sortDir],
   );
 
-  // What DataTable is handed: the page, the count behind it, and tabs stripped
-  // of the predicates it has no use for.
   const plainTabs: TabFilter | undefined = useMemo(
     () => tabs?.map(({ value, label, badge, waiting }) => ({ value, label, badge, waiting })),
     [tabs],

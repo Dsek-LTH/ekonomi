@@ -1,20 +1,9 @@
 // Resolve an export that ended without an answer. [id] = expense id.
-//
-// The export route never guesses: when Fortnox did not say whether it made the
-// voucher, the utlägg stays locked (see lib/server/export-claim.ts). This is
-// where a person who has looked in Fortnox says what they found:
-//
-//   none     no voucher. The lock is let go, and the utlägg can be exported
-//            again.
-//   exists   it is there, as series and number. Recorded exactly as a
-//            successful export would have, and the lock let go with it.
-//
-// Both are conditional on the very lock that was looked into, so two people
-// resolving the same utlägg at once cannot both act. The second one's write
-// matches nothing and is a 409.
-//
-// EXPORT_UNDO, the same authority as unexporting: both are a person telling
-// the app what is true in Fortnox when the app cannot find out for itself.
+// A person who has looked in Fortnox says what they found:
+//   none     no voucher. The lock is let go, and the utlägg can be exported again.
+//   exists   it is there, as series and number. Recorded as a successful export would have been.
+// Both are conditional on the very lock that was looked into, so a second simultaneous resolve is a 409.
+// EXPORT_UNDO, the same authority as unexporting.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canUnexport } from "@/lib/domain/permissions";
@@ -44,8 +33,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!expense) return fail(404, "expense.notFound");
 
-  // Only an uncertain one. An export still in flight may yet answer, and
-  // resolving it by hand under it is how it would be filed twice.
+  // Only an uncertain one. An export still in flight may yet answer.
   const lock = exportLock(expense.exportClaimState, expense.exportClaimedAt, Date.now());
   if (lock !== "uncertain") {
     return lock === "exporting"
@@ -53,7 +41,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       : fail(409, "expense.nothingToResolve");
   }
 
-  // The lock as it was looked into. Every write below is conditional on it.
   const theLock = {
     id: expense.id,
     status: "BOOKED" as const,
@@ -79,13 +66,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ id, status: "BOOKED" });
   }
 
-  // Only a BOOKED utlägg has an export lock to resolve, and a konterat one
-  // has its voucher.
+  // Only a BOOKED utlägg has an export lock to resolve.
   const verification = expense.verification;
   if (!verification) throw new Error(`Expense ${id} is BOOKED but has no verification`);
 
-  // Fortnox's financial-year id is not something anybody reads off a voucher,
-  // so it is left unknown, which is what the export does when Fortnox omits it.
+  // Fortnox's financial-year id is not on a voucher, so it is left unknown, as the export does when Fortnox omits it.
   const created = { series: body.series, number: body.number, year: null };
   const label = `${created.series}-${created.number}`;
   const recorded = await commit(() =>

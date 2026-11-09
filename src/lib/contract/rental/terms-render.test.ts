@@ -5,16 +5,8 @@ import { NodeCompiler } from "@myriaddreamin/typst-ts-node-compiler";
 import { RENTAL_TERMS, TERMS_VERSION, type TermsSection } from "./terms";
 import type { RentalContractData } from "./types";
 
-// Whether every kind of clause block actually reaches the page.
-//
-// The template branches on `TermsBlock.kind`, and the failure this guards
-// against is silent: add a fourth kind to terms.ts, forget the branch, and the
-// clause renders with that part simply missing. Nothing throws, the PDF still
-// has pages, and the term nobody can see is the one that is not agreed to.
-//
-// Measured by counting drawn glyphs in the SVG rather than by reading the PDF,
-// which needs no rasteriser. Removing a block should cost the page roughly the
-// characters that block held.
+// Whether every TermsBlock kind reaches the page. The template branches on `kind`, so a
+// forgotten branch renders silently without that part. Counts drawn glyphs in the SVG.
 
 const compiler = NodeCompiler.create({
   workspace: process.cwd(),
@@ -67,11 +59,7 @@ const glyphs = (terms: readonly TermsSection[]): number => {
   return (svg!.match(/<use /g) ?? []).length;
 };
 
-/**
- * The real clauses plus one of every kind. The wording is free to stop using a
- * kind (the villkor have gone without a list before), and the template branch
- * for it still has to work the day a clause picks it up again.
- */
+/** The real clauses plus one of every kind, so each template branch is exercised even if no clause currently uses it. */
 const TERMS: TermsSection[] = [
   ...RENTAL_TERMS,
   {
@@ -84,11 +72,9 @@ const TERMS: TermsSection[] = [
   },
 ];
 
-/** The clauses with every block of one kind taken out. */
 const without = (kind: string): TermsSection[] =>
   TERMS.map((s) => ({ ...s, body: s.body.filter((b) => b.kind !== kind) }));
 
-/** How many characters the blocks of one kind carry between them. */
 const charsIn = (kind: string): number =>
   TERMS.flatMap((s) => s.body).reduce((n, b) => {
     if (b.kind !== kind) return n;
@@ -98,9 +84,8 @@ const charsIn = (kind: string): number =>
   }, 0);
 
 describe("every kind of clause block reaches the page", () => {
-  // A space that falls at a line break is not drawn, so the glyph count runs a
-  // little under the character count. Anything near it means the text is there;
-  // a branch the template forgot would cost ~0.
+  // A space at a line break is not drawn, so glyphs run a little under characters. A
+  // forgotten branch would cost ~0.
   it.each(["text", "table", "list"])("%s", (kind) => {
     const chars = charsIn(kind);
     expect(chars).toBeGreaterThan(0);

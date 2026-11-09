@@ -2,43 +2,23 @@
 import { z } from "zod";
 
 import { Clearable, Id, IsoDate, NonEmpty, Ore, Trimmed, UpperCode } from "./common";
-// A voucher row is a voucher row whatever it substantiates: same fields, same
-// units, same rules. Declared with the utlägg bodies because that is where the
-// first one was written.
+// A voucher row is the same whatever it substantiates; declared with the utlägg bodies.
 import { VoucherLineInput } from "./expense";
 
-/**
- * A BAS account number as it is stored: digits, kept as a string.
- *
- * Up here rather than with the settings bodies below because both halves need
- * it: the routing table says where a product's money lands, and a corrected
- * line says the same thing about one sale.
- */
+/** A BAS account number as stored: digits, kept as a string. Shared by the routing table and corrected lines. */
 const AccountNumber = Trimmed.regex(/^\d{4,6}$/);
 
-/**
- * Fetch a range from Zettle: the sales and that range's fees, as one report per
- * day. SWISH is not here on purpose: it arrives as an uploaded file rather than
- * a JSON body, and has its own route.
- */
+/** Fetch a range from Zettle: sales and fees, one report per day. SWISH is an uploaded file with its own route. */
 export const FetchIncome = z.object({
   from: IsoDate,
   to: IsoDate,
 });
 
 /**
- * Correct where sold lines book: whose sale it was, which account, which cost
- * centre. Each field is optional and left out means unchanged.
- *
- * The amounts are deliberately absent. What was sold, how many and for how
- * much are the till's word; correcting them here would mean the voucher and the
- * evidence behind it disagreed, since the document is rendered from these same
- * lines. Where the money books is this app's own routing, and routing is what a
- * mistyped prefix gets wrong. See lib/income/lines.ts.
- *
- * Changing the verksamhet without naming a cost centre gives the line the one
- * that verksamhet's routing would have: its prefix's for that account, else its
- * default.
+ * Correct where sold lines book: whose sale, which account, which cost centre. Absent means unchanged. Amounts are
+ * deliberately absent: they are the till's word and the document is rendered from these lines. See lib/income/lines.ts.
+ * Changing the verksamhet without a cost centre gives the line that verksamhet's routing default (its prefix's for the
+ * account, else its default).
  */
 export const UpdateIncomeLines = z.object({
   lines: z
@@ -54,35 +34,20 @@ export const UpdateIncomeLines = z.object({
     .max(2000),
 });
 
-/**
- * A kontering written by hand for a day: every row but the clearing account,
- * which is always the day's total. See lib/income/manual-voucher.ts.
- */
+/** A kontering written by hand for a day: every row but the clearing account, which is the day's total. See lib/income/manual-voucher.ts. */
 export const SaveIncomeVoucher = z.object({
   lines: z.array(VoucherLineInput).min(1).max(200),
 });
 
 // ── The routing table (settings) ──────────────────────────────────
-//
-// This is intakt's config.yaml, made editable. Everything here decides where a
-// sold product's money lands, so the validation is about keeping a voucher from
-// being booked against something that does not exist.
+// intakt's config.yaml made editable: validation keeps a voucher from booking against something that does not exist.
 
-/**
- * A product-name prefix. Stored lower-case, because matching is
- * case-insensitive and storing both cases would make "C" and "c" two rows that
- * could route two ways.
- */
+/** A product-name prefix, stored lower-case (matching is case-insensitive; both cases would be two rows). */
 const PrefixCode = Trimmed.min(1)
   .max(16)
   .transform((s) => s.toLowerCase());
 
-/**
- * Give a resultatenhet an income profile: the settings that let it take money
- * in. The unit itself is created under Inställningar → Resultatenheter: there
- * is one register of the section's verksamheter, and this is the half of a row
- * in it that income needs.
- */
+/** Give a resultatenhet an income profile. The unit itself is created under Inställningar → Resultatenheter. */
 export const CreateIncomeUnit = z.object({
   resultUnitId: Id,
   description: Trimmed.default(""),
@@ -113,11 +78,7 @@ export const UpdateIncomePrefix = z.object({
   costCenterId: Clearable(Id).optional(),
 });
 
-/**
- * A Swish payment matched by exact amount when its message says nothing usable.
- * The message is fed through the normal prefix pipeline, so "c-Cola" routes
- * exactly as a labelled payment would.
- */
+/** A Swish payment matched by exact amount when its message says nothing usable; the message goes through the normal prefix pipeline. */
 export const UpsertSwishFallback = z.object({
   amount: Ore.positive(),
   message: NonEmpty,
@@ -129,17 +90,9 @@ export const UpdateIncomeSettings = z.object({
   swishClearingAccount: AccountNumber.optional(),
   zettleFeeAccount: AccountNumber.optional(),
   zettleFeeCostCenterId: Clearable(Id).optional(),
-  /**
-   * Which verifikationsserie takings are exported to. Cleared, the empty
-   * string, means the one the Fortnox connection uses, which is what income
-   * did before this setting existed. Upper-cased like every other series in
-   * the app, so "b" and "B" cannot become two.
-   */
+  /** Which verifikationsserie takings export to. Cleared (empty string) means the Fortnox connection's. Upper-cased. */
   incomeVoucherSeries: Clearable(UpperCode).optional(),
-  /**
-   * Where a sale matching no prefix goes: a verksamhet's income profile, and
-   * the account it is credited to. See BookkeepingSettings.
-   */
+  /** Where a sale matching no prefix goes: a verksamhet's income profile and the account credited. See BookkeepingSettings. */
   incomeFallbackIncomeId: Clearable(Id).optional(),
   incomeFallbackAccount: AccountNumber.optional(),
 });

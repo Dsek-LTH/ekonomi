@@ -1,16 +1,6 @@
-// The test mail from Inställningar: a mail of a chosen kind, sent to one
-// member by hand, built from real data.
-//
-// Real rather than made up, because what is being tested is the mail as this
-// member would get it: their own utlägg, their card's latest transactions,
-// what their Sunday digest would say today. Each kind is built by the same
-// function the real one is (lib/email/content.ts, weekly-digest.ts), only fed
-// by a lookup here instead of by the event that would normally cause it.
-//
-// "[Test]" stays in front of the subject. The content is real, and a mail
-// saying that somebody asked for changes on your actual utlägg, without a
-// word that nothing happened, would send its reader off to fix something
-// that was never asked for.
+// The test mail from Inställningar: a mail of a chosen kind, built from the member's real data by the same
+// functions as the real one (lib/email/content.ts, weekly-digest.ts). "[Test]" stays in the subject so
+// nobody acts on a change that never happened.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -32,8 +22,7 @@ import type { NotificationKind } from "@/lib/domain/types";
 
 type ExpenseKey = Parameters<typeof expenseNotice>[0];
 
-// Each mail about an utlägg, by the key content.ts words it under, and whose
-// point of view it is written from. That decides which utlägg it is built on.
+// Each mail about an utlägg by its content.ts key, and whose point of view it is written from.
 const EXPENSE_KINDS: Partial<
   Record<NotificationKind, { key: ExpenseKey; reader: "submitter" | "attester" | "bookkeeper" }>
 > = {
@@ -60,8 +49,7 @@ const EXPENSE_SELECT = {
   submitterId: true,
   submitter: { select: { name: true } },
   allocations: { select: { costCenter: { select: { code: true, name: true } } } },
-  // The latest thing anybody wrote on it, for the quote a real mail carries
-  // when the actor left a comment.
+  // The latest comment, for the quote a real mail carries.
   events: {
     where: { comment: { not: null } },
     orderBy: { createdAt: "desc" as const },
@@ -70,18 +58,12 @@ const EXPENSE_SELECT = {
   },
 } as const;
 
-// How far back to look for an utlägg waiting on this attester. The newest few
-// are the likely ones; a member who attests nothing recent gets their own.
+// How far back to look for an utlägg waiting on this attester.
 const ATTEST_SCAN = 25;
 
 /**
- * Which utlägg a mail of this kind to this member is built on. Only ever one
- * they could open themselves: a test sent to an ordinary member must not carry
- * somebody else's claim to them.
- *
- *   attester    the newest utlägg waiting for their attest
- *   bookkeeper  the newest attested or exported one, if they book
- *   either, failing that, and submitter: their own newest
+ * Which utlägg a mail of this kind to this member is built on: only one they could open themselves.
+ * attester: newest waiting for their attest. bookkeeper: newest attested or exported. Else their own newest.
  */
 async function pickExpense(reader: "submitter" | "attester" | "bookkeeper", userId: string) {
   if (reader === "attester") {
@@ -122,8 +104,7 @@ async function cardEmail(userId: string): Promise<Email | null> {
     select: { importedAt: true },
   });
   if (!latest) return null;
-  // One import writes its rows in one statement, so they share the stamp: this
-  // is what that import told them, or would have.
+  // One import writes its rows in one statement, so they share the stamp.
   const txns = await prisma.bankTransaction.findMany({
     where: { card: { holderId: userId }, importedAt: latest.importedAt },
     select: {
@@ -152,11 +133,7 @@ async function cardEmail(userId: string): Promise<Email | null> {
   };
 }
 
-/**
- * A levfaktura mail about the newest invoice this member may open. Only one
- * they could open, for the same reason pickExpense keeps to their own: a test
- * must not carry somebody else's business to them.
- */
+/** A levfaktura mail about the newest invoice this member may open. */
 async function invoiceEmail(
   kind: "SUPPLIER_INVOICE_ASSIGNED" | "SUPPLIER_INVOICE_SUBMITTED",
   recipient: { id: string },
@@ -186,12 +163,8 @@ export type TestEmailResult =
   | { ok: false; error: "noExpense" | "noCardTransactions" | "noInvoice" | "nothingWaiting" };
 
 /**
- * Build a mail of `kind` for one member from their real data, and write it to
- * the outbox with `sentById` saying who sent it.
- *
- * Their choices in the profile are not asked: a test is somebody checking that
- * mail reaches this person at all, and a switched-off kind silently sending
- * nothing would answer the wrong question.
+ * Build a mail of `kind` for one member from their real data and write it to the outbox with `sentById`.
+ * The member's profile choices are not asked: a test checks that mail reaches them at all.
  */
 export async function sendTestEmail(
   kind: NotificationKind,
@@ -205,9 +178,7 @@ export async function sendTestEmail(
     const e = await pickExpense(expenseKind.reader, recipient.id);
     if (!e) return { ok: false, error: "noExpense" };
     const note = e.events[0];
-    // A real mail names one person twice, as the one who acted and as the
-    // author of the comment it quotes. With a comment on the utlägg, that is
-    // whoever wrote it. Without one, nobody acted but the sender of the test.
+    // With a comment on the utlägg, its author is the actor; without one, the sender of the test.
     const actor = note?.actor?.name ?? sender.name;
     email = expenseNotice(
       expenseKind.key,

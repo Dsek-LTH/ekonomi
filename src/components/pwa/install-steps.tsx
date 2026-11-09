@@ -7,11 +7,6 @@ import { cn } from "@/lib/ui/utils";
 import type { Platform } from "./platform";
 import { promptInstall, useCanPromptInstall } from "./service-worker";
 
-// How to put the app on the home screen, step by step, for the first card of
-// the app tour on a phone (shell/guide.tsx). The dashboard's own card
-// (install-hint.tsx) says the same in a sentence. Here there is room to number
-// the taps, which is what someone holding the phone in the other hand follows.
-
 const IOS = ["steps.ios1", "steps.ios2", "steps.ios3"] as const;
 const ANDROID = ["steps.android1", "steps.android2"] as const;
 
@@ -19,7 +14,6 @@ export function InstallSteps({ platform }: { platform: Platform }) {
   const t = useTranslations("pwa");
   const canPrompt = useCanPromptInstall();
 
-  // Android offering an install of its own: one button does it all.
   if (platform === "android" && canPrompt) {
     return (
       <Button className="mt-3 w-full" onClick={() => void promptInstall()}>
@@ -49,12 +43,8 @@ export function InstallSteps({ platform }: { platform: Platform }) {
   );
 }
 
-/**
- * A step's number in a pink circle, the brand's action colour. Also the
- * dashboard's first-run steps, at the larger size. A size rather than a
- * className, since `cn` joins rather than merges and two `size-` utilities
- * would be settled by stylesheet order.
- */
+/** A size prop rather than className: `cn` joins rather than merges, so two `size-` utilities
+ * would be settled by stylesheet order. */
 export function StepNumber({ n, size = "sm" }: { n: number; size?: "sm" | "md" }) {
   return (
     <span

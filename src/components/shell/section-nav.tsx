@@ -1,18 +1,5 @@
 "use client";
 
-// The section a page belongs to: its pages as tabs across the top. Drawn by the shell (SectionBand), once, above whichever page is open.
-//
-// It used to be drawn by every page's own header. That put the band inside the
-// page, so a click on a tab replaced the band along with everything else: the
-// line under the current tab could not slide because there was no line that
-// stayed, the loading placeholder needed a copy of the band, and the two had
-// to be kept the same height or the page jumped. Above the page, in the shell,
-// it simply stays, and a tab is a change of one class.
-//
-// The one thing a page still puts in the band is its own switch (Mina / Alla),
-// which belongs on the tabs' line. It is portaled there (PageHeader), so the
-// page keeps owning it: its state and callbacks stay the page's. On a phone
-// there is no room for both on one line, and it stays in the page instead.
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -26,25 +13,21 @@ import { cn } from "@/lib/ui/utils";
 import { NavCount } from "./nav-count";
 
 export interface SectionNav {
-  /** The section's name, which is the heading on its own pages. */
   label: string;
   tabsLabel: string;
   tabs: {
     href: string;
     label: string;
-    /** The page's own icon from the nav, so a tab and its rail row match. */
     icon: (p: { className?: string }) => React.ReactNode;
     active: boolean;
     count: number;
   }[];
-  /** On one of the section's own pages, rather than somewhere under one. */
   root: boolean;
 }
 
 const Ctx = createContext<{
   nav: SectionNav | null;
   slot: HTMLElement | null;
-  /** The page says whether it is one of the section's own (see PageHeader). */
   reportOwn: (own: boolean | null) => void;
 }>({
   nav: null,
@@ -53,73 +36,33 @@ const Ctx = createContext<{
 });
 export const SectionNavProvider = Ctx.Provider;
 
-/**
- * The band at the top of the main column, for a page in a section: its tabs,
- * and a slot at the end of the tabs' line for the page's switch (see
- * PageHeader). Sticky, blurred behind, the way
- * the utlägg form's action bar sits at the foot.
- */
 export function SectionBand({
   section,
   own,
   slotRef,
 }: {
   section: SectionNav;
-  /** One of the section's own pages: the lit tab's name is the heading. */
   own: boolean;
   slotRef: (el: HTMLElement | null) => void;
 }) {
   const scrolled = usePageScrolled();
   return (
     <div
-      // A guide on a phone keeps the control it lights below the band
-      // (shell/guide.tsx).
       data-guide-edge="top"
       className={cn(
-        // Out to the main column's edges, so what scrolls under it does not
-        // show beside it, and below the phone's own top bar. From md the
-        // header is outside the scrollport, so it sticks to the very top.
-        // z-20, above the page's own raised bits: a table's expand chevron
-        // and a row's buttons sit at z-10 over their row, and at the band's
-        // own z-10 they came later in the page and were drawn over it as they
-        // scrolled under.
-        // The right side follows the main column's own gutter, which widens
-        // while the folded receipt tab hangs over that edge (app-shell.tsx).
-        //
-        // Its bottom border is the divider under the tabs. The band reaches
-        // both edges of the main column, so its own border does too, at
-        // every width and whatever the receipt panel is doing.
         "sticky top-app-bar z-20 md:top-0 -ml-4 -mr-(--main-pr) mb-6 border-b border-border bg-background/90 pl-4 pr-(--main-pr) backdrop-blur-xl backdrop-saturate-150 md:-ml-6 md:pl-6",
-        // The main column's top padding, taken back, so the band starts right
-        // under the header. The tabs are the first thing there, with no title
-        // above them, and the row's own height is all the room it needs.
         "-mt-6",
       )}
     >
-      {/* No visible title. The lit tab already says which page this is, and
-          the section's name above it mostly repeated one of the tabs
-          ("Utlägg" over "Utlägg"). A section's own page still needs an h1,
-          so it is the lit tab's name, for a screen reader only. Under one (a
-          budget, an utlägg) the page has a heading of its own below. */}
       {own && (
         <h1 className="sr-only">
           {section.tabs.find((tab) => tab.active)?.label ?? section.label}
         </h1>
       )}
-      {/* One row of a fixed height whatever stands at its end. The switch is
-          32px (a 26px option in a padded, bordered track), the height of every
-          control from sm up, and 44 leaves it 6px from the header above and 6
-          from the divider below. The divider is the band's border, outside
-          the 44, so it takes no pixel from the row and the switch stays
-          centred. */}
       <div className="relative flex h-11 items-stretch justify-between gap-4">
         <SectionTabs label={section.tabsLabel} tabs={section.tabs} />
         <div ref={slotRef} className="flex shrink-0 items-center empty:hidden" />
       </div>
-      {/* Once the page has scrolled under the band, a fade below it, so what
-          slides beneath reads as going under rather than as cut off at a
-          line. Not there at rest, where it would only dim the page's first
-          card. The same treatment as the action bar at the foot of a form. */}
       <div
         aria-hidden
         className={cn(
@@ -131,17 +74,6 @@ export function SectionBand({
   );
 }
 
-/**
- * A page's header: what it is, and the switch for which collection of it.
- *
- * On a section's own page the band above already says what it is (the
- * section's name, and the tab), so this draws no title of its own. Under one
- * (a budget, an utlägg) it draws its back link and title as it always has.
- * Either way, in a section the switch goes up to the band's slot, so it stands
- * on the tabs' line on every page. In no section at all it is the header it
- * always was, the switch beside the title. On a phone it never goes up to the
- * band, and has a row of its own in the page.
- */
 export function PageHeader({
   title,
   subtitle,
@@ -152,22 +84,11 @@ export function PageHeader({
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   back?: string;
-  /** The collection switch or the view control, already drawn. */
   right?: React.ReactNode;
-  /** The page's own controls, on the title's line. See PageShell. */
   aside?: React.ReactNode;
 }) {
   const { nav, slot, reportOwn } = useContext(Ctx);
-  // On a phone the switch stays in the page instead of going up to the band.
-  // The band's line is 343px there, and "Mina | Min resultatenhet | Alla"
-  // beside the tabs left them about 100px, so a section's second tab was
-  // pushed out of sight. Asked in JavaScript because which element it is
-  // portaled into is not something a class can change.
   const phone = usePhone();
-  // A page in a section with no way back is one of the section's own, the
-  // ones the tabs and their switches go between, whatever its path. A path is
-  // only the shell's first guess (`root`): /income/booked is not a tab's own
-  // path, and it is the other half of Intäkter's switch, not a page under it.
   const own = Boolean(nav) && !back;
   useLayoutEffect(() => {
     if (!nav) return;
@@ -184,29 +105,12 @@ export function PageHeader({
     );
   }
 
-  // Under a section's page (a budget, an utlägg) the page keeps its own title
-  // and back link, but its switch still goes up onto the tabs' line: what
-  // steers the page stands at the same height whichever page it is, rather
-  // than beside the title on some pages and above it on others.
   const inBand = Boolean(nav) && !phone && slot;
-  // Everything on one line: the arrow back, the title, and the page's own
-  // controls at the far end, with the subtitle under the title rather than
-  // under the arrow. The back link on a line of its own above the title, and
-  // a page's controls on a row below it, were three lines of header where one
-  // will do. In a section the switch goes up to the band (above); in none it
-  // stands at the far end with the controls, and so it does on a phone, in
-  // the row of controls under the title.
   const end = (!nav || phone) && right;
   return (
     <div className="mb-6 flex items-start gap-1.5">
       {inBand && right && createPortal(right, slot)}
       {back && <BackLink href={back} />}
-      {/* A grid, so the order is the same however much there is. From md the
-          controls stand at the end of the title's line. On a phone they have a
-          row of their own under the title and the subtitle: they used to wrap
-          wherever they ran out of room, a comparison picker on one line, the
-          lock on the next, the menu on a third, and the subtitle under all of
-          them, a long way from the title it belongs to. */}
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
         <div className="col-start-1 row-start-1 min-w-0">
           <PageTitle>{title}</PageTitle>
@@ -227,11 +131,6 @@ export function PageHeader({
   );
 }
 
-/**
- * PageHeader while the page is on its way, for SkeletonPage. On a section's own
- * page there is nothing to hold a place for: the band stays where it is, and
- * the switch arrives in its slot with the page.
- */
 export function PageHeaderSkeleton({
   back,
   right,
@@ -239,11 +138,8 @@ export function PageHeaderSkeleton({
   aside,
 }: {
   back: boolean;
-  /** Placeholders for the page's controls on the title's line. See PageHeader. */
   aside?: React.ReactNode;
-  /** The placeholder for the switch, where the page has one. */
   right?: React.ReactNode;
-  /** The placeholder for the page's own title, and the bar's in settings. */
   title: React.ReactNode;
 }) {
   const { nav } = useContext(Ctx);
@@ -252,8 +148,6 @@ export function PageHeaderSkeleton({
   return (
     <div className="mb-6 flex items-start gap-1.5">
       {back && <div aria-hidden className="skeleton size-8 shrink-0 rounded-control" />}
-      {/* The same grid as PageHeader: controls at the end of the title's line
-          from md, on a row of their own under it on a phone. */}
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
         <div className="col-start-1 row-start-1 min-w-0">{title}</div>
         {(aside || end) && (
@@ -267,31 +161,12 @@ export function PageHeaderSkeleton({
   );
 }
 
-/**
- * The pages of a section, as tabs with the page's icon. The one you are on is
- * in bold and in the text colour, with the pink line under it.
- *
- * The line is one element under the whole row rather than a border on each
- * tab, so that moving to another tab moves it: measured to the current tab and
- * slid there with a transition. The band is not redrawn by a navigation, so
- * the line is still standing under the old tab when the new one is current.
- */
 function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] }) {
   const strip = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const line = useRef<HTMLSpanElement>(null);
   const current = tabs.findIndex((i) => i.active);
-  // The tab just clicked, shown as current from the click rather than from
-  // when its page arrives. The path only changes once the next page is on its
-  // way, which on a slow page is a beat later, and the line used to sit still
-  // under the old tab for that beat and then slide: a slide that looked as
-  // slow as the page. Held only while the real current tab is still the one
-  // it was clicked from, so it gives way the moment the navigation lands,
-  // wherever that turns out to be.
   const [pending, setPending] = useState<{ index: number; from: number } | null>(null);
-  // Forgotten as soon as the real current tab changes, so that going back to
-  // the tab it was clicked from (the browser's Back) does not bring it back.
-  // Set during render, React's way of resetting state when a value changes.
   const [seen, setSeen] = useState(current);
   if (seen !== current) {
     setSeen(current);
@@ -299,9 +174,6 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
   }
   const active = pending && pending.from === current ? pending.index : current;
   const section = tabs.map((i) => i.href).join("|");
-  // Arriving in another section, or on the first draw, the line appears in
-  // place rather than sliding in from the left edge or from under a tab of
-  // the last section.
   const lastSection = useRef<string | null>(null);
 
   useLayoutEffect(() => {
@@ -316,19 +188,12 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
       el.style.transform = `translateX(${tab.offsetLeft}px)`;
       el.style.width = `${tab.offsetWidth}px`;
       if (!animate) {
-        // Painted where it is before the transition is given back, so the
-        // next move slides rather than this one.
         void el.offsetWidth;
         el.style.transition = "";
       }
     };
     place(lastSection.current === section);
     lastSection.current = section;
-    // Kept on its tab when the row changes size: a font arriving, a phone
-    // turned on its side, the new tab's label turning bold and wider as the
-    // line travels to it. Slid there too, never jumped: a new observer reports
-    // the size at once, and jumping on that report is what cancelled the
-    // slide the moment it began.
     const ro = new ResizeObserver(() => place(true));
     ro.observe(ul);
     return () => ro.disconnect();
@@ -337,13 +202,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
   useScrollStrip(strip, active, list);
 
   return (
-    // `-mb-px` so the line lies over the row's divider rather than a pixel
-    // above it.
     <nav aria-label={label} className="-mb-px flex min-w-0 flex-1" data-tour="section-tabs">
-      {/* Scrolls sideways on a phone rather than wrapping: four tabs of Lager
-          do not fit 343px, and a second row of tabs reads as a second level.
-          The side with more fades out, and the current tab is kept in view
-          (useScrollStrip). */}
       <div
         ref={strip}
         className="scroll-strip relative flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]"
@@ -358,8 +217,6 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
                   href={i.href}
                   aria-current={i.active ? "page" : undefined}
                   onClick={(e) => {
-                    // Not for a click that opens a new tab or window: this
-                    // page is staying where it is.
                     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
                     if (n !== current) setPending({ index: n, from: current });
                   }}
@@ -388,10 +245,6 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
   );
 }
 
-/**
- * Whether the page has been scrolled at all: the main column from md up, the
- * document below it (see `data-main-scroll` in app-shell.tsx).
- */
 function usePageScrolled(): boolean {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -408,18 +261,6 @@ function usePageScrolled(): boolean {
   return scrolled;
 }
 
-/**
- * The way back from a nested page, as an arrow before its title, on the
- * title's own line. It does what the browser's Back button does, so it returns
- * you to the list you came from with its query and scroll position as they
- * were. `href` is the page's parent, for when there is nothing in the app
- * behind you. See useGoBack.
- *
- * It was the word "Tillbaka" on a line of its own above the title, which cost
- * every page under a section a line of header and repeated what the section's
- * band above already says (where you are, and the tab you came from). The
- * word is still its name, for a screen reader and on hover.
- */
 function BackLink({ href }: { href: string }) {
   const t = useTranslations("common");
   const back = useGoBack(href);
@@ -430,8 +271,6 @@ function BackLink({ href }: { href: string }) {
       onClick={back.onClick}
       aria-label={t("back")}
       title={t("back")}
-      // The height of the title's line, so the arrow sits on it whatever the
-      // title wraps to below.
       className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground"
     >
       <IconChevronLeft className="size-5" />

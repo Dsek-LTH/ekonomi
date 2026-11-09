@@ -57,8 +57,7 @@ describe("buildInvoiceCoverData", () => {
   });
 });
 
-// The attest page as Fortnox will file it, read back the way the app reads any
-// PDF. What matters is that it says who attested what, in Swedish.
+// The attest page as Fortnox will file it, read back like any PDF: it says who attested what, in Swedish.
 describe("renderInvoiceCover", () => {
   it("names the invoice and who attested and konterade it", async () => {
     const text = (await pdfLines(await renderInvoiceCover(facts))).join("\n");

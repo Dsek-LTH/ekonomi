@@ -1,16 +1,5 @@
-// The HTML drawing of an email, as React Email components.
-//
-// React Email's components are what make JSX safe to send: Section, Row and
-// Column come out as the nested tables Outlook on Windows needs (it renders
-// with Word and knows no flexbox), Button carries the extra markup Outlook
-// needs to honour its padding, and Preview is the line an inbox shows under
-// the subject. Every style is inline because Gmail strips <style>, which is
-// also why nothing here is a class.
-//
-// The look follows the app's: cool greys, ink for links and accents, the pink
-// blend only on the one button, amber for "something went backwards", the card
-// blue. One component per kind of block, and EmailDocument to put a whole mail
-// together.
+// The HTML drawing of an email as React Email components: nested tables for Outlook on Windows (Word renders it,
+// no flexbox) and every style inline because Gmail strips <style>.
 import {
   Body,
   Button,
@@ -30,8 +19,6 @@ import {
 import type { CSSProperties, ReactNode } from "react";
 import { LOGO_CID, type Block, type Email, type Link, type TagTone, type Tone } from "./types";
 
-// ── Palette, from the app's own tokens (src/app/globals.css) ──────
-
 const C = {
   ground: "#f4f4f5",
   card: "#ffffff",
@@ -49,11 +36,9 @@ const C = {
   success: "#1f7a36",
 };
 
-// --radius-control and --radius-panel.
 const R = { control: 4, panel: 6 };
 
-// The eyebrow's colour. An ordinary mail says what it is in grey, the way a
-// page's own small labels do; only the two tones that mean something get one.
+// The eyebrow's colour: grey for an ordinary mail, a tone only for the two that mean something.
 const EYEBROW: Record<Tone, string> = { action: C.muted, warning: C.warning, card: C.cardBlue };
 const SOFT: Record<Tone | "neutral", string> = {
   neutral: C.surface,
@@ -68,22 +53,18 @@ const STRONG: Record<Tone | "neutral", string> = {
   card: C.cardBlue,
 };
 
-/** The payment-type tags the app draws, in the app's colours. */
 const TAG: Record<TagTone, { color: string; background: string }> = {
   CARD: { color: "#1d4ed8", background: "#e3eafc" },
   REIMBURSEMENT: { color: "#0e7068", background: "#dcf2ec" },
   MILEAGE: { color: "#7c4a1e", background: "#f3e5d6" },
 };
 
-// Inter where the reader has it, which is rare, and the system face otherwise.
-// A web font would mean a request to Google from every inbox that opens one.
+// Inter where the reader has it, else the system face (a web font would call Google from every inbox).
 const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-// React Email's Text comes with a margin and a line height of its own; every
-// use here sets both, so this is the reset they start from.
+// React Email's Text has its own margin and line height: this is the reset.
 const t = (style: CSSProperties): CSSProperties => ({ margin: 0, fontFamily: FONT, ...style });
 
-/** Amounts and dates, in figures that line up down a column, as in the app. */
 const NUM: CSSProperties = { fontVariantNumeric: "tabular-nums" };
 
 const muted = t({ fontSize: 12, lineHeight: "18px", color: C.muted });
@@ -95,11 +76,7 @@ const box: CSSProperties = {
 const ruled = (first: boolean): CSSProperties =>
   first ? {} : { borderTop: `1px solid ${C.border}` };
 
-/**
- * A few cells side by side, only as wide as what is in them: the logo beside
- * the name, the initials beside the author. React Email's Row always spans the
- * full width, which spreads its cells out and centres them.
- */
+/** A few cells side by side, only as wide as their content (React Email's Row always spans the full width). */
 function Inline({ children }: { children: ReactNode }) {
   return (
     <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
@@ -110,9 +87,7 @@ function Inline({ children }: { children: ReactNode }) {
   );
 }
 
-// The app's primary button (.action-fill): the pink blend with a white label.
-// Outlook and older Gmail drop the gradient and keep the flat pink under it.
-// Taller than the app's 32px, since most mail is read on a phone.
+// The app's primary button (.action-fill). Outlook and older Gmail drop the gradient and keep the flat pink. Taller than 32px for phones.
 function ActionButton({ link }: { link: Link }) {
   return (
     <Button
@@ -135,10 +110,7 @@ function ActionButton({ link }: { link: Link }) {
   );
 }
 
-// ── Blocks ────────────────────────────────────────────────────────
-
 function ExpenseCard({ block }: { block: Extract<Block, { kind: "expense" }> }) {
-  // Two facts to a row, the way the design lays them out.
   const rows: (typeof block.facts)[] = [];
   block.facts.forEach((f, i) => (i % 2 ? rows[rows.length - 1].push(f) : rows.push([f])));
   return (
@@ -362,10 +334,7 @@ function TransactionTable({ block }: { block: Extract<Block, { kind: "transactio
 }
 
 function Stats({ block }: { block: Extract<Block, { kind: "stats" }> }) {
-  // Percentages for the gaps as well as the counters: a fixed-width cell
-  // beside percentage ones is the first thing a client squeezes. The colour is
-  // on the cells themselves, so a label that wraps in one counter does not
-  // leave the others short.
+  // Percentages for the gaps too: a fixed-width cell beside percentage ones gets squeezed. Colour is on the cells so a wrapping label leaves no short counter.
   const GAP = 3;
   const width = `${Math.floor((100 - GAP * (block.items.length - 1)) / block.items.length)}%`;
   return (
@@ -536,15 +505,12 @@ function BlockView({ block }: { block: Block }) {
   }
 }
 
-// ── The whole mail ────────────────────────────────────────────────
-
 export function EmailDocument({
   email: e,
   logoSrc = `cid:${LOGO_CID}`,
 }: {
   email: Email;
-  /** Where the logo comes from. The attachment in a sent mail; a file in the
-   *  preview server (emails/), which has no attachments to point at. */
+  /** Where the logo comes from: the attachment in a sent mail, a file in the preview server (emails/). */
   logoSrc?: string;
 }) {
   return (
@@ -650,7 +616,6 @@ export function EmailDocument({
             )}
 
             {e.blocks.map((b, i) => {
-              // Sections in the digest are set apart by a rule; anything else by space.
               const ruleBefore =
                 b.kind === "section" && i > 0 && e.blocks[i - 1].kind === "section";
               return (

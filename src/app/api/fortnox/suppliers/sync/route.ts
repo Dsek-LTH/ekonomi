@@ -1,5 +1,4 @@
-// POST /api/fortnox/suppliers/sync: fetch the supplier register again, from
-// the Fortnox settings page. The nightly sync does the same.
+// POST /api/fortnox/suppliers/sync: refetch the supplier register (the nightly sync does the same).
 import { NextResponse } from "next/server";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { syncSuppliers } from "@/lib/fortnox/sync";

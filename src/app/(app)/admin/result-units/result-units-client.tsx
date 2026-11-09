@@ -1,20 +1,5 @@
 "use client";
 
-// Settings → Result units. A result unit owns one or more cost-centre code
-// prefixes; every cost centre whose code starts with one of them belongs to it,
-// and its resultatansvariga hold approval authority over those expenses. How a
-// unit's sales are booked is set under Inställningar → Försäljning, beside the
-// accounts they are booked against.
-//
-// One table of every unit, and the unit itself in a dialog over it. It was a
-// list down the side and the selected unit beside it, which meant reading the
-// setup one unit at a time: whether every unit had a prefix and somebody
-// answering for it took a click per unit to find out. The table answers that
-// at a glance, and the dialog is where one unit is changed.
-//
-// Cost centres with no result unit are not a unit, so they are not a row. They
-// are a warning above the table while there are any, which is what they are:
-// expenses only an administrator can attest.
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -44,7 +29,6 @@ export function ResultUnitsClient({
   unassigned,
 }: {
   resultUnits: ResultUnit[];
-  /** Cost centres no unit's prefix matches. */
   unassigned: ResultUnitCostCenter[];
 }) {
   const t = useTranslations("admin.resultUnits");
@@ -52,8 +36,6 @@ export function ResultUnitsClient({
   const { pending, mutate } = useMutation();
   const controls = useTableControls({ sortKey: "name" });
 
-  // The open unit by id, so the dialog follows the refreshed row after every
-  // save rather than holding on to the copy it was opened with.
   const [openId, setOpenId] = useState<string | null>(null);
   const open = openId ? (resultUnits.find((u) => u.id === openId) ?? null) : null;
   const [showUnassigned, setShowUnassigned] = useState(false);
@@ -74,7 +56,6 @@ export function ResultUnitsClient({
     if (!created) return;
     setNewName("");
     setAdding(false);
-    // Straight into it: a new unit is nothing until it has a prefix.
     if (typeof created.id === "string") setOpenId(created.id);
   }
 
@@ -86,8 +67,6 @@ export function ResultUnitsClient({
       sortable: true,
       searchable: true,
       mobile: "title",
-      // A button, not a click on the row: it is a tab stop, it answers Enter,
-      // and a screen reader says it opens something.
       cell: (u) => (
         <button
           type="button"
@@ -115,7 +94,6 @@ export function ResultUnitsClient({
             ))}
           </span>
         ) : (
-          // A unit without one owns nothing, which is worth seeing from here.
           <span className="text-xs text-warning">{t("noPrefix")}</span>
         ),
     },
@@ -220,7 +198,6 @@ export function ResultUnitsClient({
 
       {open && (
         <UnitDialog
-          // Keyed, so every draft inside starts over when another unit opens.
           key={open.id}
           unit={open}
           pending={pending}
@@ -245,10 +222,6 @@ export function ResultUnitsClient({
   );
 }
 
-/**
- * One result unit, in sections that each answer one question: which cost
- * centres are its, who attests them, and whether it sells.
- */
 function UnitDialog({
   unit,
   pending,
@@ -266,8 +239,6 @@ function UnitDialog({
   const tRole = useTranslations("common.role");
   const confirm = useConfirm();
 
-  // The prefix input is hidden behind a + until asked for, so the prefixes
-  // read as data rather than as a form. null means "not adding".
   const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
   const [showCostCenters, setShowCostCenters] = useState(false);
 
@@ -296,8 +267,6 @@ function UnitDialog({
       tone: "danger",
     });
     if (!confirmed) return;
-    // The endpoint refuses while owners or unattested expenses hang on it, and
-    // says which, so no pre-check is needed here.
     const ok = await mutate(`/api/result-units/${unit.id}`, {
       key: unit.id,
       method: "DELETE",
@@ -329,8 +298,6 @@ function UnitDialog({
 
   return (
     <Modal label={unit.resultUnit} onClose={onClose} className="max-w-2xl">
-      {/* Not ModalHeader: the name is edited in place here, and the delete and
-          the close sit beside it. */}
       <div className="flex shrink-0 items-start gap-2 border-b border-border px-inset py-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold">
@@ -358,7 +325,6 @@ function UnitDialog({
       </div>
 
       <ModalBody>
-        {/* ── Which cost centres are its ── */}
         <Section title={t("sectionCostCenters")} hint={t("sectionCostCentersHint")}>
           <FieldGroup label={t("prefixes")}>
             <div className="flex flex-wrap items-center gap-2">
@@ -418,8 +384,6 @@ function UnitDialog({
             </div>
           </FieldGroup>
 
-          {/* The cost centres themselves, folded: the count is usually what is
-              wanted, and the list is there for checking a particular code. */}
           {unit.costCenters.length === 0 ? (
             <p className="text-sm text-muted">
               {unit.prefixes.length ? t("noCostCentersForPrefix") : t("noPrefixHint")}
@@ -442,12 +406,6 @@ function UnitDialog({
           )}
         </Section>
 
-        {/* ── Who attests them ──
-            Read-only here. Which groups make somebody resultatansvarig for a
-            unit is set under Inställningar → Roller, and who is in a group is
-            Authentik's. Showing the groups and not just the names is what makes
-            an empty list diagnosable: nobody holds the post, or no group grants
-            it. */}
         <Section title={t("sectionAttest")} hint={t("sectionAttestHint")}>
           <FieldGroup label={tRole("RESULTATANSVARIG")}>
             {unit.owners.length === 0 ? (
@@ -489,9 +447,6 @@ function UnitDialog({
           </p>
         </Section>
 
-        {/* ── Whether it sells ──
-            Said here, set under Inställningar → Försäljning, where every
-            unit's sales sit beside the accounts they are booked against. */}
         <Section title={t("sectionSales")} hint={t("sectionSalesHint")}>
           <p className="text-sm">
             {unit.income
@@ -510,7 +465,6 @@ function UnitDialog({
   );
 }
 
-/** A titled part of the unit dialog, with a line saying what it decides. */
 function Section({
   title,
   hint,
@@ -531,7 +485,6 @@ function Section({
   );
 }
 
-/** Cost centres by code, the retired ones after the rest and dimmed. */
 function CostCenterList({ list }: { list: ResultUnitCostCenter[] }) {
   const t = useTranslations("admin.resultUnits");
   if (list.length === 0) return <p className="text-sm text-muted">{t("unassignedEmpty")}</p>;

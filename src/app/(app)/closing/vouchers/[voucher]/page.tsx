@@ -10,9 +10,7 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("closingVoucher");
 
-// One voucher as the ledger has it, what the app holds behind it, and its
-// review. Keyed on series and number ("A-12") rather than the row's id, which a
-// sync replaces.
+// One voucher, keyed on series and number ("A-12") since a sync replaces row ids.
 export default async function ClosingVoucherPage({
   params,
 }: {
@@ -21,8 +19,7 @@ export default async function ClosingVoucherPage({
   const user = await requirePage(canViewBookkeeping);
   const { voucher: voucherParam } = await params;
 
-  // A voucher of the header's year. One from another year is not found here,
-  // the same as any key that names no voucher.
+  // A voucher of the header's year only.
   const ref = parseVoucherKey(decodeURIComponent(voucherParam));
   const year = ref ? await getOpenClosingYear() : null;
   if (!year || !ref) notFound();

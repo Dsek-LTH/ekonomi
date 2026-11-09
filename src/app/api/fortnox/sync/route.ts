@@ -1,8 +1,5 @@
-// Trigger a Fortnox ledger sync. Body:
-// { scope?: "current" | "all", financialYearId?: number }.
-// Default is "current" (one SIE call, fast, safe for an interactive button).
-// "all" backfills every financial year and can take a while; prefer the CLI
-// (pnpm fortnox:sync) or the scheduled job for that.
+// Trigger a Fortnox ledger sync. Body: { scope?: "current" | "all", financialYearId?: number }.
+// "current" (default) is one fast SIE call; "all" backfills every year and is slow: prefer the CLI (pnpm fortnox:sync).
 import { NextResponse } from "next/server";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { syncLedger } from "@/lib/fortnox/sync";
@@ -16,8 +13,7 @@ export const maxDuration = 300; // allow long backfills on platforms that honour
 export async function POST(req: Request) {
   const g = await gate(canBookkeep, "auth.bookkeeperSync");
   if (!g.ok) return g.res;
-  // syncLedger fetches its own service token, so this only has to know there is
-  // a connection for it to find.
+  // syncLedger fetches its own service token; this only checks a connection exists.
   const offline = await denyNoFortnox();
   if (offline) return offline;
 

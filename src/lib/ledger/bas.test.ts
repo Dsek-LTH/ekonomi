@@ -8,8 +8,7 @@ describe("orient", () => {
   });
 
   it("flips a credit-oriented section, so income reads positive", () => {
-    // The ledger stores income as a credit (negative net); Fortnox prints it
-    // positive, and the reports have to agree with Fortnox.
+    // The ledger stores income as a credit (negative net); Fortnox prints it positive.
     expect(orient(-5000, "credit")).toBe(5000);
     expect(orient(5000, "credit")).toBe(-5000);
   });
@@ -19,8 +18,7 @@ describe.each(["RESULT", "BALANCE"] as ReportKind[])("%s sections", (kind) => {
   const sections = sectionsFor(kind);
 
   it("covers its whole account range with no gap and no overlap", () => {
-    // A gap would drop an account out of the report without anyone noticing:
-    // the section totals would still add up, just not to the right figure.
+    // A gap would drop an account out of the report unnoticed.
     const range = accountRangeFor(kind);
     const ordered = [...sections].sort((a, b) => a.from - b.from);
 
@@ -50,8 +48,6 @@ describe.each(["RESULT", "BALANCE"] as ReportKind[])("%s sections", (kind) => {
 
 describe("the two reports together", () => {
   it("split the chart between them without meeting", () => {
-    // 1000-2999 is the balance sheet, 3000-8999 the result. A 1930 row has no
-    // place in a result report, and vice versa.
     const balance = accountRangeFor("BALANCE");
     const result = accountRangeFor("RESULT");
     expect(balance.to).toBeLessThan(result.from);

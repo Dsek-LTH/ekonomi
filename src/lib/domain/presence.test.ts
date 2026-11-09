@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HIDDEN_GRACE_MS, IDLE_MS, PRESENCE_TTL_MS, HEARTBEAT_MS, isIdle } from "./presence";
 
-// When a bookkeeper stops counting as being on an utlägg. Getting this wrong
-// one way leaves a name on a colleague's screen for somebody who went home;
-// the other way makes a name blink in and out for somebody who is reading the
-// receipt.
+// When a bookkeeper stops counting as being on an utlägg.
 
 const T = 1_000_000_000;
 

@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// An invoice is born when its unit fördelar a document in its Inkorg: only a
-// document given to a unit, only by someone who may fördela it, and with the
-// sender's own rows signed as it is made.
-
 const h = vi.hoisted(() => ({
   create: vi.fn(),
   claim: vi.fn(),
@@ -12,7 +8,6 @@ const h = vi.hoisted(() => ({
   access: null as unknown,
 }));
 
-// The year picked in the header is its own test (lib/api/fiscal-year.test.ts).
 vi.mock("@/lib/api/fiscal-year", () => ({ denyOutsideFiscalYear: async () => null }));
 vi.mock("@/lib/server/current-user", () => ({
   resolveUserId: async () => "maja",
@@ -31,7 +26,6 @@ vi.mock("@/lib/server/db", () => ({
       fn({
         supplierInvoice: {
           create: h.create,
-          // The year's last number, which the new one counts on from.
           findFirst: async () => ({ reference: "LEV26-0011" }),
         },
         supplierInvoiceDocument: { updateMany: h.claim },
@@ -139,7 +133,6 @@ describe("making an invoice by fördelning a document", () => {
       assignedById: "kassor",
       amount: 125000,
       description: "Hyra av släp",
-      // What the PDF said fills what the unit did not type.
       invoiceNumber: "F-77",
       prefilled: ["invoiceNumber"],
     });
@@ -150,7 +143,6 @@ describe("making an invoice by fördelning a document", () => {
       "APPROVED",
     ]);
     expect(data.events.create[1].createdAt).toBe(assignedAt);
-    // The document is claimed out of that unit's Inkorg, and no longer the unit's.
     expect(h.claim).toHaveBeenCalledWith({
       where: { id: "d1", invoiceId: null, resultUnitId: "sex" },
       data: expect.objectContaining({ invoiceId: "inv1", resultUnitId: null }),

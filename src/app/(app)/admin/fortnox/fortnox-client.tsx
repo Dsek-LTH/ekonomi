@@ -1,11 +1,5 @@
 "use client";
 
-// Settings → Fortnox. Everything touching the integration lives here: the
-// connection itself, where exports land, and what is mirrored from Fortnox
-// (the chart of accounts and the ledger). Cost centres
-// sync from Fortnox too, but they are managed on their own settings page since
-// local ones are added and edited there as well. Bookkeeping and Utfall only
-// show read-only status and link here.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -56,13 +50,9 @@ export function FortnoxClient({
   accounts: AccountRecord[];
   settings: BookkeepingSettings;
   ledgerYears: LedgerYear[];
-  /** The Fortnox-owned cost centres: how many, and when the sync last ran. */
   costCenters: { count: number; lastSyncAt: string | null };
-  /** The mirrored Fortnox projects: how many, and when the sync last ran. */
   projects: { count: number; lastSyncAt: string | null };
-  /** The kept supplier register: how many, and when it was last read. */
   suppliers: { count: number; lastSyncAt: string | null };
-  /** The last full sync, the nightly job's or one started here. */
   lastSync: FortnoxSyncStatus;
 }) {
   const t = useTranslations("admin.fortnox");
@@ -150,8 +140,6 @@ export function FortnoxClient({
     notify.success(t("suppliersSummary", { count: data.suppliers }), t("suppliersSynced"));
   }
 
-  // What the nightly job does, now. A step that failed is not an error of the
-  // request, so it is said here, and the card's status line names the step.
   async function syncEverything() {
     const data = await mutate<SyncAllResult>("/api/fortnox/sync-all", {
       key: "all",
@@ -166,9 +154,6 @@ export function FortnoxClient({
     else notify.success(t("syncAllDone"));
   }
 
-  // Cost centres are listed and added to on their own settings page (local
-  // ones live there too), but fetched here, with everything else that comes
-  // from Fortnox.
   async function syncCostCenters() {
     const data = await mutate<CostCenterSyncResult>("/api/cost-centers/sync", {
       key: "costCenters",
@@ -187,16 +172,13 @@ export function FortnoxClient({
     );
   }
 
-  // One financial year per click. "current" is the year we're in, also the only
-  // thing to press before any year has been fetched, since the per-year buttons
-  // below are built from the years a sync has already found. A full backfill is
-  // a long job and stays with the CLI (pnpm fortnox:sync --all) rather than a
-  // button someone has to sit and wait on.
+  // A full backfill is a long job and stays with the CLI (pnpm fortnox:sync --all)
+  // rather than a button someone has to sit and wait on.
   async function syncLedger(target: number | "current") {
     const data = await mutate<{ totalVouchers: number }>("/api/fortnox/sync", {
       key: `ledger-${target}`,
-      // Fortnox's financial-year id, which is what FortnoxFinancialYear.id
-      // holds and what syncLedger filters on.
+      // Fortnox's financial-year id, which is what FortnoxFinancialYear.id holds and
+      // what syncLedger filters on.
       body: target === "current" ? { scope: "current" } : { financialYearId: target },
       error: tCostCenters("syncFailed"),
     });
@@ -214,9 +196,6 @@ export function FortnoxClient({
     });
   }
 
-  // One row of the sync card: what it is, when it was last fetched, and the
-  // button that fetches it again. The chart and every ledger year are the same
-  // kind of thing, so they read as one list rather than two cards.
   function syncButton(key: string, label: string, onClick: () => void) {
     return (
       <IconButton
@@ -232,19 +211,12 @@ export function FortnoxClient({
 
   return (
     <div className="space-y-5">
-      {/* Three cards, each answering one question: is it connected, where
-          does an export land, and is what we mirror from Fortnox current. The
-          settings used to be split between the first card and the middle of
-          the chart of accounts, under its search box, so the page did not say
-          at a glance what could be set on it. */}
       <Card>
         <CardHeader
           title={t("connection")}
           subtitle={t("connectionSubtitle")}
           action={
             connected && fortnox.refreshFailed ? (
-              // Connecting again replaces the dead connection, keeping the
-              // voucher series, so there is nothing to disconnect first.
               <ButtonLink
                 href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
                 size="sm"
@@ -271,9 +243,6 @@ export function FortnoxClient({
           }
         />
         <CardBody>
-          {/* The access token's hour is not shown: it renews by itself and
-              said nothing an administrator could act on. Only a renewal
-              Fortnox refused is, since that one needs them to connect again. */}
           <FortnoxBanner
             ok={connected && !fortnox.refreshFailed}
             title={
@@ -313,8 +282,6 @@ export function FortnoxClient({
                   aria-label={t("voucherSeries")}
                   className="min-w-0 uppercase"
                 />
-                {/* Always there rather than appearing on the first keystroke:
-                    a button that materialises shifts the row beside it. */}
                 <Button
                   variant="secondary"
                   disabled={!connected || series === savedSeries}
@@ -365,16 +332,11 @@ export function FortnoxClient({
             </Button>
           }
         />
-        {/* Said once, rather than under each greyed-out button, and in words
-            rather than a tooltip nobody hovers on a phone. */}
         {!connected ? (
           <p className="border-b border-border px-inset py-3 text-sm text-muted">
             {tBookkeeping("connectFirst")}
           </p>
         ) : (
-          // When it last ran by itself, and what went wrong if anything did.
-          // A failure stays here until a run goes through, so a connection
-          // that has quietly stopped working is seen on this page.
           <div className="space-y-1 border-b border-border px-inset py-3 text-sm">
             <p className="text-muted">
               {lastSync.runningSince
@@ -394,12 +356,6 @@ export function FortnoxClient({
           </div>
         )}
 
-        {/* Two groups, because they are two kinds of thing. The registers are
-            lists the app books against, fetched whole. The ledger is what was
-            booked, fetched a financial year at a time. As one list of five
-            rows the difference was in the labels alone, and "Huvudbok 2025"
-            next to "Kontoplan" did not say why one had a year and the other
-            did not. Each group says what its rows are for. */}
         <SyncGroup title={t("groupRegisters")} hint={t("groupRegistersHint")}>
           <SyncRow
             label={t("chart")}
@@ -420,9 +376,6 @@ export function FortnoxClient({
             {syncButton("accounts", t("syncChart"), syncAccounts)}
           </SyncRow>
 
-          {/* The accounts themselves, for looking one up. Hundreds of rows, so
-              folded away until asked for: it was most of the page, and none
-              of it is a setting. */}
           {showAccounts && (
             <li className="border-b border-border bg-surface">
               <div className="px-inset py-3 sm:w-80">
@@ -505,15 +458,13 @@ export function FortnoxClient({
 
         <SyncGroup title={t("ledger")} hint={t("groupLedgerHint")}>
           {ledgerYears.length === 0 ? (
-            // Nothing fetched yet, so there are no years to list a button
-            // against. The current year is the one to start from.
             <SyncRow label={t("noYears")}>
               {syncButton("ledger-current", t("syncCurrentYear"), () => syncLedger("current"))}
             </SyncRow>
           ) : (
             ledgerYears.map((y) => (
-              // The year as a plain string: it is a label, not a quantity,
-              // and sv-SE would group it into "2 025".
+              // The year as a plain string: it is a label, not a quantity, and sv-SE
+              // would group it into "2 025".
               <SyncRow
                 key={y.id}
                 label={String(y.year)}
@@ -529,8 +480,6 @@ export function FortnoxClient({
               </SyncRow>
             ))
           )}
-          {/* About the ledger alone, so it sits in its group rather than at
-              the foot of the card. */}
           <li className="px-inset py-3 text-xs text-muted">
             {t.rich("openingBalancesNote", { code: (chunks) => <code>{chunks}</code> })}
           </li>
@@ -540,7 +489,6 @@ export function FortnoxClient({
   );
 }
 
-/** A heading over related sync rows, saying what they are for. */
 function SyncGroup({
   title,
   hint,
@@ -561,7 +509,6 @@ function SyncGroup({
   );
 }
 
-/** What is fetched, when it last was, and the controls for it on the right. */
 function SyncRow({
   label,
   meta,

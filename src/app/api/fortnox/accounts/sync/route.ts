@@ -12,8 +12,7 @@ export async function POST() {
   if (!g.ok) return g.res;
 
   try {
-    // The chart is per financial year, so pick the year containing today and
-    // fall back to the newest one Fortnox knows about.
+    // The chart is per financial year: the one containing today, else the newest.
     const years = await syncFinancialYears(g.token);
     const today = isoDay(new Date());
     const target = years.find((y) => y.fromDate <= today && today <= y.toDate) ?? years[0];

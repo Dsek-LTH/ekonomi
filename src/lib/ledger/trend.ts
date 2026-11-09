@@ -1,40 +1,20 @@
-// The same ledger the utfall table reads, cut the four ways a chart needs it.
-//
-// The report next door answers "what does each account come to over this
-// period", which is the question a table is good at. None of these are that:
-// they are the shape of the period rather than its contents, and every one of
-// them is a question the table can only be squinted at to answer.
-//
-//   months        the result month by month, and running
-//   costCenters   what each cost centre came to over the whole period
-//   stack         each cost centre's costs month by month
-//   sections      what kind of cost the period's money went to
-//
-// All four come out of one query. They are four projections of the same rows,
-// so computing them separately would be four scans of the largest table in the
-// app to produce four things that cannot disagree anyway.
-//
-// Amounts leave here in SEK, already oriented the way the report orients them:
-// income reads positive, costs read negative, and a result is their sum. The
-// charts then never have to know which way a BAS account points.
+// The ledger cut the four ways a chart needs it, all from one query: months, costCenters, stack, sections.
+// Amounts are in SEK, oriented as the report orients them: income positive, costs negative.
 import { prisma } from "@/lib/server/db";
 import { orient, sectionsFor, type BasSection } from "./bas";
 import { oreToSEK } from "@/lib/domain/money";
 import { NO_CC, costCenterMatcher, costCenterWhere } from "./cost-center-filter";
 
-/** The BAS section that is money coming in. Everything else in a result report
- *  is money going out, which is what makes `income`/`costs` a split of two. */
+/** The BAS section that is money coming in. Everything else in a result report is money going out. */
 const INCOME_SECTION = "intakter";
 
 export interface TrendMonth {
-  /** "YYYY-MM". Every month of the period is here, including empty ones: a
-   *  month nothing happened in is a fact about the year, not a gap to close. */
+  /** "YYYY-MM". Every month of the period is here, including empty ones. */
   month: string;
   income: number;
   costs: number; // negative
   result: number; // income + costs
-  /** The result summed from the period's first month up to and including this
-   *  one. On the chart it is the line you follow to see when a year turned. */
+  /** The result summed from the period's first month up to and including this one. */
   cumulative: number;
 }
 
@@ -45,14 +25,7 @@ export interface TrendCostCenter {
   income: number;
   costs: number; // negative
   result: number;
-  /**
-   * What the budget planned for this cost centre, oriented the same way, or
-   * null when no budget was compared against.
-   *
-   * The whole year's, always, however short the period is: a budget carries no
-   * monthly split, so there is nothing honest to cut it down to. Whatever shows
-   * this has to say so.
-   */
+  /** The budget for this cost centre, oriented the same way, or null. Always the whole year's (no monthly split). */
   budget: number | null;
 }
 
@@ -64,9 +37,7 @@ interface TrendSection {
 
 interface TrendStack {
   month: string;
-  /** Cost centre code (or "" for none) → what it spent that month, as a
-   *  positive magnitude. Costs only: a stack of results, which change sign
-   *  between committees and between months, is a shape with no meaning. */
+  /** Cost centre code (or "") to spend that month as a positive magnitude. Costs only. */
   values: Record<string, number>;
 }
 
@@ -89,9 +60,7 @@ interface TrendOptions {
   budget?: Map<string, number> | null;
 }
 
-/** How busy a cost centre was, which is what the ranking is ordered on. Not its
- *  result: one that took in 200 000 and spent 200 000 is among the busiest in
- *  the section, and its result is zero. */
+/** How busy a cost centre was (the ranking order), not its result. */
 const turnover = (c: TrendCostCenter) => Math.abs(c.income) + Math.abs(c.costs);
 
 /** "YYYY-MM" for a date, in UTC, which is the zone every ledger date is in. */
@@ -119,11 +88,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
     return Number.isFinite(n) ? sectionDefs.find((s) => n >= s.from && n <= s.to) : undefined;
   };
 
-  // The date is in the grouping, which is what makes this a series rather than
-  // a total. It comes back per day and is bucketed into months here rather than
-  // by the database: `date_trunc` would mean raw SQL for the one query in this
-  // module that could avoid it, and the row count a financial year produces at
-  // this grain is a few thousand, which is a list, not a problem.
+  // Per day and bucketed into months here, which avoids raw SQL (`date_trunc`).
   const grouped = await prisma.ledgerRow.groupBy({
     by: ["account", "costCenterCode", "costCenterName", "date"],
     where: {
@@ -153,9 +118,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
 
   for (const g of grouped) {
     const section = sectionOf(g.account);
-    // Balance-sheet accounts are in the same table and are not part of a
-    // result. Skipping them here is what makes every figure below a result
-    // figure without anything having to say so again.
+    // Balance-sheet accounts are not part of a result.
     if (!section) continue;
 
     const i = monthIndex.get(monthKey(g.date));
@@ -193,9 +156,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
     return { month, income: income[i], costs: costs[i], result, cumulative: running };
   });
 
-  // The budget, per cost centre and in total. Oriented through the same section
-  // table, so a budgeted cost lands negative exactly as the actual one does and
-  // the two can be drawn on one axis.
+  // Oriented through the same section table so a budgeted cost lands negative like the actual one.
   const budgetByCc = new Map<string, number>();
   let budgetTotal: number | null = null;
   if (opts.budget) {
@@ -211,9 +172,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
     }
   }
 
-  // A cost centre the budget names but the ledger never touched still belongs
-  // on the ranking: "budgeted 40 000, spent nothing" is one of the things the
-  // chart exists to show.
+  // A cost centre only the budget names still belongs on the ranking.
   const codes = new Set([...byCc.keys(), ...budgetByCc.keys()]);
   const names = await costCenterNames([...codes].filter((c) => c !== NO_CC && !byCc.get(c)?.name));
 
@@ -239,8 +198,7 @@ export async function getLedgerTrend(opts: TrendOptions): Promise<LedgerTrend> {
   return { months: monthRows, costCenters, stack, sections, budgetTotal };
 }
 
-/** Names for cost centres the ledger rows had none for, which is every one that
- *  only the budget mentions. */
+/** Names for cost centres only the budget mentions. */
 async function costCenterNames(codes: string[]): Promise<Map<string, string>> {
   if (codes.length === 0) return new Map();
   const known = await prisma.costCenter.findMany({

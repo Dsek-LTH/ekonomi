@@ -1,23 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Filing a day's takings in Fortnox.
-//
-// Deliberately the same shape as api/expenses/[id]/export, and since the shared
-// half moved to lib/fortnox/export.ts what is left here is what actually
-// differs, which is what this pins:
-//
-//   the series        takings have a verifikationsserie of their own, falling
-//                     back to the connection's
-//   the duplicate     the last check before anything is written over there,
-//                     against the day as it stands *now* rather than as it
-//                     stood at import, and before the upload so that a refusal
-//                     leaves nothing behind at all
-//   the document      already rendered, so unlike an utlägg there is no cover
-//                     to draw here
-//
-// The ordering rule itself (attachment first, voucher second) is pinned in the
-// expense export's test; the two go through the same helpers.
-
 const h = vi.hoisted(() => ({
   capabilities: ["BOOKKEEPING"] as string[],
   status: "BOOKED" as string,
@@ -110,8 +92,6 @@ vi.mock("@/lib/fortnox", () => ({
   FortnoxError,
 }));
 
-// The real matching rules (lib/income/voucher.ts) over a fake list, so what
-// is pinned here is which rule the route picks for which kind of report.
 vi.mock("@/lib/income/duplicate", async () => {
   const { incomeVoucherCoversDay, incomeVoucherKey } = await import("@/lib/income/voucher");
   return {
@@ -192,8 +172,6 @@ describe("POST /api/income/reports/[id]/export", () => {
   });
 
   it("checks for a duplicate before it uploads anything", async () => {
-    // A refusal has to leave nothing behind at all, which is only true while
-    // the check runs ahead of the upload.
     await exportIt();
     expect(h.calls[0]).toBe("fortnoxIncomeVouchers");
     expect(h.calls).toEqual([
@@ -214,9 +192,6 @@ describe("POST /api/income/reports/[id]/export", () => {
     expect(h.reportUpdate).not.toHaveBeenCalled();
   });
 
-  // A whole day carries every verksamhet's money, so an old per-verksamhet
-  // voucher or a day of fees on that date means some of it is already over
-  // there. Exporting the day would count that money twice.
   it("refuses a whole day when Fortnox has any older voucher for some of it", async () => {
     for (const description of ["Zettle - Källaren", "IR Zettle - Pub", "Zettleavgifter"]) {
       h.existing = [{ date: "2026-03-01", description, label: "B-3" }];
@@ -232,8 +207,6 @@ describe("POST /api/income/reports/[id]/export", () => {
     expect((await exportIt()).status).toBe(200);
   });
 
-  // An old per-verksamhet day is still exported on its own text: a sibling
-  // verksamhet's voucher on the same date is other money, not this.
   it("matches an old per-verksamhet day on its own text only", async () => {
     h.legacy = true;
     h.existing = [{ date: "2026-03-01", description: "Zettle - Pub", label: "B-4" }];

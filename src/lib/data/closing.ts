@@ -1,17 +1,7 @@
-// Reading a financial year for the bokslut: every voucher in the ledger, what
-// underlag the app holds for each, and where each stands in the review.
-//
-// Every voucher, not only the ones the app made. Bank fees, Swish settlements
-// and anything booked by hand in Fortnox are in the ledger too, and those are
-// exactly what a revisor asks about. Which of them the app knows is worked out
-// in lib/closing/evidence.ts.
-//
-// Filtered, sorted and paged here rather than in the database, unlike the
-// other lists. Which tab a voucher falls under, and where it stands in the
-// review, both depend on joins the schema has no relation for (the ledger is
-// Fortnox's mirror and cannot point at the app's records), so the database
-// cannot filter on them. A year is a few thousand vouchers, which is small
-// enough to hold whole for one request.
+// Every voucher in the ledger (bank fees, Swish settlements and hand-booked vouchers too), with the
+// underlag the app holds (lib/closing/evidence.ts) and its review standing.
+// Filtered, sorted and paged in memory: tab and review depend on joins the schema has no relation
+// for (the ledger is Fortnox's mirror). A year is a few thousand vouchers.
 import "server-only";
 
 import {
@@ -41,7 +31,6 @@ import { isoDay } from "@/lib/domain/date";
 export interface ClosingYear {
   /** Fortnox's financial-year id, which is what the URL carries. */
   id: number;
-  /** The calendar year it starts in, which is what people call it. */
   year: number;
   fromDate: string;
   toDate: string;
@@ -54,9 +43,7 @@ export interface ClosingVoucher {
   key: string;
   date: string;
   description: string;
-  /** The voucher's total: the sum of its debit rows. */
   amount: number;
-  /** What the review of this voucher has to be a review of. */
   contentHash: string;
   evidence: VoucherEvidence;
   review: Record<ReviewPass, ReviewState>;
@@ -86,7 +73,6 @@ export interface ClosingComment {
 
 export interface ClosingVoucherDetail extends ClosingVoucher {
   rows: ClosingVoucherRow[];
-  /** Every review in both passes, newest first. */
   history: (ReviewRecord & { current: boolean })[];
   thread: ClosingComment[];
 }
@@ -95,11 +81,9 @@ export interface ClosingProgress {
   total: number;
   settled: Record<ReviewPass, number>;
   questions: Record<ReviewPass, number>;
-  /** Reviews of vouchers that are no longer in the ledger. */
   orphaned: number;
 }
 
-/** The tabs of the voucher list. "all" first, the rest by evidence. */
 const CLOSING_TABS = ["all", "expense", "income", "none", "disagrees"] as const;
 export type ClosingTab = (typeof CLOSING_TABS)[number];
 
@@ -125,13 +109,7 @@ export async function getClosingYear(id: number): Promise<ClosingYear | null> {
   return y ? toYear(y, vouchers) : null;
 }
 
-/**
- * Fill in the fingerprint on vouchers synced before it existed.
- *
- * Once per year at most: the next sync writes it with everything else, and
- * until then the first read does it here. Computed from the stored rows in the
- * same shape the sync computes it from, so the two agree.
- */
+/** Fill in the fingerprint on vouchers synced before it existed, computed in the same shape as the sync. */
 async function backfillFingerprints(ids: readonly string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
   const vouchers = await prisma.ledgerVoucher.findMany({
@@ -166,11 +144,8 @@ async function backfillFingerprints(ids: readonly string[]): Promise<Map<string,
 }
 
 /**
- * The app's exported vouchers that can belong to this year.
- *
- * By the Fortnox year the export recorded. An export resolved by hand after an
- * uncertain outcome records no year (see the export resolve route), so those
- * are taken by their date instead.
+ * The app's exported vouchers that can belong to this year, by the Fortnox year the export recorded.
+ * A hand-resolved export records no year, so those are taken by date.
  */
 async function appVouchersFor(year: ClosingYear): Promise<AppVoucher[]> {
   const rows = await prisma.verification.findMany({
@@ -196,7 +171,6 @@ async function appVouchersFor(year: ClosingYear): Promise<AppVoucher[]> {
           title: true,
           deadlineWaivedAt: true,
           _count: { select: { receipts: true } },
-          // Who sent it to Fortnox, to hold against who konterade it.
           events: {
             where: { type: "EXPORTED" },
             orderBy: { createdAt: "desc" },
@@ -240,7 +214,6 @@ async function appVouchersFor(year: ClosingYear): Promise<AppVoucher[]> {
   });
 }
 
-/** Every review in the year, by voucher key. */
 async function reviewsFor(yearId: number): Promise<Map<string, ReviewRecord[]>> {
   const rows = await prisma.voucherReview.findMany({
     where: { financialYear: yearId },
@@ -280,7 +253,6 @@ async function commentCountsFor(yearId: number): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [voucherKey(r.series.toUpperCase(), r.number), r._count._all]));
 }
 
-/** Every voucher in the year with its underlag and its review, in ledger order. */
 async function yearVouchers(
   year: ClosingYear,
 ): Promise<{ vouchers: ClosingVoucher[]; orphaned: number }> {
@@ -355,7 +327,6 @@ const inTab = (tab: ClosingTab) => (v: ClosingVoucher) =>
       ? v.evidence.kind !== "none" && !v.evidence.agrees
       : v.evidence.kind === tab;
 
-/** Which review pick a voucher's standing in a pass answers to. */
 function reviewPick(s: ReviewState): ReviewPick {
   if (s.state === "unreviewed") return "unreviewed";
   if (s.state === "changed") return "changed";
@@ -373,8 +344,7 @@ function matchesSearch(v: ClosingVoucher, q: string): boolean {
   return haystack.some((s) => s.toLowerCase().includes(needle));
 }
 
-// "A-2" before "A-10": by series, then by number, which is the ledger's order
-// and the default.
+// By series then number ("A-2" before "A-10"), the ledger's order.
 const byNumber = (a: ClosingVoucher, b: ClosingVoucher) =>
   a.key.localeCompare(b.key, "sv", { numeric: true });
 
@@ -401,7 +371,6 @@ function progressOf(all: readonly ClosingVoucher[], orphaned: number): ClosingPr
   return progress;
 }
 
-/** How far each pass of the review has got over the whole year. */
 export async function getClosingProgress(year: ClosingYear): Promise<ClosingProgress> {
   const { vouchers, orphaned } = await yearVouchers(year);
   return progressOf(vouchers, orphaned);
@@ -412,11 +381,8 @@ function parseClosingTab(tab: string): ClosingTab {
 }
 
 /**
- * One page of the year's vouchers, how many fall under each tab, and how far
- * the review has got.
- *
- * `pass` is the one the review filter asks about: the viewer's own, or the
- * revisorer's for somebody who reviews in neither.
+ * One page of the year's vouchers, tab counts and review progress. `pass` is the one the review
+ * filter asks about: the viewer's own, or the revisorer's.
  */
 export async function getClosingVoucherPage(
   year: ClosingYear,
@@ -430,8 +396,7 @@ export async function getClosingVoucherPage(
   const { vouchers: all, orphaned } = await yearVouchers(year);
   const progress = progressOf(all, orphaned);
 
-  // The two filters share `picks`, told apart by their prefix (see
-  // SelectFilters in data-table.tsx). OR-ed within one, AND-ed across them.
+  // Both filters share `picks`, told apart by prefix (SelectFilters in data-table.tsx). OR within one, AND across.
   const reviewPicks = q.picks.flatMap((p) => (p.startsWith("review:") ? [p.slice(7)] : []));
   const flagPicks = q.picks.flatMap((p) => (p.startsWith("flag:") ? [p.slice(5)] : []));
 
@@ -459,7 +424,6 @@ export async function getClosingVoucherPage(
   };
 }
 
-/** One voucher, its rows, its underlag, its reviews and its thread. */
 export async function getClosingVoucher(
   year: ClosingYear,
   ref: { series: string; number: number },
@@ -484,7 +448,6 @@ export async function getClosingVoucher(
   ]);
   if (!ledger) return null;
 
-  // The review each pass currently stands on, if it stands on one.
   const isCurrent = (r: ReviewRecord) => {
     const s = voucher.review[r.pass];
     return s.state === "reviewed" && s.review.reviewedAt === r.reviewedAt;
@@ -514,10 +477,7 @@ export async function getClosingVoucher(
   };
 }
 
-/**
- * What a voucher says now, as its fingerprint, for a route about to record a
- * review or a comment against it. Null when the year has no such voucher.
- */
+/** A voucher's current fingerprint, for a route recording a review or comment against it. Null if absent. */
 export async function voucherFingerprintNow(
   yearId: number,
   ref: { series: string; number: number },

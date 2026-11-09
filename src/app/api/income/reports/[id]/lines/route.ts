@@ -1,5 +1,4 @@
-// Correct where a fetched day's sold lines book: verksamhet, account, cost
-// centre. Refused once the day is booked. See lib/income/lines.ts.
+// Correct where a fetched day's sold lines book (verksamhet, account, cost centre). Refused once booked. See lib/income/lines.ts.
 import { NextResponse } from "next/server";
 
 import { fail, gate } from "@/lib/api/guard";

@@ -12,8 +12,6 @@ export default async function AdminUsersPage() {
   await requirePage(canAccessSettings);
   const t = await getTranslations("admin.users");
 
-  // Only the members who hold a role beyond the baseline; anyone else is found
-  // through the search, which queries the server.
   const holders = await getRoleHolders();
 
   return (

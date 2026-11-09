@@ -28,9 +28,7 @@ export default function ChecklistClient({
   canEditTemplate,
 }: {
   year: ClosingYear;
-  /** Null until the year's checklist has been started. */
   items: ChecklistEntry[] | null;
-  /** May tick items and write their notes. */
   canWork: boolean;
   canEditTemplate: boolean;
 }) {
@@ -128,8 +126,7 @@ function ChecklistRow({
     <li className="flex gap-3 px-inset py-3">
       <div className="pt-0.5">
         {item.check || !canWork ? (
-          // Answered by the app, or read by somebody who does not tick: a mark,
-          // not a control.
+          // A mark, not a control.
           <span
             className={cn(
               "flex size-5 items-center justify-center rounded-full border",

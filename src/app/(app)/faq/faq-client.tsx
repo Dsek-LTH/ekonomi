@@ -1,10 +1,6 @@
 "use client";
 
-// Frågor & svar, the guild's "HOW TO UTLÄGG" turned into something you can
-// search at the register with your phone in one hand, instead of a PDF you have
-// to remember you were sent. The text itself lives in
-// messages/<locale>/faq-content/<category>.json (see faq-content.ts); this file
-// is only how it reads and how you find it.
+// Frågor & svar: the guild's "HOW TO UTLÄGG", searchable. The text lives in messages/<locale>/faq-content/<category>.json (see faq-content.ts).
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -21,10 +17,7 @@ import { searchText, type FaqBlock, type FaqItem, type FaqSection } from "./faq-
 
 const ALL = "all";
 
-// The anchor in the address bar, as state. Read through useSyncExternalStore
-// rather than in an effect: the server has no location, and this is the API
-// that lets the first client render agree with the server's and correct itself
-// straight after, instead of hydrating wrong or flashing.
+// The anchor in the address bar, via useSyncExternalStore: the server has no location, and this lets the first client render agree with the server's.
 const subscribeToHash = (onChange: () => void) => {
   window.addEventListener("hashchange", onChange);
   return () => window.removeEventListener("hashchange", onChange);
@@ -40,16 +33,12 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
   const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
   const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
 
-  // One lowercased haystack per question, built once. The answers don't change
-  // between keystrokes.
   const index = useMemo(
     () => sections.flatMap((s) => s.items.map((i) => [i.id, searchText(i)] as const)),
     [sections],
   );
 
-  // Every term has to hit, in any order and anywhere in the answer, so "alkohol
-  // pant" narrows rather than finding nothing. `null` means "not searching",
-  // which is a different state from "searched and matched everything".
+  // Every term has to hit, in any order. `null` means not searching, which differs from matched everything.
   const matches = useMemo(() => {
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (terms.length === 0) return null;
@@ -58,16 +47,10 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
     );
   }, [query, index]);
 
-  // What a question does when nobody has touched it. A search is a question,
-  // and a screen of collapsed headlines answers none of it, so a search opens
-  // what it found. Failing that, /faq#deadline opens the answer it names, which
-  // is what makes these anchors worth putting in a reminder mail.
+  // A search opens what it found. Failing that, /faq#deadline opens the answer it names (anchors used in reminder mails).
   const opensItself = (id: string) => (matches ? matches.has(id) : hash === id);
 
-  // Clicks are held as "differs from the default" rather than as the open set,
-  // so clearing a search folds the page back up without a reset step. The key
-  // carries the search and the anchor, so a click stops applying once the thing
-  // it was a reaction to is gone.
+  // Clicks are held as "differs from the default", keyed on the search and anchor, so clearing a search folds the page back without a reset.
   const clickKey = (id: string) => `${query}\u0000${hash}\u0000${id}`;
   const isOpen = (id: string) => (toggled.has(clickKey(id)) ? !opensItself(id) : opensItself(id));
 
@@ -88,12 +71,10 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
     .filter((s) => s.items.length > 0);
 
   const hits = sections.reduce((n, s) => n + matched(s).length, 0);
-  // What the line under the search field counts is what is on the screen, so it
-  // doesn't claim five hits while a category chip is showing one of them.
+  // The count is what is on screen, not all hits.
   const shown = visible.reduce((n, s) => n + s.items.length, 0);
 
-  // Counts only while searching. At rest they'd say how long each chapter is,
-  // which is not a thing anyone came here to learn.
+  // Counts only while searching.
   const options = [
     { value: ALL, label: t("all"), badge: matches ? hits : undefined },
     ...sections.map((s) => ({
@@ -113,9 +94,6 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
           aria-label={t("searchPlaceholder")}
           className="sm:max-w-md"
         />
-        {/* Which slice of the questions, so the underline register (the pills
-            these were would have read as "which set of questions is this
-            page about", which is not a choice this page offers. */}
         <div className="border-b border-border">
           <FilterTabs
             options={options}
@@ -138,8 +116,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
       {visible.map((section) => (
         <section key={section.id} className="space-y-3">
           <h2 className="text-xs font-medium text-muted">{section.label}</h2>
-          {/* overflow-hidden so a hovered first or last question doesn't
-              paint its background square over the card's corners. */}
+          {/* overflow-hidden so a hovered first or last question doesn't paint square over the card's corners. */}
           <Card className="divide-y divide-border overflow-hidden">
             {section.items.map((item) => (
               <Question
@@ -166,14 +143,10 @@ function Question({
   onToggle: () => void;
 }) {
   const panelId = `faq-${item.id}-answer`;
-  // 200ms and the app's one easing (see DESIGN.md → Motion). The global
-  // prefers-reduced-motion guard in globals.css cuts every duration here to
-  // nothing, so the answer arrives instead of unfolding for anyone who asked
-  // for that, no separate branch needed.
+  // 200ms and the app's one easing (DESIGN.md, Motion). The prefers-reduced-motion guard in globals.css handles reduced motion.
   const MOTION = "duration-200 ease-[var(--ease-out-quint)]";
   return (
-    // The id is on the row, not the button: an anchor should land on the whole
-    // question-and-answer, and it survives the button being re-rendered.
+    // The id is on the row so an anchor lands on the whole question-and-answer.
     <div id={item.id} className="scroll-mt-6">
       <button
         type="button"
@@ -191,15 +164,7 @@ function Question({
           )}
         />
       </button>
-      {/* The answer stays mounted and is opened by animating the row it sits in
-          from 0fr to 1fr, the one way to transition to a height nobody has
-          measured, and it costs no JS and no ResizeObserver. A browser that
-          won't interpolate `fr` still lands on the right two end states and
-          just snaps between them.
-
-          `inert` rather than an unmount: it takes the closed answer out of the
-          tab order and the accessibility tree immediately, while the height is
-          still on its way down, so nothing is reachable that isn't visible. */}
+      {/* Opened by animating the row from 0fr to 1fr (no JS, no ResizeObserver). `inert` rather than unmount takes the closed answer out of tab order and the accessibility tree at once. */}
       <div
         id={panelId}
         inert={!open}
@@ -209,10 +174,7 @@ function Question({
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
-        {/* Two wrappers, and both are load-bearing: the outer one is the grid
-            row being animated and clips what overflows it, and the inner one
-            carries the padding. On the outer, the bottom padding would keep a
-            closed answer 20px tall. */}
+        {/* Two wrappers, both load-bearing: the outer is the animated grid row and clips overflow, the inner carries the padding (on the outer it would keep a closed answer 20px tall). */}
         <div className="overflow-hidden">
           <div className="px-inset pb-5">
             <Answer blocks={item.a} />
@@ -303,14 +265,10 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
   const t = useTranslations("faq");
 
   return (
-    // Capped rather than full width: a receipt photographed portrait would
-    // otherwise stand taller than the screen inside an answer, and you'd scroll
-    // past the explanation to reach the picture it belongs to.
+    // Capped, or a portrait receipt photo would stand taller than the screen inside an answer.
     <div className="relative aspect-[3/4] max-w-xs overflow-hidden rounded-panel border border-border bg-surface">
       {block.src ? (
-        // The photo is contained, not cropped to fill: a cover crop cuts off the
-        // footer, which is half of what these pictures are here to show. Full
-        // size in a new tab for the details that survive neither.
+        // Contained, not cropped: a cover crop cuts off the footer. Full size in a new tab.
         <a
           href={block.src}
           target="_blank"
@@ -327,9 +285,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
           />
         </a>
       ) : (
-        // Stands in until the photo exists, and says which file to add. This
-        // page is maintained by whoever holds the treasury, and a frame that
-        // renders nothing is a frame nobody knows how to fill.
+        // Stands in until the photo exists, and says which file to add.
         <div className="flex size-full flex-col items-center justify-center gap-2 p-5 text-center">
           <IconReceipt className="size-7 text-faint" />
           <p className="text-sm font-medium text-muted">{t("imageMissing")}</p>
@@ -340,10 +296,7 @@ function ExamplePhoto({ block }: { block: Extract<FaqBlock, { t: "image" }> }) {
   );
 }
 
-// Amounts line up here for the same reason they line up in every table in the
-// app. Which column is money is worked out from the content rather than
-// declared, so the translations stay plain data: a column is numeric when every
-// cell in it is.
+// Which column is money is worked out from the content: numeric when every cell is.
 const NUMERIC = /^-?[\d\s]+([.,]\d+)?(\s*(kr|%|st))?$/i;
 
 function AnswerTable({ head, rows }: { head: string[]; rows: string[][] }) {
@@ -351,9 +304,7 @@ function AnswerTable({ head, rows }: { head: string[]; rows: string[][] }) {
   const align = (col: number) => (numeric[col] ? "text-right tabular-nums" : "text-left");
 
   return (
-    // The page column is narrow on a phone and a three-column table does not
-    // fit in it; the table scrolls inside its own box rather than making the
-    // page scroll sideways.
+    // The table scrolls inside its own box rather than making the page scroll sideways.
     <div className="overflow-x-auto overscroll-x-contain rounded-panel border border-border">
       <table className="w-full text-sm text-foreground">
         <thead>

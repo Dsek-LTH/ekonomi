@@ -5,22 +5,13 @@ import { TitleOrBar } from "@/components/shell/settings-title";
 import { PageHeaderSkeleton } from "@/components/shell/section-nav";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
 
-// Placeholders for a wait whose shape is already known. A skeleton is only
-// worth more than a spinner if it is honest about what is coming (same
-// widths, same paddings, same number of rows), otherwise the page reflows the
-// moment the data lands and the placeholder was a lie. So these mirror the real
-// components (Card, DataTable, PageShell) rather than approximating them, and
-// the composites below are the only ones a route should need.
-//
-// Everything here is inert: `aria-hidden` on each block, with one `role=status`
-// on the page wrapper, so a screen reader hears "loading" once instead of
-// reading out fifty empty boxes.
+// Placeholders mirror the real components (Card, DataTable, PageShell) in widths and rows, so the page does not reflow when data lands.
+// Blocks are aria-hidden with one role=status on the page wrapper.
 
 export function Skeleton({ className }: { className?: string }) {
   return <div aria-hidden className={cn("skeleton rounded-control", className)} />;
 }
 
-// Paragraph-shaped filler. The last line is short, the way a real one is.
 function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
     <div className={cn("space-y-2", className)}>
@@ -31,9 +22,6 @@ function SkeletonText({ lines = 3, className }: { lines?: number; className?: st
   );
 }
 
-// The whole page, standing in for PageShell + PageHeader. Every loading.tsx
-// starts here, so a route in flight keeps the width and the header rhythm of
-// the route that is arriving.
 export function SkeletonPage({
   width = "wide",
   back = false,
@@ -44,29 +32,21 @@ export function SkeletonPage({
   children,
 }: {
   width?: PageWidth;
-  /** Nested pages carry a "← parent" link above the title. */
   back?: boolean;
-  /** Pages whose header holds a primary button. */
   action?: boolean;
   titleWidth?: string;
-  /** Pages with a second line under the title (PageShell's `subtitle`). */
   subtitle?: boolean;
-  /** Placeholders for controls on the title's line (PageShell's `aside`). */
   aside?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const t = useTranslations("common");
   return (
     <div role="status" aria-busy="true" aria-label={t("loading")} className={PAGE_WIDTH[width]}>
-      {/* Inside a section of the nav, its name and tabs are drawn for real
-          and only the page's own parts wait. See PageHeaderSkeleton. */}
       <PageHeaderSkeleton
         back={back}
         aside={aside}
         right={action ? <Skeleton className="h-8 w-36 rounded-control" /> : undefined}
         title={
-          // In the settings overlay the title is drawn in its top bar, so its
-          // placeholder is too. See components/shell/settings-title.
           <TitleOrBar
             page={
               <>
@@ -83,17 +63,10 @@ export function SkeletonPage({
   );
 }
 
-// Row widths cycle rather than randomise: a placeholder that reshuffles on
-// every render draws the eye to itself, and on the server a random width would
-// not survive hydration anyway.
+// Row widths cycle rather than randomise: a random width would not survive hydration.
 const ROW_WIDTHS = ["w-2/5", "w-1/2", "w-1/3", "w-3/5", "w-5/12", "w-1/2"];
 
-// The inside of a DataTable: filter bar, header, rows, pagination footer. Goes
-// inside a <Card>, exactly as DataTable does, or use SkeletonTableCard, which
-// wraps it for you.
-//
-// Below md the real table is drawn as stacked cards, so this is too: the same
-// rows, laid out the way that width lays them out.
+// The inside of a DataTable, for use inside a <Card> or via SkeletonTableCard. Below md it is stacked cards, like the real table.
 export function SkeletonTable({
   rows = 6,
   columns = 5,
@@ -102,9 +75,7 @@ export function SkeletonTable({
 }: {
   rows?: number;
   columns?: number;
-  /** The search / date-range bar above the rows. */
   toolbar?: boolean;
-  /** A segmented control above the toolbar. */
   tabs?: boolean;
 }) {
   const cols = Array.from({ length: columns }, (_, i) => i);
@@ -128,7 +99,6 @@ export function SkeletonTable({
         </div>
       )}
 
-      {/* Phone: one card per row, headline plus a trailing value. */}
       <div className="divide-y divide-border md:hidden">
         {Array.from({ length: rows }, (_, r) => (
           <div key={r} className="flex items-start justify-between gap-3 px-inset py-4">
@@ -181,8 +151,6 @@ export function SkeletonTableCard(props: React.ComponentProps<typeof SkeletonTab
   );
 }
 
-// A Card with a header rule and some body content. The settings pages and the
-// detail screens are stacks of these.
 export function SkeletonCard({
   header = true,
   action = false,
@@ -190,7 +158,6 @@ export function SkeletonCard({
   className,
 }: {
   header?: boolean;
-  /** Cards whose header carries a button on the right. */
   action?: boolean;
   children?: React.ReactNode;
   className?: string;
@@ -211,7 +178,6 @@ export function SkeletonCard({
   );
 }
 
-// A bordered label/value list, a row per fact with the value side short.
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
     <div className="divide-y divide-border rounded-panel border border-border" aria-hidden>
@@ -225,9 +191,6 @@ export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   );
 }
 
-// A budget sheet: dense gridlines, a pinned header block, no filter bar. The
-// spreadsheet screens read nothing like the rest of the app, so their
-// placeholder shouldn't either.
 export function SkeletonSheet({ rows = 12, columns = 6 }: { rows?: number; columns?: number }) {
   const cols = Array.from({ length: columns }, (_, i) => i);
   return (
@@ -250,7 +213,6 @@ export function SkeletonSheet({ rows = 12, columns = 6 }: { rows?: number; colum
   );
 }
 
-// Stacked labelled fields, for the form screens.
 export function SkeletonFields({ fields = 3 }: { fields?: number }) {
   return (
     <div className="space-y-4">

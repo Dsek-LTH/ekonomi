@@ -11,8 +11,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ amount: str
   if (!g.ok) return g.res;
 
   const ore = Number(amount);
-  // From the path rather than a body, so it is worth checking rather than
-  // trusting: a non-integer here would reach Postgres as a type error.
+  // From the path, so check it: a non-integer would reach Postgres as a type error.
   if (!Number.isInteger(ore)) return fail(422, "request.invalidBody");
 
   const deleted = await orNotFound(

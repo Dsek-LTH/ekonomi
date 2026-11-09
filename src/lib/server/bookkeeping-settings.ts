@@ -1,9 +1,5 @@
-// The one way to read BookkeepingSettings.
-//
-// Every value here is a decision, and none has a default. Null means nobody
-// has made it yet, and whatever needs it refuses until somebody does: posting
-// to an account this app picked would put the section's money somewhere
-// nobody chose. No row at all is the same as a row where nothing is chosen.
+// The one way to read BookkeepingSettings. No value has a default: null means nobody decided yet, and
+// whatever needs it refuses (no row is the same as nothing chosen).
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -16,8 +12,7 @@ export interface BookkeepingSettingsValues {
   zettleFeeAccount: string | null;
   zettleFeeCostCenterId: string | null;
   zettleFeeCostCenterCode: string | null;
-  /** Null means "the same series as everything else", which is itself a choice
-   *  the settings screen offers. See incomeVoucherSeries. */
+  /** Null means "the same series as everything else", a choice the settings screen offers. See incomeVoucherSeries. */
   incomeVoucherSeries: string | null;
   /** Where a sale matching no product prefix goes. See lib/income/routing.ts. */
   incomeFallbackIncomeId: string | null;

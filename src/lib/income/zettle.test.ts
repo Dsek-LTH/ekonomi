@@ -13,10 +13,6 @@ import {
   zettleRange,
 } from "./zettle";
 
-// The cases intakt's Go tests pinned (zettle/timestamps_test.go,
-// report/timezone_test.go, report/sources_test.go, report/purchases_test.go
-// and the server's range test), which this code replaces.
-
 describe("zettleDay", () => {
   it.each([
     ["2025-01-15T10:30:00Z", "2025-01-15"],
@@ -103,8 +99,6 @@ describe("normalizePurchases", () => {
     expect(lines).toHaveLength(2);
     expect(lines[0].discount + lines[1].discount).toBe(100);
     expect(lines[0].total + lines[1].total).toBe(2900);
-    // Two thirds of the positive total is the bulle's, so is two thirds of
-    // the discount, rounded by largest remainder.
     expect(lines[1].discount).toBe(67);
   });
 
@@ -114,7 +108,13 @@ describe("normalizePurchases", () => {
         purchaseUUID: "p2",
         timestamp: "2026-07-01T22:30:00.000+0000",
         products: [
-          { name: "c-Kaffe", variantName: "Stor", quantity: "3", unitPrice: 2000, discountValue: 500 },
+          {
+            name: "c-Kaffe",
+            variantName: "Stor",
+            quantity: "3",
+            unitPrice: 2000,
+            discountValue: 500,
+          },
         ],
       },
     ]);
@@ -145,15 +145,25 @@ describe("normalizePurchases", () => {
     expect(lines.map((l) => l.total)).toEqual([-1000, 900]);
   });
 
-  // The crash this guards: a custom-amount sale came without a name, the
-  // line carried `undefined`, and routing called .trim() on it.
   it("reads a field Zettle left out as Go's zero value", () => {
     const [line] = normalizePurchases([
-      { purchaseUUID: "c1", timestamp: "2026-11-01T12:00:00Z", products: [{ quantity: "1", unitPrice: 5000 }] },
+      {
+        purchaseUUID: "c1",
+        timestamp: "2026-11-01T12:00:00Z",
+        products: [{ quantity: "1", unitPrice: 5000 }],
+      },
     ]);
-    expect(line).toMatchObject({ name: "", quantity: 1, unitPrice: 5000, discount: 0, total: 5000 });
+    expect(line).toMatchObject({
+      name: "",
+      quantity: 1,
+      unitPrice: 5000,
+      discount: 0,
+      total: 5000,
+    });
     expect(line).not.toHaveProperty("variant");
-    expect(normalizePurchases([{ purchaseUUID: "c2", timestamp: "2026-11-01T12:00:00Z" }])).toEqual([]);
+    expect(normalizePurchases([{ purchaseUUID: "c2", timestamp: "2026-11-01T12:00:00Z" }])).toEqual(
+      [],
+    );
   });
 
   it("leaves a purchase with nothing positive undiscounted", () => {
@@ -196,10 +206,26 @@ describe("normalizeFees", () => {
   it("keeps only the fees, as positive costs on their Swedish day", () => {
     expect(
       normalizeFees([
-        { timestamp: "2026-01-02T10:00:00.000+0100", amount: 5000, originatorTransactionType: TX_PAYMENT },
-        { timestamp: "2026-01-02T10:00:00.000+0100", amount: -150, originatorTransactionType: TX_PAYMENT_FEE },
-        { timestamp: "2026-01-02T10:00:00.000+0100", amount: 0, originatorTransactionType: TX_PAYMENT_FEE },
-        { timestamp: "2026-01-03T08:00:00.000+0100", amount: -4850, originatorTransactionType: TX_PAYOUT },
+        {
+          timestamp: "2026-01-02T10:00:00.000+0100",
+          amount: 5000,
+          originatorTransactionType: TX_PAYMENT,
+        },
+        {
+          timestamp: "2026-01-02T10:00:00.000+0100",
+          amount: -150,
+          originatorTransactionType: TX_PAYMENT_FEE,
+        },
+        {
+          timestamp: "2026-01-02T10:00:00.000+0100",
+          amount: 0,
+          originatorTransactionType: TX_PAYMENT_FEE,
+        },
+        {
+          timestamp: "2026-01-03T08:00:00.000+0100",
+          amount: -4850,
+          originatorTransactionType: TX_PAYOUT,
+        },
       ]),
     ).toEqual([{ date: "2026-01-02", amount: 150 }]);
   });

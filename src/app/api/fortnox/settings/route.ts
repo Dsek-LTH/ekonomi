@@ -1,6 +1,5 @@
-// Bookkeeping settings surfaced in Inställningar → Fortnox: the voucher series
-// exports land in (a property of the connection) and the accounts the booking
-// view pre-fills (app config, kept across a disconnect).
+// Bookkeeping settings in Inställningar → Fortnox: the voucher series (a property of the connection) and
+// the accounts the booking view pre-fills (app config, kept across a disconnect).
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessSettings } from "@/lib/domain/permissions";
@@ -18,10 +17,7 @@ export async function PATCH(req: Request) {
   const body = parsed.data;
   const data: { bankAccount?: string; memberDebtAccount?: string } = {};
 
-  // The schema says these are non-empty strings; that each names an account in
-  // the synced chart is what the lookup below establishes, and is the check
-  // worth having. A voucher posted to a number Fortnox has never heard of is
-  // the failure this prevents.
+  // The lookup below checks each account exists in the synced chart: a voucher to an unknown number fails in Fortnox.
   for (const field of ["bankAccount", "memberDebtAccount"] as const) {
     const value = body[field];
     if (value === undefined) continue;
@@ -31,8 +27,7 @@ export async function PATCH(req: Request) {
   }
 
   if (Object.keys(data).length) {
-    // Creating the row writes only what was chosen. No column has a default,
-    // so everything else stays unset. See lib/server/bookkeeping-settings.ts.
+    // Creating the row writes only what was chosen (no column has a default; lib/server/bookkeeping-settings.ts).
     await prisma.bookkeepingSettings.upsert({
       where: { id: "singleton" },
       create: { id: "singleton", ...data },

@@ -21,26 +21,15 @@ import { isAdmin } from "@/lib/domain/permissions";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import type { BudgetSummary } from "@/lib/data/budget";
 
-// A budget is a year and a name, and nothing above it. Several may share a year
-// The adopted one and whatever was drafted beside it, and they are siblings,
-// not versions of each other: no budget knows that another exists. So the list
-// is flat, and every row stands on its own.
-//
-// The rows arrive from the page's Server Component, like every other list in the
-// app. This used to fetch them itself, which meant it also owned the loading
-// state, rendered its own route skeleton, reloaded by hand after every write,
-// and showed the "no budgets yet" empty state when the request had actually
-// failed. `useMutation`'s refresh does all of that now, and a failure is the
-// route's error boundary rather than a silent empty list.
+// Budgets are siblings (several may share a year), so the list is flat. Rows arrive from the
+// page's Server Component and writes refresh through `useMutation`.
 export function BudgetListClient({
   budgets,
   year,
 }: {
-  /** Every budget, for the comparison and for copying from: either can reach
-   *  across years. The table shows only `year`'s. */
+  /** Every budget, for comparing and copying across years. The table shows only `year`'s. */
   budgets: BudgetSummary[];
-  /** The header's räkenskapsår, as the calendar year a budget is kept in.
-   *  Null before any year has been synced, and every budget is listed. */
+  /** The header's räkenskapsår as a calendar year. Null before any year is synced (all listed). */
   year: number | null;
 }) {
   const router = useProgressRouter();
@@ -54,23 +43,15 @@ export function BudgetListClient({
   const fileRef = useRef<HTMLInputElement>(null);
   const controls = useTableControls({ sortKey: "year", sortDir: "desc" });
 
-  // Which budgets the compare view opens with. Comparing is a question about two
-  // or more budgets, so it is chosen here rather than assumed from the list's
-  // order, any of them against any other, across years.
+  // Which budgets the compare view opens with: any of them against any other, across years.
   const [picked, setPicked] = useState<string[]>([]);
 
-  // A new budget is for the year being looked at, which is this one unless the
-  // header says otherwise.
+  // A new budget is for the year being looked at.
   const thisYear = year ?? new Date().getFullYear();
   const shown = year == null ? budgets : budgets.filter((b) => b.year === year);
 
-  // Creating asks nothing. Every budget starts as a year and a name that are
-  // both a pencil away on its own page, so a form here would only be collecting
-  // what the next screen already lets you change, and the empty one has to be
-  // named something before you know what it is anyway.
-  //
-  // `key` names the control that asked, so only that one spins: the header menu
-  // and every row's copy button all end up here, and they share one busy scope.
+  // Creating asks nothing: name and year are editable on the budget's own page. `key` names
+  // the control that asked, so only that one spins (they share one busy scope).
   async function create(
     body: { year: number; name?: string; copyFromId?: string },
     success: string,
@@ -87,10 +68,7 @@ export function BudgetListClient({
 
   const createEmpty = () => create({ year: thisYear }, t("created"));
 
-  // Duplicating makes a plain copy: the source's year, a derived name, and no
-  // tie back to what it was copied from. It keeps the year rather than guessing
-  // at next year's. If the copy is meant for another year, that is one edit on
-  // the page it just opened.
+  // A plain copy: the source's year, a derived name, no tie back to the source.
   const copyBudget = (b: BudgetSummary, key?: string) =>
     create(
       { year: b.year, name: t("copyOf", { name: b.name }), copyFromId: b.id },
@@ -98,12 +76,8 @@ export function BudgetListClient({
       key,
     );
 
-  // Importing a past budget from the interchange CSV (lib/domain/budget-csv.ts).
-  //
-  // Asks nothing, like every other way of starting a budget here: the year is
-  // the one in the header, as for every new budget (the route holds to it), and
-  // the name is the file's own. A past year's budget is imported with that year
-  // picked.
+  // Imports a past budget from the interchange CSV (lib/domain/budget-csv.ts). Asks nothing:
+  // the year is the header's (the route holds to it) and the name is the file's.
   async function importCsv(file: File) {
     const base = file.name.replace(/\.[^.]+$/, "");
     const year = thisYear;
@@ -126,11 +100,9 @@ export function BudgetListClient({
     notify.success(
       t("imported", { sheets: data.sheets, accounts: data.accounts, lines: data.lines }),
     );
-    // Two things the import cannot decide for the reader, and both change what
-    // the budget is worth: a sheet with no cost centre is left out of the Utfall
-    // comparison entirely (lib/ledger/comparison.ts), and a dropped row is a
-    // figure that is simply not in the budget. Neither is an error, so neither
-    // stops the import, but neither may pass silently either.
+    // Neither stops the import but neither may pass silently: a sheet with no cost centre is
+    // left out of the Utfall comparison (lib/ledger/comparison.ts), and a dropped row is
+    // missing from the budget.
     if (data.unmatchedCostCenters.length > 0) {
       notify.info(
         t("importUnmatched", {
@@ -175,17 +147,11 @@ export function BudgetListClient({
       key: "compare",
       header: "",
       className: "w-10 align-middle",
-      // On a phone it rides with the buttons at the foot of the card; there is
-      // no checkbox column there to put it in.
+      // On a phone it rides with the buttons at the foot of the card (no checkbox column).
       mobile: "actions",
       cell: (b) => (
-        // `z-10` because the row is a link: DataTable stretches the title
-        // cell's `before:` over the whole row, and this cell comes *earlier* in
-        // the row than that link, so with both at the auto stacking level the
-        // overlay won on tree order, and ticking a budget opened it instead.
-        // (The action buttons on other lists sit in the last column, after the
-        // link, which is why this only ever bit here.)
-        //
+        // `z-10`: the row is a link whose `before:` overlay DataTable stretches over the row,
+        // and this cell is earlier in tree order, so without it ticking opened the budget.
         <Checkbox
           className="z-10"
           checked={picked.includes(b.id)}
@@ -205,10 +171,8 @@ export function BudgetListClient({
       cell: (b) => <span className="text-sm font-medium tabular-nums">{b.year}</span>,
     },
     {
-      // Sortable and searchable on the date itself: "2026-04" narrows to that
-      // month's meetings, which is how anyone looking for a particular budget
-      // actually remembers it. A draft sorts by the empty string and so lands
-      // together with the others that were never adopted.
+      // Sortable and searchable on the date itself ("2026-04" narrows to a month). A draft sorts
+      // as the empty string.
       key: "adoptedAt",
       mobile: "meta",
       header: t("colAdopted"),
@@ -263,7 +227,6 @@ export function BudgetListClient({
                 tone="danger"
                 onClick={() => deleteBudget(b)}
                 loading={pending === b.id}
-                // A locked budget stays; the server refuses it either way.
                 disabled={b.lockedAt !== null}
               >
                 <IconTrash className="size-4" />
@@ -288,22 +251,12 @@ export function BudgetListClient({
         }}
       />
       <Card>
-        {/* No header of its own: the page's heading already says Budget, and
-            the table's footer counts the rows. Comparing rides the table's
-            toolbar beside "new", acting on the rows ticked below it. */}
         <ClientDataTable
           columns={columns}
           rows={shown}
           controls={controls}
-          // On the list's toolbar: it adds a budget to the list under it.
           action={
             <div className="flex items-center gap-2">
-              {/* Said in words. As an icon alone it was a pair of arrows
-                  nobody could read as "compare budgets", greyed out until two
-                  rows were ticked with nothing saying that ticking them is
-                  what it waits for. Two is the fewest that makes a comparison;
-                  there is no upper bound, the compare view gives each budget
-                  its own column. */}
               <span className="flex" data-tour="budget-compare">
                 {picked.length >= 2 ? (
                   <ButtonLink
@@ -322,7 +275,6 @@ export function BudgetListClient({
                 )}
               </span>
               {admin && (
-                // Not a form in a dropdown: two ways to start, each one click.
                 <span className="flex" data-tour="budget-new">
                   <Menu
                     label={t("new")}

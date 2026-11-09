@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 
-// The page's shape: the row of figures, then Din tur and Väntar på andra in the
-// wide column, and the calendar and the budget beside them.
 export default function Loading() {
   return (
     <SkeletonPage width="content" action titleWidth="w-40">

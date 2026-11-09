@@ -17,8 +17,7 @@ const { prisma } = await import("@/lib/server/db");
 const { attachDocument, DocumentTaken, readInvoiceScan, scanOf } =
   await import("./invoice-documents");
 
-// A document moving from the Inkorg onto an invoice: claimed only while it is
-// still in the Inkorg, and put last. Nothing is read off it on the way.
+// A document moving from the Inkorg onto an invoice: claimed only while still in the Inkorg, and put last.
 function fakeTx(claimed: number, lastPosition: number | null) {
   return {
     supplierInvoiceDocument: {

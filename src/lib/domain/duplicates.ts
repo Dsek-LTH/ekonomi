@@ -1,13 +1,5 @@
-// Is this utlägg one that has already been handed in?
-//
-// The usual mistake is the same receipt twice: photographed again a week later
-// because the first one seemed not to have gone through, or once as a draft and
-// again from scratch. What gives it away is the same amount on (nearly) the
-// same day, from the same person. Three days either side, because the date is
-// typed and the second time it is often typed off by one.
-//
-// A warning, never a refusal. Two pizzas on one evening is not a mistake, and
-// only the person filling this in knows which it is.
+// Is this utlägg one that has already been handed in? The same amount within three days either side
+// (the date is typed, so often off by one), from the same person. A warning, never a refusal.
 
 import { sekToOre } from "./money";
 

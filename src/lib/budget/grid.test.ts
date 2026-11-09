@@ -3,21 +3,11 @@ import { buildGrid, orderedColumns, toDisplay, toStored, type GridSheet } from "
 
 const columns = orderedColumns();
 
-// The letter of the Belopp column, which is where every formula lives. Read from
-// the layout rather than written down, so this doesn't have to be edited if a
-// column is ever inserted before it.
 const BELOPP = columns.find((c) => c.key === "expression")!.letter;
 const KONTO = columns.find((c) => c.key === "konto")!.letter;
 
-// SEX02: an income account with one row, then a cost account with two. Rows are
-// numbered from 1 with a section header before each kind:
-//   1 section (income) - 2 account 3010 - 3 line li1
-//   4 section (cost)   - 5 account 4010 - 6 line li2 - 7 line li3
-//
-// KM01 has no income at all, and is here for the subtlety that follows from
-// that: both section rows are emitted regardless, so a cost-only sheet still
-// starts its accounts at row 3 rather than row 2.
-//   1 section (income, empty) - 2 section (cost) - 3 account 4010 - 4 line li9
+// SEX02: an income account (1 section, 2 account 3010, 3 line li1), then a cost account (4 section, 5 account 4010, 6-7 lines).
+// KM01 has no income, but both section rows are still emitted: 1 section (income), 2 section (cost), 3 account 4010, 4 line li9.
 const sheets: GridSheet[] = [
   {
     code: "SEX02",
@@ -62,7 +52,6 @@ describe("buildGrid", () => {
     expect(grid.lineLoc.get("li9")).toEqual({ sheet: "KM01", row: 4 });
   });
 
-  // The same account code appears in several sheets; the row is per sheet.
   it("keys account codes by sheet", () => {
     expect(grid.acctCodeRow.get("SEX02|4010")).toBe(5);
     expect(grid.acctCodeRow.get("KM01|4010")).toBe(3);
@@ -97,8 +86,7 @@ describe("toStored: what was typed → what is kept", () => {
     expect(toStored("=2*TROJA_POLICY", "SEX02", grid)).toBe("=2*TROJA_POLICY");
   });
 
-  // An A1 word that names no real cell is left as typed, so the formula still
-  // shows what someone wrote rather than silently losing it.
+  // An A1 word naming no real cell is left as typed.
   it("leaves an A1 word that resolves to nothing alone", () => {
     expect(toStored(`=${BELOPP}99`, "SEX02", grid)).toBe(`=${BELOPP}99`);
     expect(toStored("=Z1", "SEX02", grid)).toBe("=Z1");
@@ -137,15 +125,13 @@ describe("toDisplay: what is kept → what is shown while editing", () => {
     expect(toDisplay("=account(SEX02, 9999)", "SEX02", grid)).toBe("=account(SEX02, 9999)");
   });
 
-  // The suffix formulas carried before the columns were named.
   it("still reads the legacy single-letter field suffix", () => {
     expect(toDisplay("=@Lli2:E", "SEX02", grid)).toBe(`=${BELOPP}6`);
   });
 });
 
 describe("round trip", () => {
-  // The property that matters: opening a formula for editing and closing it
-  // again without touching anything must not change what is stored.
+  // Opening a formula for editing and closing it unchanged must not change what is stored.
   it.each([
     `=${BELOPP}6`,
     `=${BELOPP}6+${BELOPP}7`,
@@ -158,8 +144,7 @@ describe("round trip", () => {
     expect(toDisplay(stored, "SEX02", grid)).toBe(typed);
   });
 
-  // The point of binding to ids: a row that moves keeps its meaning, and the
-  // formula follows it to its new coordinates.
+  // A row that moves keeps its meaning: the formula follows it to its new coordinates.
   it("follows a row that has moved", () => {
     const stored = toStored(`=${BELOPP}6`, "SEX02", grid); // li2, currently row 6
     // A row is inserted above li2, pushing it down one.

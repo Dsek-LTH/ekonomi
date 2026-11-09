@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { parseSwishAmount, parseSwishPayments, SwishParseError } from "./swish";
 
-// The cases intakt's report/swish_test.go and sources_test.go pinned, which
-// this parser replaces. Test data is made up: real exports carry payers' names
-// and phone numbers.
-
 const HEADER =
   "Radnr,Clnr,Kontonr,Bokfdag,Transdag,Valutadag,Mottagarnr,Mottagarnamn,Avsändarnr,Avsändarnamn,Meddelande,Tid,Belopp,Orderreferens";
 
@@ -37,8 +33,6 @@ describe("parseSwishPayments", () => {
     ]);
   });
 
-  // intakt once read the dates as UTC against a Swedish-midnight range, and
-  // the last day of every range silently dropped out.
   it("is inclusive at both ends, and a single day is a range", () => {
     const file = latin1(
       csv(

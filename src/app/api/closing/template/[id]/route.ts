@@ -4,9 +4,7 @@ import { parseBody } from "@/lib/api/parse";
 import { TemplateItemPatch } from "@/lib/api/schemas/closing";
 import { canAccessSettings } from "@/lib/domain/permissions";
 
-// Edit a template step, or retire it (`active: false`). Never deleted: a year
-// that was started from it still names it as where its item came from. A year
-// already started keeps its own copy and is not changed by any of this.
+// Retire with `active: false`, never delete: a year started from it still names it.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const g = await gate(canAccessSettings, "auth.adminOnly");
   if (!g.ok) return g.res;

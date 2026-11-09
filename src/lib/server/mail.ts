@@ -1,13 +1,5 @@
-// Sending one email, through the section's SMTP relay.
-//
-// The relay is the whole transport. It accepts mail from the cluster without
-// credentials in the usual setup, which is why SMTP_USER and SMTP_PASS are
-// optional: set them only if the relay asks for them.
-//
-// Unset SMTP_HOST means mail is off, a supported way to run like Fortnox and
-// intakt are. Mail is then written to the log instead of being sent, which is
-// what local development wants: every notification can be read in the
-// terminal, and nobody in the section gets a test mail from a laptop.
+// Sending one email through the section's SMTP relay (SMTP_USER and SMTP_PASS only if it asks). Unset
+// SMTP_HOST means mail is off: it is logged instead of sent.
 import "server-only";
 
 import { join } from "node:path";
@@ -23,21 +15,14 @@ export interface Mail {
   html?: string | null;
 }
 
-// The section's mark, attached to every HTML mail and drawn from it by content
-// id. Attached rather than linked: a mail client that blocks remote images
-// (most do, until asked) still shows an attached one, and nothing depends on
-// the app being reachable from wherever the mail is read. A PNG because no
-// common client draws SVG. public/, since the production image keeps it.
+// The section's mark, attached (not linked) to every HTML mail by content id, since clients block remote
+// images and none draw SVG. In public/, which the production image keeps.
 const LOGO = join(process.cwd(), "public", "email-logo.png");
 
-/** Whether a relay is configured. Off is not an error; see the note above. */
+/** Whether a relay is configured. */
 export const mailEnabled = (): boolean => !!process.env.SMTP_HOST;
 
-/**
- * The address mail is sent from. Required with a relay, since a relay that
- * accepts anything will still have its mail binned by the receiving end if the
- * sender is made up.
- */
+/** The address mail is sent from. Required with a relay, since a made-up sender gets binned. */
 function sender(): string {
   const from = process.env.MAIL_FROM;
   if (from) return from;
@@ -53,8 +38,7 @@ function relay(): Transporter {
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
-    // Implicit TLS on 465. Anywhere else nodemailer upgrades with STARTTLS
-    // when the relay offers it.
+    // Implicit TLS on 465; elsewhere nodemailer upgrades with STARTTLS.
     secure: port === 465,
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" }

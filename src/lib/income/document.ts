@@ -1,30 +1,8 @@
-// Rendering the intäktsräkning, and the one point at which it is kept.
-//
-// Two operations, deliberately apart:
-//
-//   renderIncomeDocument: bytes, and nothing else. What the review screen
-//                          reads. A day nobody books is a PDF nobody keeps.
-//   storeIncomeDocument:  the same bytes, written to object storage and
-//                          recorded on the report. Called when a day is
-//                          booked, because from that moment the document is
-//                          the evidence behind a figure in the ledger and has
-//                          to be the same bytes forever. They are the ones export
-//                          attaches to the voucher in Fortnox.
-//
-// It has been both ways round. Rendering at booking meant the document could
-// not be read until the takings had been booked on the strength of it, which is
-// backwards. Rendering *and storing* at import meant a term of Swish left a
-// hundred-odd PDFs in storage for days that were skipped or never booked. This
-// is the split those two attempts were circling: render whenever anyone looks,
-// store when it starts to matter.
-//
-// Rendering on demand is safe because the document is a function of the
-// report's lines: the same lines render to the same page. Review can change a
-// line's verksamhet, account or cost centre, and the page follows, since its
-// sections and its distribution table are built from exactly those. The
-// document's address carries the report's `updatedAt` for that reason (see
-// documentUrl in the review screen). Rendered in-process with typst
-// (lib/income/render.ts).
+// Rendering the intäktsräkning (typst, lib/income/render.ts) and storing it. Render on demand,
+// store at booking, because from then on the document is evidence behind a ledger figure and
+// export attaches those same bytes to the Fortnox voucher. The document's address carries the
+// report's `updatedAt`, since review edits change the page.
+
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
@@ -35,13 +13,10 @@ import { isLegacyReport } from "./legacy";
 import { renderIncomePdf } from "./render";
 import { isoDay } from "@/lib/domain/date";
 
-/**
- * Why a report has no document. Each maps to a message key under
- * `errors.income`, so a route can hand it straight to `fail()`.
- */
+/** Why a report has no document. Each is a message key under `errors.income`. */
 export type DocumentFailure =
   | { reason: "reportNotFound" }
-  /** Booked before the per-day voucher, and stored then. See lib/income/legacy.ts. */
+  /** Booked before the per-day voucher, and stored then. */
   | { reason: "legacyReport" }
   | { reason: "renderFailed"; detail: string }
   | { reason: "storeFailed" };
@@ -59,18 +34,8 @@ interface DocumentAttestation {
 }
 
 /**
- * Render a report to PDF bytes.
- *
- * Attested by `attestation`: the person reviewing the day. A report is a
- * statement someone stands behind, and every day is reviewed against this very
- * document before it is booked, so the one who approves it is that someone.
- * While it is a draft that is whoever is looking at it, which is who would be
- * approving it. Once booked the document is stored (below) with the reviewer's
- * name on it and never rendered again, so a booked day says the same thing
- * whoever opens it.
- *
- * It used to name the person who ran the fetch, which said nothing about who
- * had actually looked at the day.
+ * Render a report to PDF bytes, attested by `attestation`: the reviewer (while a draft, whoever is
+ * looking). Once booked the stored document is used and never re-rendered.
  */
 export async function renderIncomeDocument(
   reportId: string,
@@ -89,8 +54,7 @@ export async function renderIncomeDocument(
     },
   });
   if (!report) return { ok: false, reason: "reportNotFound" };
-  // An old report's document was stored when it was booked and is read from
-  // storage. This page cannot draw one, and has no business redrawing it.
+  // An old report's document is read from storage, not redrawn.
   if (isLegacyReport(report) || report.source === "ZETTLE_FEE") {
     return { ok: false, reason: "legacyReport" };
   }
@@ -123,18 +87,15 @@ export async function renderIncomeDocument(
     return { ok: true, bytes: await renderIncomePdf(data), filename };
   } catch (e) {
     console.error(`[income] rendering report ${reportId} failed`, e);
-    return { ok: false, reason: "renderFailed", detail: e instanceof Error ? e.message : String(e) };
+    return {
+      ok: false,
+      reason: "renderFailed",
+      detail: e instanceof Error ? e.message : String(e),
+    };
   }
 }
 
-/**
- * The report's stored document, rendering and storing it if it has none.
- *
- * Idempotent: a report that already has one is not rendered again, which is
- * what makes it safe for booking to call unconditionally. The key is derived
- * from the report id, so even a double call writes the same object twice rather
- * than leaving two. `attestation` is the reviewer, the one booking it.
- */
+/** The report's stored document, rendering and storing it if missing. Idempotent: the key derives from the report id. `attestation` is the booker. */
 export async function storeIncomeDocument(
   reportId: string,
   attestation: DocumentAttestation,
@@ -159,8 +120,7 @@ export async function storeIncomeDocument(
     return { ok: false, reason: "storeFailed" };
   }
 
-  // Only after the bytes are in storage: the row is what says a document
-  // exists, so writing it first would leave a row pointing at nothing.
+  // Only after the bytes are stored: the row says a document exists.
   await prisma.incomeReport.update({
     where: { id: reportId },
     data: { documentKey: key, documentFilename: rendered.filename },

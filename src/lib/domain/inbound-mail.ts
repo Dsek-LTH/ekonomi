@@ -1,9 +1,5 @@
-// What the app reads out of a mail forwarded to the levfaktura inkorg, and
-// what it decides from it. Pure: the Gmail side is lib/server/gmail.ts, the
-// writing is lib/server/inbound-mail.ts, and everything they found is handed
-// in here so the rules can be read, and tested, without either.
-
-// ── Who sent it ───────────────────────────────────────────────────
+// What the app reads out of a mail forwarded to the levfaktura inkorg, and what it decides from it.
+// Pure: the Gmail side is lib/server/gmail.ts, the writing is lib/server/inbound-mail.ts.
 
 /** `"Anna Berg" <anna.berg@dsek.se>` → its address (lower-cased) and name. */
 export function parseAddress(header: string | null | undefined): {
@@ -20,23 +16,14 @@ export function parseAddress(header: string | null | undefined): {
   return bare ? { address: bare[0].toLowerCase(), name: null } : null;
 }
 
-/** One `method=result` from an Authentication-Results header, with its
- *  properties: `dkim=pass header.i=@dsek.se` → { method, result, props }. */
+/** One `method=result` from an Authentication-Results header: `dkim=pass header.i=@dsek.se` → { method, result, props }. */
 interface AuthResult {
   method: string;
   result: string;
   props: Record<string, string>;
 }
 
-/**
- * The Authentication-Results header Gmail itself added, parsed. Null when
- * there is none from Gmail.
- *
- * Only Gmail's, and only the topmost: a header further down was there when the
- * mail arrived, which means whoever sent it could have written it. Gmail
- * prepends its own, and the Gmail API returns headers in the order they stand
- * in the mail, so the first one naming mx.google.com is the one Gmail wrote.
- */
+/** The Authentication-Results header Gmail itself added, or null. Only Gmail's and only the topmost (the API returns headers in mail order and Gmail prepends its own): a lower one could have been written by the sender. */
 function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
   const ours = headers.find((h) => h.trim().toLowerCase().startsWith("mx.google.com"));
   if (!ours) return null;
@@ -46,7 +33,6 @@ function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
     .map((part) => part.trim())
     .filter(Boolean)
     .flatMap((part) => {
-      // Comments in parentheses say nothing the properties do not.
       const clean = part.replace(/\([^)]*\)/g, " ");
       const [head, ...rest] = clean.split(/\s+/).filter(Boolean);
       const eq = head?.indexOf("=") ?? -1;
@@ -68,15 +54,7 @@ function gmailAuthResults(headers: readonly string[]): AuthResult[] | null {
 
 export type RejectReason = "noSender" | "foreignDomain" | "notAuthenticated";
 
-/**
- * Why a mail is refused, or null when it is taken.
- *
- * Two questions. Is it from the section's own domain (only members forward
- * invoices in; a supplier writing to the address directly is not a way in), and
- * did Gmail check that it really was: DMARC passing for that domain, or failing
- * that a DKIM signature from it that verified. A From header on its own is a
- * line anyone can type.
- */
+/** Why a mail is refused, or null when taken. It must be from the section's own domain, and Gmail must have verified it (DMARC pass, or failing that a verified DKIM signature from it): a From header alone is typeable by anyone. */
 export function rejectReason(
   from: { address: string } | null,
   authResultsHeaders: readonly string[],
@@ -99,23 +77,13 @@ export function rejectReason(
   return dmarc || dkim ? null : "notAuthenticated";
 }
 
-// ── What it says ──────────────────────────────────────────────────
-
-// The line a mail client puts between what the forwarder wrote and what they
-// forwarded. Gmail's, in the two languages the section writes in, and the
-// Outlook and Apple shapes, which open the quoted mail with its From line.
+// The line a mail client puts between what the forwarder wrote and what they forwarded (Gmail's, in
+// Swedish and English, and the Outlook and Apple shapes, which open the quoted mail with its From line).
 const FORWARD_MARKER =
   /^\s*(?:-{3,}\s*(?:forwarded message|vidarebefordrat meddelande|original message|ursprungligt meddelande)\s*-{3,}|begin forwarded message:|vidarebefordrat brev:)\s*$/im;
 const OUTLOOK_HEADER = /^\s*(?:from|från):\s.+$/im;
 
-/**
- * Split a forwarded mail's text into what the forwarder wrote and what was
- * forwarded, and read who the forwarded mail was from.
- *
- * Whatever comes first of the forward marker and a quoted From line is the
- * boundary. With neither, the whole text is the note: somebody who attached a
- * PDF to a fresh mail wrote nothing but the note.
- */
+/** Split a forwarded mail's text into the forwarder's note and the forwarded part, and read who it was from. The first of the forward marker and a quoted From line is the boundary; with neither, all of it is the note. */
 export function splitForward(text: string | null | undefined): {
   note: string | null;
   originalFrom: string | null;
@@ -142,34 +110,15 @@ export function cleanSubject(subject: string | null | undefined): string | null 
   return clean || null;
 }
 
-// ── Whose it is ───────────────────────────────────────────────────
-
 export type AutoRule = "costCenter" | "unitName" | "forwarder";
 
 export interface AutoAssignment {
   resultUnitId: string;
   rule: AutoRule;
-  /** What matched: the cost centre code, the unit's name, or the forwarder. */
   match: string;
 }
 
-/**
- * Which result unit a forwarded invoice goes to without anybody sorting it, or
- * null when nothing settles it. Optional by design: a forward that says nothing
- * lands in the inkorg as it would have anyway.
- *
- * In order, and the first that settles it wins:
- *
- *   1. a cost centre code in the note or subject ("SEX01"), when every code
- *      named belongs to the same unit;
- *   2. a unit named in so many words ("till Sexmästeriet"), when exactly one is;
- *   3. a forwarder who answers for exactly one unit.
- *
- * Two codes from different units, or two units named, is a forwarder telling a
- * person something, and the invoice is left for one. Nothing is guessed from
- * the supplier here. That is a suggestion shown to triage, not an assignment,
- * because one supplier often serves several units.
- */
+/** Which result unit a forwarded invoice goes to without anybody sorting it, or null. The first that settles it wins: (1) cost centre codes in the note or subject, all in one unit; (2) exactly one unit named; (3) a forwarder who answers for exactly one unit. Conflicts leave it for triage. The supplier is never used: one supplier often serves several units. */
 export function autoAssign(args: {
   text: string;
   units: readonly { id: string; name: string }[];

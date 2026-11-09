@@ -18,7 +18,6 @@ import { ROLES } from "@/lib/domain/permissions";
 import type { ClosingCheck, Role } from "@/lib/domain/types";
 import { cn } from "@/lib/ui/utils";
 
-/** The editable fields of a step, as the form holds them. */
 interface Draft {
   title: string;
   howTo: string;
@@ -190,7 +189,6 @@ function TemplateRow({
 function NewStep() {
   const t = useTranslations("closing.template");
   const { pending, mutate } = useMutation();
-  // A new key after each save starts the form over empty.
   const [round, setRound] = useState(0);
 
   return (
