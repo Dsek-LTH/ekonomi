@@ -3,31 +3,41 @@ import "server-only";
 // Period figures over the same movement log the list reads (shelf value is the sum of movements, no snapshot
 // table). Pricing: lib/stock/value.ts.
 import { prisma } from "@/lib/server/db";
-import { getStockLevels, type StockLevelDto } from "./stock";
-import { CATEGORIES } from "@/lib/domain/categories";
+import { getStockGroups, getStockLevels, type StockLevelDto } from "./stock";
 import type { DrinkCategory, StockEntryKind } from "@/lib/domain/types";
 import { hasTag } from "@/lib/stock/tags";
 import { stockholmDay, today } from "@/lib/domain/date";
+import type { StockSlug } from "@/lib/stock/stocks";
 
 /** What the screen narrowed itself to. Nothing set means the whole shelf, all of time. */
 interface StockStatsQuery {
+  stock: StockSlug;
   /** Inclusive, `YYYY-MM-DD`. Absent means "since the first movement". */
   from?: string;
   /** Inclusive. Absent means today. */
   to?: string;
-  categories?: DrinkCategory[];
+  /** Product types, by group id. */
+  groups?: string[];
   tags?: string[];
 }
 
 export interface ValuePoint {
   date: string;
-  /** Öre, cumulative, one per drink type. Zero where that type held nothing. */
-  byCategory: Record<DrinkCategory, number>;
+  /** Öre, cumulative, one per product type (group id). Zero where that type held nothing. */
+  byGroup: Record<string, number>;
   totalOre: number;
 }
 
-interface CategoryHolding {
-  category: DrinkCategory;
+/** A product type, as the charts name and colour it. */
+export interface StatsGroup {
+  id: string;
+  name: string;
+  /** The drink type it stands for, where it stands for one: what gives it its familiar colour. */
+  category?: DrinkCategory;
+}
+
+interface GroupHolding {
+  groupId: string;
   valueOre: number;
   units: number;
   /** Null when nobody has said how much a unit holds. */
@@ -57,15 +67,17 @@ interface PeriodFlow {
 interface ProductMover {
   id: string;
   name: string;
-  category: DrinkCategory;
+  groupId: string;
   /** Öre that left the shelf through this product in the period and did not come back, positive. */
   outOre: number;
   valueOre: number;
 }
 
 export interface StockStats {
+  /** The stock's product types, in the order every chart stacks and lists them. */
+  groups: StatsGroup[];
   points: ValuePoint[];
-  holdings: CategoryHolding[];
+  holdings: GroupHolding[];
   flow: PeriodFlow;
   movers: ProductMover[];
   /** Every tag any product carries, not only those surviving the filter, or narrowing would leave nothing to widen with. */
@@ -73,9 +85,6 @@ export interface StockStats {
   /** The whole shelf, whatever the filter says. */
   wholeShelfOre: number;
 }
-
-const zero = (): Record<DrinkCategory, number> =>
-  Object.fromEntries(CATEGORIES.map((c) => [c, 0])) as Record<DrinkCategory, number>;
 
 /** The calendar day a movement belongs to, in Stockholm, not UTC (UTC "now" is yesterday for two hours of every Swedish evening; lib/domain/date.ts). */
 const day = (d: Date): string => stockholmDay.format(d);
@@ -91,20 +100,35 @@ const destroyed = (kind: StockEntryKind): boolean => kind === "WASTE" || kind ==
  * nothing). `withSpill` includes spill, for a product's own line; the screen's four figures must not overlap.
  */
 const gone = (kind: StockEntryKind, valueDeltaOre: number, withSpill: boolean): number =>
-  kind === "CHECKOUT" || kind === "RETURN" || (withSpill && destroyed(kind)) ? -valueDeltaOre : 0;
+  kind === "CHECKOUT" ||
+  kind === "RETURN" ||
+  kind === "ISSUE" ||
+  kind === "WITHDRAWAL" ||
+  (withSpill && destroyed(kind))
+    ? -valueDeltaOre
+    : 0;
 
 /** Everything the statistics page shows, in two queries. The series emits a point on each day something happened. */
-export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats> {
+export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
   const to = q.to || today();
-  const levels = await getStockLevels(to);
+  const [levels, groupRows] = await Promise.all([
+    getStockLevels(q.stock, to),
+    getStockGroups(q.stock),
+  ]);
+  const groups: StatsGroup[] = groupRows.map((g) => ({
+    id: g.id,
+    name: g.name,
+    category: g.category ?? undefined,
+  }));
+  const zero = (): Record<string, number> => Object.fromEntries(groups.map((g) => [g.id, 0]));
 
   const chosen = (p: StockLevelDto): boolean =>
-    (!q.categories?.length || q.categories.includes(p.category)) &&
+    (!q.groups?.length || q.groups.includes(p.groupId)) &&
     (!q.tags?.length || q.tags.some((tag) => hasTag(p.tags, tag)));
 
   const kept = levels.filter(chosen);
   const keptIds = new Set(kept.map((p) => p.id));
-  const categoryOf = new Map(kept.map((p) => [p.id, p.category]));
+  const groupOf = new Map(kept.map((p) => [p.id, p.groupId]));
 
   // Every movement up to the end of the period, before `from` as well as after: the opening value is everything earlier.
   const entries = keptIds.size
@@ -120,20 +144,20 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
   const out = new Map<string, number>();
 
   /** End-of-day shelf value on each day something happened, and the value going into the window. */
-  const closes = new Map<string, Record<DrinkCategory, number>>();
+  const closes = new Map<string, Record<string, number>>();
   let opening = zero();
 
   for (const e of entries) {
-    const category = categoryOf.get(e.productId);
-    if (!category) continue;
+    const group = groupOf.get(e.productId);
+    if (!group) continue;
     const date = day(e.occurredAt);
     if (q.from && date < q.from) {
-      running[category] += e.valueDeltaOre;
+      running[group] += e.valueDeltaOre;
       opening = { ...running };
       continue;
     }
 
-    running[category] += e.valueDeltaOre;
+    running[group] += e.valueDeltaOre;
     closes.set(date, { ...running });
 
     if (e.kind === "PURCHASE") flow.purchasedOre += e.valueDeltaOre;
@@ -160,24 +184,24 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
     const date = day(cursor);
     carried = closes.get(date) ?? carried;
     if (i % every === 0 || i === days - 1) {
-      const byCategory = { ...carried };
+      const byGroup = { ...carried };
       points.push({
         date,
-        byCategory,
-        totalOre: CATEGORIES.reduce((sum, c) => sum + byCategory[c], 0),
+        byGroup,
+        totalOre: groups.reduce((sum, g) => sum + (byGroup[g.id] ?? 0), 0),
       });
     }
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
-  const holdings: CategoryHolding[] = CATEGORIES.map((category) => {
-    const rows = kept.filter((p) => p.category === category);
+  const holdings: GroupHolding[] = groups.map((group) => {
+    const rows = kept.filter((p) => p.groupId === group.id);
     const litres = rows.reduce<number | null>(
       (sum, p) => (sum == null || p.onHand.totalMl == null ? null : sum + p.onHand.totalMl / 1000),
       0,
     );
     return {
-      category,
+      groupId: group.id,
       valueOre: rows.reduce((sum, p) => sum + p.onHand.valueOre, 0),
       units: rows.reduce((sum, p) => sum + p.onHand.units, 0),
       litres,
@@ -189,7 +213,7 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
     .map((p) => ({
       id: p.id,
       name: p.name,
-      category: p.category,
+      groupId: p.groupId,
       outOre: out.get(p.id) ?? 0,
       valueOre: p.onHand.valueOre,
     }))
@@ -199,6 +223,7 @@ export async function getStockStats(q: StockStatsQuery = {}): Promise<StockStats
     .slice(0, 8);
 
   return {
+    groups,
     points,
     holdings,
     flow,

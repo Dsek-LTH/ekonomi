@@ -1,12 +1,9 @@
 "use client";
 
-// Stacked area of the cellar's worth by drink type, hand-drawn SVG with the app's tokens rather than a chart library.
+// Stacked area of a stock's worth by product type, hand-drawn SVG with the app's tokens rather than a chart library.
 import { useId, useMemo } from "react";
 import { useTranslations } from "next-intl";
 
-import { CATEGORIES } from "@/lib/domain/categories";
-import type { DrinkCategory } from "@/lib/domain/types";
-import { DRINK_SERIES } from "@/lib/ui/chart-colors";
 import {
   axisTicks,
   labelPositions,
@@ -22,15 +19,25 @@ import { oreToSEK } from "@/lib/domain/money";
 
 export interface ValuePoint {
   date: string;
-  byCategory: Record<DrinkCategory, number>;
+  /** Öre per product type, by group id. */
+  byGroup: Record<string, number>;
   totalOre: number;
+}
+
+/** A band of the chart: a product type, named and coloured by the caller (lib/ui/chart-colors.ts). */
+export interface ValueSeries {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export function StockValueChart({
   points,
+  series,
   className,
 }: {
   points: ValuePoint[];
+  series: ValueSeries[];
   className?: string;
 }) {
   const t = useTranslations("stock.stats");
@@ -56,18 +63,18 @@ export function StockValueChart({
   /** One closed path per band, stacked from the bottom: each needs its own colour and its underside is the previous band's top, reversed. */
   const bands = useMemo(() => {
     const floors = points.map(() => 0);
-    return CATEGORIES.map((category) => {
-      const tops = points.map((p, i) => floors[i] + Math.max(0, p.byCategory[category] ?? 0));
+    return series.map((band) => {
+      const tops = points.map((p, i) => floors[i] + Math.max(0, p.byGroup[band.id] ?? 0));
       const up = points.map((_, i) => `${x(i)},${y(tops[i])}`);
       const down = points.map((_, i) => `${x(i)},${y(floors[i])}`).reverse();
       const carries = tops.some((v, i) => v - floors[i] > 0);
       const d = `M${up.join("L")}L${down.join("L")}Z`;
       for (let i = 0; i < floors.length; i++) floors[i] = tops[i];
-      return { category, d, carries };
+      return { band, d, carries };
     });
     // `x` and `y` read the geometry, so a change of coordinate space must redraw the bands. `geometry` is a stable module constant.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, top, geometry]);
+  }, [points, series, top, geometry]);
 
   const hovered = at == null ? null : points[at];
 
@@ -104,12 +111,12 @@ export function StockValueChart({
           />
 
           <g clipPath={`url(#${clipId})`}>
-            {bands.map(({ category, d, carries }) =>
+            {bands.map(({ band, d, carries }) =>
               carries ? (
                 <path
-                  key={category}
+                  key={band.id}
                   d={d}
-                  fill={DRINK_SERIES[category]}
+                  fill={band.color}
                   // A 2px gap in the card's colour keeps two bands from reading as one shape.
                   stroke="var(--color-background)"
                   strokeWidth={2}
@@ -153,19 +160,21 @@ export function StockValueChart({
           >
             <p className="mb-1.5 text-xs font-medium tabular-nums">{hovered.date}</p>
             <dl className="space-y-0.5">
-              {CATEGORIES.filter((c) => (hovered.byCategory[c] ?? 0) !== 0).map((c) => (
-                <div key={c} className="flex items-center gap-1.5 text-xs">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-mark"
-                    style={{ background: DRINK_SERIES[c] }}
-                  />
-                  <dt className="min-w-0 flex-1 truncate text-muted">{t(`category.${c}`)}</dt>
-                  <dd className="tabular-nums">
-                    {formatNumber(oreToSEK(hovered.byCategory[c]), 0, 0)}
-                  </dd>
-                </div>
-              ))}
+              {series
+                .filter((s) => (hovered.byGroup[s.id] ?? 0) !== 0)
+                .map((s) => (
+                  <div key={s.id} className="flex items-center gap-1.5 text-xs">
+                    <span
+                      aria-hidden
+                      className="size-2 shrink-0 rounded-mark"
+                      style={{ background: s.color }}
+                    />
+                    <dt className="min-w-0 flex-1 truncate text-muted">{s.name}</dt>
+                    <dd className="tabular-nums">
+                      {formatNumber(oreToSEK(hovered.byGroup[s.id]), 0, 0)}
+                    </dd>
+                  </div>
+                ))}
               <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 text-xs font-medium">
                 <dt className="min-w-0 flex-1">{t("total")}</dt>
                 <dd className="tabular-nums">{formatNumber(oreToSEK(hovered.totalOre), 0, 0)}</dd>
@@ -175,16 +184,12 @@ export function StockValueChart({
         )}
       </div>
 
-      {/* Always present: five bands cannot be told apart by colour alone. */}
+      {/* Always present: several bands cannot be told apart by colour alone. */}
       <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        {CATEGORIES.map((c) => (
-          <span key={c} className="flex items-center gap-1.5 text-xs text-muted">
-            <span
-              aria-hidden
-              className="size-2.5 rounded-mark"
-              style={{ background: DRINK_SERIES[c] }}
-            />
-            {t(`category.${c}`)}
+        {series.map((s) => (
+          <span key={s.id} className="flex items-center gap-1.5 text-xs text-muted">
+            <span aria-hidden className="size-2.5 rounded-mark" style={{ background: s.color }} />
+            {s.name}
           </span>
         ))}
       </figcaption>

@@ -31,6 +31,14 @@ export function seriesColor(index: number): string {
  * The five drink types on the shared palette: beer amber, wine pink, spirits blue. Of the assignments keeping those,
  * this one has the largest minimum distance (ΔE 13.2) between neighbours in `CATEGORIES` order.
  */
+/**
+ * The colour of a product type. One that stands for a drink type keeps that drink's colour, so the bar's charts read
+ * as they always have. Any other takes the next of the shared palette by its place in the list.
+ */
+export function groupColor(group: { category?: DrinkCategory }, index: number): string {
+  return group.category ? DRINK_SERIES[group.category] : seriesColor(index);
+}
+
 export const DRINK_SERIES: Record<DrinkCategory, string> = {
   OL: "var(--chart-4)", // amber
   OVRIG_JASTDRYCK: "var(--chart-2)", // purple

@@ -6,10 +6,10 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateEvent } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { WriteStockCells } from "@/lib/api/schemas/stock";
-import { canManageStock } from "@/lib/domain/permissions";
 import { entryFault } from "@/lib/stock/entry";
 import { heldOnHandMany, openColumns, openOf } from "@/lib/server/stock-state";
 import { replayProduct } from "@/lib/server/stock-replay";
@@ -25,10 +25,10 @@ import {
 } from "@/lib/stock/cells";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const g = await gate(canManageStock, "stock.noAccess");
+  const { id } = await params;
+  const g = await gateEvent(id, "manage");
   if (!g.ok) return g.res;
 
-  const { id } = await params;
   const parsed = await parseBody(req, WriteStockCells);
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
@@ -38,7 +38,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const productIds = [...new Set(body.cells.map((c) => c.productId))];
   const products = await prisma.stockProduct.findMany({
-    where: { id: { in: productIds } },
+    // Only this stock's products: a night cannot draw on the other shelf.
+    where: { id: { in: productIds }, stockId: g.stock },
     select: {
       id: true,
       kind: true,

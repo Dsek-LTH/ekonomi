@@ -2,21 +2,23 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate, orNotFound } from "@/lib/api/guard";
+import { fail, orNotFound } from "@/lib/api/guard";
+import { gateProduct } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { PatchStockProduct } from "@/lib/api/schemas/stock";
-import { canManageStock } from "@/lib/domain/permissions";
 import {
   eanTaken,
   nameTaken,
   nextInternalCode,
   typedInternalCode,
+  resolveGroup,
 } from "@/lib/server/stock-product-guard";
 import { isInternalCode } from "@/lib/stock/barcode";
+import { STOCKS } from "@/lib/stock/stocks";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageStock, "stock.noAccess");
+  const g = await gateProduct(id, "manage");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PatchStockProduct);
@@ -29,6 +31,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     select: {
       kind: true,
       name: true,
+      groupId: true,
+      packSize: true,
       category: true,
       abv: true,
       unitMl: true,
@@ -46,6 +50,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const after = { ...existing, ...body };
   if (after.kind === "VOLUME" && !after.nominalMl) {
     return fail(422, "stock.calibrationNoVolume");
+  }
+  const traits = STOCKS[g.stock];
+  if (traits.filesRestaurangrapport && (!after.category || after.abv == null)) {
+    return fail(422, "stock.categoryRequired");
+  }
+  if (!traits.usesOpenLevels && after.kind === "VOLUME") return fail(422, "stock.unitOnly");
+  // Another group moves the product's value between two stock accounts, so it has to be this stock's.
+  if (body.groupId && !(await resolveGroup(g.stock, body.groupId, null))) {
+    return fail(422, "stock.groupRequired");
   }
 
   // Excluding this product, so keeping its own barcode is not a clash. Marked as having none: keep
@@ -68,7 +81,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data = {
     name: body.name,
     kind: body.kind,
-    category: body.category,
+    groupId: body.groupId,
+    packSize: body.packSize,
+    category: traits.filesRestaurangrapport ? body.category : undefined,
     abv: body.abv,
     unitMl: body.unitMl,
     nominalMl: body.nominalMl,
@@ -126,7 +141,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageStock, "stock.noAccess");
+  const g = await gateProduct(id, "manage");
   if (!g.ok) return g.res;
 
   const gone = await orNotFound(

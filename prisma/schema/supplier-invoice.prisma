@@ -76,7 +76,8 @@ enum SupplierInvoiceEventType {
   BOOKED
   /// A document from the Inkorg added to it.
   DOCUMENT_ATTACHED
-  /// Created in Fortnox. `comment` is the GivenNumber Fortnox gave it.
+  /// Created in Fortnox, or tied to the one already there with the same
+  /// supplier and invoice number. `comment` is the GivenNumber.
   EXPORTED
   /// An export whose outcome was unknown was looked up in Fortnox by the
   /// treasurer, found not to have made an invoice, and let go to try again.
@@ -93,6 +94,9 @@ model SupplierInvoice {
   reference String?               @unique
   status    SupplierInvoiceStatus
   source    SupplierInvoiceSource
+
+  /// Stock deliveries that arrived on this invoice.
+  stockEntries StockEntry[] @relation("StockPurchaseInvoice")
 
   /// Who put it here: the uploader, or the member whose mail it came from.
   receivedBy   User?   @relation("SupplierInvoiceReceiver", fields: [receivedById], references: [id], onDelete: SetNull)

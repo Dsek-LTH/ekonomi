@@ -9,13 +9,23 @@ import type { DrinkCategory, StockEntryKind, StockKind } from "@/lib/domain/type
 import { checkOf, lastEmptied, soonestCheck, type Check, type ShelfStep } from "@/lib/stock/expiry";
 import { OPEN_SUM, openOf } from "@/lib/server/stock-state";
 import type { StockEntry } from "@/lib/generated/prisma/client";
-import { today, isoDay } from "@/lib/domain/date";
+import { today, isoDay, stockholmDay } from "@/lib/domain/date";
+import type { StockSlug } from "@/lib/stock/stocks";
+import { MOVE_KINDS, placeTaken } from "@/lib/server/stock-move";
+import type { During } from "@/lib/server/fiscal-year";
 
 export interface StockProductDto {
   id: string;
   name: string;
   kind: StockKind;
-  category: DrinkCategory;
+  stock: StockSlug;
+  /** The product type its accounts come from. */
+  groupId: string;
+  groupName: string;
+  /** The drink type. Only in a stock that files the restaurangrapport. */
+  category?: DrinkCategory;
+  /** How many units a pack holds, where it is handled in packs. */
+  packSize?: number;
   /** Per cent. Decimal in the column; a number everywhere a person sees it. */
   abv?: number;
   unitMl?: number;
@@ -38,13 +48,17 @@ export interface StockLevelDto extends StockProductDto {
 
 const opt = <T>(v: T | null): T | undefined => v ?? undefined;
 
-export async function getStockProducts(): Promise<StockProductDto[]> {
+export async function getStockProducts(stock: StockSlug): Promise<StockProductDto[]> {
   const rows = await prisma.stockProduct.findMany({
+    where: { stockId: stock },
     orderBy: [{ name: "asc" }],
     select: {
       id: true,
       name: true,
       kind: true,
+      groupId: true,
+      group: { select: { name: true } },
+      packSize: true,
       category: true,
       abv: true,
       unitMl: true,
@@ -60,7 +74,11 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
     id: p.id,
     name: p.name,
     kind: p.kind,
-    category: p.category,
+    stock,
+    groupId: p.groupId,
+    groupName: p.group.name,
+    category: opt(p.category),
+    packSize: opt(p.packSize),
     abv: p.abv == null ? undefined : Number(p.abv),
     unitMl: opt(p.unitMl),
     nominalMl: opt(p.nominalMl),
@@ -76,12 +94,14 @@ export async function getStockProducts(): Promise<StockProductDto[]> {
  * Every product with what is on the shelf of it. `asOf` stops the replay at the end of a day, reading the log
  * as understood now (a delivery corrected last week changes what May held), not as the books said then.
  */
-export async function getStockLevels(asOf?: string): Promise<StockLevelDto[]> {
-  const upTo = asOf ? { occurredAt: { lte: new Date(asOf) } } : undefined;
+export async function getStockLevels(stock: StockSlug, asOf?: string): Promise<StockLevelDto[]> {
   const [products, sums] = await Promise.all([
-    getStockProducts(),
+    getStockProducts(stock),
     prisma.stockEntry.groupBy({
-      where: upTo,
+      where: {
+        product: { stockId: stock },
+        occurredAt: asOf ? { lte: new Date(asOf) } : undefined,
+      },
       by: ["productId"],
       _sum: {
         units: true,
@@ -132,6 +152,12 @@ export interface StockLogRowDto {
   productKind: StockKind;
   eventId?: string;
   tagName?: string;
+  /** The place a move went to or came back from (docs/stock.md, section 11). */
+  placeId?: string;
+  placeName?: string;
+  /** Who on the board took it, on a withdrawal. */
+  memberId?: string;
+  memberName?: string;
   kind?: StockEntryKind;
   units: number;
   open: { 80: number; 60: number; 40: number; 20: number };
@@ -154,9 +180,11 @@ export interface StockLogRowDto {
 }
 
 interface StockLogFilter {
+  stock: StockSlug;
   productIds?: string[];
   kinds?: StockEntryKind[];
   eventId?: string;
+  placeIds?: string[];
   /** Inclusive, `YYYY-MM-DD`. */
   from?: string;
   to?: string;
@@ -164,13 +192,15 @@ interface StockLogFilter {
 }
 
 /** The log, newest first by `occurredAt` then `createdAt` (movements share dates, so the second key keeps the order stable). */
-export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLogRowDto[]> {
+export async function getStockLog(filter: StockLogFilter): Promise<StockLogRowDto[]> {
   const rows = await prisma.stockEntry.findMany({
     where: {
+      product: { stockId: filter.stock },
       // Several of each, since narrowing a log is usually excluding. An empty list is no filter.
       productId: filter.productIds?.length ? { in: filter.productIds } : undefined,
       kind: filter.kinds?.length ? { in: filter.kinds } : undefined,
       eventId: filter.eventId,
+      placeId: filter.placeIds?.length ? { in: filter.placeIds } : undefined,
       occurredAt: {
         gte: filter.from ? new Date(filter.from) : undefined,
         lte: filter.to ? new Date(filter.to) : undefined,
@@ -200,6 +230,9 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
       event: { select: { name: true } },
       actor: { select: { name: true } },
       expense: { select: { reference: true } },
+      placeId: true,
+      place: { select: { name: true } },
+      boardWithdrawal: { select: { memberId: true, member: { select: { name: true } } } },
     },
   });
 
@@ -264,6 +297,10 @@ export async function getStockLog(filter: StockLogFilter = {}): Promise<StockLog
         note: opt(r.note),
         expenseId: opt(r.expenseId),
         expenseReference: opt(r.expense?.reference ?? null),
+        placeId: opt(r.placeId),
+        placeName: opt(r.place?.name ?? null),
+        memberId: opt(r.boardWithdrawal?.memberId ?? null),
+        memberName: opt(r.boardWithdrawal?.member.name ?? null),
       });
       continue;
     }
@@ -407,6 +444,9 @@ interface TagLineDto {
 }
 
 export interface StockEventDetailDto extends StockEventDto {
+  stock: StockSlug;
+  /** The cost centre this night is charged on, where it names its own. */
+  costCenterId?: string;
   lines: TagLineDto[];
 }
 
@@ -470,8 +510,9 @@ const soldValue = (
  * The events, most recent first (the one being registered against is nearly always the latest). Every event's
  * arithmetic is folded here in two queries: all movements shown, and each touched product's unit cost.
  */
-export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
+export async function getStockEvents(stock: StockSlug, take = 50): Promise<StockEventDto[]> {
   const events = await prisma.stockEvent.findMany({
+    where: { stockId: stock },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take,
     select: { id: true, name: true, date: true },
@@ -523,7 +564,7 @@ export async function getStockEvents(take = 50): Promise<StockEventDto[]> {
 export async function getStockEvent(id: string): Promise<StockEventDetailDto | null> {
   const event = await prisma.stockEvent.findUnique({
     where: { id },
-    select: { id: true, name: true, date: true },
+    select: { id: true, name: true, date: true, stockId: true, costCenterId: true },
   });
   if (!event) return null;
 
@@ -582,6 +623,8 @@ export async function getStockEvent(id: string): Promise<StockEventDetailDto | n
     entries: entries.length,
     products: byProduct.size,
     soldValueOre: lines.reduce((sum, l) => sum + l.soldValueOre, 0),
+    stock: event.stockId as StockSlug,
+    costCenterId: event.costCenterId ?? undefined,
     lines,
   };
 }
@@ -768,18 +811,34 @@ export async function getProductMovementCount(productId: string): Promise<number
 }
 
 /** Notice wanted before a delivery's estimated date. Null until chosen; no checks are raised until then. */
-export async function getStockSettings(): Promise<{ expiryLeadDays: number | null }> {
-  const row = await prisma.stockSettings.findUnique({ where: { id: "singleton" } });
-  return { expiryLeadDays: row?.expiryLeadDays ?? null };
+export async function getExpiryLeadDays(stock: StockSlug): Promise<number | null> {
+  const row = await prisma.stock.findUnique({
+    where: { id: stock },
+    select: { expiryLeadDays: true },
+  });
+  return row?.expiryLeadDays ?? null;
 }
+
+/** A stock's product types, in the order the settings list them. */
+export async function getStockGroups(stock: StockSlug) {
+  return prisma.stockGroup.findMany({
+    where: { stockId: stock },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, category: true },
+  });
+}
+export type StockGroupOption = Awaited<ReturnType<typeof getStockGroups>>[number];
 
 /**
  * Products wanting somebody to read a crate, and the delivery that is the reason: one entry per product, its oldest
  * outstanding check. The rule is pure (lib/stock/expiry.ts), so the row flag and filter count agree. Two queries
  * whatever the shelf holds; the second is over products the first named.
  */
-export async function getExpiryChecks(now: string = today()): Promise<Map<string, Check> | null> {
-  const { expiryLeadDays } = await getStockSettings();
+export async function getExpiryChecks(
+  stock: StockSlug,
+  now: string = today(),
+): Promise<Map<string, Check> | null> {
+  const expiryLeadDays = await getExpiryLeadDays(stock);
   // Not chosen: no rule applies. Null, not an empty map, which would read as "nothing due".
   if (expiryLeadDays === null) return null;
 
@@ -788,7 +847,11 @@ export async function getExpiryChecks(now: string = today()): Promise<Map<string
   horizon.setDate(horizon.getDate() + expiryLeadDays);
 
   const deliveries = await prisma.stockEntry.findMany({
-    where: { kind: "PURCHASE", bestBefore: { not: null, lte: horizon } },
+    where: {
+      kind: "PURCHASE",
+      product: { stockId: stock },
+      bestBefore: { not: null, lte: horizon },
+    },
     orderBy: { bestBefore: "asc" },
     select: { id: true, productId: true, occurredAt: true, bestBefore: true, checkedAt: true },
   });
@@ -887,10 +950,11 @@ const asDelivery = (e: Pick<StockEntry, "id" | "occurredAt" | "bestBefore" | "ch
  * Deliveries the shelf has been empty since are not here at all.
  */
 export async function getProductChecks(
+  stock: StockSlug,
   productId: string,
   now: string = today(),
 ): Promise<Check[] | null> {
-  const { expiryLeadDays } = await getStockSettings();
+  const expiryLeadDays = await getExpiryLeadDays(stock);
   // Not chosen: see getExpiryChecks.
   if (expiryLeadDays === null) return null;
 
@@ -934,5 +998,209 @@ export async function getProductChecks(
   return deliveries.flatMap((d) => {
     const check = checkOf(asDelivery(d), expiryLeadDays, emptied, now);
     return check ? [check] : [];
+  });
+}
+
+// ── Flytta ───────────────────────────────────────────────────────
+
+/** A place stock is carried to (docs/stock.md, section 11), as the move sheet and the settings need it. */
+export interface StockPlaceDto {
+  id: string;
+  name: string;
+  /** Whether the reader may log moves to and from it: a group of theirs holds it, or they keep the stock. */
+  mine: boolean;
+}
+
+/** A product as the move sheet needs it: what it is, and what storage and each place hold. */
+export interface MoveProductDto {
+  id: string;
+  name: string;
+  ean?: string;
+  /** Whole units the log holds in storage. */
+  onHand: number;
+  /** Units each place has taken this räkenskapsår and not brought back, by place id. Absent is none. */
+  taken: Record<string, number>;
+  /** Units moved over the last ninety days: what sorts the sheet, so the usual ones are on top. */
+  recent: number;
+}
+
+/** One submit, as it reads back to whoever made it. `from` and `to` are place names, null for storage. */
+export interface MoveBatchDto {
+  batchId: string;
+  /** When it was written down (ISO), which is what orders them. */
+  createdAt: string;
+  occurredAt: string;
+  from: string | null;
+  to: string | null;
+  lines: { productId: string; name: string; units: number }[];
+}
+
+/** A stock's places in their order, archived ones left out. */
+export async function getStockPlaces(stock: StockSlug) {
+  return prisma.stockPlace.findMany({
+    where: { stockId: stock, archived: false },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
+}
+
+/**
+ * The move sheet: every product with what storage and each place holds, the places, and what this person has logged
+ * today (which they may undo). `during` bounds what a place holds to the räkenskapsår, as the move route does.
+ */
+export async function getMoveSheet(
+  stock: StockSlug,
+  reader: { id: string; stockPlaceIds: readonly string[]; keeps: boolean },
+  during: During | null,
+): Promise<{ products: MoveProductDto[]; places: StockPlaceDto[]; batches: MoveBatchDto[] }> {
+  const since = new Date();
+  since.setDate(since.getDate() - 90);
+  const startOfToday = new Date(`${today()}T00:00:00.000Z`);
+  // A day's margin on the query, then cut to the Stockholm day below: `createdAt` is an instant, not a date.
+  startOfToday.setDate(startOfToday.getDate() - 1);
+
+  const places = await getStockPlaces(stock);
+  const [products, sums, recent, mine, taken] = await Promise.all([
+    prisma.stockProduct.findMany({
+      where: { stockId: stock },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, ean: true },
+    }),
+    prisma.stockEntry.groupBy({
+      by: ["productId"],
+      where: { product: { stockId: stock } },
+      _sum: { units: true },
+    }),
+    prisma.stockEntry.groupBy({
+      by: ["productId"],
+      where: { product: { stockId: stock }, kind: "ISSUE", occurredAt: { gte: since } },
+      _sum: { units: true },
+    }),
+    prisma.stockEntry.findMany({
+      where: {
+        product: { stockId: stock },
+        kind: { in: [...MOVE_KINDS] },
+        placeId: { not: null },
+        actorId: reader.id,
+        batchId: { not: null },
+        createdAt: { gte: startOfToday },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        batchId: true,
+        createdAt: true,
+        occurredAt: true,
+        kind: true,
+        units: true,
+        productId: true,
+        product: { select: { name: true } },
+        place: { select: { name: true } },
+      },
+    }),
+    placeTaken(prisma, { placeIds: places.map((p) => p.id), during }),
+  ]);
+
+  const held = new Map(sums.map((s) => [s.productId, s._sum.units ?? 0]));
+  const used = new Map(recent.map((s) => [s.productId, -(s._sum.units ?? 0)]));
+  const takenBy = new Map<string, Record<string, number>>();
+  for (const [key, units] of taken) {
+    if (units <= 0) continue;
+    const [placeId, productId] = key.split("|");
+    takenBy.set(productId, { ...takenBy.get(productId), [placeId]: units });
+  }
+
+  // A move is up to two rows per product (a RETURN from, an ISSUE to). Its lines are read off the ISSUE rows, or
+  // off the RETURN rows for a move back to storage, which has no ISSUE.
+  const batches = new Map<string, MoveBatchDto>();
+  const issued = new Set<string>();
+  const day = today();
+  for (const e of mine) {
+    if (!e.batchId || stockholmDay.format(e.createdAt) !== day) continue;
+    const batch = batches.get(e.batchId) ?? {
+      batchId: e.batchId,
+      createdAt: e.createdAt.toISOString(),
+      occurredAt: isoDay(e.occurredAt),
+      from: null,
+      to: null,
+      lines: [],
+    };
+    batches.set(e.batchId, batch);
+    if (e.kind === "RETURN") batch.from = e.place?.name ?? null;
+    else batch.to = e.place?.name ?? null;
+
+    const line = { productId: e.productId, name: e.product.name, units: Math.abs(e.units) };
+    if (e.kind === "ISSUE") {
+      if (!issued.has(e.batchId)) batch.lines = [];
+      issued.add(e.batchId);
+      batch.lines.push(line);
+    } else if (!issued.has(e.batchId)) {
+      batch.lines.push(line);
+    }
+  }
+
+  return {
+    products: products
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        ean: opt(p.ean),
+        onHand: held.get(p.id) ?? 0,
+        taken: takenBy.get(p.id) ?? {},
+        recent: used.get(p.id) ?? 0,
+      }))
+      // The usual ones first, then by name (the query's order, which a stable sort keeps).
+      .sort((a, b) => b.recent - a.recent),
+    places: places.map((p) => ({
+      id: p.id,
+      name: p.name,
+      mine: reader.keeps || reader.stockPlaceIds.includes(p.id),
+    })),
+    batches: [...batches.values()],
+  };
+}
+
+/** One place's bill for a räkenskapsår: what it took less what it brought back. */
+export interface PlaceSummaryDto {
+  id: string;
+  name: string;
+  /** The cost centre it is charged to, or null for the stock's own consumption cost centre. */
+  costCenterCode: string | null;
+  units: number;
+  /** At moving average cost: what its cost centre has been charged, net. */
+  valueOre: number;
+}
+
+/** Every place in a stock with what it has been charged within `during`, in the places' order. */
+export async function getPlaceSummary(
+  stock: StockSlug,
+  during: During | null,
+): Promise<PlaceSummaryDto[]> {
+  const [places, sums] = await Promise.all([
+    prisma.stockPlace.findMany({
+      where: { stockId: stock, archived: false },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, costCenter: { select: { code: true } } },
+    }),
+    prisma.stockEntry.groupBy({
+      by: ["placeId"],
+      where: {
+        product: { stockId: stock },
+        placeId: { not: null },
+        occurredAt: during ?? undefined,
+      },
+      _sum: { units: true, valueDeltaOre: true },
+    }),
+  ]);
+  const byPlace = new Map(sums.map((s) => [s.placeId, s._sum]));
+  return places.map((p) => {
+    const sum = byPlace.get(p.id);
+    return {
+      id: p.id,
+      name: p.name,
+      costCenterCode: p.costCenter?.code ?? null,
+      // Leaving the shelf is negative in the log. Turned round, it is what the place has.
+      units: -(sum?.units ?? 0),
+      valueOre: -(sum?.valueDeltaOre ?? 0),
+    };
   });
 }

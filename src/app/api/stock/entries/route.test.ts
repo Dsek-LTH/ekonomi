@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  capabilities: ["STOCK_MANAGE"] as string[],
+  capabilities: ["ALCOHOL_STOCK_MANAGE"] as string[],
   /** What the log says the shelf holds, as a summed row. */
   sums: {
     units: 0,
@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   } as Record<string, number>,
   product: {
     id: "p1",
+    stockId: "alcohol",
     kind: "UNIT" as string,
     category: "OL" as string,
     unitMl: 330,
@@ -94,10 +95,11 @@ const delivery = (over: Body = {}): Body => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.capabilities = ["STOCK_MANAGE"];
+  h.capabilities = ["ALCOHOL_STOCK_MANAGE"];
   h.sums = { units: 0, open80: 0, open60: 0, open40: 0, open20: 0, valueDeltaOre: 0 };
   h.product = {
     id: "p1",
+    stockId: "alcohol",
     kind: "UNIT",
     category: "OL",
     unitMl: 330,
@@ -125,8 +127,8 @@ const checkedOut = (units: number) => ({
 });
 
 describe("POST /api/stock/entries", () => {
-  it("refuses anybody without STOCK_MANAGE", async () => {
-    h.capabilities = ["STOCK_VIEW"];
+  it("refuses anybody who may only read the stock", async () => {
+    h.capabilities = ["ALCOHOL_STOCK_VIEW"];
     const res = await post(delivery());
     expect(res.status).toBe(403);
     expect(h.create).not.toHaveBeenCalled();

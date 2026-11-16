@@ -45,6 +45,18 @@ model CostCenter {
   incomeLines       IncomeLine[]          @relation("IncomeLineCostCenter")
   zettleFeeSettings BookkeepingSettings[] @relation("ZettleFeeCostCenter")
 
+  // The stocks' booking settings and a night's own cost centre. See stock.prisma.
+  stockConsumption     Stock[]               @relation("StockConsumptionCostCenter")
+  stockPurchase        Stock[]               @relation("StockPurchaseCostCenter")
+  stockLoss            Stock[]               @relation("StockLossCostCenter")
+  stockCountDiff       Stock[]               @relation("StockCountDiffCostCenter")
+  stockBoardCost       Stock[]               @relation("StockBoardCostCenter")
+  stockBoardSales      Stock[]               @relation("StockBoardSalesCostCenter")
+  stockEvents          StockEvent[]          @relation("StockEventCostCenter")
+  stockPlaces          StockPlace[]          @relation("StockPlaceCostCenter")
+  stockPostings        StockPostingLine[]    @relation("StockPostingCostCenter")
+  customerInvoiceLines CustomerInvoiceLine[] @relation("CustomerInvoiceLineCostCenter")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -59,6 +71,8 @@ model Account {
   name   String
   active Boolean @default(true) // Active in Fortnox; inactive stays selectable-but-hidden
   sru    String? // Fortnox SRU code, informational
+
+  budgetAccounts BudgetAccount[]
 
   lastSyncAt DateTime?
   createdAt  DateTime  @default(now())

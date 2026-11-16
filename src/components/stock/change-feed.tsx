@@ -3,6 +3,7 @@
 // Who did what, in order: the other half of the stock record. The log says what stock did (netted per event and product),
 // this says who made it, including changes that netted to no movement.
 // On an event it is the night in order, on a product its whole story including deliveries; the middle column is whichever the page is not about.
+import { useStock } from "@/components/stock/stock-context";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ClientDataTable } from "@/components/ui/client-data-table";
@@ -24,6 +25,7 @@ export function ChangeFeed({
   empty?: string;
 }) {
   const t = useTranslations("stock");
+  const { href } = useStock();
   const controls = useTableControls();
   const { dateTime } = useFormat();
 
@@ -63,11 +65,11 @@ export function ChangeFeed({
       mobile: "title",
       cell: (c) =>
         scope === "event" ? (
-          <Link href={`/stock/${c.productId}`} className="font-medium hover:underline">
+          <Link href={href(`/${c.productId}`)} className="font-medium hover:underline">
             {c.productName}
           </Link>
         ) : c.eventId ? (
-          <Link href={`/stock/events/${c.eventId}`} className="font-medium hover:underline">
+          <Link href={href(`/events/${c.eventId}`)} className="font-medium hover:underline">
             {c.tagName}
           </Link>
         ) : (

@@ -1,26 +1,177 @@
-// Alkohollager: the bar's stock, kept because a serving permit requires a
-// lagerbokföring that holds up when somebody asks to see it.
+// Lager: the section's stocks. Two of them, the bar's alcohol and the café's
+// drinks, kept the same way and for partly different reasons. See docs/stock.md.
+//
+// The alcohol stock exists because a serving permit requires a lagerbokföring
+// that holds up when somebody asks to see it. The café's exists because the
+// stock's value is in the books and has to be defensible there.
+//
+// The log is the record. What is on hand is the sum of `StockEntry`, not a
+// column somebody edits, and what the stock is worth is the sum of
+// `valueDeltaOre`. A row can be corrected in place, and every such edit is
+// written to `StockChange`, so the ledger says what happened to the stock and
+// the change log says who did what to the ledger. Because a correction can
+// reach back in time, a later row's cost is re-derived by reading the log
+// forward (lib/stock/replay.ts).
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Alkohollager: the bar's stock, and the law's reason for it.
-//
-// Serving alcohol under a permit means keeping a lagerbokföring: a record of
-// what came in, what went out, and what is on the shelf, that holds up when
-// somebody asks to see it. Two things follow from that and shape everything
-// below.
-//
-// The log is the record. `StockEntry` is append-only, never updated and never
-// deleted, and what is on hand is the sum of it, not a column somebody edits.
-// A quantity that can be quietly changed is a quantity nobody can defend; a log
-// that can be replayed is. Mistakes are corrected by a new row naming the row it
-// corrects (`correctsId`), which is also how a stocktake's discrepancy is
-// written.
-//
-// And the measurement is kept, not just its conclusion. Spirits are measured by
-// weighing the bottle, and grams become millilitres through the product's own
-// calibration (see lib/stock/measure.ts). The grams are stored, so a tare
-// corrected later can be applied to every historical figure. Store only the
-// derived volume and a wrong constant is baked into the legal record for good.
+/// How a stock's purchases reach the books, which decides what the daily
+/// voucher has to carry.
+enum StockPurchaseMode {
+  /// The utlägg or leverantörsfaktura already debited the stock account. The
+  /// voucher leaves deliveries alone. Alcohol.
+  CAPITALISED
+  /// The purchase was booked as a cost. The voucher takes a delivery into
+  /// stock by crediting that cost back. The café.
+  EXPENSED
+}
+
+/// One of the section's stocks.
+///
+/// The set is fixed in code (lib/stock/stocks.ts), because each stock has its
+/// own capabilities and its own pages, and a row nobody wrote code for would be
+/// a stock nobody could open. The row holds what a person chooses: how it is
+/// booked. Every account and cost centre is null until somebody has chosen it,
+/// and nothing is exported for a stock until its own are complete.
+model Stock {
+  /// "alcohol" or "cafe". The key itself, so a foreign key reads as what it is
+  /// and a path segment needs no lookup.
+  id String @id
+
+  purchaseMode StockPurchaseMode
+
+  /// The cost centre goods that left for sale are charged on, when the event
+  /// they left for names none. The account is on the group.
+  consumptionCostCenter   CostCenter? @relation("StockConsumptionCostCenter", fields: [consumptionCostCenterId], references: [id], onDelete: SetNull)
+  consumptionCostCenterId String?
+
+  /// EXPENSED only: credited when a delivery is taken into stock, which is
+  /// the cost account the purchase was booked on.
+  purchaseOffsetAccount String?
+  purchaseCostCenter    CostCenter? @relation("StockPurchaseCostCenter", fields: [purchaseCostCenterId], references: [id], onDelete: SetNull)
+  purchaseCostCenterId  String?
+
+  /// Cost centres for spoilage in storage and for stocktake differences. The
+  /// accounts are on the group.
+  lossCostCenter        CostCenter? @relation("StockLossCostCenter", fields: [lossCostCenterId], references: [id], onDelete: SetNull)
+  lossCostCenterId      String?
+  countDiffCostCenter   CostCenter? @relation("StockCountDiffCostCenter", fields: [countDiffCostCenterId], references: [id], onDelete: SetNull)
+  countDiffCostCenterId String?
+
+  /// What the board took, at cost, and what it is invoiced for, at board price.
+  boardCostAccount       String?
+  boardCostCenter        CostCenter? @relation("StockBoardCostCenter", fields: [boardCostCenterId], references: [id], onDelete: SetNull)
+  boardCostCenterId      String?
+  boardSalesAccount      String?
+  boardSalesCostCenter   CostCenter? @relation("StockBoardSalesCostCenter", fields: [boardSalesCostCenterId], references: [id], onDelete: SetNull)
+  boardSalesCostCenterId String?
+
+  /// The verifikationsserie the daily vouchers land in. Null means
+  /// FortnoxConnection.voucherSeries.
+  voucherSeries String?
+
+  /// The first day that produces a voucher. Null means posting is off.
+  postingStartsOn DateTime? @db.Date
+
+  /// How many days before a delivery's best-before to start asking about it.
+  ///
+  /// A policy, not a property of any product: a lager keeps nine months and a
+  /// cider twenty-one, and both want the same notice, because the notice is
+  /// about how long it takes to drink a crate once somebody knows it needs
+  /// drinking. Null until somebody chooses it. Until then no checks are
+  /// raised, and the stock pages say so.
+  expiryLeadDays Int?
+
+  groups   StockGroup[]
+  products StockProduct[]
+  events   StockEvent[]
+  vouchers StockVoucher[]
+  places   StockPlace[]
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Somewhere stock is carried to from storage and charged to: a fridge, a
+/// committee working a shift. A fixed list kept in Inställningar -> Lager.
+///
+/// Not a second shelf. What reaches a place counts as used the moment it
+/// arrives (an ISSUE), so a place has no stock of its own to count. What it
+/// has is a figure: taken less brought back, which is what its cost centre has
+/// been charged. Something brought back is a RETURN naming the place, and a
+/// move from one place to another is the two of them in one batch.
+///
+/// Archived rather than deleted, so the log keeps the names it was written
+/// with.
+model StockPlace {
+  id      String @id @default(cuid())
+  stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Restrict)
+  stockId String
+  name    String
+
+  /// Where what reaches this place is charged. Null falls back to the stock's
+  /// own consumption cost centre until somebody chooses one.
+  costCenter   CostCenter? @relation("StockPlaceCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  archived  Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  groups  StockPlaceGroup[]
+  entries StockEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stockId, name])
+}
+
+/// An Authentik group, and a place its members may log moves to and from.
+/// Read into User.stockPlaceIds at sign-in, like GroupResultUnit.
+model StockPlaceGroup {
+  /// Lowercased, exactly as Authentik writes it: "dsek.sex.mastare".
+  group   String
+  place   StockPlace @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  placeId String
+
+  createdAt DateTime @default(now())
+
+  @@id([group, placeId])
+  @@index([group])
+}
+
+/// A product type within a stock: beer, cider, wine, spirits. The thing the
+/// accounts hang on, since the books keep one stock account per type.
+///
+/// Not `DrinkCategory`, although in the alcohol stock they line up one to one
+/// today. The category is Folkhälsomyndigheten's classification and exists for
+/// the restaurangrapport. This is the section's own chart, and the café has
+/// types without having drink categories.
+model StockGroup {
+  id      String @id @default(cuid())
+  stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Restrict)
+  stockId String
+  name    String
+
+  /// The drink category this type is pre-selected for on the product form.
+  category DrinkCategory? @unique
+
+  /// The balance account this type's value lives on.
+  stockAccount       String?
+  /// The cost account this type is charged on when it leaves for sale.
+  consumptionAccount String?
+  /// Where this type's spoilage and stocktake differences are charged. Null
+  /// means `consumptionAccount`, so spoiled wine lands on the wine account.
+  lossAccount        String?
+  countDiffAccount   String?
+
+  sortOrder Int @default(0)
+
+  products     StockProduct[]
+  postingLines StockPostingLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stockId, name])
+}
 
 /// How a product's stock is counted.
 enum StockKind {
@@ -95,17 +246,44 @@ enum StockEntryKind {
   /// what a term's svinn cost wants the two added together, which is one line
   /// in lib/data/stock-stats.ts rather than a shape both kinds have to share.
   ///
-  /// Last in the enum because Postgres appends: keeping the order the database
-  /// has is what stops a later migration wanting to rewrite the type.
+  /// Appended after the kinds above it rather than sorted in, because Postgres
+  /// appends: keeping the order the database has is what stops a later
+  /// migration wanting to rewrite the type. The same goes for the two below.
   SPOILAGE
+  /// Left storage for sale and is not expected back: a fridge refilled in the
+  /// café. What `CHECKOUT` would be without a night to belong to. Priced at the
+  /// moving average like any removal.
+  ISSUE
+  /// Taken by a board member, who is invoiced for it at board price at year
+  /// end (see BoardWithdrawal). It leaves the stock at cost like any removal,
+  /// and is its own kind because the books charge it somewhere else.
+  WITHDRAWAL
 }
 
-/// A thing the bar keeps a stock of.
+/// A thing a stock holds.
 model StockProduct {
-  id       String        @id @default(cuid())
-  name     String
-  kind     StockKind
-  category DrinkCategory
+  id   String    @id @default(cuid())
+  name String
+  kind StockKind
+
+  /// Which stock it is in. Never changed once the product has movements: its
+  /// value would move between two sets of accounts.
+  stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Restrict)
+  stockId String
+
+  /// Its type, which is where its accounts come from. Moving a product to
+  /// another group moves its value between two stock accounts, and the next
+  /// voucher carries that as a correction.
+  group   StockGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  groupId String
+
+  /// The drink type the restaurangrapport files it under. Required in the
+  /// alcohol stock (a CHECK in the migration), null in the café.
+  category DrinkCategory?
+
+  /// How many units a pack holds: 24 for a flak. Lets a refill or a delivery
+  /// be typed in packs. Null where the product is handled one at a time.
+  packSize Int?
 
   /// The barcode on the tin or the bottle. Unique, so scanning one in the
   /// cellar identifies the product outright; null for anything without one.
@@ -180,13 +358,16 @@ model StockProduct {
   /// cannot both end up in the list.
   tags String[] @default([])
 
-  entries StockEntry[]
-  changes StockChange[]
-  edits   StockProductChange[]
+  entries     StockEntry[]
+  changes     StockChange[]
+  edits       StockProductChange[]
+  boardPrices BoardPrice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([stockId])
+  @@index([groupId])
   @@index([category])
   /// GIN, because the question asked of this column is "which products carry
   /// this tag", and a btree cannot answer a containment test.
@@ -327,6 +508,13 @@ model StockEntry {
   eventId String?
   event   StockEvent? @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
+  /// The place an ISSUE went to or a RETURN came back from, in a stock that
+  /// uses places (lib/stock/stocks.ts). Never together with `eventId`. Null on
+  /// a refill logged before places existed, which is charged to the stock's
+  /// own consumption cost centre.
+  placeId String?
+  place   StockPlace? @relation(fields: [placeId], references: [id], onDelete: Restrict)
+
   /// What this movement did to the value of the stock, in öre.
   ///
   /// It rides on `units` alone. An open bottle is worth nothing to the stock,
@@ -357,11 +545,25 @@ model StockEntry {
   expenseId String?
   expense   Expense? @relation("StockPurchaseExpense", fields: [expenseId], references: [id], onDelete: SetNull)
 
+  /// Or the leverantörsfaktura it arrived on. A delivery points at one or the
+  /// other, whichever document the purchase was booked from.
+  supplierInvoiceId String?
+  supplierInvoice   SupplierInvoice? @relation("StockPurchaseInvoice", fields: [supplierInvoiceId], references: [id], onDelete: SetNull)
+
+  /// A key the client made up for one submit: a refill of several products, a
+  /// board member's withdrawal. With the unique index below it makes a retried
+  /// submit harmless, which matters on a phone in a storage room. Null on
+  /// everything typed row by row.
+  batchId String?
+
   /// A correction names what it corrects. Self-relation, so the chain is
   /// readable in both directions.
   correctsId  String?
   corrects    StockEntry?  @relation("StockCorrection", fields: [correctsId], references: [id], onDelete: Restrict)
   correctedBy StockEntry[] @relation("StockCorrection")
+
+  /// On a WITHDRAWAL: who took it and what they owe. See board.prisma.
+  boardWithdrawal BoardWithdrawal?
 
   note String?
 
@@ -376,6 +578,9 @@ model StockEntry {
   /// Postgres counts nulls as distinct, which is the behaviour wanted here: a
   /// cellar takes as many deliveries of a product as it takes.
   @@unique([eventId, productId, kind, level])
+  /// One submit holds a product once. Rows without a batch are exempt, as
+  /// above.
+  @@unique([batchId, productId, kind])
   /// Which deliveries are due a look: a range over the date, and most rows do
   /// not have one.
   @@index([bestBefore])
@@ -383,23 +588,9 @@ model StockEntry {
   @@index([occurredAt])
   @@index([kind, occurredAt])
   @@index([eventId])
+  @@index([placeId])
 }
 
-/// An event stock is taken out for: a pub, a sittning, a party.
-///
-/// It exists because a night is not a date. A pub that runs past midnight is
-/// two dates, a committee may take stock out twice in an evening, and two
-/// events can run on one night, so grouping by day, or by "the last checkout",
-/// answers none of them. The event says which movements belong together, and
-/// once they are grouped the arithmetic is the whole of what a night sold:
-///
-///   sold = taken out − brought back − spilled
-///
-/// Deliberately never closed. What is still on the bar and what has been drunk
-/// are the same number until somebody carries the crates back, and a status
-/// that claimed to know the difference would be a status somebody had to
-/// remember to set. An event mid-flight simply reads as having sold what is
-/// currently out, and its page says as much.
 /// What somebody did to a stock row, as opposed to what the row says.
 ///
 /// The stock log answers "what happened to our stock"; this answers "who did
@@ -474,6 +665,34 @@ model StockChange {
   @@index([entryId])
 }
 
+/// What was changed in how a stock is booked, and by whom: an account, a
+/// cost centre, the day posting starts.
+///
+/// The same shape as StockProductChange and for the same reason. Which account
+/// a type's value lives on decides where every later voucher lands, so a
+/// change to it must not be something that only shows as figures coming out
+/// differently. A change applies to days posted after it and never moves what
+/// was already sent.
+model StockSettingsChange {
+  id String @id @default(cuid())
+
+  /// Plain text, like everything here: the log outlives a group that is
+  /// removed. `groupName` is set when the change was to a product type.
+  stockId   String
+  groupName String?
+
+  /// The field as the API names it: "stockAccount", "postingStartsOn".
+  field     String
+  fromValue String?
+  toValue   String?
+
+  at      DateTime @default(now())
+  actorId String
+  actor   User     @relation("StockSettingsChangeActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([stockId, at])
+}
+
 /// What was changed on a product, and by whom.
 ///
 /// The entry log next door records what happened to the *stock*: rows written,
@@ -518,34 +737,33 @@ enum StockChangeAction {
   DELETE
 }
 
-// The stock feature's own settings. One row, like BookkeepingSettings.
-//
-// Everything here is a policy rather than a fact: a number somebody chose, not
-// one the world handed us. Facts about a product live on the product.
-model StockSettings {
-  id String @id @default("singleton")
-
-  /// How many days before a delivery's best-before to start asking about it.
-  ///
-  /// A policy and therefore section-wide, not a property of any product. A
-  /// lager keeps nine months and a cider twenty-one, and both want the same
-  /// amount of notice, because the notice is about how long it takes to drink a
-  /// crate once somebody knows it needs drinking.
-  ///
-  /// Folding it into the product's own figure would have been the cheaper
-  /// schema and the wrong one: changing your mind about how much warning you
-  /// want would then mean editing every product on the shelf.
-  ///
-  /// Null until somebody chooses it. Until then no checks are raised, and the
-  /// stock pages say so rather than showing a shelf with nothing due.
-  expiryLeadDays Int?
-
-  updatedAt DateTime @updatedAt
-}
-
+/// An event stock is taken out for: a pub, a sittning, a party.
+///
+/// It exists because a night is not a date. A pub that runs past midnight is
+/// two dates, a committee may take stock out twice in an evening, and two
+/// events can run on one night, so grouping by day, or by "the last checkout",
+/// answers none of them. The event says which movements belong together, and
+/// once they are grouped the arithmetic is the whole of what a night sold:
+///
+///   sold = taken out − brought back − spilled
+///
+/// Deliberately never closed. What is still on the bar and what has been drunk
+/// are the same number until somebody carries the crates back, and a status
+/// that claimed to know the difference would be a status somebody had to
+/// remember to set. An event mid-flight simply reads as having sold what is
+/// currently out, and its page says as much.
 model StockEvent {
-  id   String   @id @default(cuid())
+  id   String @id @default(cuid())
   name String
+
+  stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Restrict)
+  stockId String
+
+  /// The cost centre this night's consumption is charged on: a pub and a
+  /// sittning are different ones. Null falls back to the stock's own.
+  costCenter   CostCenter? @relation("StockEventCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
   /// The night it is about, which is not the same as when its rows were
   /// written. A Friday pub is entered on the Monday as often as not.
   date DateTime @db.Date
@@ -557,5 +775,105 @@ model StockEvent {
   actorId   String
   actor     User     @relation("StockEventCreator", fields: [actorId], references: [id], onDelete: Restrict)
 
-  @@index([date, name])
+  @@index([stockId, date, name])
+}
+
+// ── Posting a stock's value to Fortnox ───────────────────────────
+//
+// The log above can be corrected, and a correction reaches back: a delivery
+// backdated to October changes what November's withdrawals cost. So the books
+// cannot be fed from the log alone. What follows remembers what was sent, per
+// day, and every voucher is "what the log says now, less what was already
+// sent". See docs/stock.md.
+
+/// What kind of voucher a StockVoucher is.
+enum StockVoucherKind {
+  /// One day's own movements, dated that day. At most one per stock and day.
+  DAILY
+  /// What has changed on days that were already sent, dated the day the
+  /// change was found. Fortnox vouchers are never edited.
+  CORRECTION
+  /// Brings the stock accounts in Fortnox to the log's value on a chosen day:
+  /// the opening when posting starts, and the year-end reconciliation. It
+  /// carries no posting lines, because it is not a movement of the log.
+  RECONCILIATION
+}
+
+/// Why value moved, as far as the books tell them apart.
+enum StockPostingClass {
+  /// A delivery taken into stock. Only in a stock whose purchases were booked
+  /// as a cost (StockPurchaseMode.EXPENSED).
+  PURCHASE
+  /// Left for sale: a night's checkouts less its returns, or a fridge refill.
+  CONSUMPTION
+  /// Taken by a board member.
+  BOARD
+  /// Destroyed in storage.
+  LOSS
+  /// What a stocktake found, and corrections.
+  COUNT
+}
+
+/// A voucher this app made for a stock, frozen at the moment it was sent.
+///
+/// A day that has not been sent has no row: it is computed from the log each
+/// time it is shown, so there is no draft to go stale.
+model StockVoucher {
+  id String @id @default(cuid())
+
+  stock   Stock  @relation(fields: [stockId], references: [id], onDelete: Restrict)
+  stockId String
+
+  /// The voucher's date in Fortnox.
+  date     DateTime         @db.Date
+  kind     StockVoucherKind
+  /// Zero for a day's voucher. Counts up for corrections and reconciliations
+  /// made on the same date.
+  sequence Int              @default(0)
+
+  /// The log's value of the stock at the end of `date`, when this was frozen.
+  valueAfterOre Int
+
+  lines        StockPostingLine[]
+  verification Verification?
+
+  /// The export lock, the same three states an utlägg's has
+  /// (lib/domain/export-claim.ts). Null once the voucher is in Fortnox.
+  exportClaimedBy   User?             @relation("StockVoucherClaimer", fields: [exportClaimedById], references: [id], onDelete: SetNull)
+  exportClaimedById String?
+  exportClaimedAt   DateTime?
+  exportClaimState  ExportClaimState?
+
+  createdBy   User     @relation("StockVoucherCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([stockId, date, kind, sequence])
+  @@index([stockId, kind, date])
+}
+
+/// What one voucher moved, per day it belongs to, reason and product type.
+/// The memory "what was already sent" is read from.
+model StockPostingLine {
+  id        String       @id @default(cuid())
+  voucher   StockVoucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucherId String
+
+  /// The day of the movements this amount belongs to. The voucher's own date
+  /// on a day's voucher, an earlier day on a correction.
+  forDate DateTime          @db.Date
+  class   StockPostingClass
+
+  /// The product type whose stock account the amount moved.
+  group   StockGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  groupId String
+
+  costCenter   CostCenter? @relation("StockPostingCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  /// Signed effect on the stock's value, in öre. Negative is value leaving.
+  amountOre Int
+
+  @@index([voucherId])
+  @@index([forDate])
 }

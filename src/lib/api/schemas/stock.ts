@@ -21,9 +21,13 @@ const StockEntryKind = z.enum([
   "RETURN",
   "WASTE",
   "SPOILAGE",
+  "ISSUE",
   "COUNT",
   "CORRECTION",
 ]);
+
+/** Which stock a request is about. Checked against the fixed set by the gate (lib/api/stock-gate.ts). */
+const StockSlug = z.enum(["alcohol", "cafe"]);
 
 /** Alcohol by volume, per cent, two decimals (the column's precision). */
 const Abv = z.number().min(0).max(100);
@@ -55,14 +59,21 @@ const Tags = z
  * that pair stays nullable and the route decides (a `.refine` would break `.partial()` for PatchStockProduct).
  */
 export const CreateStockProduct = z.object({
+  /** The stock it is in. Set once: the PATCH route ignores it. */
+  stock: StockSlug,
+  /** Its type, which its accounts come from. Absent, the route takes the group its drink category names. */
+  groupId: Id.optional(),
+  /** Units in a pack (24 for a flak). Nullable so clearing is expressible. */
+  packSize: z.int().min(2).max(1000).nullish(),
   name: NonEmpty,
   // Required unless `noBarcode`, which the route checks (a refine would break `.partial()`).
   ean: Ean.optional(),
   /** The product has no barcode at all (a keg), said on purpose: the route assigns one of the section's own codes. See lib/stock/barcode.ts. */
   noBarcode: z.boolean().optional(),
   kind: StockKind,
-  category: DrinkCategory,
-  abv: Abv,
+  // Required in a stock that files the restaurangrapport, which the route checks.
+  category: DrinkCategory.optional(),
+  abv: Abv.optional(),
   unitMl: z.int().positive().nullish(),
   nominalMl: z.int().positive().nullish(),
   costPriceOre: Ore.min(0),
@@ -74,7 +85,7 @@ export const CreateStockProduct = z.object({
 });
 export type CreateStockProduct = z.infer<typeof CreateStockProduct>;
 
-export const PatchStockProduct = CreateStockProduct.partial();
+export const PatchStockProduct = CreateStockProduct.omit({ stock: true }).partial();
 export type PatchStockProduct = z.infer<typeof PatchStockProduct>;
 
 /**
@@ -130,14 +141,18 @@ export const CreateStockEntry = z.object({
 export type CreateStockEntry = z.infer<typeof CreateStockEntry>;
 
 /** POST /api/stock/events: an event to book a night's movements against. */
-export const CreateStockEvent = z.object({
+const StockEventFields = z.object({
   name: NonEmpty.max(120),
   date: IsoDate,
+  /** The cost centre the night's consumption is charged on. Null falls back to the stock's own. */
+  costCenterId: Id.nullish(),
 });
+
+export const CreateStockEvent = StockEventFields.extend({ stock: StockSlug });
 export type CreateStockEvent = z.infer<typeof CreateStockEvent>;
 
-/** PATCH /api/stock/events/[id]: the same two fields, as they should now read. */
-export const PatchStockEvent = CreateStockEvent;
+/** PATCH /api/stock/events/[id]: the same fields, as they should now read. */
+export const PatchStockEvent = StockEventFields;
 export type PatchStockEvent = z.infer<typeof PatchStockEvent>;
 
 /**
@@ -184,10 +199,80 @@ export const PatchStockEntry = z.object({
 export type PatchStockEntry = z.infer<typeof PatchStockEntry>;
 
 /**
- * PATCH /api/stock/settings: how many days before a delivery's estimated best-before to start asking about it.
- * Section-wide. Bounded at a year, beyond which every delivery is permanently due.
+ * POST /api/stock/moves: stock carried from one place to another, several products in one go. `from` and `to` are
+ * StockPlace ids, or null for storage: a refill is storage to a fridge, a return is a place to storage. `batchId` is
+ * made up by the client for this one submit, so sending it again (a phone with no signal retries) writes nothing twice.
  */
-export const UpdateStockSettings = z.object({
-  expiryLeadDays: z.int().min(0).max(365),
+export const CreateStockMove = z.object({
+  stock: StockSlug,
+  from: Id.nullable(),
+  to: Id.nullable(),
+  batchId: z.uuid(),
+  occurredAt: IsoDate,
+  lines: z
+    .array(z.object({ productId: Id, units: z.int().min(1).max(100_000) }))
+    .min(1)
+    .max(200),
+  note: NonEmpty.max(500).nullish(),
 });
-export type UpdateStockSettings = z.infer<typeof UpdateStockSettings>;
+export type CreateStockMove = z.infer<typeof CreateStockMove>;
+
+/** An account as the chart writes it: four digits. Null clears it. */
+const AccountNumber = Trimmed.regex(/^\d{4}$/, { error: "an account number is four digits" });
+
+/**
+ * PATCH /api/stock/stocks/[stock]: how a stock is booked, and its notice period for best-before checks.
+ * Everything optional, and null means "not chosen": nothing is exported for a stock until its own are set.
+ */
+export const UpdateStock = z
+  .object({
+    /** Days before a delivery's estimated best-before to start asking about it. Bounded at a year. */
+    expiryLeadDays: z.int().min(0).max(365).nullable(),
+    consumptionCostCenterId: Id.nullable(),
+    purchaseOffsetAccount: AccountNumber.nullable(),
+    purchaseCostCenterId: Id.nullable(),
+    lossCostCenterId: Id.nullable(),
+    countDiffCostCenterId: Id.nullable(),
+    boardCostAccount: AccountNumber.nullable(),
+    boardCostCenterId: Id.nullable(),
+    boardSalesAccount: AccountNumber.nullable(),
+    boardSalesCostCenterId: Id.nullable(),
+    voucherSeries: Trimmed.min(1).max(10).nullable(),
+    postingStartsOn: IsoDate.nullable(),
+  })
+  .partial();
+export type UpdateStock = z.infer<typeof UpdateStock>;
+
+const StockGroupFields = z.object({
+  name: NonEmpty.max(60),
+  stockAccount: AccountNumber.nullable(),
+  consumptionAccount: AccountNumber.nullable(),
+  lossAccount: AccountNumber.nullable(),
+  countDiffAccount: AccountNumber.nullable(),
+});
+
+/** POST /api/stock/groups: a new product type in a stock. Accounts can wait. */
+export const CreateStockGroup = StockGroupFields.partial()
+  .required({ name: true })
+  .extend({ stock: StockSlug });
+export type CreateStockGroup = z.infer<typeof CreateStockGroup>;
+
+/** PATCH /api/stock/groups/[id]: its name and accounts. */
+export const PatchStockGroup = StockGroupFields.partial();
+export type PatchStockGroup = z.infer<typeof PatchStockGroup>;
+
+/** POST /api/stock/places: a new place in a stock. Its cost centre and groups are chosen after. */
+export const CreateStockPlace = z.object({ stock: StockSlug, name: NonEmpty.max(60) });
+export type CreateStockPlace = z.infer<typeof CreateStockPlace>;
+
+/**
+ * PATCH /api/stock/places/[id]: its name, cost centre, the Authentik groups whose members may log moves to and from
+ * it (the whole list, replacing what was there), and whether it is archived.
+ */
+export const PatchStockPlace = z.object({
+  name: NonEmpty.max(60).optional(),
+  costCenterId: Id.nullable().optional(),
+  groups: z.array(Trimmed.min(1).max(200)).max(50).optional(),
+  archived: z.boolean().optional(),
+});
+export type PatchStockPlace = z.infer<typeof PatchStockPlace>;

@@ -57,7 +57,8 @@ model BookkeepingSettings {
 // A bookkeeping voucher (verifikation). Its lines must balance (sum debit ==
 // sum credit), whatever produced it.
 //
-// It hangs off exactly one of two things: an Expense (money going out, an
+// It hangs off exactly one of three things (the third is a StockVoucher, a
+// stock's value change): an Expense (money going out, an
 // utlägg or a card purchase) or an IncomeReport (money coming in, a day's
 // takings). Both are the same object to a bookkeeper and to Fortnox, so they
 // are one table rather than two: the export path, the Fortnox voucher columns
@@ -74,6 +75,11 @@ model Verification {
 
   incomeReport   IncomeReport? @relation(fields: [incomeReportId], references: [id], onDelete: Cascade)
   incomeReportId String?       @unique
+
+  // A stock's value change for a day, a correction to days already sent, or a
+  // reconciliation. See StockVoucher in stock.prisma.
+  stockVoucher   StockVoucher? @relation(fields: [stockVoucherId], references: [id], onDelete: Cascade)
+  stockVoucherId String?       @unique
 
   date        DateTime @db.Date
   description String // verifikationstext

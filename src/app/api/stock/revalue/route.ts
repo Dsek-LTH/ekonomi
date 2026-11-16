@@ -4,19 +4,26 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { gate } from "@/lib/api/guard";
-import { canManageStock } from "@/lib/domain/permissions";
+import { gateStock } from "@/lib/api/stock-gate";
 import { replayProduct } from "@/lib/server/stock-replay";
 
-export async function POST() {
-  const g = await gate(canManageStock, "stock.noAccess");
+export async function POST(req: Request) {
+  const g = await gateStock(new URL(req.url).searchParams.get("stock"), "manage");
   if (!g.ok) return g.res;
 
-  const products = await prisma.stockProduct.findMany({ select: { id: true } });
+  const products = await prisma.stockProduct.findMany({
+    where: { stockId: g.stock },
+    select: { id: true },
+  });
 
   // The shelf's value before and after, summed over the whole table.
   const total = async () =>
-    (await prisma.stockEntry.aggregate({ _sum: { valueDeltaOre: true } }))._sum.valueDeltaOre ?? 0;
+    (
+      await prisma.stockEntry.aggregate({
+        where: { product: { stockId: g.stock } },
+        _sum: { valueDeltaOre: true },
+      })
+    )._sum.valueDeltaOre ?? 0;
   const beforeOre = await total();
 
   // A transaction per product: one over the whole shelf would hold locks while a cellar is stocked.

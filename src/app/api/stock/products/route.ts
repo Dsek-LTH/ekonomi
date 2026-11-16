@@ -1,10 +1,10 @@
 // The products the bar keeps a stock of.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateStock } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { CreateStockProduct } from "@/lib/api/schemas/stock";
-import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockProducts } from "@/lib/data/stock";
 import {
   eanTaken,
@@ -12,28 +12,41 @@ import {
   nameTaken,
   nextInternalCode,
   typedInternalCode,
+  resolveGroup,
 } from "@/lib/server/stock-product-guard";
+import { STOCKS } from "@/lib/stock/stocks";
 
-export async function GET() {
-  const g = await gate(canViewStock, "stock.noAccess");
+export async function GET(req: Request) {
+  const g = await gateStock(new URL(req.url).searchParams.get("stock"), "view");
   if (!g.ok) return g.res;
-  return NextResponse.json(await getStockProducts());
+  return NextResponse.json(await getStockProducts(g.stock));
 }
 
 export async function POST(req: Request) {
-  const g = await gate(canManageStock, "stock.noAccess");
-  if (!g.ok) return g.res;
-
   const parsed = await parseBody(req, CreateStockProduct);
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
+
+  const g = await gateStock(body.stock, "manage");
+  if (!g.ok) return g.res;
+  const traits = STOCKS[g.stock];
+
+  // The restaurangrapport needs a drink type and a strength for everything it is filed from.
+  if (traits.filesRestaurangrapport && (!body.category || body.abv == null)) {
+    return fail(422, "stock.categoryRequired");
+  }
+  // The ladder is the bar's: elsewhere everything is counted whole.
+  if (!traits.usesOpenLevels && body.kind === "VOLUME") return fail(422, "stock.unitOnly");
+
+  const group = await resolveGroup(g.stock, body.groupId, body.category);
+  if (!group) return fail(422, "stock.groupRequired");
 
   // The needed size follows from the kind, which the schema cannot say: a spirit without bottle size
   // has meaningless levels, a can without volume drops out of the restaurangrapport's litres.
   if (body.kind === "VOLUME" && !body.nominalMl) {
     return fail(422, "stock.calibrationNoVolume");
   }
-  if (body.kind === "UNIT" && !body.unitMl) {
+  if (body.kind === "UNIT" && !body.unitMl && traits.filesRestaurangrapport) {
     return fail(422, "stock.sizeRequired");
   }
 
@@ -51,7 +64,10 @@ export async function POST(req: Request) {
       data: {
         name: body.name,
         kind: body.kind,
-        category: body.category,
+        stockId: g.stock,
+        groupId: group,
+        packSize: body.packSize ?? null,
+        category: traits.filesRestaurangrapport ? (body.category ?? null) : null,
         abv: body.abv ?? null,
         unitMl: body.unitMl ?? null,
         nominalMl: body.nominalMl ?? null,

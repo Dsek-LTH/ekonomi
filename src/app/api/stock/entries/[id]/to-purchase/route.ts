@@ -4,8 +4,8 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
-import { canManageStock } from "@/lib/domain/permissions";
+import { fail } from "@/lib/api/guard";
+import { gateEntry } from "@/lib/api/stock-gate";
 import { replayProduct } from "@/lib/server/stock-replay";
 import { bulkTransaction } from "@/lib/server/tx";
 
@@ -13,9 +13,9 @@ import { bulkTransaction } from "@/lib/server/tx";
 const NOTE = "Inköp, omgjort från inventering";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const g = await gate(canManageStock, "stock.noAccess");
-  if (!g.ok) return g.res;
   const { id } = await params;
+  const g = await gateEntry(id, "manage");
+  if (!g.ok) return g.res;
 
   const entry = await prisma.stockEntry.findUnique({
     where: { id },

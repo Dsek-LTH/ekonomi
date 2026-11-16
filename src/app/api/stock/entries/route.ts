@@ -3,10 +3,10 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateProduct, gateStock } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { CreateStockEntry } from "@/lib/api/schemas/stock";
-import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { entryFault, type ProposedEntry } from "@/lib/stock/entry";
 import { LEVELS, isLevel, pickFault, shortfall, type OpenBottles } from "@/lib/stock/levels";
 import { movementVolume, spillVolume, tagTotals, unaccounted } from "@/lib/stock/event";
@@ -17,12 +17,13 @@ import { replayProduct } from "@/lib/server/stock-replay";
 import { bulkTransaction } from "@/lib/server/tx";
 import { getStockLog } from "@/lib/data/stock";
 import type { StockEntryKind } from "@/lib/domain/types";
+import { STOCKS } from "@/lib/stock/stocks";
 
 export async function GET(req: Request) {
-  const g = await gate(canViewStock, "stock.noAccess");
+  const url = new URL(req.url);
+  const g = await gateStock(url.searchParams.get("stock"), "view");
   if (!g.ok) return g.res;
 
-  const url = new URL(req.url);
   const take = Number(url.searchParams.get("take"));
   // Repeated or comma-separated.
   const many = (key: string) =>
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
       .flatMap((v) => v.split(","))
       .filter(Boolean);
   const log = await getStockLog({
+    stock: g.stock,
     productIds: many("product"),
     kinds: many("kind") as StockEntryKind[],
     from: url.searchParams.get("from") ?? undefined,
@@ -162,12 +164,16 @@ async function nightCeiling(
 }
 
 export async function POST(req: Request) {
-  const g = await gate(canManageStock, "stock.noAccess");
-  if (!g.ok) return g.res;
-
   const parsed = await parseBody(req, CreateStockEntry);
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
+
+  const g = await gateProduct(body.productId, "manage");
+  if (!g.ok) return g.res;
+  // A kind belongs to how a stock works: nights are the bar's, moves to places the café's.
+  const traits = STOCKS[g.stock];
+  if (NEEDS_EVENT.includes(body.kind) && !traits.usesEvents) return fail(422, "stock.kindNotHere");
+  if (body.kind === "ISSUE" && !traits.usesPlaces) return fail(422, "stock.kindNotHere");
 
   const product = await findProduct(body.productId);
   if (!product) return fail(404, "stock.productNotFound");

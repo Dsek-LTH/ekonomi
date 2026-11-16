@@ -31,10 +31,10 @@ enum Capability {
   /// Reach Inställningar. At least one live person must always hold this. See
   /// lib/server/capabilities.ts.
   SETTINGS
-  /// Read the stock overview and the log.
-  STOCK_VIEW
-  /// Register movements, run an event, close a stocktake.
-  STOCK_MANAGE
+  /// Read the alcohol stock's overview and log.
+  ALCOHOL_STOCK_VIEW
+  /// Register movements in the alcohol stock, run an event, close a stocktake.
+  ALCOHOL_STOCK_MANAGE
   /// See the budget pages.
   BUDGET_VIEW
   /// Comment on a budget account.
@@ -114,6 +114,13 @@ enum Capability {
   /// redovisar (lib/domain/member-score.ts). A member always sees their own.
   /// Held by the skattmästare by default.
   MEMBER_SCORE_VIEW
+  /// Read the café stock's overview and log.
+  CAFE_STOCK_VIEW
+  /// Keep the café stock: products, deliveries, stocktakes.
+  CAFE_STOCK_MANAGE
+  /// Log what one takes from the café stock as a board member, and see one's
+  /// own tab. See BoardWithdrawal.
+  BOARD_TAB
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
@@ -144,6 +151,11 @@ enum Role {
   // point of a revisor is to stand outside the treasury.
   REVISOR
   ORDINARIE
+  // Keeps the café's stock, the way STOCKARE keeps the bar's.
+  CAFE_STOCKARE
+  // Sits on the board, and so has a tab in the café stock. Says nothing else:
+  // what a board member may do in the books follows from their other roles.
+  STYRELSE
 }
 
 model User {
@@ -174,6 +186,10 @@ model User {
   // nothing there; a name with no row behind it simply grants nothing, which
   // the settings screen reports.
   resultUnits String[] @default([])
+
+  // The stock places (StockPlace.id) this person may log moves to and from,
+  // derived from the same group list at the same moment (StockPlaceGroup).
+  stockPlaceIds String[] @default([])
 
   // The Authentik group list as it stood at this person's last sign-in.
   //
@@ -208,42 +224,55 @@ model User {
 
   active Boolean @default(true)
 
-  submittedExpenses    Expense[]                @relation("ExpenseSubmitter")
-  allocationApprovals  ExpenseCostAllocation[]  @relation("AllocationApprover")
-  uploadedReceipts     Receipt[]                @relation("ReceiptUploader")
-  events               ExpenseEvent[]           @relation("EventActor")
-  deadlineWaivers      Expense[]                @relation("ExpenseDeadlineWaiver")
-  createdVerifications Verification[]           @relation("VerificationCreator")
-  heldCards            Card[]                   @relation("CardHolder")
-  budgets              Budget[]                 @relation("BudgetAuthor")
-  lockedBudgets        Budget[]                 @relation("BudgetLocker")
-  budgetComments       BudgetComment[]          @relation("BudgetCommentAuthor")
-  budgetChanges        BudgetChange[]           @relation("BudgetChangeAuthor")
-  revokedBudgetChanges BudgetChange[]           @relation("BudgetChangeRevoker")
-  fortnoxConnections   FortnoxConnection[]      @relation("FortnoxConnector")
-  fortnoxSession       FortnoxUserSession?      @relation("FortnoxUserSession")
-  incomeBatches        IncomeBatch[]            @relation("IncomeBatchCreator")
-  reviewedIncome       IncomeReport[]           @relation("IncomeReportReviewer")
-  manualIncomeVouchers IncomeReport[]           @relation("IncomeManualVoucher")
-  stockEntries         StockEntry[]             @relation("StockEntryActor")
-  stockEvents          StockEvent[]             @relation("StockEventCreator")
-  stockChanges         StockChange[]            @relation("StockChangeActor")
-  stockProductChanges  StockProductChange[]     @relation("StockProductChangeActor")
-  mileageRates         MileageRate[]            @relation("MileageRateAuthor")
-  contracts            Contract[]               @relation("ContractCreator")
-  contractFiles        ContractFile[]           @relation("ContractFileUploader")
-  rentalChecks         RentalDetails[]          @relation("RentalChecker")
-  counterparties       Counterparty[]           @relation("CounterpartyCreator")
-  outboundEmails       OutboundEmail[]          @relation("EmailRecipient")
-  sentTestEmails       OutboundEmail[]          @relation("EmailSender")
-  notificationPrefs    NotificationPreference[]
-  expensePresence      ExpensePresence[]        @relation("ExpensePresenceUser")
-  voucherReviews       VoucherReview[]          @relation("VoucherReviewer")
-  voucherComments      VoucherComment[]         @relation("VoucherCommentAuthor")
-  checklistItemsDone   ChecklistItem[]          @relation("ChecklistItemDoneBy")
-  reconciliations      AccountReconciliation[]  @relation("AccountReconciler")
-  accountNotes         AccountNote[]            @relation("AccountNoteAuthor")
-  exportClaims         Expense[]                @relation("ExpenseExportClaim")
+  submittedExpenses        Expense[]               @relation("ExpenseSubmitter")
+  allocationApprovals      ExpenseCostAllocation[] @relation("AllocationApprover")
+  uploadedReceipts         Receipt[]               @relation("ReceiptUploader")
+  events                   ExpenseEvent[]          @relation("EventActor")
+  deadlineWaivers          Expense[]               @relation("ExpenseDeadlineWaiver")
+  createdVerifications     Verification[]          @relation("VerificationCreator")
+  heldCards                Card[]                  @relation("CardHolder")
+  budgets                  Budget[]                @relation("BudgetAuthor")
+  lockedBudgets            Budget[]                @relation("BudgetLocker")
+  budgetComments           BudgetComment[]         @relation("BudgetCommentAuthor")
+  budgetChanges            BudgetChange[]          @relation("BudgetChangeAuthor")
+  revokedBudgetChanges     BudgetChange[]          @relation("BudgetChangeRevoker")
+  fortnoxConnections       FortnoxConnection[]     @relation("FortnoxConnector")
+  fortnoxSession           FortnoxUserSession?     @relation("FortnoxUserSession")
+  incomeBatches            IncomeBatch[]           @relation("IncomeBatchCreator")
+  reviewedIncome           IncomeReport[]          @relation("IncomeReportReviewer")
+  manualIncomeVouchers     IncomeReport[]          @relation("IncomeManualVoucher")
+  stockEntries             StockEntry[]            @relation("StockEntryActor")
+  stockEvents              StockEvent[]            @relation("StockEventCreator")
+  stockChanges             StockChange[]           @relation("StockChangeActor")
+  stockProductChanges      StockProductChange[]    @relation("StockProductChangeActor")
+  stockSettingsChanges     StockSettingsChange[]   @relation("StockSettingsChangeActor")
+  stockVouchersClaimed     StockVoucher[]          @relation("StockVoucherClaimer")
+  stockVouchersCreated     StockVoucher[]          @relation("StockVoucherCreator")
+  boardPrices              BoardPrice[]            @relation("BoardPriceCreator")
+  boardWithdrawals         BoardWithdrawal[]       @relation("BoardWithdrawalMember")
+  boardWithdrawalsLogged   BoardWithdrawal[]       @relation("BoardWithdrawalLogger")
+  customerInvoices         CustomerInvoice[]       @relation("CustomerInvoiceCustomer")
+  customerInvoicesExported CustomerInvoice[]       @relation("CustomerInvoiceExporter")
+  customerInvoicesCreated  CustomerInvoice[]       @relation("CustomerInvoiceCreator")
+
+  /// This person's customer number in Fortnox, once an invoice has been made
+  /// for them. Kept so the next invoice goes to the same customer.
+  fortnoxCustomerNumber String?
+  mileageRates          MileageRate[]            @relation("MileageRateAuthor")
+  contracts             Contract[]               @relation("ContractCreator")
+  contractFiles         ContractFile[]           @relation("ContractFileUploader")
+  rentalChecks          RentalDetails[]          @relation("RentalChecker")
+  counterparties        Counterparty[]           @relation("CounterpartyCreator")
+  outboundEmails        OutboundEmail[]          @relation("EmailRecipient")
+  sentTestEmails        OutboundEmail[]          @relation("EmailSender")
+  notificationPrefs     NotificationPreference[]
+  expensePresence       ExpensePresence[]        @relation("ExpensePresenceUser")
+  voucherReviews        VoucherReview[]          @relation("VoucherReviewer")
+  voucherComments       VoucherComment[]         @relation("VoucherCommentAuthor")
+  checklistItemsDone    ChecklistItem[]          @relation("ChecklistItemDoneBy")
+  reconciliations       AccountReconciliation[]  @relation("AccountReconciler")
+  accountNotes          AccountNote[]            @relation("AccountNoteAuthor")
+  exportClaims          Expense[]                @relation("ExpenseExportClaim")
 
   receivedSupplierInvoices         SupplierInvoice[]           @relation("SupplierInvoiceReceiver")
   assignedSupplierInvoices         SupplierInvoice[]           @relation("SupplierInvoiceAssigner")

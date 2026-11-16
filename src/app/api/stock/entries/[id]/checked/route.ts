@@ -4,13 +4,13 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
-import { canManageStock } from "@/lib/domain/permissions";
+import { fail } from "@/lib/api/guard";
+import { gateEntry } from "@/lib/api/stock-gate";
 import { today } from "@/lib/domain/date";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageStock, "stock.noAccess");
+  const g = await gateEntry(id, "manage");
   if (!g.ok) return g.res;
 
   const entry = await prisma.stockEntry.findUnique({

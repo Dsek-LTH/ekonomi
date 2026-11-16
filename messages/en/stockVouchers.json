@@ -1,0 +1,75 @@
+{
+  "title": "Bookkeeping",
+  "notSetUp": "Accounts are missing before the stock value can be booked.",
+  "notStarted": "Booking of the stock value is not turned on yet.",
+  "setUp": "To the settings",
+  "uncertain": "The voucher for {date} was sent by {name} but Fortnox never gave a clear answer. Nothing more can be booked until it is settled.",
+  "inProgress": "{name} is booking {date} right now.",
+  "resolve": "Check in Fortnox",
+  "resolveFailed": "Could not check in Fortnox",
+  "resolvedFound": "The voucher was in Fortnox as {label}",
+  "resolvedReleased": "The voucher was not in Fortnox. What was on it is waiting again.",
+  "tabsLabel": "Selection",
+  "tab": {
+    "due": "To book",
+    "sent": "Booked"
+  },
+  "send": "Book",
+  "sendFailed": "Could not book in Fortnox",
+  "sentOne": "Booked in Fortnox as {label}",
+  "nothingDue": "Nothing is waiting. Every movement of the stock is booked.",
+  "nothingSent": "Nothing has been booked yet.",
+  "corrections": "Corrections",
+  "correctionsHint": "What has changed on days that are already booked. Booked in a voucher of its own, dated today.",
+  "missingAccount": "An account is missing for this row. Choose it in the settings.",
+  "seeMovements": "Show the day's movements",
+  "line": {
+    "account": "Account",
+    "costCenter": "CC",
+    "text": "Text",
+    "debit": "Debit",
+    "credit": "Credit"
+  },
+  "col": {
+    "date": "Date",
+    "text": "Text",
+    "voucher": "Voucher",
+    "change": "Change",
+    "valueAfter": "Stock value after"
+  },
+  "undo": "Undo",
+  "undoTitle": "Undo the booking of {label}?",
+  "undoMessage": "Only do this if the voucher has been voided in Fortnox. The app forgets that it was sent, and what it carried is booked again in the next voucher.",
+  "undone": "The booking has been undone",
+  "undoFailed": "Could not undo",
+  "recon": {
+    "title": "Reconciliation",
+    "hint": "The stock accounts according to the stock compared with the ledger, last fetched {at}.",
+    "neverSynced": "The ledger has not been fetched from Fortnox yet, so there is nothing to compare with.",
+    "col": {
+      "group": "Product type",
+      "account": "Stock account",
+      "app": "According to the stock",
+      "due": "Not booked",
+      "fortnox": "In Fortnox",
+      "diff": "Difference"
+    },
+    "agrees": "Agrees",
+    "stale": "A voucher has been sent since the ledger was fetched. Sync with Fortnox before booking the difference.",
+    "dateLabel": "Voucher date",
+    "action": "Book the difference",
+    "confirmTitle": "Book the difference against Fortnox?",
+    "confirmMessage": "A voucher dated {date} brings the stock accounts in Fortnox to the stock's value. The difference is booked against the stocktake difference account."
+  },
+  "through": {
+    "date": "Through",
+    "send": "Book through {date}",
+    "hint": "Everything not yet booked up to and including the date becomes one voucher, dated that day. What comes after waits for next time.",
+    "refused": {
+      "alreadySent": "The stock is already booked through {date}. Pick a later date.",
+      "closedPeriod": "Fortnox has no open financial year for {date}.",
+      "nothingToSend": "There is nothing to book through {date}."
+    }
+  },
+  "sentThrough": "Booked through {date}"
+}

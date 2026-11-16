@@ -31,7 +31,7 @@ export interface ProposedEntry {
 // Kinds whose sign is fixed. COUNT and CORRECTION can go either way, and WASTE moves no stock.
 // SPOILAGE is a removal because a bottle broken in the cellar never left the shelf.
 const ADDS: readonly StockEntryKind[] = ["PURCHASE", "RETURN"];
-const REMOVES: readonly StockEntryKind[] = ["CHECKOUT", "SPOILAGE"];
+const REMOVES: readonly StockEntryKind[] = ["CHECKOUT", "SPOILAGE", "ISSUE", "WITHDRAWAL"];
 
 export function entryFault(entry: ProposedEntry, product: { kind: StockKind }): EntryFault | null {
   const { kind, units, open } = entry;

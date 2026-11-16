@@ -35,7 +35,9 @@
     "CORRECTION": "Rättelse",
     "CHECKOUT": "Ut",
     "RETURN": "In",
-    "SPOILAGE": "Kassation"
+    "SPOILAGE": "Kassation",
+    "ISSUE": "Till plats",
+    "WITHDRAWAL": "Styrelseuttag"
   },
   "kindName": {
     "UNIT": "Styckvara",
@@ -76,7 +78,8 @@
     "sizeRequired": "Volymen behövs till restaurangrapportens liter",
     "costRequired": "Inköpspriset behövs för att lagret ska kunna värderas",
     "eanInvalid": "Det här är ingen giltig streckkod. Kontrollera siffrorna eller skanna koden",
-    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen. Markera att produkten saknar streckkod i stället"
+    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen. Markera att produkten saknar streckkod i stället",
+    "packSizeInvalid": "En förpackning rymmer minst två"
   },
   "log": {
     "title": "Lagerlogg",
@@ -90,7 +93,9 @@
       "kind": "Vad hände",
       "allKinds": "Allt",
       "from": "Från",
-      "to": "Till"
+      "to": "Till",
+      "place": "Plats",
+      "allPlaces": "Alla platser"
     },
     "col": {
       "date": "Datum",
@@ -103,12 +108,14 @@
       "open": "Öppnade",
       "value": "Värde",
       "out": "Ute",
-      "event": "Tillfälle"
+      "event": "Tillfälle",
+      "place": "Plats"
     },
     "searchPlaceholder": "Sök i loggen…",
     "showRevisions": "Visa uppdelning",
     "duringTheNight": "Under kvällen",
-    "counted": "Räknat"
+    "counted": "Räknat",
+    "boardMember": "Styrelsen, {name}"
   },
   "products": {
     "new": "Ny produkt",
@@ -149,7 +156,12 @@
       "tagTooLong": "Taggen är för lång, högst {max} tecken",
       "shelfLife": "Hållbarhet",
       "shelfLifeHint": "Antal månader från leverans. Öl brukar vara 9, cider 21. Lämna tomt för sådant som inte blir gammalt, till exempel sprit.",
-      "shelfLifePlaceholder": "månader"
+      "shelfLifePlaceholder": "månader",
+      "group": "Produkttyp",
+      "groupHint": "Avgör vilket lagerkonto och kostnadskonto produkten bokförs på.",
+      "costHint": "Per styck, med pant och utan frakt.",
+      "packSize": "Antal per förpackning",
+      "packSizeHint": "Till exempel 24 för ett flak. Gör att leveranser och påfyllningar kan anges i förpackningar."
     },
     "col": {
       "name": "Produkt",
@@ -264,6 +276,9 @@
     "size": "Volym per styck",
     "abv": "Alkoholhalt",
     "unitCost": "Inköpspris inkl. pant",
+    "boardPrice": "Styrelsepris",
+    "noBoardPrice": "Inget, styrelsen kan inte ta ut den",
+    "boardPrices": "Priser",
     "alcoholPerKrona": "Alkohol per krona",
     "totalVolume": "Total volym",
     "events": "Ut och in",
@@ -522,5 +537,44 @@
     "stats": "Statistik"
   },
   "expiryUnset": "Ingen framförhållning för bäst före är vald, så inga leveranser bevakas.",
-  "expiryUnsetAction": "Välj den under Inställningar → Lager."
+  "expiryUnsetAction": "Välj den under Inställningar → Lager.",
+  "move": {
+    "title": "Flytta varor",
+    "from": "Från",
+    "to": "Till",
+    "storage": "Mauer",
+    "noPlaces": "Lagret har inga platser ännu. De läggs till under Inställningar -> Lager.",
+    "search": "Sök produkt",
+    "scanUnknown": "Ingen produkt i cafélagret har den streckkoden",
+    "noProducts": "Det finns inga produkter i lagret ännu.",
+    "noMatch": "Ingen produkt matchar sökningen.",
+    "nothingTaken": "{place} har inget att lämna tillbaka i år.",
+    "onHand": "{units} st i Mauer",
+    "taken": "{units} st hos {place}",
+    "date": "Datum",
+    "summary": "{units} st till {to}",
+    "move": "Flytta",
+    "saveEmpty": "Välj vad du flyttar",
+    "saved": "{units} st flyttade till {to}",
+    "failed": "Kunde inte spara flytten",
+    "today": "Dina flyttar i dag",
+    "route": "Från {from} till {to}",
+    "undo": "Ångra",
+    "undone": "Flytten är borttagen",
+    "undoFailed": "Kunde inte ångra flytten",
+    "searchPlace": "Sök plats"
+  },
+  "places": {
+    "title": "Platser i år",
+    "hint": "Det varje plats har tagit, minus det som lämnats tillbaka, under det valda räkenskapsåret. Det är vad platsens kostnadsställe har belastats med.",
+    "defaultCostCenter": "Förbrukningens",
+    "units": "{units} st"
+  },
+  "stepper": {
+    "scan": "Skanna",
+    "noneLeft": "Slut enligt lagret",
+    "less": "Färre {name}",
+    "more": "Fler {name}",
+    "units": "Antal {name}"
+  }
 }

@@ -35,7 +35,9 @@
     "CORRECTION": "Correction",
     "CHECKOUT": "Out",
     "RETURN": "In",
-    "SPOILAGE": "Write-off"
+    "SPOILAGE": "Write-off",
+    "ISSUE": "To a place",
+    "WITHDRAWAL": "Board withdrawal"
   },
   "kindName": {
     "UNIT": "Counted in units",
@@ -76,7 +78,8 @@
     "sizeRequired": "The volume is needed for the report's litres",
     "costRequired": "The cost price is needed before the stock can be valued",
     "eanInvalid": "This is not a valid barcode. Check the digits or scan the code",
-    "internalCodeTyped": "Codes starting with 2 are given out by the app. Mark the product as having none instead"
+    "internalCodeTyped": "Codes starting with 2 are given out by the app. Mark the product as having none instead",
+    "packSizeInvalid": "A pack holds at least two"
   },
   "log": {
     "title": "Stock log",
@@ -90,7 +93,9 @@
       "kind": "What happened",
       "allKinds": "Everything",
       "from": "From",
-      "to": "To"
+      "to": "To",
+      "place": "Place",
+      "allPlaces": "All places"
     },
     "col": {
       "date": "Date",
@@ -103,12 +108,14 @@
       "open": "Open bottles",
       "value": "Value",
       "out": "Out",
-      "event": "Occasion"
+      "event": "Occasion",
+      "place": "Place"
     },
     "searchPlaceholder": "Search the log…",
     "showRevisions": "Show the breakdown",
     "duringTheNight": "During the night",
-    "counted": "Counted"
+    "counted": "Counted",
+    "boardMember": "Board, {name}"
   },
   "products": {
     "new": "New product",
@@ -149,7 +156,12 @@
       "tagTooLong": "That tag is too long, at most {max} characters",
       "shelfLife": "Shelf life",
       "shelfLifeHint": "Months from delivery. Beer is usually 9, cider 21. Leave empty for anything that does not go off, such as spirits.",
-      "shelfLifePlaceholder": "months"
+      "shelfLifePlaceholder": "months",
+      "group": "Product type",
+      "groupHint": "Decides which stock account and cost account the product is booked on.",
+      "costHint": "Per unit, with deposit and without freight.",
+      "packSize": "Units per pack",
+      "packSizeHint": "For example 24 for a tray. Lets deliveries and refills be entered in packs."
     },
     "col": {
       "name": "Product",
@@ -264,6 +276,9 @@
     "size": "Volume each",
     "abv": "Strength",
     "unitCost": "Cost price incl. deposit",
+    "boardPrice": "Board price",
+    "noBoardPrice": "None, the board cannot take it",
+    "boardPrices": "Prices",
     "alcoholPerKrona": "Alcohol per krona",
     "totalVolume": "Total volume",
     "events": "Out and in",
@@ -522,5 +537,44 @@
     "stats": "Statistics"
   },
   "expiryUnset": "No best-before notice period is chosen, so no deliveries are being watched.",
-  "expiryUnsetAction": "Choose it under Settings → Stock."
+  "expiryUnsetAction": "Choose it under Settings → Stock.",
+  "move": {
+    "title": "Move stock",
+    "from": "From",
+    "to": "To",
+    "storage": "Mauer",
+    "noPlaces": "The stock has no places yet. They are added under Settings -> Stock.",
+    "search": "Search products",
+    "scanUnknown": "No product in the café stock has that barcode",
+    "noProducts": "There are no products in the stock yet.",
+    "noMatch": "No product matches the search.",
+    "nothingTaken": "{place} has nothing to bring back this year.",
+    "onHand": "{units} in Mauer",
+    "taken": "{units} at {place}",
+    "date": "Date",
+    "summary": "{units} to {to}",
+    "move": "Move",
+    "saveEmpty": "Choose what you are moving",
+    "saved": "{units} moved to {to}",
+    "failed": "Could not save the move",
+    "today": "Your moves today",
+    "route": "From {from} to {to}",
+    "undo": "Undo",
+    "undone": "The move has been removed",
+    "undoFailed": "Could not undo the move",
+    "searchPlace": "Search places"
+  },
+  "places": {
+    "title": "Places this year",
+    "hint": "What each place has taken, less what was brought back, in the chosen financial year. This is what the place's cost centre has been charged.",
+    "defaultCostCenter": "Consumption's",
+    "units": "{units}"
+  },
+  "stepper": {
+    "scan": "Scan",
+    "noneLeft": "Out, according to the stock",
+    "less": "Fewer {name}",
+    "more": "More {name}",
+    "units": "Number of {name}"
+  }
 }

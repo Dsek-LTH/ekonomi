@@ -31,10 +31,12 @@ export function CategoryMark({
   category,
   size = "sm",
 }: {
-  category: Category;
+  /** Absent on a product with no drink type (the café's): then there is no mark. */
+  category?: Category | null;
   size?: "sm" | "lg";
 }) {
   const t = useTranslations("stock");
+  if (!category) return null;
   const name = t(`category.${category}`);
   return (
     <span

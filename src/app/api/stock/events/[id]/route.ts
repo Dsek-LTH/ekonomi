@@ -3,10 +3,10 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateEvent } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { PatchStockEvent } from "@/lib/api/schemas/stock";
-import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockEvent } from "@/lib/data/stock";
 import { assertAllPossible } from "@/lib/server/stock-state";
 import { replayProduct } from "@/lib/server/stock-replay";
@@ -15,7 +15,7 @@ import { isoDay } from "@/lib/domain/date";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canViewStock, "stock.noAccess");
+  const g = await gateEvent(id, "view");
   if (!g.ok) return g.res;
 
   const event = await getStockEvent(id);
@@ -30,7 +30,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageStock, "stock.noAccess");
+  const g = await gateEvent(id, "manage");
   if (!g.ok) return g.res;
 
   const parsed = await parseBody(req, PatchStockEvent);
@@ -44,7 +44,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const saved = await bulkTransaction(async (tx) => {
     const updated = await tx.stockEvent.update({
       where: { id },
-      data: { name: parsed.data.name, date: day },
+      data: {
+        name: parsed.data.name,
+        date: day,
+        // Absent leaves it, null clears it.
+        costCenterId: parsed.data.costCenterId,
+      },
       select: { id: true, name: true, date: true },
     });
 
@@ -89,7 +94,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const g = await gate(canManageStock, "stock.noAccess");
+  const g = await gateEvent(id, "manage");
   if (!g.ok) return g.res;
 
   const event = await prisma.stockEvent.findUnique({ where: { id }, select: { id: true } });

@@ -2,29 +2,33 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateStock } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { CreateStockEvent } from "@/lib/api/schemas/stock";
-import { canManageStock, canViewStock } from "@/lib/domain/permissions";
 import { getStockEvents } from "@/lib/data/stock";
 import { isoDay } from "@/lib/domain/date";
+import { STOCKS } from "@/lib/stock/stocks";
 
-export async function GET() {
-  const g = await gate(canViewStock, "stock.noAccess");
+export async function GET(req: Request) {
+  const g = await gateStock(new URL(req.url).searchParams.get("stock"), "view");
   if (!g.ok) return g.res;
-  return NextResponse.json(await getStockEvents());
+  return NextResponse.json(await getStockEvents(g.stock));
 }
 
 export async function POST(req: Request) {
-  const g = await gate(canManageStock, "stock.noAccess");
-  if (!g.ok) return g.res;
-
   const parsed = await parseBody(req, CreateStockEvent);
   if (!parsed.ok) return parsed.res;
+
+  const g = await gateStock(parsed.data.stock, "manage");
+  if (!g.ok) return g.res;
+  if (!STOCKS[g.stock].usesEvents) return fail(422, "stock.kindNotHere");
 
   const event = await prisma.stockEvent.create({
     data: {
       name: parsed.data.name,
+      stockId: g.stock,
+      costCenterId: parsed.data.costCenterId ?? null,
       date: new Date(parsed.data.date),
       actorId: g.actor.id,
     },

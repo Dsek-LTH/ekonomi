@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  capabilities: ["STOCK_MANAGE"] as string[],
-  event: { id: "ev1" } as { id: string } | null,
+  capabilities: ["ALCOHOL_STOCK_MANAGE"] as string[],
+  event: { id: "ev1", stockId: "alcohol" } as { id: string; stockId: string } | null,
   moved: 0,
   update: vi.fn(),
   updateMany: vi.fn(),
@@ -58,8 +58,8 @@ const patch = (body: Record<string, unknown>) =>
   );
 
 beforeEach(() => {
-  h.capabilities = ["STOCK_MANAGE"];
-  h.event = { id: "ev1" };
+  h.capabilities = ["ALCOHOL_STOCK_MANAGE"];
+  h.event = { id: "ev1", stockId: "alcohol" };
   h.moved = 0;
   h.update
     .mockReset()
@@ -114,7 +114,7 @@ describe("PATCH /api/stock/events/[id]", () => {
   });
 
   it("refuses somebody who may only read the stock", async () => {
-    h.capabilities = ["STOCK_VIEW"];
+    h.capabilities = ["ALCOHOL_STOCK_VIEW"];
     const res = await patch({ name: "Fredagspub", date: "2026-03-14" });
 
     expect(res.status).toBe(403);

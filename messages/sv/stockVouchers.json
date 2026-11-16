@@ -1,0 +1,75 @@
+{
+  "title": "Bokföring",
+  "notSetUp": "Konton saknas innan lagervärdet kan bokföras.",
+  "notStarted": "Bokföringen av lagervärdet är inte påslagen ännu.",
+  "setUp": "Till inställningarna",
+  "uncertain": "Verifikatet för {date} skickades av {name} men Fortnox svarade aldrig tydligt. Inget mer kan bokföras förrän det är utrett.",
+  "inProgress": "{name} bokför {date} just nu.",
+  "resolve": "Kontrollera i Fortnox",
+  "resolveFailed": "Kunde inte kontrollera i Fortnox",
+  "resolvedFound": "Verifikatet fanns i Fortnox som {label}",
+  "resolvedReleased": "Verifikatet fanns inte i Fortnox. Det som stod på det väntar igen.",
+  "tabsLabel": "Urval",
+  "tab": {
+    "due": "Att bokföra",
+    "sent": "Bokförda"
+  },
+  "send": "Bokför",
+  "sendFailed": "Kunde inte bokföra i Fortnox",
+  "sentOne": "Bokfört i Fortnox som {label}",
+  "nothingDue": "Inget väntar. Allt lagret har rört sig är bokfört.",
+  "nothingSent": "Inget är bokfört ännu.",
+  "corrections": "Rättelser",
+  "correctionsHint": "Det som har ändrats på dagar som redan är bokförda. Bokförs i ett eget verifikat, daterat i dag.",
+  "missingAccount": "Ett konto saknas för den här raden. Välj det i inställningarna.",
+  "seeMovements": "Visa dagens rörelser",
+  "line": {
+    "account": "Konto",
+    "costCenter": "Kst",
+    "text": "Text",
+    "debit": "Debet",
+    "credit": "Kredit"
+  },
+  "col": {
+    "date": "Datum",
+    "text": "Text",
+    "voucher": "Verifikat",
+    "change": "Ändring",
+    "valueAfter": "Lagervärde efter"
+  },
+  "undo": "Ångra",
+  "undoTitle": "Ångra bokföringen av {label}?",
+  "undoMessage": "Gör bara detta om verifikatet har makulerats i Fortnox. Appen glömmer att det skickades, och det som stod på det bokförs igen i nästa verifikat.",
+  "undone": "Bokföringen är ångrad",
+  "undoFailed": "Kunde inte ångra",
+  "recon": {
+    "title": "Avstämning",
+    "hint": "Lagerkontona enligt lagret jämfört med huvudboken, som senast hämtades {at}.",
+    "neverSynced": "Huvudboken har inte hämtats från Fortnox ännu, så det finns inget att jämföra med.",
+    "col": {
+      "group": "Produkttyp",
+      "account": "Lagerkonto",
+      "app": "Enligt lagret",
+      "due": "Ej bokfört",
+      "fortnox": "I Fortnox",
+      "diff": "Skillnad"
+    },
+    "agrees": "Stämmer",
+    "stale": "Ett verifikat har skickats sedan huvudboken hämtades. Synka med Fortnox innan skillnaden bokförs.",
+    "dateLabel": "Datum för verifikatet",
+    "action": "Bokför skillnaden",
+    "confirmTitle": "Bokför skillnaden mot Fortnox?",
+    "confirmMessage": "Ett verifikat daterat {date} för lagerkontona i Fortnox till lagrets värde. Skillnaden bokförs mot kontot för inventeringsdifferens."
+  },
+  "through": {
+    "date": "Till och med",
+    "send": "Bokför t.o.m. {date}",
+    "hint": "Allt som inte är bokfört till och med datumet blir ett verifikat, daterat den dagen. Det som ligger efter väntar till nästa gång.",
+    "refused": {
+      "alreadySent": "Lagret är redan bokfört till och med {date}. Välj ett senare datum.",
+      "closedPeriod": "Fortnox har inget öppet räkenskapsår för {date}.",
+      "nothingToSend": "Det finns inget att bokföra till och med {date}."
+    }
+  },
+  "sentThrough": "Bokfört till och med {date}"
+}

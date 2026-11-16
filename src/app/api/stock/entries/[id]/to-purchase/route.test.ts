@@ -15,7 +15,7 @@ vi.mock("@/lib/server/current-user", () => ({
     email: "s@dsek.se",
     studentId: "st1234ab-s",
     roles: ["SKATTMASTARE"],
-    capabilities: ["STOCK_MANAGE", "STOCK_VIEW", "SETTINGS"],
+    capabilities: ["ALCOHOL_STOCK_MANAGE", "ALCOHOL_STOCK_VIEW", "SETTINGS"],
   }),
 }));
 
@@ -27,7 +27,8 @@ vi.mock("@/lib/domain/permissions", async (orig) => ({
 vi.mock("@/lib/server/db", () => ({
   prisma: {
     stockEntry: {
-      findUnique: async () => h.entry,
+      // The gate reads the entry's stock off its product (lib/api/stock-gate.ts).
+      findUnique: async () => h.entry && { ...h.entry, product: { stockId: "alcohol" } },
       findMany: async () => h.day,
     },
     stockProduct: { findUnique: async () => h.product },

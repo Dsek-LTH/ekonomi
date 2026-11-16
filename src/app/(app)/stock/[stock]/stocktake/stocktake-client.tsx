@@ -1,0 +1,439 @@
+"use client";
+
+// The whole shelf counted as a sheet (the per-product dialog is StocktakeDialog in product-actions.tsx).
+// What is typed is what is on the shelf, never a difference, and the box is never pre-filled with the log's figure.
+// Every counted product is booked, agreeing or not: a matching count moves nothing but is the evidence that somebody looked (recordStocktake in api/stock/entries).
+// Kept in the browser as it is typed (lib/ui/use-local-draft.ts), since a count is half an hour on a phone that locks itself.
+import { deliveryDraftKey } from "../delivery/delivery-client";
+import { useStock } from "@/components/stock/stock-context";
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { PageShell } from "@/components/page-shell";
+import { ActionBar } from "@/components/action-bar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { DateInput, Field, Input } from "@/components/ui/field";
+import { IconScan } from "@/components/ui/icons";
+import { SearchInput } from "@/components/ui/search-input";
+import { Tag } from "@/components/ui/status-pill";
+import { TableScroll } from "@/components/ui/table-scroll";
+import { CategoryMark } from "@/components/stock/category-mark";
+import { useMutation } from "@/components/shell/use-mutation";
+import { useNotify } from "@/components/shell/notifications";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useLocalDraft } from "@/lib/ui/use-local-draft";
+import { useProductScan } from "@/components/stock/use-product-scan";
+import { tagsInUse } from "@/lib/stock/tags";
+import { isQuantityInput, quantity } from "@/lib/stock/quantity";
+import { LEVELS, bottlesAt, type Level } from "@/lib/stock/levels";
+import type { StockLevelDto } from "@/lib/data/stock";
+import type { CreateStockEntry } from "@/lib/api/schemas/stock";
+import { cn } from "@/lib/ui/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+
+/** What has been typed and not yet booked, as typed. */
+type Draft = {
+  /** Sealed bottles, or units for a can, by product id. */
+  sealed: Record<string, string>;
+  /** Open bottles per level, by product id. Spirits and wine only. */
+  open: Record<string, Partial<Record<Level, string>>>;
+  occurredAt: string;
+  note: string;
+};
+
+const draftKey = (stock: string) => `stock:stocktake:draft:${stock}`;
+
+/** A box's figure: what was typed, worked out, or 0 for nothing. */
+const figure = (text: string | undefined): number => {
+  if (!text || text.trim() === "") return 0;
+  const q = quantity(text);
+  return q.ok ? q.value : 0;
+};
+
+export default function StocktakeClient({
+  products,
+  today,
+}: {
+  products: StockLevelDto[];
+  today: string;
+}) {
+  const t = useTranslations("stock");
+  const { href, stock } = useStock();
+  const router = useRouter();
+  const notify = useNotify();
+  const confirm = useConfirm();
+  const { mutate } = useMutation();
+  const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [onlyDiffering, setOnlyDiffering] = useState(false);
+
+  const [draft, setDraft, clearDraft] = useLocalDraft<Draft>(draftKey(stock), {
+    sealed: {},
+    open: {},
+    occurredAt: today,
+    note: "",
+  });
+
+  // Counted once its first box has something in it; a spirit's open bottles are optional and none when empty.
+  const counted = (id: string) => (draft.sealed[id] ?? "").trim() !== "";
+
+  const differences = (p: StockLevelDto) => {
+    const sealed = figure(draft.sealed[p.id]) - p.onHand.units;
+    const open = LEVELS.map((l) => figure(draft.open[p.id]?.[l]) - bottlesAt(p.onHand.open, l));
+    return {
+      sealed,
+      open,
+      any: sealed !== 0 || (p.kind === "VOLUME" && open.some((n) => n !== 0)),
+    };
+  };
+
+  const countedProducts = products.filter((p) => counted(p.id));
+  const differing = countedProducts.filter((p) => differences(p).any);
+  // More sealed than the log is often a delivery booked in the wrong place, which would enter at the shelf's average and miss the restaurangrapport.
+  const increases = countedProducts
+    .map((p) => ({ p, n: differences(p).sealed }))
+    .filter((x) => x.n > 0);
+
+  /** Hand the increases to the delivery sheet as a delivery of that many each (added to its draft, `deliveryDraftKey`), and go there to book it. */
+  function increasesToDelivery() {
+    try {
+      const key = deliveryDraftKey(stock);
+      const raw = window.localStorage.getItem(key);
+      const d = raw
+        ? (JSON.parse(raw) as {
+            rows: string[];
+            typed: Record<string, string>;
+            occurredAt?: string;
+            note?: string;
+          })
+        : { rows: [], typed: {}, occurredAt: draft.occurredAt, note: "" };
+      for (const { p, n } of increases) {
+        if (!d.rows.includes(p.id)) d.rows.push(p.id);
+        d.typed[p.id] = String(n);
+      }
+      d.occurredAt ??= draft.occurredAt;
+      window.localStorage.setItem(key, JSON.stringify(d));
+    } catch {
+      notify.error(t("stocktakeSheet.toDeliveryFailed"));
+      return;
+    }
+    router.push(href("/delivery"));
+  }
+
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const shown = products.filter(
+      (p) =>
+        (!q || p.name.toLowerCase().includes(q) || p.ean?.includes(q)) &&
+        (!onlyDiffering || (counted(p.id) && differences(p).any)),
+    );
+    const by = new Map<string, StockLevelDto[]>();
+    for (const p of shown) by.set(p.groupId, [...(by.get(p.groupId) ?? []), p]);
+    return [...by.entries()];
+    // `counted` and `differences` read the draft, which is the dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, query, onlyDiffering, draft]);
+
+  const boxes = useRef(new Map<string, HTMLInputElement | null>());
+  const jumpTo = (id: string) => {
+    setQuery("");
+    setOnlyDiffering(false);
+    requestAnimationFrame(() => {
+      const box = boxes.current.get(id);
+      box?.scrollIntoView({ block: "center", behavior: "smooth" });
+      box?.focus({ preventScroll: true });
+    });
+  };
+  const { scan, overlay } = useProductScan({
+    unknownError: t("scan.unknown"),
+    knownTags: tagsInUse(products),
+    onScanned: jumpTo,
+  });
+
+  const typeSealed = (id: string, text: string) => {
+    if (!isQuantityInput(text)) return;
+    setDraft((d) => ({ ...d, sealed: { ...d.sealed, [id]: text } }));
+  };
+  const typeOpen = (id: string, level: Level, text: string) => {
+    if (!isQuantityInput(text)) return;
+    setDraft((d) => ({ ...d, open: { ...d.open, [id]: { ...d.open[id], [level]: text } } }));
+  };
+
+  /** Book every counted product as one COUNT each through the dialog's route, one at a time (each write replays that product's log). Refused ones stay on the sheet, booked ones are cleared. */
+  async function save() {
+    if (countedProducts.length === 0 || saving) return;
+    setSaving(true);
+    const written: string[] = [];
+    try {
+      for (const p of countedProducts) {
+        const body: CreateStockEntry = {
+          productId: p.id,
+          kind: "COUNT",
+          occurredAt: draft.occurredAt,
+          counted: {
+            sealed: figure(draft.sealed[p.id]),
+            open:
+              p.kind === "VOLUME"
+                ? Object.fromEntries(LEVELS.map((l) => [String(l), figure(draft.open[p.id]?.[l])]))
+                : undefined,
+          },
+          note: draft.note.trim() || undefined,
+        };
+        const made = await mutate<{ id: string }>("/api/stock/entries", {
+          key: "save",
+          method: "POST",
+          body,
+          refresh: false,
+          error: t("stocktakeSheet.failed", { name: p.name }),
+        });
+        if (!made) break;
+        written.push(p.id);
+      }
+    } finally {
+      setSaving(false);
+    }
+    if (written.length === 0) return;
+
+    const done = new Set(written);
+    setDraft((d) => ({
+      ...d,
+      sealed: Object.fromEntries(Object.entries(d.sealed).filter(([id]) => !done.has(id))),
+      open: Object.fromEntries(Object.entries(d.open).filter(([id]) => !done.has(id))),
+    }));
+    notify.success(t("stocktakeSheet.saved", { count: written.length }));
+    router.refresh();
+  }
+
+  async function discard() {
+    const ok = await confirm({
+      title: t("stocktakeSheet.discardTitle"),
+      message: t("stocktakeSheet.discardMessage", { count: countedProducts.length }),
+      confirmLabel: t("delivery.discard"),
+      tone: "danger",
+    });
+    if (ok) clearDraft();
+  }
+
+  const head = "px-2 py-2.5 text-center font-medium";
+  const cell =
+    "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
+
+  return (
+    <PageShell title={t("stocktakeSheet.title")} back={href()} width="content">
+      <Card>
+        <div className="grid gap-4 px-inset py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <Field label={t("field.date")} requirement="required">
+            <DateInput
+              value={draft.occurredAt}
+              onChange={(e) => setDraft((d) => ({ ...d, occurredAt: e.target.value }))}
+            />
+          </Field>
+          <Field label={t("field.note")} requirement="optional">
+            <Input
+              value={draft.note}
+              onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
+              placeholder={t("stocktakeSheet.notePlaceholder")}
+            />
+          </Field>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-inset py-3">
+          {/* A row of its own on a phone, or the field is left about 60px. */}
+          <div className="min-w-0 flex-1 max-md:basis-full">
+            <SearchInput
+              placeholder={t("stocktakeSheet.search")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="secondary" size="sm" onClick={scan}>
+            <IconScan className="size-4" />
+            {t("scan.action")}
+          </Button>
+          <Checkbox
+            checked={onlyDiffering}
+            onChange={() => setOnlyDiffering((v) => !v)}
+            label={t("stocktakeSheet.onlyDiffering")}
+            className="text-muted"
+          >
+            {t("stocktakeSheet.onlyDiffering")}
+          </Checkbox>
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <TableScroll minWidth="min-w-[42rem]">
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead>
+              <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+                <th className={cn(head, "w-[30%] text-left")}>{t("stocktakeSheet.col.product")}</th>
+                <th className={cn(head, "w-[15%] text-right")}>{t("stocktakeSheet.col.log")}</th>
+                <th className={cn(head, "w-[12%]")}>{t("stocktakeSheet.col.sealed")}</th>
+                {LEVELS.map((l) => (
+                  <th key={l} className={cn(head, "w-[7%]")}>
+                    {l} %
+                  </th>
+                ))}
+                <th className={cn(head, "w-[15%] text-right")}>
+                  {t("stocktakeSheet.col.difference")}
+                </th>
+              </tr>
+            </thead>
+            {groups.length === 0 && (
+              <tbody>
+                <tr>
+                  <td colSpan={8} className="px-3 py-6 text-center text-sm text-muted">
+                    {t("stocktakeSheet.noMatch")}
+                  </td>
+                </tr>
+              </tbody>
+            )}
+            {groups.map(([group, rows]) => (
+              <tbody key={group}>
+                <tr className="border-b border-border bg-surface/60">
+                  <td colSpan={8} className="px-3 py-1.5">
+                    <span className="flex items-center gap-2 text-xs font-medium text-muted">
+                      <CategoryMark category={rows[0]?.category} />
+                      {rows[0]?.groupName}
+                    </span>
+                  </td>
+                </tr>
+                {rows.map((p) => {
+                  const volume = p.kind === "VOLUME";
+                  const isCounted = counted(p.id);
+                  const diff = differences(p);
+                  const expectedOpen = LEVELS.filter((l) => bottlesAt(p.onHand.open, l) > 0)
+                    .map((l) =>
+                      t("stocktakeSheet.openAt", {
+                        count: bottlesAt(p.onHand.open, l),
+                        level: l,
+                      }),
+                    )
+                    .join(", ");
+                  return (
+                    <tr
+                      key={p.id}
+                      className={cn(
+                        "divide-x divide-border border-b border-border last:border-b-0",
+                        isCounted && "bg-accent-soft/20",
+                      )}
+                    >
+                      <td className="truncate px-3 py-2 font-medium" title={p.name}>
+                        {p.name}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-muted">
+                        <span className="block">
+                          {t("stocktakeSheet.logSealed", {
+                            count: p.onHand.units,
+                            unit: volume
+                              ? t("stocktakeSheet.sealedShort")
+                              : t("stocktakeSheet.unitsShort"),
+                          })}
+                        </span>
+                        {expectedOpen && <span className="block text-xs">{expectedOpen}</span>}
+                      </td>
+                      <td className="p-0 align-middle">
+                        <input
+                          ref={(el) => {
+                            boxes.current.set(p.id, el);
+                          }}
+                          inputMode="numeric"
+                          value={draft.sealed[p.id] ?? ""}
+                          onChange={(e) => typeSealed(p.id, e.target.value)}
+                          placeholder="-"
+                          aria-label={t("stocktakeSheet.countFor", {
+                            name: p.name,
+                          })}
+                          className={cn(cell, isCounted && "bg-warning-soft/40 font-medium")}
+                        />
+                      </td>
+                      {LEVELS.map((l) =>
+                        volume ? (
+                          <td key={l} className="p-0 align-middle">
+                            <input
+                              inputMode="numeric"
+                              value={draft.open[p.id]?.[l] ?? ""}
+                              onChange={(e) => typeOpen(p.id, l, e.target.value)}
+                              placeholder="0"
+                              aria-label={t("stocktakeSheet.openFor", { name: p.name, level: l })}
+                              className={cn(
+                                cell,
+                                (draft.open[p.id]?.[l] ?? "") !== "" &&
+                                  "bg-warning-soft/40 font-medium",
+                              )}
+                            />
+                          </td>
+                        ) : (
+                          // A can is never opened on the shelf: nothing to count.
+                          <td key={l} className="bg-surface/50" aria-hidden />
+                        ),
+                      )}
+                      <td className="px-2 py-2 text-right">
+                        {isCounted &&
+                          (diff.any ? (
+                            <Tag
+                              tone="warning"
+                              size="sm"
+                              className="tabular-nums"
+                              title={diff.sealed > 0 ? t("stocktakeSheet.increaseHint") : undefined}
+                            >
+                              {diff.sealed !== 0
+                                ? `${diff.sealed > 0 ? "+" : "−"}${Math.abs(diff.sealed)}`
+                                : t("stocktakeSheet.openDiffers")}
+                            </Tag>
+                          ) : (
+                            <Tag tone="success" size="sm">
+                              {t("stocktakeSheet.agrees")}
+                            </Tag>
+                          ))}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            ))}
+          </table>
+        </TableScroll>
+      </Card>
+
+      <ActionBar
+        summary={
+          <span className="font-medium">
+            {t("stocktakeSheet.progress", {
+              counted: countedProducts.length,
+              total: products.length,
+            })}
+          </span>
+        }
+        missing={[]}
+        missingLabel=""
+        note={
+          increases.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-warning">
+              <span>{t("stocktakeSheet.increases", { count: increases.length })}</span>
+              <Button variant="link" type="button" onClick={increasesToDelivery}>
+                {t("stocktakeSheet.toDelivery")}
+              </Button>
+            </div>
+          ) : differing.length > 0 ? (
+            <p className="text-xs text-warning">
+              {t("stocktakeSheet.differing", { count: differing.length })}
+            </p>
+          ) : undefined
+        }
+        onSave={discard}
+        saveLabel={t("delivery.discard")}
+        saveDisabled={countedProducts.length === 0 || saving}
+        saving={false}
+        submit={{
+          label: t("stocktakeSheet.save", { count: countedProducts.length }),
+          onClick: save,
+          disabled: countedProducts.length === 0,
+          loading: saving,
+        }}
+      />
+
+      {overlay}
+    </PageShell>
+  );
+}

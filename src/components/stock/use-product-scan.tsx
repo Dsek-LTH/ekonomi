@@ -4,7 +4,8 @@
 // by opening the product form with the barcode filled in. Returns the overlay as a node so both sheets wire it the same way.
 import { useState } from "react";
 import { BarcodeScanner } from "@/components/stock/barcode-scanner";
-import { ProductDialog } from "@/app/(app)/stock/product-dialog";
+import { ProductDialog } from "@/app/(app)/stock/[stock]/product-dialog";
+import { useStock } from "@/components/stock/stock-context";
 import { useMutation } from "@/components/shell/use-mutation";
 
 /** A product being invented mid-sheet: what is known of it so far. */
@@ -27,6 +28,7 @@ export function useProductScan({
 }) {
   // Its own mutation scope, so a scan does not make the sheet's save button read as busy.
   const { mutate } = useMutation();
+  const { stock } = useStock();
   const [scanning, setScanning] = useState(false);
   const [naming, setNaming] = useState<Naming>(null);
 
@@ -34,7 +36,7 @@ export function useProductScan({
   async function lookUp(ean: string) {
     setScanning(false);
     const found = await mutate<{ id: string; name: string }>(
-      `/api/stock/products/by-ean?ean=${encodeURIComponent(ean)}`,
+      `/api/stock/products/by-ean?stock=${stock}&ean=${encodeURIComponent(ean)}`,
       { key: "scan", method: "GET", refresh: false, error: unknownError },
     );
     if (!found) {

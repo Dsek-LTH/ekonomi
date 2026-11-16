@@ -17,7 +17,8 @@ export interface StockMovement {
 /** What a product is, as far as counting it goes. */
 export interface StockSubject {
   kind: StockKind;
-  category: DrinkCategory;
+  /** The drink type, in a stock that files the restaurangrapport. */
+  category?: DrinkCategory | null;
   /** UNIT: what one unit holds. VOLUME: what one sealed bottle holds. */
   unitMl?: number | null;
   nominalMl?: number | null;

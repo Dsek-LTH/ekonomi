@@ -4,10 +4,10 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { fail, gate } from "@/lib/api/guard";
+import { fail } from "@/lib/api/guard";
+import { gateEntry } from "@/lib/api/stock-gate";
 import { parseBody } from "@/lib/api/parse";
 import { PatchStockEntry } from "@/lib/api/schemas/stock";
-import { canManageStock } from "@/lib/domain/permissions";
 import { entryFault } from "@/lib/stock/entry";
 import type { OpenBottles } from "@/lib/stock/levels";
 import { assertPossible, NEGATIVE_STOCK, openColumns, openOf } from "@/lib/server/stock-state";
@@ -50,17 +50,18 @@ const ENTRY = {
 } as const;
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const g = await gate(canManageStock, "stock.noAccess");
+  const { id } = await params;
+  const g = await gateEntry(id, "manage");
   if (!g.ok) return g.res;
 
-  const { id } = await params;
   const parsed = await parseBody(req, PatchStockEntry);
   if (!parsed.ok) return parsed.res;
 
   const entry = await prisma.stockEntry.findUnique({ where: { id }, select: ENTRY });
   if (!entry) return fail(404, "stock.entryNotFound");
-  // A night's figures are the sheet's business.
+  // A night's figures are the sheet's business, and a board member's withdrawal the tab's.
   if (entry.eventId) return fail(422, "stock.onTheSheet");
+  if (entry.kind === "WITHDRAWAL") return fail(422, "stock.onTheBoardTab");
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },
@@ -80,7 +81,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Only the size changes: rung and direction are what the row is.
   const sign =
-    entry.kind === "CHECKOUT" || entry.kind === "WASTE" || entry.kind === "SPOILAGE" ? -1 : 1;
+    entry.kind === "CHECKOUT" ||
+    entry.kind === "WASTE" ||
+    entry.kind === "SPOILAGE" ||
+    entry.kind === "ISSUE"
+      ? -1
+      : 1;
   const open: OpenBottles = {};
   let units = 0;
   let spilledQty = 0;
@@ -128,13 +134,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const g = await gate(canManageStock, "stock.noAccess");
+  const { id } = await params;
+  const g = await gateEntry(id, "manage");
   if (!g.ok) return g.res;
 
-  const { id } = await params;
   const entry = await prisma.stockEntry.findUnique({ where: { id }, select: ENTRY });
   if (!entry) return fail(404, "stock.entryNotFound");
   if (entry.eventId) return fail(422, "stock.onTheSheet");
+  if (entry.kind === "WITHDRAWAL") return fail(422, "stock.onTheBoardTab");
 
   const product = await prisma.stockProduct.findUnique({
     where: { id: entry.productId },
