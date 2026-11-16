@@ -1,0 +1,125 @@
+// The board's tab: what board members take from the café stock, and the
+// invoices they get for it at year end. See docs/stock.md.
+//
+// A withdrawal is two facts. That stock left the shelf is a StockEntry of kind
+// WITHDRAWAL, valued at cost like any removal, and it reaches the books in the
+// stock's daily voucher. Who took it and what they owe for it is the
+// BoardWithdrawal beside it, priced from the board's own price list.
+
+/// What the board pays for one product, from a day on.
+///
+/// Append-only: a new price is a new row with its own date, so the table is
+/// its own history. A withdrawal copies the price in force on its day
+/// (BoardWithdrawal.unitPriceOre), which is why a price change never reaches
+/// back into what somebody has already taken.
+model BoardPrice {
+  id        String       @id @default(cuid())
+  product   StockProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+
+  priceOre  Int
+  /// The first day this price applies.
+  validFrom DateTime @db.Date
+
+  createdBy   User     @relation("BoardPriceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([productId, validFrom])
+}
+
+/// One product a board member took, and what it costs them.
+model BoardWithdrawal {
+  id String @id @default(cuid())
+
+  /// The movement in the stock's log. Gone with it: a withdrawal that is
+  /// removed is removed from the shelf's history too.
+  entry   StockEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId String     @unique
+
+  member   User   @relation("BoardWithdrawalMember", fields: [memberId], references: [id], onDelete: Restrict)
+  memberId String
+
+  qty          Int
+  /// The board price on the day, in öre. Captured, never read from the price
+  /// list again.
+  unitPriceOre Int
+
+  /// Who wrote it down. The member, or the treasurer on their behalf.
+  loggedBy   User   @relation("BoardWithdrawalLogger", fields: [loggedById], references: [id], onDelete: Restrict)
+  loggedById String
+
+  /// The invoice line it was billed on. From then on the row is locked.
+  invoiceLine   CustomerInvoiceLine? @relation(fields: [invoiceLineId], references: [id], onDelete: SetNull)
+  invoiceLineId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([memberId, invoiceLineId])
+}
+
+/// Where a customer invoice came from. One value today. A fakturabegäran from
+/// avtalaD will be the second.
+enum CustomerInvoiceSource {
+  BOARD_TAB
+}
+
+/// An invoice this app makes in Fortnox, as an utkast the treasurer books and
+/// sends from there.
+model CustomerInvoice {
+  id     String                @id @default(cuid())
+  source CustomerInvoiceSource
+
+  customer   User   @relation("CustomerInvoiceCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  customerId String
+
+  /// Fortnox's financial-year id the invoice is for.
+  fiscalYearId Int
+  /// Zero for the year's invoice. Counts up when something is logged after
+  /// the run and needs an invoice of its own.
+  sequence     Int @default(0)
+
+  invoiceDate DateTime @db.Date
+  totalOre    Int
+
+  lines CustomerInvoiceLine[]
+
+  /// Set once the invoice exists in Fortnox.
+  fortnoxCustomerNumber String?
+  fortnoxDocumentNumber String?
+  exportedAt            DateTime?
+  exportedBy            User?     @relation("CustomerInvoiceExporter", fields: [exportedById], references: [id], onDelete: SetNull)
+  exportedById          String?
+
+  /// The export lock, the same three states an utlägg's has.
+  exportClaimedAt  DateTime?
+  exportClaimState ExportClaimState?
+
+  createdBy   User     @relation("CustomerInvoiceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([source, customerId, fiscalYearId, sequence])
+}
+
+model CustomerInvoiceLine {
+  id        String          @id @default(cuid())
+  invoice   CustomerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+
+  description  String
+  qty          Int
+  unitPriceOre Int
+  amountOre    Int
+
+  /// The revenue account and cost centre, as chosen when the invoice was made.
+  account      String
+  costCenter   CostCenter? @relation("CustomerInvoiceLineCostCenter", fields: [costCenterId], references: [id], onDelete: SetNull)
+  costCenterId String?
+
+  sortOrder Int @default(0)
+
+  withdrawals BoardWithdrawal[]
+
+  @@index([invoiceId])
+}

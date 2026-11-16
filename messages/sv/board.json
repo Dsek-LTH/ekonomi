@@ -1,0 +1,134 @@
+{
+  "log": {
+    "title": "Logga uttag",
+    "today": "Loggat i dag"
+  },
+  "history": {
+    "title": "Mina uttag",
+    "nothingOpen": "Ingen öppen nota. Allt du har tagit är fakturerat.",
+    "logMore": "Logga mer"
+  },
+  "invoices": {
+    "title": "Fakturering",
+    "logFor": "Logga åt någon",
+    "nothingOpen": "Ingen öppen nota. Allt är fakturerat.",
+    "logForMember": "Logga uttag"
+  },
+  "members": {
+    "none": "Ingen har ett styrelsekonto ännu. Vilka grupper som sitter i styrelsen väljs under Inställningar, Roller.",
+    "left": "Har lämnat styrelsen",
+    "count": "{count, plural, =0 {inga uttag} one {# uttag} other {# uttag}}",
+    "total": "Totalt att fakturera",
+    "col": {
+      "member": "Ledamot",
+      "status": "Status",
+      "count": "Öppna uttag",
+      "owed": "Att fakturera"
+    },
+    "search": "Sök ledamot"
+  },
+  "tab": {
+    "open": "Öppen nota",
+    "closed": "Tidigare notor",
+    "inFortnox": "I Fortnox",
+    "unconfirmed": "Inte bekräftad av Fortnox",
+    "resend": "Skicka igen",
+    "resent": "Fakturan skickad till Fortnox",
+    "resendFailed": "Kunde inte skicka fakturan",
+    "owed": "Att betala",
+    "since": "Öppen sedan",
+    "count": "Uttag",
+    "units": "{count} st",
+    "lines": "{count, plural, one {# rad} other {# rader}}",
+    "col": {
+      "product": "Produkt",
+      "qty": "Antal",
+      "last": "Senast",
+      "amount": "Belopp",
+      "date": "Fakturadatum",
+      "invoice": "Faktura",
+      "lines": "Rader",
+      "status": "Status"
+    }
+  },
+  "customer": {
+    "label": "Kund i Fortnox för {name}",
+    "loading": "Hämtar kunder…",
+    "pick": "Välj kund i Fortnox",
+    "search": "Sök namn, nummer eller e-post",
+    "missing": "Finns kunden inte? Lägg upp den i Fortnox först.",
+    "reload": "Hämta listan igen"
+  },
+  "resend": {
+    "customer": "Kund i Fortnox",
+    "title": "Skicka fakturan igen",
+    "account": "Intäktskonto",
+    "accountPlaceholder": "Välj konto",
+    "costCenter": "Kostnadsställe",
+    "noCostCenter": "Inget kostnadsställe",
+    "invoiceDate": "Fakturadatum",
+    "cancel": "Avbryt"
+  },
+  "loggedBy": "Loggat av {name}",
+  "remove": "Ta bort",
+  "removed": "Uttaget är borttaget",
+  "removeFailed": "Kunde inte ta bort uttaget",
+  "cancel": "Avbryt",
+  "saved": "Uttag på {amount} loggat",
+  "saveFailed": "Kunde inte spara uttaget",
+  "withdraw": {
+    "member": "Ledamot",
+    "pickMember": "Välj ledamot",
+    "date": "Datum",
+    "noProducts": "Inga produkter har ett styrelsepris ännu.",
+    "noMatch": "Ingen produkt matchar sökningen.",
+    "search": "Sök produkt",
+    "scanUnknown": "Ingen produkt med styrelsepris har den streckkoden",
+    "saveEmpty": "Välj vad du har tagit",
+    "save": "Spara uttag"
+  },
+  "prices": {
+    "title": "Priser",
+    "empty": "Det finns inga produkter i cafélagret ännu.",
+    "col": {
+      "product": "Produkt",
+      "cost": "Inköpspris",
+      "price": "Styrelsepris",
+      "since": "Gäller från",
+      "status": "Status"
+    },
+    "none": "Inget pris",
+    "underCost": "Under inköpspris",
+    "next": "{price} från {date}",
+    "set": "Sätt pris",
+    "change": "Ändra",
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "saved": "Priset är sparat",
+    "saveFailed": "Kunde inte spara priset",
+    "dialog": {
+      "hint": "Utan pris kan styrelsen inte ta ut produkten.",
+      "price": "Styrelsepris (kr)",
+      "cost": "Inköpspriset är {cost}.",
+      "underCost": "Lägre än inköpspriset, som är {cost}.",
+      "from": "Gäller från",
+      "fromHint": "Uttag före den dagen behåller sitt pris.",
+      "history": "Tidigare priser",
+      "priceRequired": "Ange ett pris",
+      "dateRequired": "Ange från vilken dag priset gäller"
+    },
+    "search": "Sök produkt"
+  },
+  "invoice": {
+    "all": "Fakturera styrelsen {year}",
+    "now": "Fakturera nu",
+    "title": "Fakturera styrelsen {year}",
+    "hint": "En kundfaktura per ledamot skapas som utkast i Fortnox, för uttagen under räkenskapsåret. Du granskar, bokför och skickar dem därifrån.",
+    "run": "Skapa {count, plural, one {# faktura} other {# fakturor}}",
+    "failed": "Kunde inte skapa fakturorna",
+    "sent": "{count, plural, one {# faktura skapad} other {# fakturor skapade}} i Fortnox",
+    "failedSome": "{count, plural, one {# gick inte igenom} other {# gick inte igenom}}. Tryck igen för att försöka på nytt, inget skickas dubbelt.",
+    "unsent": "En faktura på {amount} är skapad här men har inte nått Fortnox. Den skickas nu.",
+    "close": "Stäng"
+  }
+}

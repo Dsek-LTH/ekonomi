@@ -1,0 +1,134 @@
+{
+  "log": {
+    "title": "Log a withdrawal",
+    "today": "Logged today"
+  },
+  "history": {
+    "title": "My withdrawals",
+    "nothingOpen": "No open tab. Everything you have taken is invoiced.",
+    "logMore": "Log more"
+  },
+  "invoices": {
+    "title": "Invoicing",
+    "logFor": "Log for somebody",
+    "nothingOpen": "No open tab. Everything is invoiced.",
+    "logForMember": "Log a withdrawal"
+  },
+  "members": {
+    "none": "Nobody has a board tab yet. Which groups sit on the board is chosen under Settings, Roles.",
+    "left": "Has left the board",
+    "count": "{count, plural, =0 {no withdrawals} one {# withdrawal} other {# withdrawals}}",
+    "total": "Total to invoice",
+    "col": {
+      "member": "Member",
+      "status": "Status",
+      "count": "Open withdrawals",
+      "owed": "To invoice"
+    },
+    "search": "Search member"
+  },
+  "tab": {
+    "open": "Open tab",
+    "closed": "Earlier tabs",
+    "inFortnox": "In Fortnox",
+    "unconfirmed": "Not confirmed by Fortnox",
+    "resend": "Send again",
+    "resent": "Invoice sent to Fortnox",
+    "resendFailed": "Could not send the invoice",
+    "owed": "To pay",
+    "since": "Open since",
+    "count": "Withdrawals",
+    "units": "{count} pcs",
+    "lines": "{count, plural, one {# line} other {# lines}}",
+    "col": {
+      "product": "Product",
+      "qty": "Quantity",
+      "last": "Last",
+      "amount": "Amount",
+      "date": "Invoice date",
+      "invoice": "Invoice",
+      "lines": "Lines",
+      "status": "Status"
+    }
+  },
+  "customer": {
+    "label": "Fortnox customer for {name}",
+    "loading": "Loading customers…",
+    "pick": "Choose a Fortnox customer",
+    "search": "Search name, number or email",
+    "missing": "Customer missing? Add it in Fortnox first.",
+    "reload": "Reload the list"
+  },
+  "resend": {
+    "customer": "Fortnox customer",
+    "title": "Send the invoice again",
+    "account": "Sales account",
+    "accountPlaceholder": "Choose account",
+    "costCenter": "Cost centre",
+    "noCostCenter": "No cost centre",
+    "invoiceDate": "Invoice date",
+    "cancel": "Cancel"
+  },
+  "loggedBy": "Logged by {name}",
+  "remove": "Remove",
+  "removed": "The withdrawal has been removed",
+  "removeFailed": "Could not remove the withdrawal",
+  "cancel": "Cancel",
+  "saved": "A withdrawal of {amount} logged",
+  "saveFailed": "Could not save the withdrawal",
+  "withdraw": {
+    "member": "Member",
+    "pickMember": "Choose a member",
+    "date": "Date",
+    "noProducts": "No products have a board price yet.",
+    "noMatch": "No product matches the search.",
+    "search": "Search product",
+    "scanUnknown": "No product with a board price has that barcode",
+    "saveEmpty": "Choose what you took",
+    "save": "Save withdrawal"
+  },
+  "prices": {
+    "title": "Prices",
+    "empty": "There are no products in the café stock yet.",
+    "col": {
+      "product": "Product",
+      "cost": "Cost price",
+      "price": "Board price",
+      "since": "Applies from",
+      "status": "Status"
+    },
+    "none": "No price",
+    "underCost": "Under cost",
+    "next": "{price} from {date}",
+    "set": "Set price",
+    "change": "Change",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "The price has been saved",
+    "saveFailed": "Could not save the price",
+    "dialog": {
+      "hint": "Without a price the board cannot take the product.",
+      "price": "Board price (kr)",
+      "cost": "The cost price is {cost}.",
+      "underCost": "Lower than the cost price, which is {cost}.",
+      "from": "Applies from",
+      "fromHint": "Withdrawals before that day keep their price.",
+      "history": "Earlier prices",
+      "priceRequired": "Enter a price",
+      "dateRequired": "Say from which day the price applies"
+    },
+    "search": "Search product"
+  },
+  "invoice": {
+    "all": "Invoice the board {year}",
+    "now": "Invoice now",
+    "title": "Invoice the board {year}",
+    "hint": "One customer invoice per member is made as a draft in Fortnox, for the withdrawals during the financial year. You review, book and send them from there.",
+    "run": "Make {count, plural, one {# invoice} other {# invoices}}",
+    "failed": "Could not make the invoices",
+    "sent": "{count, plural, one {# invoice} other {# invoices}} made in Fortnox",
+    "failedSome": "{count, plural, one {# did not go through} other {# did not go through}}. Press again to retry, nothing is sent twice.",
+    "unsent": "An invoice of {amount} was made here but has not reached Fortnox. It is sent now.",
+    "close": "Close"
+  }
+}

@@ -21,8 +21,14 @@ export type FortnoxAuthMode = "service" | "user";
 // The service account only reads, but `bookkeeping` is the only ledger scope and carries
 // write rights too. A connection or personal login made before `project`, `supplier` or
 // `supplierinvoice` were added must reconnect. Suppliers are only added in Fortnox.
-const SERVICE_SCOPES = "bookkeeping costcenter project companyinformation supplier";
-const USER_SCOPES = "bookkeeping inbox connectfile companyinformation supplierinvoice supplier";
+// `customer` and `invoice` came with the board's year-end invoices (lib/server/board-invoices.ts): the service
+// connection reads the customer register and a customer's invoices, the personal login makes the invoices.
+// Customers, like suppliers, are only added in Fortnox. Both need Fortnox's Kundfaktura or
+// Order licence, and a connection or login made before they were added must reconnect.
+const SERVICE_SCOPES =
+  "bookkeeping costcenter project companyinformation supplier supplierinvoice customer invoice";
+const USER_SCOPES =
+  "bookkeeping inbox connectfile companyinformation supplierinvoice supplier customer invoice";
 
 const scopesFor = (mode: FortnoxAuthMode) => (mode === "service" ? SERVICE_SCOPES : USER_SCOPES);
 
@@ -170,8 +176,14 @@ export async function saveConnection(
     const previous = await tx.fortnoxConnection.findFirst({
       select: { voucherSeries: true, orgNumber: true },
     });
+    const sameCompany =
+      previous != null && previous.orgNumber != null && previous.orgNumber === opts.orgNumber;
     const voucherSeries =
       previous && previous.orgNumber === (opts.orgNumber ?? null) ? previous.voucherSeries : null;
+    // A personal login was let in for the company the connection had (see the callback). Another company, or one
+    // that cannot be told, ends them all: they could write into the wrong books. The same company keeps them, since
+    // reconnecting for a new scope should not log everybody out.
+    if (previous && !sameCompany) await tx.fortnoxUserSession.deleteMany({});
     await tx.fortnoxConnection.deleteMany({});
     return tx.fortnoxConnection.create({
       data: {
@@ -189,8 +201,12 @@ export async function saveConnection(
   });
 }
 
+/** Ends the connection and every personal login with it: they were let in against this connection, and nothing can be exported without it. */
 export async function disconnect(): Promise<void> {
-  await prisma.fortnoxConnection.deleteMany({});
+  await prisma.$transaction([
+    prisma.fortnoxUserSession.deleteMany({}),
+    prisma.fortnoxConnection.deleteMany({}),
+  ]);
 }
 
 // A usable service token, refreshing if near expiry. Reads only, never for writing
@@ -749,7 +765,113 @@ export interface SupplierInvoiceInput {
   }[];
   payableAccount: number;
   /** Öresutjämning, SEK, signed. */
-  rounding?: { account: number; amount: number };
+  rounding?: number;
+}
+
+/** The GivenNumber of a supplier's invoice with this invoice number in Fortnox, cancelled ones
+ *  left out, or null if there is none. Matched here, in case Fortnox ignores the filter. */
+export async function findSupplierInvoice(
+  token: string,
+  supplierNumber: string,
+  invoiceNumber: string,
+): Promise<string | null> {
+  const wanted = invoiceNumber.trim();
+  for (let page = 1; ; page++) {
+    const data = await fortnoxGet<{
+      SupplierInvoices?: {
+        GivenNumber?: string | number;
+        SupplierNumber?: string;
+        InvoiceNumber?: string;
+        Cancelled?: boolean;
+      }[];
+      MetaInformation?: { "@TotalPages"?: number };
+    }>(
+      `/supplierinvoices?suppliernumber=${encodeURIComponent(supplierNumber)}&limit=500&page=${page}`,
+      token,
+    );
+    const hit = (data.SupplierInvoices ?? []).find(
+      (i) =>
+        !i.Cancelled &&
+        i.SupplierNumber === supplierNumber &&
+        (i.InvoiceNumber ?? "").trim() === wanted,
+    );
+    if (hit?.GivenNumber != null) return String(hit.GivenNumber);
+    if (page >= (data.MetaInformation?.["@TotalPages"] ?? 1)) return null;
+  }
+}
+
+export interface FortnoxSupplierInvoice {
+  givenNumber: string;
+  invoiceNumber: string | null;
+  invoiceDate: string | null; // YYYY-MM-DD
+  dueDate: string | null;
+  total: number; // SEK
+  roundOff: number; // SEK, signed
+  ocr: string | null;
+  yourReference: string | null;
+  ourReference: string | null;
+  /** The booking rows less the payable (TOT) row. */
+  rows: {
+    account: string;
+    debit: number;
+    credit: number;
+    costCenter: string | null;
+    project: string | null;
+    text: string | null;
+  }[];
+}
+
+export async function getSupplierInvoice(
+  token: string,
+  givenNumber: string,
+): Promise<FortnoxSupplierInvoice> {
+  const data = await fortnoxGet<{
+    SupplierInvoice?: {
+      GivenNumber?: string | number;
+      InvoiceNumber?: string;
+      InvoiceDate?: string;
+      DueDate?: string;
+      Total?: string | number;
+      RoundOffValue?: string | number;
+      OCR?: string;
+      YourReference?: string;
+      OurReference?: string;
+      SupplierInvoiceRows?: {
+        Account?: number | string;
+        Code?: string;
+        Debit?: number | string;
+        Credit?: number | string;
+        CostCenter?: string;
+        Project?: string;
+        TransactionInformation?: string;
+      }[];
+    };
+  }>(`/supplierinvoices/${encodeURIComponent(givenNumber)}`, token);
+  const i = data.SupplierInvoice;
+  if (i?.GivenNumber == null)
+    throw new FortnoxError("Leverantörsfakturan finns inte i Fortnox.", 404);
+  const num = (v: string | number | undefined) => Number(v ?? 0) || 0;
+  return {
+    givenNumber: String(i.GivenNumber),
+    invoiceNumber: i.InvoiceNumber || null,
+    invoiceDate: i.InvoiceDate || null,
+    dueDate: i.DueDate || null,
+    total: num(i.Total),
+    roundOff: num(i.RoundOffValue),
+    ocr: i.OCR || null,
+    yourReference: i.YourReference || null,
+    ourReference: i.OurReference || null,
+    rows: (i.SupplierInvoiceRows ?? [])
+      .filter((r) => r.Code !== "TOT" && r.Account != null && (num(r.Debit) || num(r.Credit)))
+      .map((r) => ({
+        account: String(r.Account),
+        debit: num(r.Debit),
+        credit: num(r.Credit),
+        costCenter: r.CostCenter || null,
+        project: r.Project || null,
+        text: r.TransactionInformation || null,
+      })),
+  };
 }
 
 /** Make an unbooked supplier invoice, returning its GivenNumber. Rows go as attested, no VAT. */
@@ -764,12 +886,7 @@ export async function createSupplierInvoice(
     ...(r.project && { Project: r.project }),
     ...(r.text && { TransactionInformation: r.text.slice(0, 100) }),
   }));
-  if (input.rounding) {
-    const { account, amount } = input.rounding;
-    rows.push(
-      amount > 0 ? { Account: account, Debit: amount } : { Account: account, Credit: -amount },
-    );
-  }
+  // No row for the rounding: Fortnox books RoundOffValue on its own rounding account.
   rows.push({ Account: input.payableAccount, Code: "TOT", Credit: input.total });
 
   const data = await fortnoxPost<{ SupplierInvoice?: { GivenNumber?: string | number } }>(
@@ -783,7 +900,7 @@ export async function createSupplierInvoice(
         DueDate: input.dueDate,
         Total: input.total.toFixed(2),
         VAT: "0",
-        ...(input.rounding && { RoundOffValue: input.rounding.amount.toFixed(2) }),
+        ...(input.rounding && { RoundOffValue: input.rounding.toFixed(2) }),
         ...(input.ocr && { OCR: input.ocr }),
         ...(input.yourReference && { YourReference: input.yourReference.slice(0, 50) }),
         ...(input.ourReference && { OurReference: input.ourReference.slice(0, 50) }),
@@ -825,4 +942,132 @@ export async function connectFileToVoucher(
       VoucherNumber: number,
     },
   });
+}
+
+// ── Customers and customer invoices ──────────────────────────────
+// Used by the board's year-end invoices. The property names follow Fortnox's v3 resources. Their documentation
+// could not be read when this was written (it is served by a script), so the first run against the real company
+// should be watched: see docs/stock.md.
+
+export interface FortnoxCustomer {
+  number: string;
+  name: string;
+  email: string | null;
+  active: boolean;
+}
+
+/** Fortnox's customer register. Customers are added in Fortnox only, never from here. */
+export async function listCustomers(token: string): Promise<FortnoxCustomer[]> {
+  const out: FortnoxCustomer[] = [];
+  for (let page = 1; ; page++) {
+    const data = await fortnoxGet<{
+      Customers?: {
+        CustomerNumber?: string | number;
+        Name?: string;
+        Email?: string;
+        Active?: boolean;
+      }[];
+      MetaInformation?: { "@TotalPages"?: number };
+    }>(`/customers?limit=500&page=${page}`, token);
+    for (const c of data.Customers ?? []) {
+      if (c.CustomerNumber == null || c.CustomerNumber === "") continue;
+      const number = String(c.CustomerNumber);
+      out.push({
+        number,
+        name: c.Name || number,
+        email: c.Email || null,
+        active: c.Active !== false,
+      });
+    }
+    if (page >= (data.MetaInformation?.["@TotalPages"] ?? 1)) return out;
+  }
+}
+
+export interface CustomerInvoiceInput {
+  customerNumber: string;
+  /** YYYY-MM-DD. */
+  invoiceDate: string;
+  /** Our own id for the invoice, written where it can be found again (`findCustomerInvoice`). */
+  externalReference: string;
+  remarks?: string;
+  rows: {
+    account: number;
+    description: string;
+    quantity: number;
+    /** Per unit, SEK. */
+    price: number;
+    costCenter?: string;
+  }[];
+}
+
+/**
+ * Make a customer invoice and return its DocumentNumber. It is left as Fortnox makes it: not booked and not
+ * sent, for the treasurer to look over, book and send from Fortnox. No VAT on any row.
+ */
+export async function createCustomerInvoice(
+  token: string,
+  input: CustomerInvoiceInput,
+): Promise<string> {
+  const data = await fortnoxPost<{ Invoice?: { DocumentNumber?: string | number } }>(
+    "/invoices",
+    token,
+    {
+      Invoice: {
+        CustomerNumber: input.customerNumber,
+        InvoiceDate: input.invoiceDate,
+        ExternalInvoiceReference1: input.externalReference,
+        ...(input.remarks && { Remarks: input.remarks.slice(0, 1024) }),
+        InvoiceRows: input.rows.map((r) => ({
+          AccountNumber: r.account,
+          Description: r.description.slice(0, 50),
+          DeliveredQuantity: r.quantity,
+          Price: r.price,
+          VAT: 0,
+          ...(r.costCenter && { CostCenter: r.costCenter }),
+        })),
+      },
+    },
+  );
+  const number = data.Invoice?.DocumentNumber;
+  if (number == null || number === "") throw new FortnoxError("Fortnox returnerade ingen faktura.");
+  return String(number);
+}
+
+/**
+ * The invoice of this customer that carries our id as its external reference, or null. The duplicate check
+ * before an invoice is made, and how one whose answer was lost is found again. It lists the customer's invoices
+ * and reads each one, because the list is not relied on to carry the reference.
+ */
+export async function findCustomerInvoice(
+  token: string,
+  customerNumber: string,
+  externalReference: string,
+): Promise<string | null> {
+  interface Page {
+    Invoices?: { DocumentNumber?: string | number; ExternalInvoiceReference1?: string | null }[];
+    MetaInformation?: { "@TotalPages"?: number };
+  }
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const data = await fortnoxGet<Page>(
+      `/invoices?customernumber=${encodeURIComponent(customerNumber)}&page=${page}`,
+      token,
+    );
+    for (const row of data.Invoices ?? []) {
+      if (row.DocumentNumber == null) continue;
+      let reference = row.ExternalInvoiceReference1;
+      if (reference === undefined) {
+        const one = await fortnoxGet<{ Invoice?: { ExternalInvoiceReference1?: string | null } }>(
+          `/invoices/${encodeURIComponent(String(row.DocumentNumber))}`,
+          token,
+        );
+        reference = one.Invoice?.ExternalInvoiceReference1;
+      }
+      if (reference === externalReference) return String(row.DocumentNumber);
+    }
+    totalPages = data.MetaInformation?.["@TotalPages"] ?? 1;
+    page++;
+  } while (page <= totalPages);
+  return null;
 }
