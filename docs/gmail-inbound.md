@@ -117,15 +117,16 @@ reads anything a push missed. While the mailbox is not connected it answers
 
 ## 7. Connect the mailbox
 
-As someone with settings access, open **Bokföring → Fakturainkorg**. The
-**Inkorgens mejlkonto** card at the foot says "Inte kopplad". Click
+As someone with settings access, open **Inställningar → E-post**. The
+**Inkommande post** card at the top says "Inte kopplad". Click
 **Koppla inkorgen**, log in to Google as `fakturor@dsek.se` and allow
-read access. The app refuses a login to any other account. Back in the
-Inkorg, the card says who connected it and when, and the watch is started.
+read access. The app refuses a login to any other account. Back on the
+settings page, the card says who connected it and when, and the watch is
+started.
 
 The login stops working if the mailbox's password is changed or the access
 is removed under the account's security settings. The card then says "Inte
-kopplad" again, and the fix is to click **Koppla inkorgen** once more. Mail
+kopplad" again, and the Inkorg shows a warning to everyone who sorts invoices, and the fix is to click **Koppla inkorgen** once more. Mail
 that arrived meanwhile is read on reconnect, up to a week back.
 
 **Koppla från** stops the watch, withdraws the login at Google and forgets
@@ -137,8 +138,9 @@ Forward an invoice PDF from your @dsek.se address to the mailbox, with
 "SEX01" (or any cost centre code) in the text. Within a few seconds it should
 be in that unit's Inkorg, and its resultatansvariga get a mail.
 
-If it is not, look at the mailbox card. It shows when the mailbox was last
-read, the last error, and any mail that was refused, with the reason.
+If it is not, look at the **Inkommande post** card in settings. It shows when
+the mailbox was last read and the last error. Mail that was refused, with the
+reason, is listed at the foot of the Inkorg.
 
 ## What gets refused
 

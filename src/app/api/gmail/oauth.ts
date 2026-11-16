@@ -4,6 +4,6 @@
 import { serverEnv } from "@/lib/server/env";
 
 export const STATE_COOKIE = "gmail_oauth_state";
-export const RETURN_TO = "/invoices/inbox";
+export const RETURN_TO = "/admin/email";
 
 export const redirectUri = () => `${serverEnv("APP_URL")}/api/gmail/callback`;

@@ -1,6 +1,6 @@
 // GET /api/gmail/callback: where Google sends the person back after logging in as the inkorg mailbox.
 // Checks the nonce and the caller's right again, refuses a login to any other mailbox than GMAIL_MAILBOX,
-// then stores the login and starts the watch. Always lands back on the Inkorg with ?gmail=connected or
+// then stores the login and starts the watch. Always lands back on Settings > E-post with ?gmail=connected or
 // ?gmail=error&reason=...
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
