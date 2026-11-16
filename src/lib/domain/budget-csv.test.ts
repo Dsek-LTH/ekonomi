@@ -88,7 +88,6 @@ describe("parseBudgetCsv", () => {
     expect(problems).toEqual([]);
     expect(sheets[0].accounts[0].lines[0].expression).toBe("20000");
     expect(sheets[0].costCenterName).toBe("SEX02");
-    expect(sheets[0].accounts[0].name).toBe("4000");
   });
 
   it("reports the missing headers and reads nothing", () => {

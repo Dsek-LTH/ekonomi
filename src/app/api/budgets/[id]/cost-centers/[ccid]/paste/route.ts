@@ -114,7 +114,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
           data: {
             budgetCostCenterId: ccId,
             accountCode: source.accountCode,
-            accountName: source.accountName,
           },
           select: { id: true },
         });

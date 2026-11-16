@@ -90,6 +90,8 @@ export async function getEvaluatedBudget(
             // By account number, the order of a chart of accounts (BAS codes are four digits, so string sort is numeric).
             orderBy: { accountCode: "asc" },
             include: {
+              // The name is the chart's, synced from Fortnox.
+              account: { select: { name: true } },
               lineItems: { orderBy: { sortOrder: "asc" } },
               comments: {
                 orderBy: { createdAt: "asc" },
@@ -162,7 +164,7 @@ export async function getEvaluatedBudget(
       accounts: cc.accounts.map((acct) => ({
         id: acct.id,
         accountCode: acct.accountCode,
-        accountName: acct.accountName,
+        accountName: acct.account.name,
         lineItems: acct.lineItems.map((li) => ({
           id: li.id,
           description: li.description,

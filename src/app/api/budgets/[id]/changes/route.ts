@@ -49,7 +49,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // Keyed on sheet and code so duplicate new accounts hit the duplicate rule.
   const toCreate = new Map<
     string,
-    { budgetCostCenterId: string; accountCode: string; accountName: string }
+    { budgetCostCenterId: string; accountCode: string }
   >();
 
   for (const raw of rawEntries) {
@@ -87,7 +87,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         toCreate.set(accountId, {
           budgetCostCenterId: sheet.id,
           accountCode: check.code,
-          accountName: check.name,
         });
       }
     }
@@ -112,7 +111,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         data: {
           budgetCostCenterId: spec.budgetCostCenterId,
           accountCode: spec.accountCode,
-          accountName: spec.accountName,
         },
       });
       createdIds.set(key, created.id);

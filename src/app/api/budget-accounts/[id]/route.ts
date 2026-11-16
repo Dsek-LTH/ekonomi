@@ -15,15 +15,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!parsed.ok) return parsed.res;
   const body = parsed.data;
   const data: Record<string, unknown> = {};
-  // Changing the code re-resolves against the chart and pulls the name with it, so the two can't disagree.
+  // A new code must be in the chart, which also supplies the name the client shows.
   if (body.accountCode !== undefined) {
     const check = await resolveBudgetAccount(body.accountCode);
     if (!check.ok) return fail(422, check.error, { values: check.values });
     data.accountCode = check.code;
-    data.accountName = check.name;
   }
-  const account = await prisma.budgetAccount.update({ where: { id }, data });
-  return NextResponse.json(account);
+  const { account: chart, ...account } = await prisma.budgetAccount.update({
+    where: { id },
+    data,
+    include: { account: { select: { name: true } } },
+  });
+  return NextResponse.json({ ...account, accountName: chart.name });
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {

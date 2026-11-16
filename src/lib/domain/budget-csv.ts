@@ -3,7 +3,8 @@
 //   cost_center,cc_name,account,account_name,description,quantity,unit_price,amount
 //   SEX02,Sittningar,3015,Biljettförsäljning,T. sittningar,,,250000
 // Amounts are kronor. Either `amount` or the `quantity`/`unit_price` pair is given, never both
-// (the rule BudgetLineItem states in the schema).
+// (the rule BudgetLineItem states in the schema). `account_name` is accepted but ignored: the
+// name comes from the chart of accounts.
 import { amountToOre, sniffDelimiter, splitCsvLine } from "@/lib/domain/csv";
 
 interface ParsedBudgetLine {
@@ -15,7 +16,6 @@ interface ParsedBudgetLine {
 
 interface ParsedBudgetAccount {
   code: string;
-  name: string;
   lines: ParsedBudgetLine[];
 }
 
@@ -181,11 +181,7 @@ export function parseBudgetCsv(text: string): ParsedBudgetCsv {
     const accountKey = `${ccCode} ${accountCode}`;
     let account = accounts.get(accountKey);
     if (!account) {
-      account = {
-        code: accountCode,
-        name: at(cols, "account_name") || accountCode,
-        lines: [],
-      };
+      account = { code: accountCode, lines: [] };
       accounts.set(accountKey, account);
       sheet.accounts.push(account);
     }

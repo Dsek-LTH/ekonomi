@@ -11,7 +11,6 @@ import { changeLabel, isActive } from "@/lib/budget/changes";
 
 type SourceAccount = {
   accountCode: string;
-  accountName: string;
   lineItems: {
     id: string;
     description: string;
@@ -37,7 +36,6 @@ type AccountRow = {
   id: string;
   budgetCostCenterId: string;
   accountCode: string;
-  accountName: string;
 };
 
 type LineRow = {
@@ -82,7 +80,6 @@ function planAccounts(
       id: accountId,
       budgetCostCenterId: targetCostCenterId,
       accountCode: acct.accountCode,
-      accountName: acct.accountName,
       // Carried over: a hand-reclassified income/cost account would otherwise revert to code-based inference.
     });
 

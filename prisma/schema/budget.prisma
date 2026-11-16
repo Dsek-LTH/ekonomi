@@ -109,8 +109,9 @@ model BudgetAccount {
   id                 String             @id @default(cuid())
   budgetCostCenter   BudgetCostCenter   @relation(fields: [budgetCostCenterId], references: [id], onDelete: Cascade)
   budgetCostCenterId String
+  // Must be in the synced chart, which supplies the name. Chart rows are never deleted (see Account).
   accountCode        String // e.g. "3010"
-  accountName        String // e.g. "Biljettintäkter"
+  account            Account            @relation(fields: [accountCode], references: [number], onDelete: Restrict)
   lineItems          BudgetLineItem[]
   comments           BudgetComment[]
   adjustments        BudgetAdjustment[]

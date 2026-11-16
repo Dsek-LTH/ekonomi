@@ -17,13 +17,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
   // The code must exist in the synced chart (the name comes from there). 3xxx belongs under Intäkter and 4xxx-8xxx under Kostnader, else refused.
   const check = await resolveBudgetAccount(parsed.data.accountCode, parsed.data.kind);
   if (!check.ok) return fail(422, check.error, { values: check.values });
-  const accountCode = check.code;
-  const accountName = check.name;
 
   // Concurrent adds of the same account are stopped by @@unique([budgetCostCenterId, accountCode]).
   const account = await prisma.budgetAccount.create({
-    data: { budgetCostCenterId, accountCode, accountName },
+    data: { budgetCostCenterId, accountCode: check.code },
     include: { lineItems: true, comments: true },
   });
-  return NextResponse.json(account, { status: 201 });
+  return NextResponse.json({ ...account, accountName: check.name }, { status: 201 });
 }

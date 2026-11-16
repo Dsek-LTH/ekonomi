@@ -75,7 +75,6 @@ export async function buildBudget(
         accounts: {
           create: cc.accounts.map((a) => ({
             accountCode: a.code,
-            accountName: a.name,
             lineItems: {
               create: a.lineItems.map((li, li_i) => {
                 const v = li[side];

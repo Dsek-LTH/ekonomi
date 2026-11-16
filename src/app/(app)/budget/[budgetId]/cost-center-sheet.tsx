@@ -562,20 +562,27 @@ export function CostCenterSheet(props: {
               <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
                 {compare &&
                   summary.map((s) => (
-                    <p
-                      key={s.label}
-                      className="flex items-baseline justify-between gap-2 text-muted"
-                    >
-                      <span className="truncate">
-                        {s.label} - {compare.label}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-foreground">
-                        {fmt(s.a)}
-                        <span className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}>
+                    <div key={s.label} className="space-y-1">
+                      <p className="flex items-baseline justify-between gap-2 text-muted">
+                        <span className="truncate">
+                          {s.label} - {compare.label}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-foreground">{fmt(s.a)}</span>
+                      </p>
+                      <p className="flex items-baseline justify-between gap-2 text-muted">
+                        <span className="truncate">
+                          {s.label} - {tGroup("diff")}
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 tabular-nums",
+                            diffClass(s.a - s.v, s.incomeLike),
+                          )}
+                        >
                           {fmtSigned(s.a - s.v)}
                         </span>
-                      </span>
-                    </p>
+                      </p>
+                    </div>
                   ))}
                 {changeImpact !== 0 && (
                   <p className="flex items-baseline justify-between gap-2 text-muted">
@@ -626,18 +633,23 @@ export function CostCenterSheet(props: {
               </p>
               {/* Name each figure, or they run together. */}
               {compare && (
-                <p className="mt-1 flex items-baseline justify-between gap-3 text-xs">
-                  <span className="truncate text-muted">{compare.label}</span>
-                  <span className="shrink-0 tabular-nums">
-                    {fmt(s.a)}
+                <>
+                  <p className="mt-1 flex items-baseline justify-between gap-3 text-xs">
+                    <span className="truncate text-muted">{compare.label}</span>
+                    <span className="shrink-0 tabular-nums">{fmt(s.a)}</span>
+                  </p>
+                  <p
+                    className="mt-1 flex items-baseline justify-between gap-3 text-xs"
+                    title={tGroup("diffHint")}
+                  >
+                    <span className="truncate text-muted">{tGroup("diff")}</span>
                     <span
-                      className={cn("ml-2", diffClass(s.a - s.v, s.incomeLike))}
-                      title={tGroup("diffHint")}
+                      className={cn("shrink-0 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}
                     >
                       {fmtSigned(s.a - s.v)}
                     </span>
-                  </span>
-                </p>
+                  </p>
+                </>
               )}
 
               {s.impact !== undefined && s.impact !== 0 && (

@@ -1,4 +1,5 @@
 // Admin only. Unreadable rows land in `problems` and sheets with no matching cost centre in `unmatchedCostCenters`, rather than failing the import.
+// An account number missing from the chart does fail it: the chart supplies every account's name.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { isAdmin } from "@/lib/domain/permissions";
@@ -40,6 +41,16 @@ export async function POST(req: Request) {
     select: { id: true, code: true },
   });
   const idByCode = new Map(known.map((c) => [c.code, c.id]));
+  const accountCodes = [...new Set(sheets.flatMap((s) => s.accounts.map((a) => a.code)))];
+  const charted = await prisma.account.findMany({
+    where: { number: { in: accountCodes } },
+    select: { number: true },
+  });
+  const inChart = new Set(charted.map((a) => a.number));
+  const unknownAccounts = accountCodes.filter((c) => !inChart.has(c));
+  if (unknownAccounts.length > 0) {
+    return fail(422, "budget.unknownAccounts", { values: { codes: unknownAccounts.join(", ") } });
+  }
   const unmatchedCostCenters = codes.filter((c) => !idByCode.has(c));
 
   const budget = await bulkTransaction(async (tx) => {
@@ -58,7 +69,6 @@ export async function POST(req: Request) {
           accounts: {
             create: sheet.accounts.map((account) => ({
               accountCode: account.code,
-              accountName: account.name,
               lineItems: {
                 create: account.lines.map((line, li) => ({
                   description: line.description,
