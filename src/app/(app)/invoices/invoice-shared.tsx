@@ -19,14 +19,6 @@ import { PersonName } from "@/components/ui/avatar";
 import { LABEL } from "@/components/record-card";
 import { underlagCaption } from "@/lib/expense/document-url";
 
-export function ActionBar({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-b-panel border-t border-border bg-background px-inset py-3">
-      {children}
-    </div>
-  );
-}
-
 export const invoiceDocuments = (invoice: SupplierInvoiceView) =>
   invoice.documents.map((d) => ({
     src: `/api/supplier-invoice-documents/${d.id}`,
@@ -36,13 +28,21 @@ export const invoiceDocuments = (invoice: SupplierInvoiceView) =>
   }));
 
 /** The attest page, then the documents, in the order they are stapled for Fortnox. Not on the fördelning. */
-export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
+/**
+ * The attest page and the invoice's own files, for the panel. `live` is the attest page drawn in the browser while
+ * the treasurer konterar: it stands in for the server's PDF once ready, and the server's URL then stops following
+ * every save, which would only fetch and redraw a page nobody sees.
+ */
+export function useInvoicePanelDocuments(
+  invoice: SupplierInvoiceView,
+  live?: { svg: string | null },
+) {
   const t = useTranslations("receipt");
   if (invoice.documents.length === 0) return [];
   // New URL whenever the page may have changed, so the panel redraws.
   const version = [
     invoice.status,
-    invoice.updatedAt,
+    live ? "" : invoice.updatedAt,
     ...invoice.allocations.map((a) => a.approvedByName ?? ""),
   ].join();
   return [
@@ -50,6 +50,7 @@ export function useInvoicePanelDocuments(invoice: SupplierInvoiceView) {
       src: `/api/supplier-invoices/${invoice.id}/cover?v=${encodeURIComponent(version)}`,
       mimeType: "application/pdf",
       label: t("invoiceCoverLabel"),
+      ...(live?.svg && { svg: live.svg }),
     },
     ...invoice.documents.map((d, i) => ({
       src: `/api/supplier-invoice-documents/${d.id}`,

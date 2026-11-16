@@ -2,18 +2,23 @@
 
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
-import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { BookPanel } from "../../book-view";
 import { useInvoiceTitle } from "../../invoice-bits";
-import { Timeline, useInvoicePanelDocuments } from "../../invoice-shared";
+import { Timeline } from "../../invoice-shared";
+import type { CoverFacts } from "@/lib/ui/invoice-cover";
 import type { WorkspaceData } from "../../load";
 
-export function InvoiceBookClient({ data }: { data: WorkspaceData }) {
+export function InvoiceBookClient({
+  data,
+  cover,
+}: {
+  data: WorkspaceData;
+  cover: CoverFacts | null;
+}) {
   const { invoice } = data;
   const router = useProgressRouter();
   const title = useInvoiceTitle();
-  const documents = useInvoicePanelDocuments(invoice);
   const record = `/invoices/${invoice.id}`;
   return (
     <PageShell
@@ -26,8 +31,7 @@ export function InvoiceBookClient({ data }: { data: WorkspaceData }) {
       }
       back={record}
     >
-      <ReceiptPanelSource documents={documents} />
-      <BookPanel {...data} onDone={() => router.push(record)} />
+      <BookPanel {...data} cover={cover} onDone={() => router.push(record)} />
       <Card>
         <Timeline invoice={invoice} />
       </Card>

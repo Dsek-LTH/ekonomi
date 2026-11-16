@@ -3,7 +3,7 @@
 // The unit's fördelning is sent with its attest, and the rows the sender may sign are signed in the same write.
 // Only a split onto another unit's cost centre waits in PENDING_APPROVAL.
 // The first fördelning is not here: it makes the invoice, from a document in the Inkorg (../../route.ts).
-// The treasury's kontering is saved a field at a time (../route.ts PATCH) and marked done here (`book`). Export to Fortnox has its own route.
+// The treasury's kontering is saved whole at Bokför (../route.ts PATCH) and marked done here (`book`). Export to Fortnox has its own route.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import type { TxClient } from "@/lib/server/tx";

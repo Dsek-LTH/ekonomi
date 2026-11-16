@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { CardFooterBar } from "@/components/action-bar";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +22,6 @@ import type { AttestReach } from "@/lib/data/supplier-invoices";
 import { LABEL } from "@/components/record-card";
 import { useInvoiceTitle } from "../../invoice-bits";
 import {
-  ActionBar,
   ReturnedNotice,
   invoiceDocuments,
   useReturnToInbox,
@@ -263,7 +263,7 @@ export function AllocateForm({
                 inputClassName="text-right"
               />
             </Field>
-            <Field label={tField("rounding")} hint={t("roundingHint")}>
+            <Field label={tField("rounding")} hint={t("roundingHint")} requirement="optional">
               <Input
                 value={roundingInput}
                 inputMode="text"
@@ -281,7 +281,7 @@ export function AllocateForm({
               <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
           </div>
-          <Field label={tField("description")} hint={t("descriptionHint")}>
+          <Field label={tField("description")} hint={t("descriptionHint")} requirement="optional">
             <Input
               value={description}
               maxLength={200}
@@ -300,7 +300,7 @@ export function AllocateForm({
         </section>
 
         <section className="border-t border-border px-inset py-5">
-          <FieldGroup label={tAttest("distribution")}>
+          <FieldGroup label={tAttest("distribution")} requirement="required">
             <AllocationEditor
               costCenters={options}
               grossAmount={costOre == null ? 0 : costOre / 100}
@@ -325,7 +325,7 @@ export function AllocateForm({
           </section>
         )}
 
-        <ActionBar>
+        <CardFooterBar>
           {decline ? (
             <Button variant="ghost" disabled={busy || decline.busy} onClick={decline.run}>
               {decline.label}
@@ -352,7 +352,7 @@ export function AllocateForm({
               {label}
             </Button>
           </div>
-        </ActionBar>
+        </CardFooterBar>
       </Card>
     </PageShell>
   );

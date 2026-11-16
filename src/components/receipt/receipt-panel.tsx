@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/ui/utils";
 import { usePhone } from "@/lib/ui/media";
 
-const RECEIPT_FOLD_MS = 240;
+const RECEIPT_FOLD_MS = 320;
 
 export const RECEIPT_COLLAPSED_COOKIE = "receipt_collapsed";
 export const RECEIPT_WIDTH_COOKIE = "receipt_width";
@@ -316,6 +316,7 @@ export function ReceiptPanelColumn() {
   }, [open, source]);
 
   const panelRef = useRef<HTMLElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   const tabRef = useRef<HTMLButtonElement>(null);
   const handBackFocus = useRef(false);
 
@@ -340,6 +341,7 @@ export function ReceiptPanelColumn() {
       frame.current = 0;
       widthRef.current = pending.current;
       panelRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
+      spacerRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
     };
 
     const onMove = (ev: PointerEvent) => {
@@ -608,6 +610,18 @@ export function ReceiptPanelColumn() {
   return (
     <>
       {(open || leavingNow) && (
+        <div
+          ref={spacerRef}
+          aria-hidden
+          style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
+          className={cn(
+            "hidden shrink-0 md:block md:max-w-[70vw] print:hidden",
+            !dragging && "receipt-spacer",
+            entering || leavingNow ? "w-0" : "w-[var(--receipt-w)]",
+          )}
+        />
+      )}
+      {(open || leavingNow) && (
         <aside
           ref={panelRef}
           inert={leavingNow}
@@ -617,12 +631,10 @@ export function ReceiptPanelColumn() {
             "flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 print:hidden",
             "receipt-panel fixed inset-y-0 left-0 right-0 z-40",
             (entering || leavingNow) && "receipt-panel-moving",
+            "md:absolute md:left-auto md:z-20 md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border",
             leavingNow
-              ? "pointer-events-none translate-y-full md:top-[65px] md:translate-x-full md:translate-y-0 md:left-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:border-l md:border-border"
-              : cn(
-                  "md:relative md:inset-auto md:z-auto md:w-[var(--receipt-w)] md:max-w-[70vw] md:shrink-0 md:border-l md:border-border",
-                  entering && "translate-y-full md:translate-x-full md:translate-y-0",
-                ),
+              ? "pointer-events-none translate-y-full md:translate-x-full md:translate-y-0"
+              : entering && "translate-y-full md:translate-x-full md:translate-y-0",
           )}
         >
           <div

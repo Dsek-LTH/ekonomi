@@ -9,89 +9,15 @@ import { prisma } from "@/lib/server/db";
 import { typeset } from "@/lib/server/typst";
 import { isoDate } from "@/lib/data/shared";
 import type { LoadedInvoice } from "@/lib/api/supplier-invoice-access";
-import { formatOreKr } from "@/lib/ui/format";
+import { buildInvoiceCoverData, type CoverFacts } from "@/lib/ui/invoice-cover";
+
+export {
+  buildInvoiceCoverData,
+  type CoverFacts,
+  type InvoiceCoverData,
+} from "@/lib/ui/invoice-cover";
 
 const TEMPLATE = path.join(process.cwd(), "src/lib/server/invoice-cover/invoice-cover.typ");
-
-export interface CoverFacts {
-  /** "LEV26-0012". */
-  reference: string;
-  /** Null until the treasury has picked one, on a page shown before that. */
-  supplierName: string | null;
-  invoiceNumber: string | null;
-  invoiceDate: string;
-  dueDate: string;
-  amount: number; // öre
-  description: string | null;
-  resultUnit: string | null;
-  rows: {
-    /** The code alone, as the utläggsräkning writes it. */
-    costCenter: string;
-    amount: number; // öre
-    attestedBy: string | null;
-    attestedAt: Date | null;
-    comment: string | null;
-  }[];
-  /** Who konterade it, from its history. Null where the history has no one. */
-  booking: { by: string | null; at: Date } | null;
-  /** Null until it is sent. */
-  exportedBy: string | null;
-  /** The day the page is dated: the day it was sent, once it was. */
-  created: Date;
-}
-
-/** What the template is handed: every value worded and formatted already. */
-export interface InvoiceCoverData {
-  reference: string;
-  supplier: string | null;
-  invoiceNumber: string | null;
-  invoiceDate: string | null;
-  dueDate: string | null;
-  resultUnit: string | null;
-  description: string | null;
-  created: string;
-  total: string;
-  allocations: {
-    costCenter: string;
-    amount: string;
-    comment: string | null;
-    approvedBy: string | null;
-    approvedAt: string | null;
-  }[];
-  booking: { by: string | null; at: string | null };
-  exportedBy: string | null;
-}
-
-/** The day in Stockholm, as an ISO date. A signature at 00:30 is that day's. */
-const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
-
-/** The page as the template draws it. Pure, so the wording can be tested. */
-export function buildInvoiceCoverData(f: CoverFacts): InvoiceCoverData {
-  return {
-    reference: f.reference,
-    supplier: f.supplierName,
-    invoiceNumber: f.invoiceNumber,
-    invoiceDate: f.invoiceDate || null,
-    dueDate: f.dueDate || null,
-    resultUnit: f.resultUnit,
-    description: f.description,
-    created: day(f.created),
-    // What the rows add up to, as on the utläggsräkning.
-    total: formatOreKr(
-      f.rows.reduce((s, r) => s + r.amount, 0),
-      { decimals: 2 },
-    ),
-    allocations: f.rows.map((r) => ({
-      costCenter: r.costCenter,
-      amount: formatOreKr(r.amount, { decimals: 2 }),
-      comment: r.comment,
-      approvedBy: r.attestedBy,
-      approvedAt: r.attestedAt ? day(r.attestedAt) : null,
-    })),
-    booking: { by: f.booking?.by ?? null, at: f.booking ? day(f.booking.at) : null },
-    exportedBy: f.exportedBy,
-  };
-}
 
 /**
  * What the page says about this invoice, for both the export and the panel. The export passes what it knows

@@ -1,5 +1,6 @@
 // Send a konterad levfaktura to Fortnox: make the supplier invoice, unbooked, with the attest page and the invoice PDF attached.
 // Made once, never twice (Fortnox has no delete for it): the export lock is taken first and a second press is refused while held.
+// One the supplier already has in Fortnox under the same invoice number is not made again: ours is tied to it and takes over its fields and rows.
 // Let go when the export is recorded or certainly made nothing; otherwise UNCERTAIN until the treasurer has looked in Fortnox (./release).
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -11,20 +12,17 @@ import {
   FortnoxError,
   connectFileToSupplierInvoice,
   createSupplierInvoice,
+  findSupplierInvoice,
+  getSupplierInvoice,
   getServiceToken,
   getSupplier,
   uploadInboxFile,
 } from "@/lib/fortnox";
 import { userToken } from "@/lib/fortnox/export";
 import { canBookkeep } from "@/lib/domain/permissions";
-import {
-  exportBlocker,
-  ocrDigits,
-  PAYABLE_ACCOUNT,
-  ROUNDING_ACCOUNT,
-} from "@/lib/domain/supplier-invoice";
+import { exportBlocker, ocrDigits, PAYABLE_ACCOUNT } from "@/lib/domain/supplier-invoice";
 import { giroMismatch } from "@/lib/domain/payment-ref";
-import { oreToSEK } from "@/lib/domain/money";
+import { oreToSEK, sekToOre } from "@/lib/domain/money";
 import { fail, gate } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
 import { exportFactsOf, loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
@@ -65,9 +63,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const token = auth.token;
 
   // Pay where the register says, or know why not. The register is read as the organisation; only the writes are the treasurer's.
+  let service: string;
   let supplier;
   try {
-    supplier = await getSupplier(await getServiceToken(), invoice.fortnoxSupplierNumber!);
+    service = await getServiceToken();
+    supplier = await getSupplier(service, invoice.fortnoxSupplierNumber!);
   } catch (e) {
     if (e instanceof FortnoxError && e.status === 403)
       return fail(403, "fortnox.missingSupplierScope");
@@ -76,6 +76,127 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return fail(422, "supplierInvoice.supplierGone");
     throw e;
   }
+
+  // Already in Fortnox (made by hand, or by an earlier export): tie ours to it and take over
+  // what Fortnox has, fields and rows, instead of making a second one. The bankgiro check is
+  // skipped, since Fortnox pays from its own invoice.
+  const link = async (givenNumber: string) => {
+    let theirs;
+    try {
+      theirs = await getSupplierInvoice(service, givenNumber);
+    } catch (e) {
+      if (e instanceof FortnoxError) return fail(e.status === 403 ? 403 : 502, e.message);
+      throw e;
+    }
+    const lines = theirs.rows.map((r, position) => ({
+      invoiceId: invoice.id,
+      position,
+      account: r.account,
+      costCenterCode: r.costCenter,
+      project: r.project,
+      description: r.text,
+      debit: sekToOre(r.debit),
+      credit: sekToOre(r.credit),
+    }));
+
+    const done = await prisma.$transaction(async (tx) => {
+      const { count } = await tx.supplierInvoice.updateMany({
+        where: { id: invoice.id, status: "BOOKED", exportClaimedAt: null },
+        data: {
+          invoiceNumber: theirs.invoiceNumber ?? invoice.invoiceNumber,
+          invoiceDate: theirs.invoiceDate ? new Date(theirs.invoiceDate) : invoice.invoiceDate,
+          dueDate: theirs.dueDate ? new Date(theirs.dueDate) : invoice.dueDate,
+          amount: sekToOre(theirs.total),
+          rounding: sekToOre(theirs.roundOff) || null,
+          ocr: theirs.ocr,
+          yourReference: theirs.yourReference,
+          ourReference: theirs.ourReference,
+          status: "EXPORTED",
+          fortnoxGivenNumber: givenNumber,
+          exportedAt: new Date(),
+          exportedById: g.actor.id,
+        },
+      });
+      if (count === 0) return false;
+      await tx.supplierInvoiceLine.deleteMany({ where: { invoiceId: invoice.id } });
+      await tx.supplierInvoiceLine.createMany({ data: lines });
+      await tx.supplierInvoiceEvent.create({
+        data: {
+          invoiceId: invoice.id,
+          type: "EXPORTED",
+          actorId: g.actor.id,
+          comment: givenNumber,
+        },
+      });
+      return true;
+    });
+    if (!done) return fail(409, "supplierInvoice.exportInProgress");
+
+    // The attest page onto the Fortnox invoice, best effort as for an export.
+    let attachFailed: string | null = null;
+    try {
+      await connectFileToSupplierInvoice(token, await uploadPdf(), givenNumber);
+    } catch (e) {
+      attachFailed = e instanceof Error ? e.message : String(e);
+      console.error(
+        `[supplier-invoices] ${invoice.id}: could not attach the PDF to ${givenNumber}`,
+        e,
+      );
+    }
+    return NextResponse.json({
+      id: invoice.id,
+      status: "EXPORTED",
+      givenNumber,
+      linked: true,
+      attachFailed,
+    });
+  };
+
+  // Does the supplier already have this invoice number in Fortnox?
+  let existing: string | null;
+  try {
+    existing = await findSupplierInvoice(service, supplier.number, invoice.invoiceNumber!);
+  } catch (e) {
+    if (e instanceof FortnoxError && e.status === 403)
+      return fail(403, "fortnox.missingSupplierInvoiceScope");
+    if (e instanceof FortnoxError) return fail(502, e.message);
+    throw e;
+  }
+  // The attest page and the invoice's documents as one PDF in Fortnox's inbox, returning its File id.
+  const uploadPdf = async () => {
+    const cover = await renderInvoiceCover(
+      await invoiceCoverFacts(invoice, {
+        supplierName: supplier.name,
+        exportedBy: g.actor.name,
+      }),
+    );
+    const documents = await prisma.supplierInvoiceDocument.findMany({
+      where: { invoiceId: invoice.id },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      select: { objectKey: true, mimeType: true },
+    });
+    const files = await Promise.all(
+      documents.map(async (d) => ({
+        bytes: (await getObjectBuffer(d.objectKey)).bytes,
+        mimeType: d.mimeType,
+      })),
+    );
+    const merged = await mergeCoverAndReceipts(cover, files);
+    const name = `Leverantorsfaktura ${invoice.invoiceNumber} ${supplier.name}`.replace(
+      /[^\w .-]/g,
+      "_",
+    );
+    return uploadInboxFile(
+      token,
+      Buffer.from(merged.bytes),
+      `${name}.pdf`,
+      "application/pdf",
+      "inbox_s",
+    );
+  };
+
+  if (existing) return link(existing);
+
   const mismatch = giroMismatch(invoice, supplier);
   if (mismatch && !parsed.data.confirmGiro) {
     return fail(409, "supplierInvoice.giroMismatch", {
@@ -106,38 +227,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       data: { exportClaimedAt: null, exportClaimedById: null, exportClaimState: null },
     });
 
-  let fileId: string | null = null;
+  let fileId: string;
   try {
-    // The attest page and invoice as one PDF into Fortnox's inbox before the invoice is made, so a failure leaves nothing in the books.
-    const cover = await renderInvoiceCover(
-      await invoiceCoverFacts(invoice, {
-        supplierName: supplier.name,
-        exportedBy: g.actor.name,
-      }),
-    );
-    const documents = await prisma.supplierInvoiceDocument.findMany({
-      where: { invoiceId: invoice.id },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-      select: { objectKey: true, mimeType: true },
-    });
-    const files = await Promise.all(
-      documents.map(async (d) => ({
-        bytes: (await getObjectBuffer(d.objectKey)).bytes,
-        mimeType: d.mimeType,
-      })),
-    );
-    const merged = await mergeCoverAndReceipts(cover, files);
-    const name = `Leverantorsfaktura ${invoice.invoiceNumber} ${supplier.name}`.replace(
-      /[^\w .-]/g,
-      "_",
-    );
-    fileId = await uploadInboxFile(
-      token,
-      Buffer.from(merged.bytes),
-      `${name}.pdf`,
-      "application/pdf",
-      "inbox_s",
-    );
+    // Into Fortnox's inbox before the invoice is made, so a failure leaves nothing in the books.
+    fileId = await uploadPdf();
   } catch (e) {
     await release();
     if (e instanceof FortnoxError)
@@ -164,9 +257,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           .filter(Boolean)
           .join(" ") || null,
       payableAccount: PAYABLE_ACCOUNT,
-      ...(invoice.rounding && {
-        rounding: { account: ROUNDING_ACCOUNT, amount: oreToSEK(invoice.rounding) },
-      }),
+      ...(invoice.rounding && { rounding: oreToSEK(invoice.rounding) }),
       // The kontering as the treasurer saved it. With the rounding, its
       // lines book exactly the amount to pay (exportBlocker).
       rows: invoice.lines.map((l) => ({

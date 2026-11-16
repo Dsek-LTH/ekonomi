@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { Combobox } from "@/components/ui/combobox";
 import { IconButton } from "@/components/ui/icon-button";
@@ -68,7 +69,6 @@ export function InkorgClient({
   const remover = useMutation();
   const confirm = useConfirm();
   const { dateTime } = useFormat();
-  useMailboxConnectResult();
   const tabValues: InkorgTab[] = [
     ...(triage ? (["sort"] as const) : []),
     ...(ownsUnits ? (["allocate"] as const) : []),
@@ -82,6 +82,8 @@ export function InkorgClient({
             value,
             label: t(`tab.${value}`),
             predicate: TAB_HOLDS[value],
+            // Everything under Att fördela waits on the unit's owner.
+            waitingOn: value === "allocate" ? (true as const) : undefined,
           }))
         : undefined,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -242,6 +244,8 @@ export function InkorgClient({
         </ReceiptPanelFooter>
       )}
 
+      {health?.enabled && <MailboxWarning health={health} canConnect={canConnectMailbox} />}
+
       <Card>
         <ClientDataTable
           columns={columns}
@@ -263,7 +267,7 @@ export function InkorgClient({
         />
       </Card>
 
-      {health?.enabled && <MailboxCard health={health} canConnect={canConnectMailbox} />}
+      {health?.enabled && <RejectedMail rejected={health.rejected} />}
     </PageShell>
   );
 }
@@ -428,120 +432,46 @@ function DocumentBar({
   );
 }
 
-const CONNECT_REASONS = [
-  "denied",
-  "invalidState",
-  "forbidden",
-  "unconfigured",
-  "wrongMailbox",
-  "watchFailed",
-];
-
-/** The banner after Google sends the person back from connecting the mailbox (api/gmail/callback). */
-function useMailboxConnectResult() {
-  const t = useTranslations("invoices.mailbox.result");
-  const notify = useNotify();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const result = searchParams.get("gmail");
-  const reason = searchParams.get("reason");
-  // replaceState does not feed back into useSearchParams, so remember what was announced (as in
-  // components/shell/fortnox-auth-result.tsx).
-  const announced = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!result) return;
-    const outcome = `${result}:${reason ?? ""}`;
-    if (announced.current === outcome) return;
-    announced.current = outcome;
-    if (result === "connected") notify.success(t("connected"));
-    else notify.error(t(reason && CONNECT_REASONS.includes(reason) ? reason : "failed"));
-    window.history.replaceState(null, "", pathname);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result]);
+/** Shown to triagers when the mailbox is not being read, with the way to fix it for those who can. */
+function MailboxWarning({ health, canConnect }: { health: InboxHealth; canConnect: boolean }) {
+  const t = useTranslations("invoices.mailbox");
+  if (health.connected && !health.lastError) return null;
+  return (
+    <Notice tone={health.connected ? "warning" : "danger"}>
+      <p>
+        {health.connected
+          ? t("failing", { error: health.lastError ?? "" })
+          : t("notConnected", { address: health.address ?? "" })}
+      </p>
+      {canConnect ? (
+        <Link
+          href="/admin/email"
+          className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+        >
+          {t("fixInSettings")}
+        </Link>
+      ) : (
+        <p className="text-muted">{t("askAdmin")}</p>
+      )}
+    </Notice>
+  );
 }
 
-/**
- * The inkorg mailbox: whether it is connected, last read, last error and recently refused mail (often from
- * private addresses). Settings users connect and disconnect it here.
- */
-function MailboxCard({ health, canConnect }: { health: InboxHealth; canConnect: boolean }) {
+/** Mail the inkorg refused in the last 30 days, often invoices sent from private addresses. */
+function RejectedMail({ rejected }: { rejected: InboxHealth["rejected"] }) {
   const t = useTranslations("invoices.mailbox");
   const { dateTime } = useFormat();
-  const confirm = useConfirm();
-  const disconnector = useMutation();
-  const disconnect = async () => {
-    const ok = await confirm({
-      title: t("disconnect"),
-      message: t("disconnectConfirm", { address: health.address ?? "" }),
-      confirmLabel: t("disconnect"),
-      tone: "danger",
-    });
-    if (!ok) return;
-    await disconnector.mutate("/api/gmail/connection", {
-      method: "DELETE",
-      success: t("disconnected"),
-    });
-  };
   return (
     <Card>
       <div className="space-y-2 px-inset py-3 text-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className={LABEL}>{t("title")}</h2>
-          {health.connected && (
-            <span className="text-xs text-muted">
-              {health.lastSyncAt
-                ? t("lastSync", { when: dateTime(health.lastSyncAt) })
-                : t("neverSynced")}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {health.connected ? (
-            <p className="text-xs text-muted">
-              {health.connectedBy && health.connectedAt
-                ? t("connectedBy", {
-                    address: health.address ?? "",
-                    name: health.connectedBy,
-                    when: dateTime(health.connectedAt),
-                  })
-                : t("connected", { address: health.address ?? "" })}
-            </p>
-          ) : (
-            <p className="text-warning">{t("notConnected", { address: health.address ?? "" })}</p>
-          )}
-          {canConnect && (
-            <div className="flex gap-2">
-              {health.connected && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={disconnector.busy}
-                  onClick={disconnect}
-                >
-                  {t("disconnect")}
-                </Button>
-              )}
-              <ButtonLink
-                href="/api/gmail/connect"
-                size="sm"
-                variant={health.connected ? "secondary" : "primary"}
-              >
-                {health.connected ? t("reconnect") : t("connect")}
-              </ButtonLink>
-            </div>
-          )}
-        </div>
-        {health.lastError && (
-          <p className="text-danger">{t("error", { error: health.lastError })}</p>
-        )}
-        {health.rejected.length === 0 ? (
+        <h2 className={LABEL}>{t("title")}</h2>
+        {rejected.length === 0 ? (
           <p className="text-xs text-muted">{t("noneRejected")}</p>
         ) : (
           <>
             <p className="text-xs text-muted">{t("rejectedLead")}</p>
             <ul className="divide-y divide-border">
-              {health.rejected.map((r) => (
+              {rejected.map((r) => (
                 <li key={r.id} className="py-1.5 text-xs">
                   <span className="block truncate">
                     {r.fromAddress || t("unknownSender")}

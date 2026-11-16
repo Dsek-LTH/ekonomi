@@ -45,6 +45,9 @@ export interface ViewerDocument {
   mimeType: string;
   filename?: string;
   label?: string;
+  /** The page drawn in the browser (components/typst), shown in place of `src` while it is set. Swapped in place on
+   * every change, with the sheet kept, so the scroll and zoom stay where they were. */
+  svg?: string;
 }
 
 export interface ReceiptViewerProps {
@@ -480,7 +483,9 @@ function DocumentSheet({
           <span aria-hidden className="h-px flex-1 bg-border" />
         </div>
       )}
-      {isPdf ? (
+      {doc.svg ? (
+        <LiveSheet svg={doc.svg} width={width} turn={turn} />
+      ) : isPdf ? (
         <Document
           key={fileSrc}
           file={fileSrc}
@@ -550,6 +555,17 @@ function DocumentSheet({
         />
       )}
     </div>
+  );
+}
+
+/** A page drawn as SVG, at the width a PDF page gets. Set as markup: it comes from our own template, without script. */
+function LiveSheet({ svg, width, turn }: { svg: string; width: number; turn: number }) {
+  return (
+    <div
+      className="overflow-hidden rounded-mark bg-white shadow-[var(--shadow-card)] [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+      style={{ width, transform: turn ? `rotate(${turn}deg)` : undefined }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
 

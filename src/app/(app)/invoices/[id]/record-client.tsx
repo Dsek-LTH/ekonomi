@@ -9,11 +9,12 @@ import { Combobox } from "@/components/ui/combobox";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { Tooltip } from "@/components/ui/tooltip";
-import { IconCheck, IconDots } from "@/components/ui/icons";
+import { IconAlert, IconCheck, IconDots } from "@/components/ui/icons";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useNotify } from "@/components/shell/notifications";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { today } from "@/lib/domain/date";
 import { giroMismatch } from "@/lib/domain/payment-ref";
@@ -27,9 +28,9 @@ import {
   AllocationTable,
   AttestedBy,
   InspectorSection,
-  LABEL,
   StripCell,
-  VoucherTable,
+  VoucherSection,
+  type VoucherFact,
   type VoucherLine,
 } from "@/components/record-card";
 import { UncertainExport } from "../book-view";
@@ -264,6 +265,7 @@ function RecordActions({
   const router = useProgressRouter();
   const tr = useTransition(invoice.id);
   const sender = useMutation();
+  const notify = useNotify();
   const back = useReturnToInbox(invoice.id, (status) =>
     status === "RETURNED" ? onGone() : undefined,
   );
@@ -327,10 +329,12 @@ function RecordActions({
       tone: mismatch ? "danger" : "default",
     });
     if (!ok) return;
-    await sender.mutate(`/api/supplier-invoices/${invoice.id}/export`, {
-      body: { confirmGiro: Boolean(mismatch) },
-      success: tWs("exported"),
-    });
+    const res = await sender.mutate<{ givenNumber: string; linked?: boolean }>(
+      `/api/supplier-invoices/${invoice.id}/export`,
+      { body: { confirmGiro: Boolean(mismatch) } },
+    );
+    if (res)
+      notify.success(res.linked ? tWs("linked", { number: res.givenNumber }) : tWs("exported"));
   }
 
   const sendReason =
@@ -589,37 +593,75 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
     },
   ];
 
-  const facts: [string, React.ReactNode][] = [
-    [tField("supplierName"), invoice.supplierName ?? "-"],
-    [tField("invoiceNumber"), invoice.invoiceNumber ?? "-"],
-    [tField("invoiceDate"), invoice.invoiceDate ? date(invoice.invoiceDate) : "-"],
-    [tField("ocr"), invoice.ocr ?? "-"],
+  // Who did the last of each step, from the history.
+  const last = (type: string) => invoice.events.findLast((e) => e.type === type);
+  const booked = last("BOOKED");
+  const sent = invoice.status === "EXPORTED" ? last("EXPORTED") : undefined;
+
+  // A giro the Fortnox register has for this supplier gets a check; one it does not, a warning.
+  const mismatch = invoice.register ? giroMismatch(invoice, invoice.register) : null;
+  const giroNote = (field: "bankgiro" | "plusgiro") =>
+    !invoice.register ? undefined : mismatch?.field === field ? (
+      <span className="inline-flex items-center gap-1 font-medium text-warning">
+        <IconAlert className="size-3.5" />
+        {t("giroNotInRegister")}
+      </span>
+    ) : (
+      <span title={t("giroInRegister")} className="inline-flex text-success">
+        <IconCheck className="size-3.5" />
+        <span className="sr-only">{t("giroInRegister")}</span>
+      </span>
+    );
+
+  // Read across in pairs from sm: who and which invoice, when and how it is paid.
+  const facts: VoucherFact[] = [
+    { label: tField("supplierName"), value: invoice.supplierName ?? "-" },
+    {
+      label: tField("invoiceNumber"),
+      value: invoice.invoiceNumber ?? "-",
+      mono: Boolean(invoice.invoiceNumber),
+    },
+    { label: tField("invoiceDate"), value: invoice.invoiceDate ? date(invoice.invoiceDate) : "-" },
+    { label: tField("ocr"), value: invoice.ocr ?? "-", mono: Boolean(invoice.ocr) },
     ...(invoice.bankgiro
-      ? [[tField("bankgiro"), invoice.bankgiro] as [string, React.ReactNode]]
+      ? [
+          {
+            label: tField("bankgiro"),
+            value: invoice.bankgiro,
+            mono: true,
+            note: giroNote("bankgiro"),
+          },
+        ]
       : []),
     ...(invoice.plusgiro
-      ? [[tField("plusgiro"), invoice.plusgiro] as [string, React.ReactNode]]
+      ? [
+          {
+            label: tField("plusgiro"),
+            value: invoice.plusgiro,
+            mono: true,
+            note: giroNote("plusgiro"),
+          },
+        ]
+      : []),
+    ...(invoice.yourReference
+      ? [{ label: tField("yourReference"), value: invoice.yourReference }]
       : []),
   ];
 
   return (
-    <InspectorSection
+    <VoucherSection
       title={t("booking")}
-      aside={
-        invoice.fortnoxGivenNumber && (
-          <span
-            title={t("fortnoxLine", {
+      number={invoice.fortnoxGivenNumber}
+      numberHint={
+        invoice.fortnoxGivenNumber
+          ? t("fortnoxLine", {
               number: invoice.fortnoxGivenNumber,
               date: invoice.exportedAt ? date(invoice.exportedAt) : "-",
-            })}
-            className="font-medium tabular-nums"
-          >
-            {t("fortnoxNumber", { number: invoice.fortnoxGivenNumber })}
-          </span>
-        )
+            })
+          : undefined
       }
-      flush
-      endsInTable
+      sent={sent && { date: invoice.exportedAt ?? sent.date, by: sent.actor }}
+      facts={facts}
       action={
         can.canBook ? (
           <ButtonLink href={`/invoices/${invoice.id}/book`} variant="secondary" size="sm">
@@ -627,16 +669,10 @@ function BookingSection({ invoice, can }: WorkspaceProps) {
           </ButtonLink>
         ) : undefined
       }
-    >
-      <dl className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2 px-inset text-sm sm:grid-cols-3">
-        {facts.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className={LABEL}>{label}</dt>
-            <dd className="mt-0.5 truncate tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <VoucherTable lines={lines} />
-    </InspectorSection>
+      lines={lines}
+      people={[
+        ...(booked ? [{ label: t("bookedBy"), name: booked.actor ?? "-", date: booked.date }] : []),
+      ]}
+    />
   );
 }

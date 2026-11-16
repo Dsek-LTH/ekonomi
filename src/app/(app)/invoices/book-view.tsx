@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { AmountInput } from "@/components/ui/amount-input";
-import { DateInput, Field, Input } from "@/components/ui/field";
+import { DateInput, Field, FieldGroup, Input } from "@/components/ui/field";
 import { IconCheck, IconChevronRight } from "@/components/ui/icons";
 import {
   BalanceChip,
@@ -18,7 +18,10 @@ import {
 } from "@/components/voucher-editor";
 import { Notice } from "@/components/ui/notice";
 import { useConfirm } from "@/components/confirm-dialog";
+import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
+import { useTypstSvg } from "@/components/typst/use-typst-svg";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useLeaveGuard } from "@/components/shell/use-leave-guard";
 import { useNotify } from "@/components/shell/notifications";
 import { useQuery } from "@/components/shell/use-query";
 import { isCompleteDate } from "@/lib/domain/date";
@@ -29,14 +32,16 @@ import {
   ROUNDING_ACCOUNT,
   costTotal,
   exportBlocker,
+  isValidOcr,
 } from "@/lib/domain/supplier-invoice";
 import { giroMismatch, matchSupplier } from "@/lib/domain/payment-ref";
 import type { FortnoxSupplier } from "@/lib/fortnox";
 import { formatSEK } from "@/lib/ui/format";
+import { buildInvoiceCoverData, liveCoverFacts, type CoverFacts } from "@/lib/ui/invoice-cover";
 import { cn } from "@/lib/ui/utils";
 import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
-import { useTransition, type WorkspaceProps } from "./invoice-shared";
+import { useInvoicePanelDocuments, useTransition, type WorkspaceProps } from "./invoice-shared";
 
 const toOre = (sek: number | null) => (sek == null ? null : sekToOre(sek));
 
@@ -85,57 +90,35 @@ function linesOf(rows: VoucherEditorRow[]): InvoiceLine[] {
   }));
 }
 
-function BookField({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className={cn("block min-w-0", className)}>
-      <span className="mb-1 block text-xs text-muted">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-/** Saves on blur; a refused save restores the saved value. */
-function SavedInput({
+/** A head field, controlled by BookPanel so the warnings and the attest page follow every keystroke. Saved with the kontering at Bokför. */
+function HeadInput({
   value,
-  onSave,
+  onChange,
+  onLeave,
   type = "text",
   amount,
   readOnly,
   align,
+  invalid,
 }: {
   value: string;
-  onSave?: (value: string) => Promise<boolean>;
+  onChange?: (value: string) => void;
+  /** The field was left (or a whole date picked), so its warning may show. */
+  onLeave?: () => void;
   type?: "text" | "date";
   amount?: boolean;
   readOnly?: boolean;
   align?: "right";
+  invalid?: boolean;
 }) {
-  const [draft, setDraft] = useState(value);
-  const [seen, setSeen] = useState(value);
-  if (seen !== value) {
-    setSeen(value);
-    setDraft(value);
-  }
-  async function commit(next = draft) {
-    if (!onSave || next === value) return;
-    if (!(await onSave(next))) setDraft(value);
-  }
   if (amount) {
     return (
       <AmountInput
         size="sm"
         suffix="kr"
-        value={draft}
-        onChange={setDraft}
-        onBlur={() => void commit()}
+        value={value}
+        onChange={(v) => onChange?.(v)}
+        onBlur={onLeave}
         inputClassName="text-right"
       />
     );
@@ -144,13 +127,13 @@ function SavedInput({
     return (
       <DateInput
         size="sm"
-        value={draft}
+        value={value}
         onChange={(e) => {
-          setDraft(e.target.value);
+          onChange?.(e.target.value);
           // A date picked from the calendar never focuses the field, so no blur follows.
-          if (isCompleteDate(e.target.value)) void commit(e.target.value);
+          if (isCompleteDate(e.target.value)) onLeave?.();
         }}
-        onBlur={() => (draft === "" ? void commit() : !isCompleteDate(draft) && setDraft(value))}
+        onBlur={onLeave}
         className="w-full"
       />
     );
@@ -158,12 +141,14 @@ function SavedInput({
   return (
     <Input
       size="sm"
-      value={draft}
+      value={value}
       readOnly={readOnly}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => void commit()}
+      aria-invalid={invalid || undefined}
+      onChange={(e) => onChange?.(e.target.value)}
+      onBlur={onLeave}
       className={cn(
         "w-full",
+        invalid && "border-warning",
         align === "right" && "text-right tabular-nums",
         readOnly && "bg-surface text-muted",
       )}
@@ -171,10 +156,57 @@ function SavedInput({
   );
 }
 
-type CardProps = WorkspaceProps & { header?: React.ReactNode };
+type HeadKey =
+  | "invoiceNumber"
+  | "ocr"
+  | "yourReference"
+  | "ourReference"
+  | "invoiceDate"
+  | "dueDate"
+  | "amount"
+  | "rounding";
+type Head = Record<HeadKey, string>;
+
+/** The head fields as their inputs show them. */
+const headOf = (i: SupplierInvoiceView): Head => ({
+  invoiceNumber: i.invoiceNumber ?? "",
+  ocr: i.ocr ?? "",
+  yourReference: i.yourReference ?? "",
+  ourReference: i.ourReference ?? "",
+  invoiceDate: i.invoiceDate ?? "",
+  dueDate: i.dueDate ?? "",
+  amount: sekToInput(i.amount),
+  rounding: i.rounding ? sekToInput(i.rounding) : "",
+});
+
+/** Öre, null for empty, undefined for something that is not an amount. */
+function parseAmount(raw: string): number | null | undefined {
+  const v = raw.trim();
+  if (!v) return null;
+  const ore = parseOre(v);
+  return Number.isFinite(ore) && ore > 0 ? ore : undefined;
+}
+
+/** Öresutjämning in öre, either sign, under a krona. Null for none, undefined for something else. */
+function parseRounding(raw: string): number | null | undefined {
+  const v = raw.trim();
+  if (!v) return null;
+  const ore = Math.round(Number(v.replace(/\s/g, "").replace(",", ".")) * 100);
+  return Number.isFinite(ore) && Math.abs(ore) <= MAX_ROUNDING ? ore || null : undefined;
+}
+
+type CardProps = WorkspaceProps & { header?: React.ReactNode; cover?: CoverFacts | null };
 
 /** Attested: the treasurer completes what Fortnox needs. A bankgiro the register does not know is flagged here and again before sending (invoice fraud). */
-export function BookPanel({ invoice, accounts, costCenters, projects, onDone, header }: CardProps) {
+export function BookPanel({
+  invoice,
+  accounts,
+  costCenters,
+  projects,
+  onDone,
+  header,
+  cover = null,
+}: CardProps) {
   const t = useTranslations("invoices.workspace");
   const tAction = useTranslations("invoices.action");
   const tFields = useTranslations("invoices.field");
@@ -198,13 +230,25 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   }
   const url = `/api/supplier-invoices/${invoice.id}`;
 
+  // What is typed (draft) and what the server has (saved). Nothing is saved until Bokför, which sends the head and
+  // the rows together. Everything below is worked from the draft; a reload from elsewhere starts both over.
+  const [draft, setDraft] = useState<Head>(() => headOf(invoice));
+  const [saved, setSaved] = useState<Head>(() => headOf(invoice));
+  const [touched, setTouched] = useState<ReadonlySet<HeadKey>>(new Set());
   const [picked, setPicked] = useState<{ supplier?: string }>({});
   const [seen, setSeen] = useState(invoice.updatedAt);
   if (seen !== invoice.updatedAt) {
     setSeen(invoice.updatedAt);
     setPicked({});
+    setDraft(headOf(invoice));
+    setSaved(headOf(invoice));
   }
-  const [rows, setRows] = useState<VoucherEditorRow[]>(() => initialRows(invoice));
+  const [rows, setRowsRaw] = useState<VoucherEditorRow[]>(() => initialRows(invoice));
+  const [rowsChanged, setRowsChanged] = useState(false);
+  const setRows = (next: VoucherEditorRow[]) => {
+    setRowsRaw(next);
+    setRowsChanged(true);
+  };
   const lines = linesOf(rows);
 
   const list = useMemo(() => suppliers.data ?? [], [suppliers.data]);
@@ -221,49 +265,89 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
     }),
   });
 
-  const put = async (body: PatchSupplierInvoice) =>
-    (await save.mutate(url, { method: "PATCH", body })) !== null;
-
-  async function commit(key: keyof PatchSupplierInvoice, raw: string) {
+  /** The PATCH for one field, or null when it cannot be saved as typed (said, unless it is a half-typed date). */
+  function bodyFor(key: HeadKey, raw: string): PatchSupplierInvoice | null {
     const v = raw.trim();
-    if (key !== "amount") return put({ [key]: v || null });
-    if (!v) return put({ amount: null });
-    const ore = parseOre(v);
-    if (!Number.isFinite(ore) || ore <= 0) {
-      notify.error(t("amountInvalid"));
-      return false;
+    if (key === "amount") {
+      const ore = parseAmount(v);
+      if (ore === undefined) notify.error(t("amountInvalid"));
+      return ore === undefined ? null : { amount: ore };
     }
-    return put({ amount: ore });
+    if (key === "rounding") {
+      const ore = parseRounding(v);
+      if (ore === undefined) notify.error(tBook("roundingInvalid"));
+      return ore === undefined ? null : { rounding: ore };
+    }
+    if ((key === "invoiceDate" || key === "dueDate") && v && !isCompleteDate(v)) return null;
+    return { [key]: v || null };
   }
 
-  async function pickSupplier(number: string) {
-    setPicked((p) => ({ ...p, supplier: number }));
-    await save.mutate(url, { method: "PATCH", body: supplierBody(number), key: "supplier" });
-  }
+  const edit = (key: HeadKey) => (value: string) => setDraft((d) => ({ ...d, [key]: value }));
 
-  const roundingOre = toOre(invoice.rounding) ?? 0;
-  const totalOre = toOre(invoice.amount) ?? 0;
+  const leave = (key: HeadKey) => setTouched((s) => (s.has(key) ? s : new Set(s).add(key)));
+
+  // Worked from the draft. A date counts once whole; until then the saved one stands.
+  const liveDate = (key: "invoiceDate" | "dueDate") =>
+    draft[key] === "" || isCompleteDate(draft[key]) ? draft[key] : saved[key];
+  const amountOre = parseAmount(draft.amount) ?? null;
+  const typedRounding = parseRounding(draft.rounding);
+  const roundingOre =
+    (typedRounding === undefined ? parseRounding(saved.rounding) : typedRounding) ?? 0;
+  const totalOre = amountOre ?? 0;
   const blocker = exportBlocker({
     fortnoxSupplierNumber: supplierNo || null,
-    invoiceNumber: invoice.invoiceNumber ?? "",
-    invoiceDate: invoice.invoiceDate || null,
-    dueDate: invoice.dueDate || null,
-    amount: toOre(invoice.amount),
-    ocr: invoice.ocr ?? null,
+    invoiceNumber: draft.invoiceNumber,
+    invoiceDate: liveDate("invoiceDate") || null,
+    dueDate: liveDate("dueDate") || null,
+    amount: amountOre,
+    ocr: draft.ocr.trim() || null,
     rounding: roundingOre,
     shares:
       invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
     lines,
   });
 
+  // The attest page, drawn here from what is typed, as it will be sent.
+  const coverData = cover
+    ? buildInvoiceCoverData(
+        liveCoverFacts(cover, {
+          supplierName: supplier?.name ?? cover.supplierName,
+          invoiceNumber: draft.invoiceNumber.trim() || null,
+          invoiceDate: liveDate("invoiceDate"),
+          dueDate: liveDate("dueDate"),
+          amount: totalOre,
+        }),
+      )
+    : null;
+  const svg = useTypstSvg("invoiceCover", coverData);
+  const documents = useInvoicePanelDocuments(invoice, cover ? { svg } : undefined);
+
+  const supplierChanged = supplierNo !== (invoice.fortnoxSupplierNumber ?? "");
+  // A supplier matched automatically is not something the reader typed, so only a pick counts.
+  const dirty =
+    rowsChanged ||
+    (picked.supplier !== undefined && supplierChanged) ||
+    (Object.keys(draft) as HeadKey[]).some((key) => draft[key] !== saved[key]);
+  useLeaveGuard(dirty && !tr.busy);
+
   async function book() {
-    // The route leaves out lines that already match.
+    // The head goes with the kontering in one PATCH. The route leaves out what already matches.
+    const typed: PatchSupplierInvoice = {};
+    for (const key of Object.keys(draft) as HeadKey[]) {
+      if (draft[key] === saved[key]) continue;
+      const body = bodyFor(key, draft[key]);
+      if (body === null) return;
+      Object.assign(typed, body);
+    }
     const unsaved: PatchSupplierInvoice = {
-      ...(supplierNo !== (invoice.fortnoxSupplierNumber ?? "") && supplierBody(supplierNo)),
+      ...typed,
+      ...(supplierChanged && supplierBody(supplierNo)),
       lines,
     };
     const ok = await save.mutate(url, { method: "PATCH", body: unsaved, refresh: false });
     if (ok === null) return;
+    setSaved(draft);
+    setRowsChanged(false);
     await tr.run({ action: "book" });
   }
 
@@ -282,39 +366,37 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
   const credit = creditOre / 100;
   const difference = (creditOre - debitOre) / 100;
 
-  async function commitRounding(raw: string) {
-    const v = raw.trim();
-    if (!v) return put({ rounding: null });
-    const ore = Math.round(Number(v.replace(/\s/g, "").replace(",", ".")) * 100);
-    if (!Number.isFinite(ore) || Math.abs(ore) > MAX_ROUNDING) {
-      notify.error(tBook("roundingInvalid"));
-      return false;
-    }
-    return put({ rounding: ore || null });
-  }
-
+  // Said once the field has been left, so a number still being typed is not called wrong.
+  const badOcr =
+    draft.ocr.trim() !== "" && !isValidOcr(draft.ocr) && (touched.has("ocr") || saved.ocr !== "");
+  const field = (key: HeadKey) => ({
+    value: draft[key],
+    onChange: edit(key),
+    onLeave: () => leave(key),
+  });
   const text = (key: "invoiceNumber" | "ocr" | "yourReference" | "ourReference") => (
-    <SavedInput value={invoice[key] ?? ""} onSave={(v) => commit(key, v)} />
+    <HeadInput {...field(key)} invalid={key === "ocr" && badOcr} />
   );
   // Supplier details are the register's, not the invoice's, once one is picked.
   const ofSupplier = (key: "bankgiro" | "plusgiro") => (
-    <SavedInput readOnly value={(supplier ? supplier[key] : invoice[key]) ?? ""} />
+    <HeadInput readOnly value={(supplier ? supplier[key] : invoice[key]) ?? ""} />
   );
 
   const sumMismatch = blocker === "supplierInvoice.allocationSumMismatch";
 
   return (
     <>
+      <ReceiptPanelSource documents={documents} />
       <Card>
         {header}
         <div className="@container space-y-5 px-inset py-5">
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 @2xl:grid-cols-4">
-            <BookField label={t("supplier")} className="col-span-2">
+            <FieldGroup label={t("supplier")} className="col-span-2" requirement="required">
               <Combobox
                 size="sm"
                 options={supplierOptions}
                 value={supplierNo}
-                onChange={(v) => void pickSupplier(v)}
+                onChange={(v) => setPicked((p) => ({ ...p, supplier: v }))}
                 placeholder={suppliers.loading ? t("loadingSuppliers") : t("pickSupplier")}
                 searchPlaceholder={t("searchSupplier")}
                 aria-label={t("supplier")}
@@ -325,35 +407,34 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
                   {t("supplierNotInRegister", { name: invoice.supplierName })}
                 </p>
               )}
-            </BookField>
-            <BookField label={tFields("invoiceDate")}>
-              <SavedInput
-                type="date"
-                value={invoice.invoiceDate}
-                onSave={(v) => commit("invoiceDate", v)}
-              />
-            </BookField>
-            <BookField label={tFields("dueDate")}>
-              <SavedInput
-                type="date"
-                value={invoice.dueDate}
-                onSave={(v) => commit("dueDate", v)}
-              />
-            </BookField>
-            <BookField label={tFields("ocr")} className="col-span-2">
+            </FieldGroup>
+            <Field label={tFields("invoiceDate")} requirement="required">
+              <HeadInput type="date" {...field("invoiceDate")} />
+            </Field>
+            <Field label={tFields("dueDate")} requirement="required">
+              <HeadInput type="date" {...field("dueDate")} />
+            </Field>
+            <Field
+              label={tFields("ocr")}
+              className="col-span-2"
+              requirement="optional"
+              error={badOcr ? tErr("supplierInvoice.badOcr") : undefined}
+            >
               {text("ocr")}
-            </BookField>
-            <BookField label={tFields("invoiceNumber")}>{text("invoiceNumber")}</BookField>
-            <BookField label={tBook("total")}>
-              <SavedInput
-                amount
-                value={sekToInput(invoice.amount)}
-                onSave={(v) => commit("amount", v)}
-              />
-            </BookField>
-            <BookField label={tVoucher("allCostCenter")} className="col-span-2">
+            </Field>
+            <Field label={tFields("invoiceNumber")} requirement="required">
+              {text("invoiceNumber")}
+            </Field>
+            <Field label={tBook("total")} requirement="required">
+              <HeadInput amount {...field("amount")} />
+            </Field>
+            <FieldGroup
+              label={tVoucher("allCostCenter")}
+              className="col-span-2"
+              requirement="optional"
+            >
               <VoucherCostCenterPicker rows={rows} onChange={setRows} costCenters={costCenters} />
-            </BookField>
+            </FieldGroup>
           </div>
 
           <details open className="group border-t border-border pt-3">
@@ -363,11 +444,15 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
             </summary>
             <div className="mt-3 grid grid-cols-2 items-start gap-x-4 gap-y-3 @2xl:grid-cols-4">
               <div className="col-span-2 space-y-3 @2xl:col-span-2">
-                <BookField label={tBook("ourRef")}>{text("ourReference")}</BookField>
-                <BookField label={tBook("supplierRef")}>{text("yourReference")}</BookField>
+                <Field label={tBook("ourRef")} requirement="optional">
+                  {text("ourReference")}
+                </Field>
+                <Field label={tBook("supplierRef")} requirement="optional">
+                  {text("yourReference")}
+                </Field>
               </div>
-              <BookField label={tFields("bankgiro")}>{ofSupplier("bankgiro")}</BookField>
-              <BookField label={tFields("plusgiro")}>{ofSupplier("plusgiro")}</BookField>
+              <Field label={tFields("bankgiro")}>{ofSupplier("bankgiro")}</Field>
+              <Field label={tFields("plusgiro")}>{ofSupplier("plusgiro")}</Field>
             </div>
           </details>
         </div>
@@ -407,13 +492,9 @@ export function BookPanel({ invoice, accounts, costCenters, projects, onDone, he
         />
 
         <div className="flex justify-end border-t border-border px-inset py-4">
-          <BookField label={tBook("rounding")} className="w-40">
-            <SavedInput
-              value={invoice.rounding ? sekToInput(oreToSEK(roundingOre)) : ""}
-              onSave={commitRounding}
-              align="right"
-            />
-          </BookField>
+          <Field label={tBook("rounding")} className="w-40" requirement="optional">
+            <HeadInput {...field("rounding")} align="right" />
+          </Field>
         </div>
 
         {mismatch && (

@@ -10,6 +10,8 @@ const h = vi.hoisted(() => ({
   events: [] as unknown[],
   create: vi.fn(),
   connect: vi.fn(),
+  existing: null as string | null,
+  lineWrites: [] as unknown[],
   supplier: {
     number: "12",
     name: "Lunds Släp AB",
@@ -94,6 +96,10 @@ vi.mock("@/lib/server/db", () => {
       $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
         fn({
           supplierInvoice: { updateMany },
+          supplierInvoiceLine: {
+            deleteMany: async () => h.lineWrites.push("delete"),
+            createMany: async (a: unknown) => h.lineWrites.push(a),
+          },
           supplierInvoiceEvent: { create: async (a: unknown) => h.events.push(a) },
         }),
     },
@@ -136,6 +142,21 @@ vi.mock("@/lib/fortnox", () => {
     // The register is read as the organisation; only the writes are Maja's.
     getServiceToken: async () => "service-token",
     getSupplier: async () => h.supplier,
+    findSupplierInvoice: async () => h.existing,
+    getSupplierInvoice: async (_t: string, n: string) => ({
+      givenNumber: n,
+      invoiceNumber: "20417",
+      invoiceDate: "2026-10-21",
+      dueDate: "2026-11-10",
+      total: 1250,
+      roundOff: 0,
+      ocr: "123456789015",
+      yourReference: "SEX01",
+      ourReference: "Maja",
+      rows: [
+        { account: "5410", debit: 1250, credit: 0, costCenter: "SEX01", project: null, text: null },
+      ],
+    }),
     uploadInboxFile: async () => "file-1",
     createSupplierInvoice: h.create,
     connectFileToSupplierInvoice: h.connect,
@@ -165,6 +186,8 @@ beforeEach(() => {
   h.claimCount = 1;
   h.updates = [];
   h.events = [];
+  h.existing = null;
+  h.lineWrites = [];
   h.create.mockReset();
   h.connect.mockReset();
   h.create.mockResolvedValue("4711");
@@ -225,6 +248,51 @@ describe("export", () => {
     h.create.mockRejectedValue(new FortnoxError("Internal error", 503));
     await call();
     expect(states().at(-1)).toBe("UNCERTAIN");
+  });
+
+  it("ties to the invoice already in Fortnox and takes over its fields and rows", async () => {
+    h.existing = "4702";
+    h.supplier = { ...h.supplier, bankgiro: "999-9999" };
+    const res = await call();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      status: "EXPORTED",
+      givenNumber: "4702",
+      linked: true,
+      attachFailed: null,
+    });
+    expect(h.create).not.toHaveBeenCalled();
+    expect(h.updates).toHaveLength(1);
+    expect(h.updates[0].data).toMatchObject({
+      status: "EXPORTED",
+      fortnoxGivenNumber: "4702",
+      invoiceDate: new Date("2026-10-21"),
+      ourReference: "Maja",
+    });
+    expect(h.lineWrites).toEqual([
+      "delete",
+      {
+        data: [
+          {
+            invoiceId: "inv1",
+            position: 0,
+            account: "5410",
+            costCenterCode: "SEX01",
+            project: null,
+            description: null,
+            debit: 125000,
+            credit: 0,
+          },
+        ],
+      },
+    ]);
+    expect(h.events[0]).toMatchObject({
+      data: {
+        type: "EXPORTED",
+        comment: "4702",
+      },
+    });
+    expect(h.connect).toHaveBeenCalledWith("t", "file-1", "4702");
   });
 
   it("stops at a bankgiro the register does not have, before taking the lock", async () => {

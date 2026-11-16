@@ -37,6 +37,8 @@ import { gmailConfig } from "@/lib/server/gmail";
 import type { DocumentReading } from "@/lib/server/invoice-documents";
 import type { Viewer } from "./expense-scope";
 import { isoDate } from "./shared";
+import { pageBounds, type ListQuery, type RowPage, type SortDir } from "./list-query";
+import type { During } from "@/lib/server/fiscal-year";
 
 /** Everything the rules need about a viewer, plus unit names (what canAttestAllocation compares). */
 export interface InvoiceViewerCtx extends InvoiceViewer {
@@ -174,18 +176,65 @@ const ROW_SELECT = {
   allocations: { select: { approvedById: true, costCenter: { select: { code: true } } } },
 } satisfies Prisma.SupplierInvoiceSelect;
 
-/** Every invoice the viewer may see, newest first. Not paged: a few a week, filtered in the browser (ClientDataTable). */
-export async function getInvoiceRows(
-  viewer: Viewer,
-  opts: { ownUnits?: boolean } = {},
-): Promise<SupplierInvoiceRow[]> {
-  const v = await invoiceViewerOf(viewer);
-  const rows = await prisma.supplierInvoice.findMany({
-    where: invoiceScopeWhere(v, opts),
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: ROW_SELECT,
-  });
-  return rows.map((r) => ({
+/** Fakturor's stage tabs (app/(app)/invoices/scope.ts) as statuses. "all" is absent and narrows nothing. */
+const INVOICE_TAB_STATUSES: Record<string, SupplierInvoiceStatus[]> = {
+  attest: ["ASSIGNED", "PENDING_APPROVAL", "CHANGES_REQUESTED"],
+  book: ["APPROVED"],
+  send: ["BOOKED"],
+  exported: ["EXPORTED"],
+};
+
+const tabOfStatus = (s: SupplierInvoiceStatus): string =>
+  Object.entries(INVOICE_TAB_STATUSES).find(([, statuses]) => statuses.includes(s))?.[0] ?? "all";
+
+/**
+ * The räkenskapsår an invoice belongs to: by its invoice date, or by when it arrived while none
+ * has been read. `during` is a day range, which a timestamp compares against the same way.
+ */
+const invoiceYearWhere = (during: During): Prisma.SupplierInvoiceWhereInput => ({
+  OR: [{ invoiceDate: during }, { invoiceDate: null, createdAt: during }],
+});
+
+// Sortable columns as database orders. Every one ends in `id` so paging never repeats or skips a row on ties.
+const INVOICE_ORDER: Record<
+  string,
+  (d: SortDir) => Prisma.SupplierInvoiceOrderByWithRelationInput[]
+> = {
+  reference: (d) => [{ reference: { sort: d, nulls: "last" } }, { id: d }],
+  description: (d) => [{ description: { sort: d, nulls: "last" } }, { id: d }],
+  unit: (d) => [{ resultUnit: { name: d } }, { id: d }],
+  // Not yet fördelade have no due date and come after the dated ones, oldest arrival first.
+  dueDate: (d) => [{ dueDate: { sort: d, nulls: "last" } }, { createdAt: d }, { id: d }],
+  amount: (d) => [{ amount: { sort: d, nulls: "last" } }, { id: d }],
+};
+const INVOICE_DEFAULT_ORDER = INVOICE_ORDER.dueDate("asc");
+
+function invoiceListWhere(q: ListQuery): Prisma.SupplierInvoiceWhereInput[] {
+  const and: Prisma.SupplierInvoiceWhereInput[] = [];
+  const statuses = INVOICE_TAB_STATUSES[q.tab];
+  if (statuses) and.push({ status: { in: statuses } });
+  if (q.q) {
+    const has = { contains: q.q, mode: "insensitive" as const };
+    and.push({
+      OR: [
+        { reference: has },
+        { description: has },
+        { supplierName: has },
+        { invoiceNumber: has },
+        { receivedBy: { name: has } },
+        { resultUnit: { name: has } },
+      ],
+    });
+  }
+  return and;
+}
+
+function toRow(
+  v: InvoiceViewerCtx,
+  r: Prisma.SupplierInvoiceGetPayload<{ select: typeof ROW_SELECT }>,
+): SupplierInvoiceRow {
+  const facts = invoiceFactsOf(v, r);
+  return {
     id: r.id,
     reference: r.reference,
     status: r.status,
@@ -199,9 +248,71 @@ export async function getInvoiceRows(
     receivedAt: r.createdAt.toISOString(),
     receivedByName: r.receivedBy?.name ?? null,
     resultUnitName: r.resultUnit?.name ?? null,
-    queue: invoiceQueue(v, invoiceFactsOf(v, r)),
-    waitsOnViewer: invoiceWaitsOn(v, invoiceFactsOf(v, r)),
-  }));
+    queue: invoiceQueue(v, facts),
+    waitsOnViewer: invoiceWaitsOn(v, facts),
+  };
+}
+
+/** One page of Fakturor and how many rows are behind it, with tab, search, year and sort in the database. */
+export async function getInvoicePage(
+  viewer: Viewer,
+  q: ListQuery,
+  { ownUnits = false, during }: { ownUnits?: boolean; during?: During } = {},
+): Promise<RowPage<SupplierInvoiceRow>> {
+  const v = await invoiceViewerOf(viewer);
+  const where: Prisma.SupplierInvoiceWhereInput = {
+    AND: [
+      invoiceScopeWhere(v, { ownUnits }),
+      ...invoiceListWhere(q),
+      ...(during ? [invoiceYearWhere(during)] : []),
+    ],
+  };
+  const order = INVOICE_ORDER[q.sort];
+  const [rows, total] = await Promise.all([
+    prisma.supplierInvoice.findMany({
+      where,
+      orderBy: order ? order(q.dir) : INVOICE_DEFAULT_ORDER,
+      ...pageBounds(q),
+      select: ROW_SELECT,
+    }),
+    prisma.supplierInvoice.count({ where }),
+  ]);
+  return { rows: rows.map((r) => toRow(v, r)), total };
+}
+
+/**
+ * How many invoices wait on the viewer under each tab, and in all. Whether one waits is decided per
+ * row (invoiceWaitsOn), so the unfinished ones are read and tested here. An exported invoice never
+ * waits, so this reads the backlog, not the history. The sidebar badge and the tabs both count here.
+ */
+export async function getInvoiceWaiting(
+  viewer: Viewer,
+  { ownUnits = false, during }: { ownUnits?: boolean; during?: During } = {},
+): Promise<{ total: number; byTab: Record<string, number> }> {
+  const v = await invoiceViewerOf(viewer);
+  const rows = await prisma.supplierInvoice.findMany({
+    where: {
+      AND: [
+        invoiceScopeWhere(v, { ownUnits }),
+        { status: { not: "EXPORTED" } },
+        ...(during ? [invoiceYearWhere(during)] : []),
+      ],
+    },
+    select: {
+      status: true,
+      resultUnitId: true,
+      allocations: { select: { approvedById: true, costCenter: { select: { code: true } } } },
+    },
+  });
+  const byTab: Record<string, number> = {};
+  let total = 0;
+  for (const r of rows) {
+    if (!invoiceWaitsOn(v, invoiceFactsOf(v, r))) continue;
+    total++;
+    const tab = tabOfStatus(r.status);
+    byTab[tab] = (byTab[tab] ?? 0) + 1;
+  }
+  return { total, byTab };
 }
 
 export interface SupplierInvoiceAllocationView {
