@@ -90,6 +90,8 @@
     "bookedBy": "Konterad",
     "amendedBy": "Ändrad",
     "amend": "Ändra",
+    "voucherDate": "Verifikationsdatum",
+    "voucherText": "Verifikationstext",
     "exportedToFortnox": "Bokförd i Fortnox - verifikat",
     "history": "Historik",
     "receipt": "Kvitto",

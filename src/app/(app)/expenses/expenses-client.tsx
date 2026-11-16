@@ -95,10 +95,15 @@ export function ExpensesClient({
   const columns: Column<Expense>[] = useMemo(
     () => [
       picks.column,
-      expenseReferenceColumn(t("col.verification")),
-      expenseTitleColumn(t("col.title"), { reference: false }),
+      // Verifikation, Typ and Attest show from xl. Below it the first two fold into the title's
+      // second line and Attest is on the utlägg's page, so a narrow laptop does not side scroll.
+      { ...expenseReferenceColumn(t("col.verification")), from: "xl" },
+      expenseTitleColumn(t("col.title"), { reference: "below-xl", paymentType: "below-xl" }),
       expenseDateColumn(t("col.date"), date),
-      expensePaymentTypeColumn(t("col.type"), (type) => tPayment(`${type}.label`)),
+      {
+        ...expensePaymentTypeColumn(t("col.type"), (type) => tPayment(`${type}.label`)),
+        from: "xl",
+      },
       expenseSubmitterColumn(t("col.submitter"), showOwnOnly),
       expenseStatusColumn(t("col.status")),
       {
@@ -106,6 +111,7 @@ export function ExpensesClient({
         header: t("col.attest"),
         // Off the phone row: a line per allocation is a column on a table, not a clause in a summary. It is on the utlägg's page under Fördelning.
         mobile: "hide",
+        from: "xl",
         cell: (e) =>
           e.allocations.length === 0 ? (
             <span className="text-muted">-</span>

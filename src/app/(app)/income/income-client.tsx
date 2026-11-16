@@ -10,29 +10,29 @@ import { useNotify } from "@/components/shell/notifications";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
-import type { Column } from "@/components/ui/data-table";
+import { DataTable, type Column, type TabFilter } from "@/components/ui/data-table";
 import { IconDots, IconDownload, IconUpload } from "@/components/ui/icons";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { Tag } from "@/components/ui/status-pill";
-import { useTableControls, useUrlTab } from "@/lib/data/use-list-query";
+import { useUrlTableControls } from "@/lib/data/use-list-query";
+import type { RowPage } from "@/lib/data/list-query";
 import { useFormat } from "@/lib/ui/use-format";
 import type { IncomeReportRow } from "@/lib/data/income";
 import type { IncomeSettingsRow } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import type { IncomeSetupStep } from "@/lib/income/setup";
 import { incomeDayHref, type IncomeSourceSlug } from "@/lib/income/source-slug";
-import type { FiscalYear } from "@/lib/ui/fiscal-year";
 
 import { FetchDialog, FetchPanel } from "./fetch-panel";
 import { IncomeSetupNotice } from "./setup-notice";
-import { INCOME_TABS, incomeTabHolds, type IncomeTab } from "./tabs";
+import { INCOME_TABS, type IncomeTab } from "./tabs";
 import { dayVoucher, lineFindings } from "./voucher-draft";
 
 export default function IncomeClient({
   slug,
-  reports,
-  tab,
+  page,
+  backlog,
+  empty,
   defaultTab,
   canBook,
   canManage,
@@ -42,13 +42,16 @@ export default function IncomeClient({
   accounts,
   costCenters,
   projects,
-  fiscal,
   setup,
   canSetUp,
 }: {
   slug: IncomeSourceSlug;
-  reports: IncomeReportRow[];
-  tab: IncomeTab;
+  /** One page, cut by the server (getIncomePage). */
+  page: RowPage<IncomeReportRow>;
+  /** Every day still to kontera or export, for the bulk buttons (getIncomeBacklog). Empty for a revisor. */
+  backlog: IncomeReportRow[];
+  /** No day has been brought in for this source yet. */
+  empty: boolean;
   defaultTab: IncomeTab;
   canBook: boolean;
   canManage: boolean;
@@ -58,7 +61,6 @@ export default function IncomeClient({
   accounts: AccountRecord[];
   costCenters: CostCenter[];
   projects: ProjectRecord[];
-  fiscal: FiscalYear | null;
   setup: IncomeSetupStep[];
   canSetUp: boolean;
 }) {
@@ -67,10 +69,8 @@ export default function IncomeClient({
   const notify = useNotify();
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
-  const controls = useUrlTab(
-    useTableControls({ tab, sortKey: "date", sortDir: "desc" }),
-    defaultTab,
-  );
+  // The list's state lives in the URL, because the query behind it runs on the server.
+  const controls = useUrlTableControls(page.total, defaultTab);
   const [fetchOpen, setFetchOpen] = useState(false);
   const source = slug === "swish" ? "SWISH" : "ZETTLE";
   const ready = setup.every((s) => !s.blocksFetch);
@@ -79,12 +79,12 @@ export default function IncomeClient({
     dayVoucher({ report: r, settings, accounts, costCenters, projects });
   const own = (r: IncomeReportRow) => !exemptOwn && r.bookedBy.includes(viewerId);
 
-  const clean = reports.filter((r) => {
+  const clean = backlog.filter((r) => {
     if (r.status !== "DRAFT" || r.legacy) return false;
     const f = lineFindings(r, costCenters);
     return voucherOf(r).canBook && f.unplaced === 0 && !r.existingVoucher;
   });
-  const reviewable = reports.filter((r) => r.status === "BOOKED" && !own(r));
+  const reviewable = backlog.filter((r) => r.status === "BOOKED" && !own(r));
 
   /** Many days one at a time, in date order, stopping at the first that fails, so a failure halfway reads as "these went, that stopped it". */
   async function runAll(days: IncomeReportRow[], step: "book" | "export", key: string) {
@@ -148,11 +148,7 @@ export default function IncomeClient({
     });
   }
 
-  const tabs: ClientTabFilter<IncomeReportRow> = INCOME_TABS.map((value) => ({
-    value,
-    label: t(`tab.${value}`),
-    predicate: incomeTabHolds(value, fiscal),
-  }));
+  const tabs: TabFilter = INCOME_TABS.map((value) => ({ value, label: t(`tab.${value}`) }));
 
   function needs(r: IncomeReportRow) {
     if (r.status === "EXPORTED") {
@@ -221,7 +217,7 @@ export default function IncomeClient({
       key: "units",
       header: t("table.units"),
       value: (r) => r.unitNames.join(", "),
-      sortable: true,
+      // Not sortable: the names come from the day's lines, so the database has no one value to order by.
       searchable: true,
       mobile: "title",
       cell: (r) => (
@@ -298,7 +294,7 @@ export default function IncomeClient({
         <FetchDialog source={source} ready={ready} onClose={() => setFetchOpen(false)} />
       )}
 
-      {reports.length === 0 && canBook ? (
+      {empty && canBook ? (
         // Nothing yet, so bringing days in is the only thing to do: the form is the page.
         <FetchPanel
           source={source}
@@ -308,7 +304,7 @@ export default function IncomeClient({
         />
       ) : (
         <Card>
-          <ClientDataTable
+          <DataTable
             action={
               canBook ? (
                 <>
@@ -340,7 +336,7 @@ export default function IncomeClient({
               ) : undefined
             }
             columns={columns}
-            rows={reports}
+            rows={page.rows}
             controls={controls}
             tabs={tabs}
             searchPlaceholder={t("booked.searchPlaceholder")}

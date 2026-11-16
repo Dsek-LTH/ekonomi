@@ -13,16 +13,16 @@ export const SCORE_WINDOW_DAYS = 365;
 const RECENT_DAYS = 182;
 
 /** A purchase not sent yet is not late until this many days have passed. */
-const SUBMIT_GRACE_DAYS = 7;
+export const SUBMIT_GRACE_DAYS = 7;
 
 /** An attest not given yet is not late until this many days have passed. */
-const ATTEST_GRACE_DAYS = 3;
+export const ATTEST_GRACE_DAYS = 3;
 
 /** Fewer items than this and a sub-score is left out of the average. */
 export const MIN_COUNTED = 3;
 
-/** Every timed sub-score starts as if with one item at this, so the first slow one does not drop a member to the bottom. */
-const PRIOR = { points: 80, weight: 1 };
+/** Every timed sub-score starts as if with one item on time, so the first slow one does not drop a member to the bottom. Full points, so a member who is always on time keeps 100. */
+const PRIOR = { points: 100, weight: 1 };
 
 /** Every share starts as if with this many that went right: one early send-back is not a 0. */
 const PRIOR_CLEAN = 2;

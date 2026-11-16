@@ -5,12 +5,12 @@ import "server-only";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/server/db";
 import { fiscalYearWhere, type During } from "@/lib/server/fiscal-year";
-import { inFiscalYear, type FiscalYear } from "@/lib/ui/fiscal-year";
+import type { FiscalYear } from "@/lib/ui/fiscal-year";
 import { canBookkeep, canSeeInvoices, hasAttestRole } from "@/lib/domain/permissions";
 import { attestScopeWhere } from "./attest-scope";
 import { countCardlessTransactions, countUnaccountedPurchases } from "./bank";
 import { canSeeInvoiceInbox, countInboxDocuments } from "./invoice-inbox";
-import { getInvoiceRows } from "./supplier-invoices";
+import { getInvoiceWaiting } from "./supplier-invoices";
 import type { Viewer } from "./expense-scope";
 
 export interface NavCounts {
@@ -89,10 +89,7 @@ export async function getExpenseTabCounts(
 
 export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Promise<NavCounts> {
   const during = year ? fiscalYearWhere(year) : undefined;
-  const invoiceRows = canSeeInvoices(viewer.capabilities)
-    ? getInvoiceRows(viewer)
-    : Promise.resolve([]);
-  const [returned, bank, cardless, attest, approved, booked, invoiceInbox, rows] =
+  const [returned, bank, cardless, attest, approved, booked, invoiceInbox, invoices] =
     await Promise.all([
       // Only what came back, not drafts (a draft is left off on purpose).
       returnedExpenses(viewer, during),
@@ -102,16 +99,13 @@ export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Pro
       treasuryExpenses(viewer, "APPROVED", during),
       treasuryExpenses(viewer, "BOOKED", during),
       canSeeInvoiceInbox(viewer) ? countInboxDocuments(viewer) : 0,
-      // Rows, not a count: invoiceWaitsOn decides per row, so the badge and the list cannot disagree.
-      invoiceRows,
+      // The same count Fakturor's tabs show (getInvoiceWaiting), so the two cannot disagree.
+      canSeeInvoices(viewer.capabilities) ? getInvoiceWaiting(viewer, { during }) : null,
     ]);
   return {
     expenses: returned + attest + approved + booked,
     bank: bank + cardless,
     invoiceInbox,
-    // Dated as the Fakturor list does (invoiceYearDate in app/(app)/invoices/scope.ts).
-    invoices: rows.filter(
-      (r) => r.waitsOnViewer && (!year || inFiscalYear(year, r.invoiceDate || r.receivedAt)),
-    ).length,
+    invoices: invoices?.total ?? 0,
   };
 }

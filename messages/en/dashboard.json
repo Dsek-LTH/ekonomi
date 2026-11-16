@@ -1,23 +1,6 @@
 {
   "title": "Overview",
   "greeting": "Hi, {name}",
-  "tiles": {
-    "turn": "Your turn",
-    "late": "{count, plural, one {# late} other {# late}}",
-    "nothingLate": "Nothing is late",
-    "waiting": "Waiting on others",
-    "stuck": "{count, plural, one {# is stuck} other {# are stuck}}",
-    "noneStuck": "Nothing is stuck",
-    "score": "Reporting score",
-    "scoreNote": "How it is counted",
-    "budget": "Ahead of budget pace",
-    "budgetValue": "{off} of {total}",
-    "over": "{count, plural, one {# over the whole year's budget} other {# over the whole year's budget}}",
-    "elapsed": "{elapsed}% of the year has passed",
-    "calendar": "Upcoming dates",
-    "next": "Next {date}",
-    "nothingComing": "Nothing scheduled"
-  },
   "firstRun": {
     "title": "How an expense works",
     "lead": "Spent your own money for the guild, or paid with a guild card? This is where you get it back.",
@@ -46,31 +29,6 @@
     "onTrack": "{unit} has used {used}% of its cost budget, and {elapsed}% of the year has passed.",
     "showAll": "Show all {count}"
   },
-  "turn": {
-    "title": "Your turn",
-    "empty": "Nothing is waiting on you.",
-    "untitled": "untitled",
-    "draft": "Send in <b>{title}</b>",
-    "cardPurchase": "Account for the card purchase <b>{title}</b>",
-    "invoiceOverdue": "The invoice from <b>{title}</b> is overdue",
-    "deadline": "Send in <b>{title}</b>",
-    "lastDay": "last day {when}",
-    "stale": "{count, plural, one {# over a week old} other {# over a week old}}",
-    "count": {
-      "FIX": "{count, plural, one {expense to fix} other {expenses to fix}}",
-      "SUBMIT": "{count, plural, one {draft to submit} other {drafts to submit}}",
-      "PURCHASES": "{count, plural, one {card purchase to account for} other {card purchases to account for}}",
-      "ATTEST": "to approve",
-      "BOOK": "to book",
-      "EXPORT": "to export to Fortnox",
-      "OVERDUE": "{count, plural, one {other overdue invoice} other {other overdue invoices}}",
-      "MEMBERS_BEHIND": "{count, plural, one {member has purchases waiting over a month} other {members have purchases waiting over a month}}"
-    },
-    "more": {
-      "SUBMIT": "{count, plural, one {other draft to submit} other {other drafts to submit}}",
-      "PURCHASES": "{count, plural, one {other card purchase to account for} other {other card purchases to account for}}"
-    }
-  },
   "waiting": {
     "title": "Waiting on others",
     "all": "All expenses",
@@ -88,13 +46,55 @@
     "pickup": "<b>{title}</b> is picked up",
     "contractEnds": "The contract <b>{title}</b> ends",
     "stockEvent": "Stock occasion: <b>{title}</b>",
-    "deadline": "Last day to send in <b>{title}</b>",
     "untitled": "an unknown supplier",
     "more": "Show {count} more"
   },
-  "invoices": {
-    "title": "Invoices in your committee",
-    "all": "All invoices",
-    "untitled": "Unknown supplier"
+  "todo": {
+    "title": "To do",
+    "empty": "Nothing is waiting on you.",
+    "untitled": "Untitled",
+    "scoreTitle": "Your reporting score",
+    "band": {
+      "late": "Late",
+      "week": "This week",
+      "later": "Later",
+      "groups": "Ongoing"
+    },
+    "tag": {
+      "fix": "Fix",
+      "draft": "Submit",
+      "cardPurchase": "Account for",
+      "attestExpense": "Attest",
+      "attestInvoice": "Attest",
+      "allocateInvoice": "Allocate",
+      "allocateDocument": "Allocate",
+      "bookInvoice": "Book",
+      "sendInvoice": "Send"
+    },
+    "context": {
+      "fix": "Your expense, sent back",
+      "draft": "Your expense, not submitted",
+      "cardPurchase": "Purchase on your card",
+      "attestExpense": "Expense from {who}",
+      "attestInvoice": "Supplier invoice, {who}",
+      "allocateInvoice": "Supplier invoice, {who}",
+      "allocateDocument": "In the inbox, {who}",
+      "bookInvoice": "Supplier invoice, {who}",
+      "sendInvoice": "Booked, {who}"
+    },
+    "due": {
+      "late": "{count, plural, one {# day late} other {# days late}}",
+      "today": "today",
+      "in": "{count, plural, one {in # day} other {in # days}}"
+    },
+    "group": {
+      "sortInbox": "{count, plural, one {document to sort in the inbox} other {documents to sort in the inbox}}",
+      "bookExpenses": "{count, plural, one {expense to book} other {expenses to book}}",
+      "exportExpenses": "{count, plural, one {expense to export to Fortnox} other {expenses to export to Fortnox}}",
+      "cardless": "{count, plural, one {purchase on no card to place} other {purchases on no card to place}}",
+      "overdueElsewhere": "{count, plural, one {overdue invoice with a unit} other {overdue invoices with the units}}",
+      "membersBehind": "{count, plural, one {member has purchases waiting over a month} other {members have purchases waiting over a month}}"
+    },
+    "showMore": "Show {count} more"
   }
 }

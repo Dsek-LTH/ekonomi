@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Amount } from "@/components/ui/amount";
 import { IconCheck } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
+import { useFormat } from "@/lib/ui/use-format";
 
 /** The small capitals every label and column head on the card is set in. */
 export const LABEL = "text-xs font-medium text-muted";
@@ -239,5 +240,130 @@ export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+/** One fact about the voucher, as a label and its value. `note` follows the value, small (a check, a warning). */
+export interface VoucherFact {
+  label: string;
+  value: React.ReactNode;
+  /** Numbers read off and typed elsewhere, in a fixed-width face. */
+  mono?: boolean;
+  note?: React.ReactNode;
+}
+
+/** Who did a step on it. `date` is left out when several people share the step. */
+export interface VoucherPerson {
+  label: string;
+  name: string;
+  date?: string;
+}
+
+/**
+ * A kontering as it was written and sent, as one section of the card. Shared by utlägg and levfakturor.
+ * Where it stands in Fortnox sits beside the caption, so that never takes a row of its own. Under it the
+ * facts as label and value pairs (two to a row from sm, one below), then the lines and who konterade.
+ */
+export function VoucherSection({
+  title,
+  number,
+  numberHint,
+  sent,
+  facts = [],
+  action,
+  lines,
+  people = [],
+}: {
+  title: string;
+  /** The number Fortnox gave it, once sent. */
+  number?: string | null;
+  numberHint?: string;
+  /** When it went to Fortnox, and who sent it. */
+  sent?: { date: string; by?: string | null } | null;
+  facts?: VoucherFact[];
+  action?: React.ReactNode;
+  lines: VoucherLine[];
+  people?: VoucherPerson[];
+}) {
+  const t = useTranslations("common.voucher");
+  const { date } = useFormat();
+  // "I Fortnox som 457", then when and by whom it went there.
+  const fortnox = number && (
+    <span title={numberHint} className="tabular-nums">
+      {t.rich("inFortnox", {
+        number,
+        n: (chunks) => <span className="font-medium">{chunks}</span>,
+      })}
+    </span>
+  );
+  const sentText =
+    sent &&
+    (sent.by
+      ? t("sentOnBy", { date: date(sent.date), name: sent.by })
+      : t("sentOn", { date: date(sent.date) }));
+  // Beside the section's title from sm; on a phone the send moves to a line under it.
+  const status = fortnox && (
+    <>
+      {fortnox}
+      {sentText && <span className="hidden text-muted sm:inline">, {sentText}</span>}
+    </>
+  );
+  const statusLine = sentText && (
+    <p className="-mt-1 mb-2 px-inset text-xs text-muted sm:hidden">{sentText}</p>
+  );
+
+  return (
+    <InspectorSection
+      title={title}
+      aside={status}
+      flush
+      endsInTable={people.length === 0}
+      action={action}
+    >
+      {statusLine}
+      {facts.length > 0 && (
+        // Two pairs to a row from sm. The rules are the grid's 1px gaps showing its tint, so each runs
+        // through every row or column, and the list is inset so none reaches the card's edge. An odd
+        // last row is filled so its rules run through too.
+        <dl className="mx-inset mb-3 grid gap-px bg-border/60 text-sm sm:grid-cols-2">
+          {facts.map((f) => (
+            <div
+              key={f.label}
+              className="flex min-w-0 items-baseline gap-4 bg-background py-2 sm:odd:pr-4 sm:even:pl-4"
+            >
+              <dt className={cn(LABEL, "w-28 shrink-0")}>{f.label}</dt>
+              <dd className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className={cn("min-w-0 truncate tabular-nums", f.mono && "font-mono")}>
+                  {f.value}
+                </span>
+                {f.note && <span className="shrink-0 text-xs">{f.note}</span>}
+              </dd>
+            </div>
+          ))}
+          {facts.length % 2 === 1 && <div aria-hidden className="hidden bg-background sm:block" />}
+        </dl>
+      )}
+      {/* With facts above, a rule over the table's header so the lines read as their own block. */}
+      <div className={cn(facts.length > 0 && "border-t border-border pt-3")}>
+        <VoucherTable lines={lines} />
+      </div>
+      {people.length > 0 && (
+        <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-border px-inset pt-3 text-xs">
+          {people.map((p) => (
+            <div key={p.label} className="flex items-baseline gap-2">
+              <dt className={LABEL}>{p.label}</dt>
+              <dd>
+                <span className="font-medium">{p.name}</span>
+                {p.date && (
+                  <span className="text-muted">
+                    , <span className="tabular-nums">{date(p.date)}</span>
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </InspectorSection>
   );
 }

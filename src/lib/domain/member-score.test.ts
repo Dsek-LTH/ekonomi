@@ -92,16 +92,22 @@ describe("memberScore", () => {
     expect(score([sent(20, 1), sent(30, 2), sent(40, 1)]).score).not.toBeNull();
   });
 
-  it("is high for somebody who always sends within the week and is never sent back", () => {
+  it("is 100 for somebody who always sends within the week and is never sent back", () => {
     const s = score([sent(10, 1), sent(50, 3), sent(90, 7), sent(120, 0)]);
-    expect(s.parts.promptness.value).toBe(96);
+    expect(s.parts.promptness.value).toBe(100);
     expect(s.parts.firstTime.value).toBe(100);
-    expect(s.score).toBe(98);
+    expect(s.score).toBe(100);
+  });
+
+  it("softens one slow purchase among few", () => {
+    // One on-time purchase as a head start: (100 + 0 + 100 + 100) / 4.
+    const s = score([sent(30, 1), sent(160, 130), sent(90, 1)]);
+    expect(s.parts.promptness.value).toBe(75);
   });
 
   it("is low for somebody who always sends late", () => {
     const s = score([sent(100, 75), sent(150, 90), sent(200, 100), sent(250, 80)]);
-    expect(s.parts.promptness.value).toBeLessThan(40);
+    expect(s.parts.promptness.value).toBeLessThan(50);
   });
 
   it("counts a purchase not sent yet, by how long it has waited", () => {

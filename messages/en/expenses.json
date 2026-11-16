@@ -90,6 +90,8 @@
     "bookedBy": "Booked",
     "amendedBy": "Amended",
     "amend": "Amend",
+    "voucherDate": "Voucher date",
+    "voucherText": "Voucher text",
     "exportedToFortnox": "Exported to Fortnox - voucher",
     "history": "History",
     "receipt": "Receipt",

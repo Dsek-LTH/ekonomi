@@ -1,7 +1,6 @@
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
-import { REIMBURSEMENT_DEADLINE_DAYS } from "@/lib/domain/status";
 import { today } from "@/lib/domain/date";
 import {
   canSeeInvoices,
@@ -9,7 +8,6 @@ import {
   canViewRentals,
   canViewStock,
 } from "@/lib/domain/permissions";
-import type { SupplierInvoiceStatus } from "@/lib/domain/types";
 import type { Viewer } from "./expense-scope";
 import { invoiceScopeWhere, invoiceViewerOf } from "./supplier-invoices";
 import { isoDate } from "./shared";
@@ -22,8 +20,6 @@ const daysUntil = (from: string, to: string) =>
 
 /** An utlägg sent in and not attested for this long is stuck. */
 const STUCK_DAYS = 14;
-/** One waiting on your attest for this long has been forgotten by you. */
-const ATTEST_STALE_DAYS = 7;
 
 /** Utlägg last sent in over `olderThan` days ago, with the days. The latest SUBMITTED event counts (resent starts over). */
 async function staleSince(ids: string[], olderThan: number): Promise<Map<string, number>> {
@@ -76,38 +72,13 @@ export async function getWaitingOnOthers(userId: string): Promise<WaitingOwn[]> 
     .sort((a, b) => b.days - a.days);
 }
 
-export async function countStaleAttests(ids: string[]): Promise<number> {
-  return (await staleSince(ids, ATTEST_STALE_DAYS)).size;
-}
-
-export async function getOverdueInvoices(
-  viewer: Viewer,
-): Promise<{ id: string; title: string; days: number }[]> {
-  if (!canSeeInvoices(viewer.capabilities)) return [];
-  const now = today();
-  const rows = await prisma.supplierInvoice.findMany({
-    where: {
-      ...invoiceScopeWhere(await invoiceViewerOf(viewer)),
-      status: { not: "EXPORTED" },
-      dueDate: { lt: day(now) },
-    },
-    orderBy: { dueDate: "asc" },
-    select: { id: true, supplierName: true, description: true, dueDate: true },
-  });
-  return rows.map((i) => ({
-    id: i.id,
-    title: i.supplierName ?? i.description ?? "",
-    days: daysUntil(isoDate(i.dueDate), now),
-  }));
-}
-
 /** How far ahead the list looks. Contracts get longer: a renewal is planned. */
 const AHEAD_DAYS = 14;
 const CONTRACT_AHEAD_DAYS = 30;
 const UPCOMING_TAKE = 8;
 
 export interface UpcomingItem {
-  kind: "deadline" | "invoice" | "pickup" | "contractEnds" | "stockEvent";
+  kind: "invoice" | "pickup" | "contractEnds" | "stockEvent";
   id: string;
   title: string;
   date: string;
@@ -121,22 +92,8 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
   const ahead = day(plusDays(now, AHEAD_DAYS));
   const caps = viewer.capabilities;
 
-  const [deadlines, invoices, pickups, contracts, events] = await Promise.all([
-    // Own unsent out-of-pocket claims whose filing deadline (purchase date + 60 days) is in the window.
-    prisma.expense.findMany({
-      where: {
-        submitterId: viewer.id,
-        status: { in: ["DRAFT", "CHANGES_REQUESTED"] },
-        paymentType: { in: ["REIMBURSEMENT", "MILEAGE"] },
-        deadlineWaivedAt: null,
-        purchaseDate: {
-          gte: day(plusDays(now, -REIMBURSEMENT_DEADLINE_DAYS)),
-          lte: day(plusDays(now, AHEAD_DAYS - REIMBURSEMENT_DEADLINE_DAYS)),
-        },
-      },
-      select: { id: true, title: true, purchaseDate: true },
-    }),
-    // Not yet due. One already past it is a late row under Din tur instead.
+  const [invoices, pickups, contracts, events] = await Promise.all([
+    // Not yet due. One already past it, or waiting on the reader, is on the to-do list instead.
     canSeeInvoices(caps)
       ? invoiceViewerOf(viewer).then((v) =>
           prisma.supplierInvoice.findMany({
@@ -175,9 +132,9 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
           },
         })
       : [],
-    canViewStock(caps)
+    canViewStock(caps, "alcohol")
       ? prisma.stockEvent.findMany({
-          where: { date: { gte: from, lte: ahead } },
+          where: { stockId: "alcohol", date: { gte: from, lte: ahead } },
           orderBy: { date: "asc" },
           take: UPCOMING_TAKE,
           select: { id: true, name: true, date: true },
@@ -186,12 +143,6 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
   ]);
 
   const items: Omit<UpcomingItem, "inDays">[] = [
-    ...deadlines.map((e) => ({
-      kind: "deadline" as const,
-      id: e.id,
-      title: e.title,
-      date: plusDays(isoDate(e.purchaseDate), REIMBURSEMENT_DEADLINE_DAYS),
-    })),
     ...invoices.map((i) => ({
       kind: "invoice" as const,
       id: i.id,
@@ -221,28 +172,4 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, UPCOMING_TAKE)
     .map((i) => ({ ...i, inDays: daysUntil(now, i.date) }));
-}
-
-export interface UnitInvoice {
-  id: string;
-  title: string;
-  status: SupplierInvoiceStatus;
-}
-
-/** The latest invoices in the result units you answer for. Empty for anyone answering for none. */
-export async function getUnitInvoices(viewer: Viewer, take: number): Promise<UnitInvoice[]> {
-  if (!canSeeInvoices(viewer.capabilities)) return [];
-  const v = await invoiceViewerOf(viewer);
-  if (v.ownedResultUnitIds.length === 0 && v.ownedPrefixes.length === 0) return [];
-  const rows = await prisma.supplierInvoice.findMany({
-    where: invoiceScopeWhere(v, { ownUnits: true }),
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take,
-    select: { id: true, supplierName: true, description: true, status: true },
-  });
-  return rows.map((i) => ({
-    id: i.id,
-    title: i.supplierName ?? i.description ?? "",
-    status: i.status,
-  }));
 }

@@ -19,7 +19,8 @@ import {
   InspectorSection,
   LABEL,
   StripCell,
-  VoucherTable,
+  VoucherSection,
+  type VoucherFact,
 } from "@/components/record-card";
 
 /** The head of the card: where the utlägg stands and the actions (top right, wrapping under the status on a phone). See components/page-shell.tsx. */
@@ -246,23 +247,31 @@ export function VerificationSection({
   const people = bookingPeople(revisions);
   const ownText = (d: string | undefined) =>
     d && d.trim() !== verification.description.trim() ? d : undefined;
+  // The last export that stood: one undone since does not count.
+  const sent = verification.fortnoxLabel
+    ? revisions.findLast((r) => r.action === "EXPORTED")
+    : undefined;
+
+  // Laid out as the levfaktura's (VoucherSection in components/record-card.tsx).
+  const facts: VoucherFact[] = [
+    { label: t("voucherDate"), value: date(verification.date) },
+    {
+      label: t("voucherText"),
+      value: <span title={verification.description}>{verification.description}</span>,
+    },
+  ];
 
   return (
-    <InspectorSection
+    <VoucherSection
       title={t("verification")}
-      aside={
-        verification.fortnoxLabel && (
-          // The Fortnox number beside the title, where a voucher's number sits on paper.
-          <span
-            title={`${t("exportedToFortnox")} ${verification.fortnoxLabel}`}
-            className="font-medium tabular-nums"
-          >
-            {verification.fortnoxLabel}
-          </span>
-        )
+      number={verification.fortnoxLabel}
+      numberHint={
+        verification.fortnoxLabel
+          ? `${t("exportedToFortnox")} ${verification.fortnoxLabel}`
+          : undefined
       }
-      flush
-      endsInTable={!people}
+      sent={sent && { date: verification.exportedAt ?? sent.date, by: sent.actor }}
+      facts={facts}
       action={
         canEdit ? (
           <ButtonLink href={`/expenses/${expenseId}/book`} variant="secondary" size="sm">
@@ -270,42 +279,27 @@ export function VerificationSection({
           </ButtonLink>
         ) : undefined
       }
-    >
-      <p className="-mt-1 mb-3 truncate px-inset text-xs text-muted">
-        <span className="tabular-nums">{date(verification.date)}</span> - {verification.description}
-      </p>
-      <VoucherTable
-        lines={verification.lines.map((l) => ({
-          key: l.id,
-          account: l.account,
-          accountName: l.accountName,
-          costCenter: l.costCenterCode,
-          project: l.project,
-          note: ownText(l.description),
-          debit: l.debit,
-          credit: l.credit,
-        }))}
-      />
-      {people && (
-        <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-border px-inset pt-3 text-xs">
-          <div className="flex items-baseline gap-2">
-            <dt className={LABEL}>{t("bookedBy")}</dt>
-            <dd>
-              <span className="font-medium">{people.booker}</span>
-              <span className="text-muted">
-                , <span className="tabular-nums">{date(people.at)}</span>
-              </span>
-            </dd>
-          </div>
-          {people.amenders.length > 0 && (
-            <div className="flex items-baseline gap-2">
-              <dt className={LABEL}>{t("amendedBy")}</dt>
-              <dd className="font-medium">{list(people.amenders)}</dd>
-            </div>
-          )}
-        </dl>
-      )}
-    </InspectorSection>
+      lines={verification.lines.map((l) => ({
+        key: l.id,
+        account: l.account,
+        accountName: l.accountName,
+        costCenter: l.costCenterCode,
+        project: l.project,
+        note: ownText(l.description),
+        debit: l.debit,
+        credit: l.credit,
+      }))}
+      people={
+        people
+          ? [
+              { label: t("bookedBy"), name: people.booker, date: people.at },
+              ...(people.amenders.length > 0
+                ? [{ label: t("amendedBy"), name: list(people.amenders) }]
+                : []),
+            ]
+          : []
+      }
+    />
   );
 }
 

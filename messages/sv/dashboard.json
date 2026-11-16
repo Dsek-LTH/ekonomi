@@ -1,23 +1,6 @@
 {
   "title": "Översikt",
   "greeting": "Hej, {name}",
-  "tiles": {
-    "turn": "Din tur",
-    "late": "{count, plural, one {# försenad} other {# försenade}}",
-    "nothingLate": "Inget är försenat",
-    "waiting": "Väntar på andra",
-    "stuck": "{count, plural, one {# har fastnat} other {# har fastnat}}",
-    "noneStuck": "Inget har fastnat",
-    "score": "Redovisningsbetyg",
-    "scoreNote": "Så räknas det",
-    "budget": "Över budgettakten",
-    "budgetValue": "{off} av {total}",
-    "over": "{count, plural, one {# över hela årsbudgeten} other {# över hela årsbudgeten}}",
-    "elapsed": "{elapsed} % av året har gått",
-    "calendar": "Kommande datum",
-    "next": "Närmast {date}",
-    "nothingComing": "Inget inbokat"
-  },
   "firstRun": {
     "title": "Så funkar ett utlägg",
     "lead": "Har du lagt ut egna pengar för sektionen, eller handlat med ett sektionskort? Det är här du får tillbaka dem.",
@@ -46,31 +29,6 @@
     "onTrack": "{unit} har använt {used} % av kostnadsbudgeten, och {elapsed} % av året har gått.",
     "showAll": "Visa alla {count}"
   },
-  "turn": {
-    "title": "Din tur",
-    "empty": "Inget väntar på dig just nu.",
-    "untitled": "utan namn",
-    "draft": "Skicka in <b>{title}</b>",
-    "cardPurchase": "Redovisa kortköpet <b>{title}</b>",
-    "invoiceOverdue": "Fakturan från <b>{title}</b> har förfallit",
-    "deadline": "Skicka in <b>{title}</b>",
-    "lastDay": "sista dag {when}",
-    "stale": "{count, plural, one {# över en vecka} other {# över en vecka}}",
-    "count": {
-      "FIX": "{count, plural, one {utlägg att åtgärda} other {utlägg att åtgärda}}",
-      "SUBMIT": "{count, plural, one {utkast att skicka in} other {utkast att skicka in}}",
-      "PURCHASES": "{count, plural, one {kortköp att redovisa} other {kortköp att redovisa}}",
-      "ATTEST": "att attestera",
-      "BOOK": "att kontera",
-      "EXPORT": "att bokföra i Fortnox",
-      "OVERDUE": "{count, plural, one {annan förfallen faktura} other {andra förfallna fakturor}}",
-      "MEMBERS_BEHIND": "{count, plural, one {medlem har köp som väntat i över en månad} other {medlemmar har köp som väntat i över en månad}}"
-    },
-    "more": {
-      "SUBMIT": "{count, plural, one {annat utkast att skicka in} other {andra utkast att skicka in}}",
-      "PURCHASES": "{count, plural, one {annat kortköp att redovisa} other {andra kortköp att redovisa}}"
-    }
-  },
   "waiting": {
     "title": "Väntar på andra",
     "all": "Alla utlägg",
@@ -88,13 +46,55 @@
     "pickup": "<b>{title}</b> hämtas",
     "contractEnds": "Avtalet <b>{title}</b> löper ut",
     "stockEvent": "Lagertillfälle: <b>{title}</b>",
-    "deadline": "Sista dag att skicka in <b>{title}</b>",
     "untitled": "okänd leverantör",
     "more": "Visa {count} till"
   },
-  "invoices": {
-    "title": "Fakturor i ditt utskott",
-    "all": "Alla fakturor",
-    "untitled": "Okänd leverantör"
+  "todo": {
+    "title": "Att göra",
+    "empty": "Inget väntar på dig just nu.",
+    "untitled": "Utan namn",
+    "scoreTitle": "Ditt redovisningsbetyg",
+    "band": {
+      "late": "Försenat",
+      "week": "Den här veckan",
+      "later": "Senare",
+      "groups": "Löpande"
+    },
+    "tag": {
+      "fix": "Åtgärda",
+      "draft": "Skicka in",
+      "cardPurchase": "Redovisa",
+      "attestExpense": "Attestera",
+      "attestInvoice": "Attestera",
+      "allocateInvoice": "Fördela",
+      "allocateDocument": "Fördela",
+      "bookInvoice": "Kontera",
+      "sendInvoice": "Skicka"
+    },
+    "context": {
+      "fix": "Ditt utlägg, skickat tillbaka",
+      "draft": "Ditt utlägg, inte inskickat",
+      "cardPurchase": "Köp på ditt kort",
+      "attestExpense": "Utlägg från {who}",
+      "attestInvoice": "Leverantörsfaktura, {who}",
+      "allocateInvoice": "Leverantörsfaktura, {who}",
+      "allocateDocument": "I inkorgen, {who}",
+      "bookInvoice": "Leverantörsfaktura, {who}",
+      "sendInvoice": "Konterad, {who}"
+    },
+    "due": {
+      "late": "{count, plural, one {# dag sen} other {# dagar sen}}",
+      "today": "idag",
+      "in": "{count, plural, one {om # dag} other {om # dagar}}"
+    },
+    "group": {
+      "sortInbox": "{count, plural, one {dokument att sortera i inkorgen} other {dokument att sortera i inkorgen}}",
+      "bookExpenses": "{count, plural, one {utlägg att kontera} other {utlägg att kontera}}",
+      "exportExpenses": "{count, plural, one {utlägg att bokföra i Fortnox} other {utlägg att bokföra i Fortnox}}",
+      "cardless": "{count, plural, one {kortköp utan kort att placera} other {kortköp utan kort att placera}}",
+      "overdueElsewhere": "{count, plural, one {förfallen faktura hos en enhet} other {förfallna fakturor hos enheterna}}",
+      "membersBehind": "{count, plural, one {medlem har köp som väntat i över en månad} other {medlemmar har köp som väntat i över en månad}}"
+    },
+    "showMore": "Visa {count} till"
   }
 }

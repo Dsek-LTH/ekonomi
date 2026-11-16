@@ -9,6 +9,7 @@ import { EXPENSE_STATUSES } from "@/lib/domain/status";
 import { Amount } from "@/components/ui/amount";
 import { PersonName } from "@/components/ui/avatar";
 import type { Expense } from "@/lib/domain/types";
+import { cn } from "@/lib/ui/utils";
 
 // Each column says where it lands in DataTable's phone card (title headline, amount opposite,
 // the rest labelled lines). Headers are passed in: built outside a component, headed differently per page.
@@ -28,11 +29,17 @@ export const expenseDateColumn = (
   cell: (e) => date(e.purchaseDate),
 });
 
-// Title with reference and payment type as the second line; a list giving either its own
-// column leaves it out here.
+// Title with reference and payment type as the second line. Each is `true` (always), `false`
+// (the list gives it its own column) or "below-xl" (its own column is there only from xl, so the
+// second line carries it on narrower tables).
+type SecondLine = boolean | "below-xl";
+
 export const expenseTitleColumn = (
   header: string,
-  { reference = true }: { reference?: boolean } = {},
+  {
+    reference = true,
+    paymentType = false,
+  }: { reference?: SecondLine; paymentType?: SecondLine } = {},
 ): Column<Expense> => ({
   key: "title",
   header,
@@ -44,11 +51,24 @@ export const expenseTitleColumn = (
   mobileCell: (e) => e.title,
   cell: (e) => {
     // An utlägg not yet submitted has no reference, so the second line may be empty.
-    const ref = reference ? e.reference : undefined;
+    const ref = reference && e.reference;
+    const narrow = (part: SecondLine) => (part === "below-xl" ? "xl:hidden" : undefined);
     return (
       <>
         <p className="font-medium">{e.title}</p>
-        {ref && <p className="mt-0.5 text-xs text-muted">{ref}</p>}
+        {(ref || paymentType) && (
+          <p
+            className={cn(
+              "mt-0.5 flex items-center gap-1.5 text-xs text-muted",
+              reference !== true && paymentType !== true && "xl:hidden",
+            )}
+          >
+            {paymentType && (
+              <PaymentTag type={e.paymentType} compact className={narrow(paymentType)} />
+            )}
+            {ref && <span className={narrow(reference)}>{ref}</span>}
+          </p>
+        )}
       </>
     );
   },

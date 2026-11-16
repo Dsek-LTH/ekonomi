@@ -1,7 +1,6 @@
 "use client";
 
 import { expensesHref } from "@/app/(app)/expenses/scope";
-import { InvoiceStatusPill } from "@/app/(app)/invoices/invoice-bits";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -15,41 +14,64 @@ import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { IconChevronRight } from "@/components/ui/icons";
 import { ScoreNumber } from "@/components/member-score";
+import { formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
-import type { QueueAction } from "@/lib/domain/queue";
-import type { UnitInvoice, UpcomingItem, WaitingOwn } from "@/lib/data/dashboard";
+import type { TodoBand, TodoGroup, TodoGroupKind, TodoItem, TodoKind } from "@/lib/domain/todo";
+import type { UpcomingItem, WaitingOwn } from "@/lib/data/dashboard";
 
-type CountAction = QueueAction | "PURCHASES" | "OVERDUE" | "MEMBERS_BEHIND";
+type Tone = React.ComponentProps<typeof Tag>["tone"];
 
-const COUNT_TONE: Record<CountAction, React.ComponentProps<typeof Tag>["tone"]> = {
-  FIX: "danger",
-  SUBMIT: "neutral",
-  PURCHASES: "warning",
-  ATTEST: "purple",
-  BOOK: "accent",
-  EXPORT: "accent",
-  OVERDUE: "danger",
-  MEMBERS_BEHIND: "warning",
+const TODO_TONE: Record<TodoKind, Tone> = {
+  fix: "danger",
+  draft: "neutral",
+  cardPurchase: "warning",
+  attestExpense: "purple",
+  attestInvoice: "purple",
+  allocateInvoice: "purple",
+  allocateDocument: "purple",
+  bookInvoice: "accent",
+  sendInvoice: "accent",
 };
 
-const COUNT_HREF: Record<CountAction, string> = {
-  FIX: expensesHref("mine", "draft"),
-  SUBMIT: expensesHref("mine", "draft"),
-  PURCHASES: "/bank?scope=mine",
-  ATTEST: expensesHref("unit", "attest"),
-  BOOK: expensesHref("all", "book"),
-  EXPORT: expensesHref("all", "export"),
-  OVERDUE: "/invoices",
-  MEMBERS_BEHIND: "/profile/members",
+const TODO_HREF: Record<TodoKind, (id: string) => string> = {
+  fix: (id) => `/expenses/${id}`,
+  draft: (id) => `/expenses/${id}`,
+  cardPurchase: (id) => `/expenses/new?txn=${id}`,
+  attestExpense: (id) => `/expenses/${id}`,
+  attestInvoice: (id) => `/invoices/${id}`,
+  allocateInvoice: (id) => `/invoices/${id}/allocate`,
+  allocateDocument: (id) => `/invoices/inbox/${id}`,
+  bookInvoice: (id) => `/invoices/${id}/book`,
+  sendInvoice: (id) => `/invoices/${id}`,
+};
+
+const GROUP_TONE: Record<TodoGroupKind, Tone> = {
+  sortInbox: "neutral",
+  bookExpenses: "accent",
+  exportExpenses: "accent",
+  cardless: "warning",
+  overdueElsewhere: "danger",
+  membersBehind: "warning",
+};
+
+const GROUP_HREF: Record<TodoGroupKind, string> = {
+  sortInbox: "/invoices/inbox",
+  bookExpenses: expensesHref("all", "book"),
+  exportExpenses: expensesHref("all", "export"),
+  cardless: "/bank",
+  overdueElsewhere: "/invoices",
+  membersBehind: "/profile/members",
 };
 
 const CALENDAR_HREF: Record<UpcomingItem["kind"], (id: string) => string> = {
-  deadline: (id) => `/expenses/${id}`,
   invoice: (id) => `/invoices/${id}`,
   pickup: (id) => `/contracts/${id}`,
   contractEnds: (id) => `/contracts/${id}`,
-  stockEvent: (id) => `/stock/events/${id}`,
+  stockEvent: (id) => `/stock/alcohol/events/${id}`,
 };
+
+/** Rows of Senare shown before "Visa fler". Late and this week's are always shown in full. */
+const LATER_SHOWN = 5;
 
 const WAITING_SHOWN = 6;
 
@@ -57,34 +79,11 @@ const CALENDAR_SHOWN = 6;
 
 const BUDGET_SHOWN = 5;
 
+/** Due this soon and the due label turns amber. */
 const DUE_SOON_DAYS = 3;
 
 const LINK =
   "inline-flex items-center gap-0.5 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current";
-
-export type TurnRow =
-  | { kind: "draft" | "cardPurchase" | "invoiceOverdue"; id: string; title: string; days: number }
-  | { kind: "deadline"; id: string; title: string; inDays: number }
-  | {
-      kind: "count";
-      action: CountAction;
-      count: number;
-      more?: boolean;
-      stale?: number;
-    };
-
-function turnHref(r: TurnRow): string {
-  switch (r.kind) {
-    case "count":
-      return COUNT_HREF[r.action];
-    case "cardPurchase":
-      return `/expenses/new?txn=${r.id}`;
-    case "invoiceOverdue":
-      return `/invoices/${r.id}`;
-    default:
-      return `/expenses/${r.id}`;
-  }
-}
 
 export interface BudgetFlags {
   budgetId: string | null;
@@ -96,33 +95,27 @@ export interface BudgetFlags {
 
 export function DashboardClient({
   firstName,
-  lateCount,
   payoutMissing,
-  turn,
+  bands,
+  groups,
   waiting,
   calendar,
   budget,
   fresh,
-  invoices,
   score,
 }: {
   firstName: string;
-  lateCount: number;
   payoutMissing: boolean;
-  turn: TurnRow[];
+  bands: { band: TodoBand; items: TodoItem[] }[];
+  groups: TodoGroup[];
   waiting: WaitingOwn[];
   calendar: UpcomingItem[];
   budget: BudgetFlags | null;
   fresh: boolean;
-  invoices: UnitInvoice[];
   score: number | null;
 }) {
   const t = useTranslations("dashboard");
-  const side = [
-    calendar.length > 0 && <CalendarCard key="calendar" items={calendar} />,
-    budget && <BudgetCard key="budget" budget={budget} />,
-    invoices.length > 0 && <InvoicesCard key="invoices" invoices={invoices} />,
-  ].filter(Boolean);
+  const empty = bands.length === 0 && groups.length === 0;
 
   return (
     <PageShell
@@ -141,206 +134,137 @@ export function DashboardClient({
             <Notice>{t("payoutMissing")}</Notice>
           </Link>
         )}
-        <Tiles
-          turn={turn}
-          lateCount={lateCount}
-          waiting={waiting}
-          score={score}
-          budget={budget}
-          calendar={calendar}
-        />
         <div className="grid items-start gap-6 lg:grid-cols-3">
-          <div
-            className={cn(
-              "grid items-start gap-6",
-              side.length > 0 ? "lg:col-span-2" : "lg:col-span-3 lg:grid-cols-2",
-            )}
-          >
-            {fresh && turn.length === 0 ? (
+          <div className="grid items-start gap-6 lg:col-span-2">
+            {fresh && empty ? (
               <FirstRun />
             ) : (
-              <>
-                <TurnCard rows={turn} score={score} />
-                <WaitingCard rows={waiting} />
-              </>
+              <TodoCard bands={bands} groups={groups} score={score} />
             )}
           </div>
-          {side.length > 0 && <div className="grid items-start gap-6">{side}</div>}
+          <div className="grid items-start gap-6">
+            {budget && <BudgetCard budget={budget} />}
+            {waiting.length > 0 && <WaitingCard rows={waiting} />}
+            {calendar.length > 0 && <CalendarCard items={calendar} />}
+          </div>
         </div>
-        {fresh && turn.length > 0 && <FirstRun />}
       </div>
     </PageShell>
   );
 }
 
-function Tiles({
-  turn,
-  lateCount,
-  waiting,
+function TodoCard({
+  bands,
+  groups,
   score,
-  budget,
-  calendar,
 }: {
-  turn: TurnRow[];
-  lateCount: number;
-  waiting: WaitingOwn[];
+  bands: { band: TodoBand; items: TodoItem[] }[];
+  groups: TodoGroup[];
   score: number | null;
-  budget: BudgetFlags | null;
-  calendar: UpcomingItem[];
 }) {
-  const t = useTranslations("dashboard.tiles");
-  const todo = turn.reduce((n, r) => n + (r.kind === "count" ? r.count : 1), 0);
-  const stuck = waiting.filter((w) => w.stuck).length;
-  const off = budget?.units.filter((u) => u.pace !== "ON_TRACK").length ?? 0;
-  const over = budget?.units.filter((u) => u.pace === "OVER").length ?? 0;
-  const date = useShortDate();
+  const t = useTranslations("dashboard.todo");
+  const [allLater, setAllLater] = useState(false);
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <StatTile
-        href="#din-tur"
-        label={t("turn")}
-        value={todo}
-        note={lateCount > 0 ? t("late", { count: lateCount }) : t("nothingLate")}
-        alert={lateCount > 0}
-      />
-      <StatTile
-        href="/expenses"
-        label={t("waiting")}
-        value={waiting.length}
-        note={stuck > 0 ? t("stuck", { count: stuck }) : t("noneStuck")}
-        alert={stuck > 0}
-      />
-      <StatTile
-        href="/profile"
-        label={t("score")}
-        value={<ScoreNumber value={score} />}
-        note={t("scoreNote")}
-      />
-      {budget ? (
-        <StatTile
-          href={budget.budgetId ? `/budget/${budget.budgetId}` : "/budget"}
-          label={t("budget")}
-          value={t("budgetValue", { off, total: budget.units.length })}
-          note={over > 0 ? t("over", { count: over }) : t("elapsed", { elapsed: budget.elapsed })}
-          alert={over > 0}
-        />
-      ) : (
-        <StatTile
-          href="#kalender"
-          label={t("calendar")}
-          value={calendar.length}
-          note={
-            calendar.length > 0 ? t("next", { date: date(calendar[0].date) }) : t("nothingComing")
-          }
-        />
-      )}
-    </div>
-  );
-}
-
-function StatTile({
-  href,
-  label,
-  value,
-  note,
-  alert = false,
-}: {
-  href: string;
-  label: string;
-  value: React.ReactNode;
-  note: string;
-  alert?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-w-0 flex-col rounded-panel border border-border bg-background px-4 py-3 transition-colors hover:bg-hover"
-    >
-      <span className="truncate text-xs font-medium text-muted">{label}</span>
-      <span className="mt-1 flex h-8 items-center text-2xl font-semibold tabular-nums">
-        {value}
-      </span>
-      <span className={cn("mt-0.5 truncate text-xs", alert ? "text-danger" : "text-muted")}>
-        {note}
-      </span>
-    </Link>
-  );
-}
-
-function TurnCard({ rows, score }: { rows: TurnRow[]; score: number | null }) {
-  const t = useTranslations("dashboard.turn");
-  const tScore = useTranslations("score");
-  const when = useRelativeDays();
-  const b = (c: React.ReactNode) => <span className="font-medium">{c}</span>;
-
-  return (
-    <Card id="din-tur" data-tour="todo" className="scroll-mt-24">
+    <Card id="att-gora" data-tour="todo" className="scroll-mt-24">
       <CardHeader
         title={t("title")}
         action={
-          <Link href="/profile" title={tScore("ownTitle")} className="inline-flex">
+          <Link href="/profile" title={t("scoreTitle")} className="inline-flex">
             <ScoreNumber value={score} />
           </Link>
         }
       />
-      {rows.length === 0 ? (
+      {bands.length === 0 && groups.length === 0 ? (
         <EmptyNote>{t("empty")}</EmptyNote>
       ) : (
-        <ul className="px-2 py-2">
-          {rows.map((r) => (
-            <li key={r.kind === "count" ? r.action : `${r.kind}-${r.id}`}>
-              <Row href={turnHref(r)}>
-                {r.kind === "count" ? (
-                  <>
-                    <CountTag tone={COUNT_TONE[r.action]} count={r.count} />
-                    <span className="min-w-0 flex-1">
-                      {t(r.more ? `more.${r.action}` : `count.${r.action}`, {
-                        count: r.count,
-                      })}
-                    </span>
-                    {!!r.stale && (
-                      <span className="shrink-0 text-xs text-danger">
-                        {t("stale", { count: r.stale })}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "mx-2 size-2 shrink-0 rounded-full",
-                        r.kind === "deadline"
-                          ? r.inDays <= DUE_SOON_DAYS
-                            ? "bg-warning"
-                            : "bg-faint"
-                          : "bg-danger",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1">
-                      {t.rich(r.kind, { title: r.title || t("untitled"), b })}
-                    </span>
-                    {r.kind === "deadline" ? (
-                      <span
-                        className={cn(
-                          "shrink-0 text-xs",
-                          r.inDays <= DUE_SOON_DAYS ? "text-warning" : "text-muted",
-                        )}
-                      >
-                        {t("lastDay", { when: when(r.inDays) })}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-xs text-danger">{when(-r.days)}</span>
-                    )}
-                  </>
+        <div className="py-2">
+          {bands.map(({ band, items }) => {
+            const shown = band === "later" && !allLater ? items.slice(0, LATER_SHOWN) : items;
+            const more = items.length - shown.length;
+            return (
+              <Section key={band} title={t(`band.${band}`)} alert={band === "late"}>
+                {shown.map((i) => (
+                  <li key={`${i.kind}-${i.id}`}>
+                    <TodoRow item={i} />
+                  </li>
+                ))}
+                {more > 0 && (
+                  <li className="px-2 pt-1">
+                    <button type="button" onClick={() => setAllLater(true)} className={LINK}>
+                      {t("showMore", { count: more })}
+                    </button>
+                  </li>
                 )}
-              </Row>
-            </li>
-          ))}
-        </ul>
+              </Section>
+            );
+          })}
+          {groups.length > 0 && (
+            <Section title={t("band.groups")}>
+              {groups.map((g) => (
+                <li key={g.kind}>
+                  <Row href={GROUP_HREF[g.kind]}>
+                    <CountTag tone={GROUP_TONE[g.kind]} count={g.count} />
+                    <span className="min-w-0 flex-1">
+                      {t(`group.${g.kind}`, { count: g.count })}
+                    </span>
+                  </Row>
+                </li>
+              ))}
+            </Section>
+          )}
+        </div>
       )}
     </Card>
+  );
+}
+
+function Section({
+  title,
+  alert = false,
+  children,
+}: {
+  title: string;
+  alert?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-t border-border px-2 py-2 first:border-t-0 first:pt-0">
+      <h3 className={cn("px-2 py-1 text-xs font-medium", alert ? "text-danger" : "text-muted")}>
+        {title}
+      </h3>
+      <ul>{children}</ul>
+    </section>
+  );
+}
+
+function TodoRow({ item: i }: { item: TodoItem }) {
+  const t = useTranslations("dashboard.todo");
+  const context = t(`context.${i.kind}`, { who: i.who ?? "-" });
+  return (
+    <Row href={TODO_HREF[i.kind](i.id)}>
+      <Tag tone={TODO_TONE[i.kind]} size="sm" className="w-20 shrink-0 justify-center">
+        {t(`tag.${i.kind}`)}
+      </Tag>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{i.title || t("untitled")}</span>
+        <span className="block truncate text-xs text-muted">
+          {i.amount != null ? `${context} - ${formatSEK(i.amount)}` : context}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 text-xs tabular-nums",
+          i.inDays < 0 ? "text-danger" : i.inDays <= DUE_SOON_DAYS ? "text-warning" : "text-muted",
+        )}
+      >
+        {i.inDays < 0
+          ? t("due.late", { count: -i.inDays })
+          : i.inDays === 0
+            ? t("due.today")
+            : t("due.in", { count: i.inDays })}
+      </span>
+    </Row>
   );
 }
 
@@ -537,50 +461,6 @@ function BudgetCard({ budget }: { budget: BudgetFlags }) {
       )}
     </Card>
   );
-}
-
-function InvoicesCard({ invoices }: { invoices: UnitInvoice[] }) {
-  const t = useTranslations("dashboard.invoices");
-  return (
-    <Card>
-      <CardHeader
-        title={t("title")}
-        action={
-          <Link href="/invoices?scope=unit" className={LINK}>
-            {t("all")}
-            <IconChevronRight className="size-4" />
-          </Link>
-        }
-      />
-      <ul className="px-2 py-2">
-        {invoices.map((i) => (
-          <li key={i.id}>
-            <Row href={`/invoices/${i.id}`}>
-              <span className="min-w-0 flex-1 truncate">{i.title || t("untitled")}</span>
-              <InvoiceStatusPill status={i.status} />
-            </Row>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
-function useRelativeDays() {
-  const locale = useLocale();
-  return useMemo(() => {
-    const f = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-    return (days: number) => f.format(days, "day");
-  }, [locale]);
-}
-
-// "4 nov.", for a plain day from the server, read as UTC so no time zone moves it.
-function useShortDate() {
-  const locale = useLocale();
-  return useMemo(() => {
-    const f = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
-    return (date: string) => f.format(new Date(`${date}T00:00:00Z`));
-  }, [locale]);
 }
 
 function CountTag({

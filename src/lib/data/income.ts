@@ -10,6 +10,14 @@ import { isLegacyReport } from "@/lib/income/legacy";
 import { sourcesOf, type IncomeSourceSlug } from "@/lib/income/source-slug";
 import { getPrefixes, resultUnitForCode } from "@/lib/server/result-units";
 import { voucherBasis, type ManualVoucherRow } from "@/lib/income/manual-voucher";
+import type { During } from "@/lib/server/fiscal-year";
+import {
+  dateRangeFilter,
+  pageBounds,
+  type ListQuery,
+  type RowPage,
+  type SortDir,
+} from "./list-query";
 
 // Money here is SEK, not öre (rendered by <Amount>; lib/domain/money.ts).
 export interface IncomeLineRow {
@@ -249,14 +257,90 @@ export async function getIncomeMoveTargets(): Promise<IncomeMoveTarget[]> {
     .sort((a, b) => a.name.localeCompare(b.name, "sv"));
 }
 
-/** Every day of one Intäkter page, Zettle or Swish, newest first; the stage is a tab cut in the browser. */
-export async function getIncomeReports(slug: IncomeSourceSlug): Promise<IncomeReportRow[]> {
+/** Intäkter's stage tabs (app/(app)/income/tabs.ts) as statuses. "all" is absent and narrows nothing. */
+const INCOME_TAB_STATUS: Record<string, IncomeReportStatus> = {
+  book: "DRAFT",
+  export: "BOOKED",
+  done: "EXPORTED",
+};
+
+// Sortable columns as database orders, each ending in `id` so paging never repeats or skips a row.
+const INCOME_ORDER: Record<string, (d: SortDir) => Prisma.IncomeReportOrderByWithRelationInput[]> =
+  {
+    date: (d) => [{ date: d }, { id: d }],
+    total: (d) => [{ total: d }, { id: d }],
+  };
+const INCOME_DEFAULT_ORDER = INCOME_ORDER.date("desc");
+
+function incomeListWhere(q: ListQuery): Prisma.IncomeReportWhereInput[] {
+  const and: Prisma.IncomeReportWhereInput[] = [];
+  const status = INCOME_TAB_STATUS[q.tab];
+  if (status) and.push({ status });
+  const date = dateRangeFilter(q, { dateOnly: true });
+  if (date) and.push({ date });
+  // The verksamhet and cost centre columns. A day made since the per-day voucher has them on its
+  // lines, an old one on the report itself.
+  if (q.q) {
+    const has = { contains: q.q, mode: "insensitive" as const };
+    const unit = { OR: [{ name: has }, { income: { properName: has } }] };
+    and.push({
+      OR: [
+        { resultUnit: unit },
+        { costCenter: { code: has } },
+        { lines: { some: { resultUnit: unit } } },
+        { lines: { some: { costCenter: { code: has } } } },
+      ],
+    });
+  }
+  return and;
+}
+
+/** One page of an Intäkter list, Zettle or Swish, with tab, search, dates, year and sort in the database. */
+export async function getIncomePage(
+  slug: IncomeSourceSlug,
+  q: ListQuery,
+  { during }: { during?: During } = {},
+): Promise<RowPage<IncomeReportRow>> {
+  const where: Prisma.IncomeReportWhereInput = {
+    AND: [
+      { source: { in: sourcesOf(slug) } },
+      ...incomeListWhere(q),
+      ...(during ? [{ date: during }] : []),
+    ],
+  };
+  const order = INCOME_ORDER[q.sort];
+  const [rows, total] = await Promise.all([
+    prisma.incomeReport.findMany({
+      where,
+      orderBy: order ? order(q.dir) : INCOME_DEFAULT_ORDER,
+      ...pageBounds(q),
+      include: REPORT_INCLUDE,
+    }),
+    prisma.incomeReport.count({ where }),
+  ]);
+  return { rows: rows.map(reportRow), total };
+}
+
+/**
+ * Every day still to kontera or export, whatever page or year is showing: what "Kontera alla" and
+ * "Exportera alla" act on. Unfinished work only, so this does not grow with the years.
+ */
+export async function getIncomeBacklog(slug: IncomeSourceSlug): Promise<IncomeReportRow[]> {
   const reports = await prisma.incomeReport.findMany({
-    where: { source: { in: sourcesOf(slug) } },
-    orderBy: [{ date: "desc" }, { id: "desc" }],
+    where: { source: { in: sourcesOf(slug) }, status: { in: ["DRAFT", "BOOKED"] } },
+    orderBy: [{ date: "asc" }, { id: "asc" }],
     include: REPORT_INCLUDE,
   });
   return reports.map(reportRow);
+}
+
+/** Whether any day has been brought in for this source at all, to tell a first visit from an empty filter. */
+export async function hasIncomeReports(slug: IncomeSourceSlug): Promise<boolean> {
+  const one = await prisma.incomeReport.findFirst({
+    where: { source: { in: sourcesOf(slug) } },
+    select: { id: true },
+  });
+  return one !== null;
 }
 
 export interface IncomeVoucherRow {
