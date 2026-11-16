@@ -155,7 +155,7 @@ async function runChecks(
           const counts = await prisma.stockEntry.count({
             where: { kind: "COUNT", occurredAt: { gte: days(-14), lte: days(14) } },
           });
-          results.set(key, { remaining: counts > 0 ? 0 : 1, href: "/stock" });
+          results.set(key, { remaining: counts > 0 ? 0 : 1, href: "/stock/alcohol" });
           break;
         }
         case "LEDGER_SYNCED": {

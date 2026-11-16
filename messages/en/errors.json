@@ -184,6 +184,7 @@
     "importBadQuery": "The year or the name of the budget is missing or invalid",
     "emptyFile": "The file is empty",
     "fileTooLarge": "The file is too large",
+    "unknownAccounts": "Accounts {codes} are not in the chart of accounts. Sync the chart under Settings → Fortnox or fix the file.",
     "noRows": "No budget rows could be read from the file",
     "changeError": {
       "empty": "Add at least one entry.",
@@ -210,6 +211,8 @@
     "missingCostCenterScope": "Fortnox is missing permission for cost centers. Disconnect and connect again to grant the app the 'costcenter' scope.",
     "missingProjectScope": "Fortnox is missing permission for projects. Disconnect and connect again to grant the app the 'project' scope.",
     "syncRunning": "A sync from Fortnox is already running. Try again in a moment.",
+    "missingSupplierInvoiceScope": "The Fortnox connection lacks access to supplier invoices. Disconnect and connect again to grant the app the 'supplierinvoice' scope.",
+    "missingCustomerScope": "The Fortnox connection lacks access to the customer register. Disconnect and connect again to give the app the 'customer' scope.",
     "missingSupplierScope": "The Fortnox connection lacks access to the supplier register. Disconnect and connect again to grant the app the 'supplier' scope."
   },
   "database": "Database error",
@@ -280,7 +283,6 @@
     "prefixExists": "The prefix {code} already exists.",
     "prefixNotFound": "That prefix does not exist.",
     "fallbackNotFound": "That amount rule does not exist.",
-    "alreadyInFortnox": "Fortnox already holds a voucher for this day ({voucher}). Nothing was exported.",
     "unitNotFound": "That result unit does not exist.",
     "unitHasIncome": "{name} already has income settings.",
     "keyFromName": "The name \"{name}\" gives no usable key. It needs letters or digits.",
@@ -342,7 +344,26 @@
     "internalCodeTyped": "Codes starting with 2 are given out by the app to products without a barcode. Mark the product as having none instead.",
     "onlyStocktake": "Only a stocktake can be turned into a purchase.",
     "stocktakeFoundNothing": "The stocktake found no more sealed than the log, so there is no purchase to make of it.",
-    "costRequired": "The product needs a cost price before the purchase can be valued. Set it on the product first."
+    "costRequired": "The product needs a cost price before the purchase can be valued. Set it on the product first.",
+    "unknownStock": "That stock does not exist.",
+    "categoryRequired": "A drink type and a strength are needed for the restaurangrapport.",
+    "unitOnly": "This stock counts everything in units.",
+    "groupRequired": "Choose a product type that belongs to the stock.",
+    "kindNotHere": "That kind of movement does not exist in this stock.",
+    "onTheBoardTab": "A board withdrawal is changed on the board tab.",
+    "accountUnknown": "Account {account} is not in the chart of accounts.",
+    "costCenterUnknown": "The cost centre does not exist.",
+    "groupNameTaken": "There is already a product type with that name.",
+    "groupNotFound": "The product type was not found.",
+    "groupInUse": "{count, plural, one {# product belongs} other {# products belong}} to the type. Move them to another type first.",
+    "notEnoughOnShelf": "The stock only holds {have} of {name}, not {want}. Register the delivery or take stock first.",
+    "moveNotYours": "You can only move to or from a place you belong to. A move is undone by whoever made it, the same day.",
+    "moveNowhere": "From and To are the same.",
+    "placeNotFound": "The place does not exist, or is archived.",
+    "moreThanTaken": "{place} has only taken {have} of {name} this year, not {want}.",
+    "moveReturnedSince": "Some of what was moved has been brought back since. Undo the return first.",
+    "placeNameTaken": "The stock already has a place with that name.",
+    "placeInUse": "Stock has been moved to or from the place, so the history names it. Archive it instead."
   },
   "mileage": {
     "noReadings": "The mileage claim is missing an odometer reading before or after the journey.",
@@ -449,5 +470,33 @@
   },
   "gmail": {
     "unconfigured": "Gmail is not configured on the server (GMAIL_* missing)."
+  },
+  "stockVoucher": {
+    "notSetUp": "Accounts are missing before the stock value can be booked. Choose them in Settings, Stock.",
+    "uncertainFirst": "The voucher for {date} has to be settled first.",
+    "inProgress": "{name} is booking {date} right now.",
+    "nothingToSend": "There is nothing to book through that date.",
+    "changed": "The figures have changed since the page was shown. Reload and look again.",
+    "alreadySent": "The stock is already booked through {date}. What has changed since goes as a correction.",
+    "duplicateCheckFailed": "Could not check in Fortnox whether the voucher already exists. Nothing was sent.",
+    "uncertain": "Fortnox gave no clear answer for {date}. Check in Fortnox before anything more is booked.",
+    "notFound": "The voucher was not found.",
+    "syncLedgerFirst": "Sync the ledger with Fortnox first, so the difference is current.",
+    "closedPeriod": "Fortnox has no open financial year for {date}."
+  },
+  "board": {
+    "noTab": "You have no board tab.",
+    "notYourTab": "Only the treasury can log a withdrawal for somebody else.",
+    "memberNotFound": "The member was not found.",
+    "futureDate": "A withdrawal cannot be dated in the future.",
+    "noPrice": "One of the products has no board price on that day.",
+    "withdrawalNotFound": "The withdrawal was not found.",
+    "alreadyInvoiced": "The withdrawal is already invoiced and cannot be changed here.",
+    "tooLate": "A withdrawal can only be removed the same day. Ask the treasurer if it is wrong.",
+    "salesAccountUnset": "Choose the revenue account for the board's invoices in Settings, Stock.",
+    "noFiscalYear": "No financial year has been fetched from Fortnox yet.",
+    "costCenterNotFound": "The cost centre was not found.",
+    "customerMissing": "Choose a Fortnox customer for every member. If the customer is missing, add it in Fortnox first.",
+    "invoiceNotFound": "The invoice was not found."
   }
 }

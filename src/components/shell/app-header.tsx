@@ -49,26 +49,13 @@ export function AppHeader({
   const pathname = usePathname();
   return (
     <header className="z-30 hidden box-content h-12 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:flex print:hidden">
-      <button
-        ref={navToggleRef}
-        type="button"
+      <MenuButton
+        buttonRef={navToggleRef}
+        open={navOpen}
         onClick={onToggleNav}
-        aria-expanded={navOpen}
-        aria-controls="app-nav"
-        className={cn(
-          "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-white",
-          navOpen && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
-        )}
-      >
-        <IconMenu className="size-4" />
-        {t("menu")}
-        {waiting && !navOpen && (
-          <span
-            aria-hidden
-            className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background"
-          />
-        )}
-      </button>
+        controls="app-nav"
+        waiting={waiting}
+      />
 
       <Link href="/dashboard" className="flex shrink-0 items-center gap-2 rounded-control">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -94,6 +81,44 @@ export function AppHeader({
         <AccountMenu user={user} />
       </div>
     </header>
+  );
+}
+
+export function MenuButton({
+  buttonRef,
+  open,
+  onClick,
+  controls,
+  waiting,
+}: {
+  buttonRef?: React.RefObject<HTMLButtonElement | null>;
+  open: boolean;
+  onClick: () => void;
+  controls?: string;
+  waiting: boolean;
+}) {
+  const t = useTranslations("nav");
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      className={cn(
+        "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-white",
+        open && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
+      )}
+    >
+      <IconMenu className="size-4" />
+      {t("menu")}
+      {waiting && !open && (
+        <span
+          aria-hidden
+          className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background"
+        />
+      )}
+    </button>
   );
 }
 

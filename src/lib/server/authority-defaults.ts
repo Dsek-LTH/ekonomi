@@ -71,12 +71,21 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
 
   { role: "SKATTMASTARE", capability: "SETTINGS" },
 
-  { role: "STOCKARE", capability: "STOCK_VIEW" },
-  { role: "SKATTMASTARE", capability: "STOCK_VIEW" },
-  { role: "ORDFORANDE", capability: "STOCK_VIEW" },
-  { role: "STOCKARE", capability: "STOCK_MANAGE" },
-  { role: "SKATTMASTARE", capability: "STOCK_MANAGE" },
-  { role: "ORDFORANDE", capability: "STOCK_MANAGE" },
+  { role: "STOCKARE", capability: "ALCOHOL_STOCK_VIEW" },
+  { role: "SKATTMASTARE", capability: "ALCOHOL_STOCK_VIEW" },
+  { role: "ORDFORANDE", capability: "ALCOHOL_STOCK_VIEW" },
+  { role: "STOCKARE", capability: "ALCOHOL_STOCK_MANAGE" },
+  { role: "SKATTMASTARE", capability: "ALCOHOL_STOCK_MANAGE" },
+  { role: "ORDFORANDE", capability: "ALCOHOL_STOCK_MANAGE" },
+
+  // The café's stock. Which Authentik groups hold CAFE_STOCKARE and STYRELSE is set in Roller.
+  { role: "CAFE_STOCKARE", capability: "CAFE_STOCK_VIEW" },
+  { role: "CAFE_STOCKARE", capability: "CAFE_STOCK_MANAGE" },
+  { role: "SKATTMASTARE", capability: "CAFE_STOCK_VIEW" },
+  { role: "SKATTMASTARE", capability: "CAFE_STOCK_MANAGE" },
+  { role: "ORDFORANDE", capability: "CAFE_STOCK_VIEW" },
+  { role: "ORDFORANDE", capability: "CAFE_STOCK_MANAGE" },
+  { role: "STYRELSE", capability: "BOARD_TAB" },
 
   { role: "SKATTMASTARE", capability: "BUDGET_VIEW" },
   { role: "ORDFORANDE", capability: "BUDGET_VIEW" },
@@ -84,6 +93,8 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTFORMAN", capability: "BUDGET_VIEW" },
   { role: "RESULTATANSVARIG", capability: "BUDGET_VIEW" },
   { role: "STOCKARE", capability: "BUDGET_VIEW" },
+  { role: "CAFE_STOCKARE", capability: "BUDGET_VIEW" },
+  { role: "STYRELSE", capability: "BUDGET_VIEW" },
   { role: "UTHYRNINGSANSVARIG", capability: "BUDGET_VIEW" },
   { role: "ORDINARIE", capability: "BUDGET_VIEW" },
 
@@ -124,7 +135,8 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   // Revisorerna read everything and change nothing. No ATTEST_VIEW.
   { role: "REVISOR", capability: "BOOKKEEPING_VIEW" },
   { role: "REVISOR", capability: "BUDGET_VIEW" },
-  { role: "REVISOR", capability: "STOCK_VIEW" },
+  { role: "REVISOR", capability: "ALCOHOL_STOCK_VIEW" },
+  { role: "REVISOR", capability: "CAFE_STOCK_VIEW" },
   { role: "REVISOR", capability: "CONTRACT_VIEW" },
   { role: "REVISOR", capability: "AUDIT_REVIEW" },
 ];

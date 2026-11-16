@@ -15,12 +15,13 @@ import { TabBar } from "./tab-bar";
 import { MobileNav } from "./mobile-nav";
 import { NavCount } from "./nav-count";
 import { SectionBand, SectionNavProvider, type SectionNav } from "./section-nav";
-import { AppHeader, FiscalYearPicker, type FiscalYears } from "./app-header";
+import { AppHeader, FiscalYearPicker, MenuButton, type FiscalYears } from "./app-header";
 import { FiscalYearProvider } from "./fiscal-year-context";
 import { useGuides } from "./guide";
 import {
   IconArchive,
   IconBox,
+  IconPlus,
   IconCalendar,
   IconIncome,
   IconInvoice,
@@ -36,7 +37,6 @@ import {
   IconLedger,
   IconList,
   IconMail,
-  IconMenu,
   IconReceipt,
   IconPerson,
   IconUsers,
@@ -51,6 +51,10 @@ import {
   canViewContracts,
   canViewRentals,
   canViewStock,
+  hasBoardTab,
+  canBookkeep,
+  canBookStock,
+  canMoveStock,
   canViewMemberScores,
   isAdmin,
 } from "@/lib/domain/permissions";
@@ -179,22 +183,93 @@ const NAV_GROUPS: NavGroup[] = [
     icon: IconBox,
     items: [
       {
-        href: "/stock",
+        href: "/stock/alcohol",
         label: "stock",
         icon: IconBox,
-        visible: (u) => canViewStock(u.capabilities),
+        visible: (u) => canViewStock(u.capabilities, "alcohol"),
       },
       {
-        href: "/stock/events",
+        href: "/stock/alcohol/events",
         label: "stockEvents",
         icon: IconCalendar,
-        visible: (u) => canViewStock(u.capabilities),
+        visible: (u) => canViewStock(u.capabilities, "alcohol"),
       },
       {
-        href: "/stock/history",
+        href: "/stock/alcohol/history",
         label: "stockHistory",
         icon: IconList,
-        visible: (u) => canViewStock(u.capabilities),
+        visible: (u) => canViewStock(u.capabilities, "alcohol"),
+      },
+      // The stock's vouchers to Fortnox, for bookkeepers (docs/stock.md).
+      {
+        href: "/stock/alcohol/bookkeeping",
+        label: "stockBookkeeping",
+        icon: IconLedger,
+        visible: (u) => canBookStock(u.capabilities),
+      },
+    ],
+  },
+  // The café's stock: its own group, because its people and its pages are not the bar's (docs/stock.md).
+  {
+    label: "groupCafeStock",
+    icon: IconBox,
+    items: [
+      // Products first, so the group opens on the stock itself.
+      {
+        href: "/stock/cafe",
+        label: "cafeStock",
+        icon: IconBox,
+        visible: (u) => canViewStock(u.capabilities, "cafe"),
+      },
+      {
+        href: "/stock/cafe/move",
+        label: "cafeMove",
+        icon: IconPlus,
+        visible: (u) => canMoveStock(u, "cafe"),
+      },
+      {
+        href: "/stock/cafe/history",
+        label: "cafeStockHistory",
+        icon: IconList,
+        visible: (u) => canViewStock(u.capabilities, "cafe"),
+      },
+      {
+        href: "/stock/cafe/bookkeeping",
+        label: "stockBookkeeping",
+        icon: IconLedger,
+        visible: (u) => canBookStock(u.capabilities),
+      },
+    ],
+  },
+  // Styrelseborder: the board's tab in the café stock. Logging, a member's own, and the treasury's invoicing, each its
+  // own page. A member who has left still reaches /board/history by its address while it holds rows.
+  {
+    label: "groupBoard",
+    icon: IconReceipt,
+    items: [
+      {
+        href: "/board",
+        label: "boardLog",
+        icon: IconPlus,
+        visible: (u) => hasBoardTab(u.capabilities) || canBookkeep(u.capabilities),
+      },
+      {
+        href: "/board/history",
+        label: "boardHistory",
+        icon: IconReceipt,
+        visible: (u) => hasBoardTab(u.capabilities),
+      },
+      {
+        href: "/board/invoices",
+        label: "boardInvoices",
+        icon: IconInvoice,
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+      {
+        href: "/board/prices",
+        label: "boardPrices",
+        icon: IconList,
+        visible: (u) => hasBoardTab(u.capabilities) || canViewBookkeeping(u.capabilities),
       },
     ],
   },
@@ -360,7 +435,7 @@ export function AppShell({
       >
         <Icon className={cn("size-[18px] shrink-0", active && "text-action-from")} />
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        {count > 0 && <NavCount count={count} active={active} />}
+        {count > 0 && <NavCount count={count} />}
       </Link>
     );
   };
@@ -480,17 +555,14 @@ export function AppShell({
             className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden"
           >
             {!tabBar && (
-              <button
-                type="button"
+              <MenuButton
+                open={menuShown}
                 onClick={() => setMenuOpen(true)}
-                aria-label={t("openMenu")}
-                className="-ml-1 flex size-9 items-center justify-center rounded-control text-foreground transition-colors hover:bg-hover"
-              >
-                <IconMenu className="size-5" />
-              </button>
+                waiting={Object.values(counts).some((n) => n > 0)}
+              />
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-7" />
+            <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-6" />
             <p className="min-w-0 flex-1 truncate text-sm font-semibold">
               {section ?? "D-sektionen"}
             </p>
@@ -501,7 +573,7 @@ export function AppShell({
             id="main"
             tabIndex={-1}
             className={cn(
-              "w-full flex-1 pl-4 pt-6 md:pl-6",
+              "receipt-main w-full flex-1 pl-4 pt-6 md:pl-6",
               receiptTab
                 ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
                 : tabBar

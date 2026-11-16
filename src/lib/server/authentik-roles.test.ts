@@ -18,8 +18,9 @@ const units = (groups: string[]) => grants(groups).resultUnits;
 
 describe("deriveGrants", () => {
   it("gives everyone the baseline role and nothing else", () => {
-    expect(grants([])).toEqual({ roles: ["ORDINARIE"], resultUnits: [] });
-    expect(grants(undefined)).toEqual({ roles: ["ORDINARIE"], resultUnits: [] });
+    const none = { roles: ["ORDINARIE"], resultUnits: [], stockPlaceIds: [] };
+    expect(grants([])).toEqual(none);
+    expect(grants(undefined)).toEqual(none);
   });
 
   it("ignores groups that mean nothing here", () => {
@@ -79,7 +80,35 @@ describe("deriveGrants", () => {
     expect(deriveGrants(one, ["dsek.x.mastare"])).toEqual({
       roles: ["ORDINARIE", "RESULTATANSVARIG"],
       resultUnits: ["Något"],
+      stockPlaceIds: [],
     });
+  });
+
+  it("hands over a stock place, and nothing else, from a place row", () => {
+    // A sexmästare logging sodas for Sexet is not made resultatansvarig or anything else by it.
+    const one = buildMapping([], [], [{ group: "dsek.sex.mastare", placeId: "sexet" }]);
+    expect(deriveGrants(one, ["dsek.sex.mastare"])).toEqual({
+      roles: ["ORDINARIE"],
+      resultUnits: [],
+      stockPlaceIds: ["sexet"],
+    });
+    expect(explainGrants(one, ["dsek.sex.mastare"]).silentGroups).toEqual([]);
+  });
+
+  it("gathers places from several groups once each, in a stable order", () => {
+    const many = buildMapping(
+      [],
+      [],
+      [
+        { group: "dsek.cafe.funk", placeId: "kyl-2" },
+        { group: "dsek.cafe.funk", placeId: "kyl-1" },
+        { group: "dsek.cafe.mastare", placeId: "kyl-1" },
+      ],
+    );
+    expect(deriveGrants(many, ["dsek.cafe.mastare", "dsek.cafe.funk"]).stockPlaceIds).toEqual([
+      "kyl-1",
+      "kyl-2",
+    ]);
   });
 });
 
@@ -153,6 +182,7 @@ describe("the defaults the section starts from", () => {
     expect(grants(["dsek.cafe.mastare"])).toEqual({
       roles: ["ORDINARIE", "RESULTATANSVARIG"],
       resultUnits: ["Caféutskottet"],
+      stockPlaceIds: [],
     });
   });
 
@@ -177,6 +207,7 @@ describe("the defaults the section starts from", () => {
     expect(grants(["dsek.sex.mastare"])).toEqual({
       roles: ["ORDINARIE", "STOCKARE", "RESULTATANSVARIG"],
       resultUnits: ["Sexmästeriet"],
+      stockPlaceIds: [],
     });
   });
 
@@ -213,13 +244,25 @@ describe("sectionGroups", () => {
 // ── reapplyGrants ── The `tx` is structurally typed, so this runs against a fake. What is held is how many
 // statements it takes (it runs in a 5s interactive transaction for ~1000 members) and that it only touches movers.
 
-type UpdateCall = { ids: string[]; roles: string[]; resultUnits: string[] };
+type UpdateCall = {
+  ids: string[];
+  roles: string[];
+  resultUnits: string[];
+  stockPlaceIds: string[];
+};
 
 function fakeTx(
-  users: { id: string; authentikGroups: string[]; roles: string[]; resultUnits: string[] }[],
+  users: {
+    id: string;
+    authentikGroups: string[];
+    roles: string[];
+    resultUnits: string[];
+    stockPlaceIds: string[];
+  }[],
   mapping: {
     roleRows?: { group: string; role: string }[];
     unitRows?: { group: string; unit: string }[];
+    placeRows?: { group: string; placeId: string }[];
   } = {},
 ) {
   const calls: UpdateCall[] = [];
@@ -232,16 +275,18 @@ function fakeTx(
           resultUnit: { name: r.unit },
         })),
     },
+    stockPlaceGroup: { findMany: async () => mapping.placeRows ?? [] },
     user: {
       findMany: async () => users,
       updateMany: async (args: {
         where: { id: { in: string[] } };
-        data: { roles: string[]; resultUnits: string[] };
+        data: { roles: string[]; resultUnits: string[]; stockPlaceIds: string[] };
       }) => {
         calls.push({
           ids: args.where.id.in,
           roles: args.data.roles,
           resultUnits: args.data.resultUnits,
+          stockPlaceIds: args.data.stockPlaceIds,
         });
         return { count: args.where.id.in.length };
       },
@@ -250,11 +295,18 @@ function fakeTx(
   return { tx: tx as unknown as Parameters<typeof reapplyGrants>[0], calls };
 }
 
-const member = (id: string, groups: string[], roles: string[], resultUnits: string[] = []) => ({
+const member = (
+  id: string,
+  groups: string[],
+  roles: string[],
+  resultUnits: string[] = [],
+  stockPlaceIds: string[] = [],
+) => ({
   id,
   authentikGroups: groups,
   roles,
   resultUnits,
+  stockPlaceIds,
 });
 
 describe("reapplyGrants", () => {
@@ -340,5 +392,30 @@ describe("reapplyGrants", () => {
       ["Caféutskottet"],
       ["Källarmästeriet"],
     ]);
+  });
+
+  it("gives and takes stock places, apart from roles", async () => {
+    // Same roles, different places: a cafe worker holding Kyl 1 is not the sexmästare holding Sexet.
+    const { tx, calls } = fakeTx(
+      [
+        member("cafe", ["dsek.cafe.funk"], ["ORDINARIE"]),
+        member("sex", ["dsek.sex.funk"], ["ORDINARIE"]),
+        member("left", ["dsek.old.funk"], ["ORDINARIE"], [], ["kyl-2"]),
+        member("same", ["dsek.cafe.funk"], ["ORDINARIE"], [], ["kyl-1"]),
+      ],
+      {
+        placeRows: [
+          { group: "dsek.cafe.funk", placeId: "kyl-1" },
+          { group: "dsek.sex.funk", placeId: "sexet" },
+        ],
+      },
+    );
+
+    expect(await reapplyGrants(tx)).toBe(3);
+    const of = (id: string) => calls.find((c) => c.ids.includes(id))!.stockPlaceIds;
+    expect(of("cafe")).toEqual(["kyl-1"]);
+    expect(of("sex")).toEqual(["sexet"]);
+    expect(of("left")).toEqual([]);
+    expect(calls.some((c) => c.ids.includes("same"))).toBe(false);
   });
 });

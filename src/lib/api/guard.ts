@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { loadUser, resolveUserId } from "@/lib/server/current-user";
 import type { Capability, Role } from "@/lib/domain/types";
+import type { StockSlug } from "@/lib/stock/stocks";
 
 // Success responses: 201 + created row for a POST; 200 + a body only when the outcome is information (DELETE
 // cost-centers answers `{ retired }`); otherwise 204. Never `{ ok: true }`. Failures always use `fail()`.
@@ -31,7 +32,15 @@ export async function orNotFound<T>(
  * (vice-skattmästare and resultatansvarig clauses in lib/domain/permissions.ts).
  */
 // `name` is for words written on the actor's behalf (notifications), never for a decision.
-export type Actor = { id: string; name: string; roles: Role[]; capabilities: Capability[] };
+export type Actor = {
+  id: string;
+  name: string;
+  roles: Role[];
+  capabilities: Capability[];
+  /** See User.stockPlaceIds. */
+  stockPlaceIds: string[];
+  placeStocks: StockSlug[];
+};
 
 export type Gate = { ok: true; actor: Actor } | { ok: false; res: NextResponse };
 
@@ -69,7 +78,14 @@ export async function gate(
   const row = await loadUser(id);
   if (!row) return { ok: false, res: fail(401, "auth.signedOut") };
 
-  const actor: Actor = { id, name: row.name, roles: row.roles, capabilities: row.capabilities };
+  const actor: Actor = {
+    id,
+    name: row.name,
+    roles: row.roles,
+    capabilities: row.capabilities,
+    stockPlaceIds: row.stockPlaceIds,
+    placeStocks: row.placeStocks,
+  };
   if (can && !can(actor.capabilities)) return { ok: false, res: fail(403, denied) };
   return { ok: true, actor };
 }

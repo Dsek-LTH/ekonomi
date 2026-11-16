@@ -55,6 +55,12 @@
     "roles": "Roller & behörigheter",
     "stockSettings": "Lagerinställningar",
     "users": "Användare",
-    "incomeDay": "Intäktsdag"
+    "incomeDay": "Intäktsdag",
+    "stockMove": "Flytta varor",
+    "stockVouchers": "Bokföring",
+    "board": "Logga uttag",
+    "boardPrices": "Styrelsepriser",
+    "boardHistory": "Mina uttag",
+    "boardInvoices": "Fakturering"
   }
 }

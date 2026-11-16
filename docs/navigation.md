@@ -88,11 +88,26 @@ Budget & utfall
     /budget/compare
   Utfall & rapporter  /ledger  view: Tabell | Diagram
 
-Lager
-  Produkter  /stock
-  Tillfällen  /stock/events
-    /stock/events/[id]  page tabs
-  Historik  /stock/history  view: Rörelser | Statistik
+Alkohollager
+  Produkter  /stock/alcohol
+  Tillfällen  /stock/alcohol/events
+    /stock/alcohol/events/[id]  page tabs
+  Historik  /stock/alcohol/history  view: Rörelser | Statistik
+  Bokföring  /stock/alcohol/bookkeeping   (bookkeepers)
+    tabs: Att bokföra | Bokförda. Avstämning above. "Bokför t.o.m. [datum]".
+
+Cafélager
+  Produkter  /stock/cafe
+  Flytta  /stock/cafe/move   (a phone in the storage room; anyone holding a place)
+  Historik  /stock/cafe/history  view: Rörelser | Statistik
+  Bokföring  /stock/cafe/bookkeeping   (bookkeepers, as for alcohol)
+
+Styrelseborder
+  Logga  /board   (board members, and the treasurer for anybody)
+  Mina uttag  /board/history   the open tab as a receipt, earlier tabs below
+  Fakturering  /board/invoices   (bookkeepers) one row per person
+    /board/invoices/[memberId]  that person's tab
+  Priser  /board/prices
 
 Uthyrning
   Uthyrningar  /rentals

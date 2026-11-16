@@ -3,11 +3,6 @@ Finish implemntation of bokslut page:
 * Perhaps improve report feature to let revisor make reports themselves?
 * Finish the checklists
 * Create a guide on how to bokslut
-Go over stale and bad comments. Many comments explain why a previous feature was removed or explains unnesseccary reasoning behind a decision.
-Go over components and code to see if anything is unused. Components used by only a few places, 1-2 can be done inline instead. Basically go over the codebase to idenity bloat and dumb code.
-Simplify the överblick page (way too much noise and numbers currently), perhaps a guide to the page? (move faq to header) and make it useful
-wtf is step-chrome? It feels redundant. USe this an example of files to remove when prompting make codebase better
-Check that program uses our own components
 Make this app generic so other guilds can use it
 Vinst uppdelning helper
 
@@ -15,5 +10,13 @@ Medlemmar utan utlägg
 Select all in intäkter
 Den här dagen är redan bokförd här och kan inte bokföras igen. Verifikation:
 Det finns redan en verifikation i Fortnox för den här dagen och verksamheten (IR-447). Bokför bara om det verkligen är två skilda dagsrapporter.
-Öresutjämning vid fakturor
-säg vilka transaktioner som redan är matchade innan diff
+Internfakturering för cafe typ och för sexmästeriets lager
+tydligare med om clearing nummer ska vara med på kontonummer
+När man konterar levfakt refreshar pdf:en och den hoppar upp
+tilbaka knappen efter konterat tar en till edit fakturan och inte till listan
+required fields in levfakt kontering
+gdpr compliant
+Go over our different rendering methods (server typst PDF, browser typst preview, pdf.js viewer, other document renders) and unify them
+Scoring system fix
+
+the error handling for levfakt is not nice since you cant see what you missed.

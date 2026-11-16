@@ -70,6 +70,7 @@
     "searchSupplier": "Search name, organisation number or bankgiro",
     "supplierNotInRegister": "{name} is not in Fortnox's supplier register. Add the supplier in Fortnox and it can be picked here.",
     "exported": "Exported to Fortnox",
+    "linked": "Already in Fortnox as supplier invoice {number}. Linked, and its details taken over.",
     "giroWarningTitle": "Check who is being paid",
     "giroWarning": "The invoice gives {field} {invoice}, but Fortnox has {register} for the supplier. A new bankgiro on an invoice from a known supplier is the commonest way to steal a payment.",
     "giroNone": "none",
@@ -111,28 +112,7 @@
     "yoursToAttest": "Waiting for your attest"
   },
   "mailbox": {
-    "title": "Inbox mail account",
-    "lastSync": "Last read {when}",
-    "neverSynced": "Not read yet",
-    "connected": "Connected to {address}.",
-    "connectedBy": "Connected to {address} by {name} {when}.",
-    "notConnected": "Not connected. No mail is read until someone logs in as {address}.",
-    "connect": "Connect inbox",
-    "reconnect": "Reconnect",
-    "disconnect": "Disconnect",
-    "disconnectConfirm": "No mail to {address} is read while the inbox is disconnected. When it is connected again, what arrived in the meantime is read, up to a week back.",
-    "disconnected": "The inbox is disconnected.",
-    "result": {
-      "connected": "The inbox is connected. New mail shows up here within a few seconds.",
-      "denied": "The login was cancelled. The inbox is not connected.",
-      "invalidState": "The login expired or was started somewhere else. Try again.",
-      "forbidden": "You are not allowed to connect the inbox.",
-      "unconfigured": "Gmail is not configured on the server.",
-      "wrongMailbox": "You logged in with the wrong account. Log in as the inbox address.",
-      "watchFailed": "The inbox is connected, but Gmail could not start sending notifications. Check that gmail-api-push@system.gserviceaccount.com may publish to the Pub/Sub topic.",
-      "failed": "The inbox could not be connected. Try again."
-    },
-    "error": "The last read failed: {error}",
+    "title": "Refused mail",
     "noneRejected": "No mail has been refused in the last 30 days.",
     "rejectedLead": "Refused in the last 30 days:",
     "unknownSender": "Unknown sender",
@@ -141,7 +121,11 @@
       "foreignDomain": "not from dsek.se",
       "notAuthenticated": "the sender could not be verified",
       "noPdf": "no PDF attached"
-    }
+    },
+    "notConnected": "The inbox mail account is not connected. Invoices mailed to {address} do not come in until it is.",
+    "failing": "The inbox mail account could not be read last time: {error}",
+    "fixInSettings": "Connect it under Settings > Email",
+    "askAdmin": "Ask someone with access to settings to reconnect it."
   },
   "event": {
     "RECEIVED": "Received",
@@ -242,7 +226,6 @@
     "unit": "Result unit",
     "waitingFor": "Waiting for {units}",
     "split": "Cost split",
-    "fortnoxLine": "Supplier invoice {number}, created {date}",
     "book": "Book",
     "allocate": "Allocate",
     "send": "Send to Fortnox",
@@ -252,7 +235,10 @@
     "fortnoxNotSignedIn": "You are not signed in to Fortnox. Sign in from your profile to send it.",
     "rebook": "Change booking",
     "booking": "Booking",
-    "fortnoxNumber": "Fortnox {number}",
+    "fortnoxLine": "Supplier invoice {number} in Fortnox, created {date}",
+    "giroInRegister": "In the supplier register",
+    "giroNotInRegister": "Does not match the supplier register in Fortnox",
+    "bookedBy": "Booked",
     "notAllocated": "{unit} has not allocated the invoice yet.",
     "sendWarningsTitle": "Worth a look before it is sent",
     "warning": {

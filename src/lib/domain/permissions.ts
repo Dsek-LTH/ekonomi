@@ -2,6 +2,7 @@
 // Which roles hold a capability is the RoleCapability table; the set is resolved per request in
 // lib/server/capabilities.ts and carried on `user.capabilities` (lib/server/current-user.ts).
 import type { Capability, Role } from "@/lib/domain/types";
+import { STOCK_SLUGS, STOCKS, type StockSlug } from "@/lib/stock/stocks";
 
 const has = (caps: readonly Capability[], cap: Capability) => caps.includes(cap);
 
@@ -37,11 +38,66 @@ export const canAccessSettings = (caps: readonly Capability[]) => has(caps, "SET
 
 // Lagerbokföring is not bookkeeping, so these are their own capabilities.
 
-/** Read the stock overview and the log. */
-export const canViewStock = (caps: readonly Capability[]) => has(caps, "STOCK_VIEW");
+// Per stock: the people who keep the bar's stock are not the people who keep the café's.
 
-/** Register movements, run an event, close a stocktake, edit a product's calibration. */
-export const canManageStock = (caps: readonly Capability[]) => has(caps, "STOCK_MANAGE");
+const STOCK_CAPS: Record<StockSlug, { view: Capability; manage: Capability }> = {
+  alcohol: { view: "ALCOHOL_STOCK_VIEW", manage: "ALCOHOL_STOCK_MANAGE" },
+  cafe: { view: "CAFE_STOCK_VIEW", manage: "CAFE_STOCK_MANAGE" },
+};
+
+/**
+ * What the stock gates read: capabilities from roles, and the places held through Authentik groups
+ * (User.stockPlaceIds). Both a User and an api Actor have this shape.
+ */
+export interface StockReach {
+  capabilities: readonly Capability[];
+  stockPlaceIds: readonly string[];
+  /** The stocks those places are in. */
+  placeStocks: readonly StockSlug[];
+}
+
+/** Register movements, run an event, close a stocktake, edit a product. */
+export const canManageStock = (caps: readonly Capability[], stock: StockSlug) =>
+  has(caps, STOCK_CAPS[stock].manage);
+
+/** Read a stock's overview and its log. Implied by keeping it. */
+export const canViewStock = (caps: readonly Capability[], stock: StockSlug) =>
+  has(caps, STOCK_CAPS[stock].view) || canManageStock(caps, stock);
+
+/** May open the Flytta page: holds a place in the stock, or keeps it. Which moves are allowed is canMoveBetween. */
+export const canMoveStock = (who: StockReach, stock: StockSlug) =>
+  STOCKS[stock].usesPlaces &&
+  (canManageStock(who.capabilities, stock) || who.placeStocks.includes(stock));
+
+/**
+ * May log one move: the keeper anything, anyone else only a move with a place they hold at one end.
+ * Storage is `null` and is held by nobody, so a refill is granted by the fridge and a return by where it came from.
+ */
+export const canMoveBetween = (
+  who: StockReach,
+  stock: StockSlug,
+  from: string | null,
+  to: string | null,
+) =>
+  canManageStock(who.capabilities, stock) ||
+  (canMoveStock(who, stock) &&
+    [from, to].some((place) => place !== null && who.stockPlaceIds.includes(place)));
+
+/** May open a stock's Bokföring page: its vouchers to Fortnox and the reconciliation. Bookkeeping, not keeping the stock. */
+export const canBookStock = (caps: readonly Capability[]) => canViewBookkeeping(caps);
+
+/** May open a stock's pages at all: to read it, to log moves in it, or to book it. Each page then asks for its own. */
+export const canEnterStock = (who: StockReach, stock: StockSlug) =>
+  canViewStock(who.capabilities, stock) ||
+  canMoveStock(who, stock) ||
+  canBookStock(who.capabilities);
+
+/** The stocks this person can open, in nav order. */
+export const viewableStocks = (caps: readonly Capability[]): StockSlug[] =>
+  STOCK_SLUGS.filter((stock) => canViewStock(caps, stock));
+
+/** May log their own withdrawals from the café stock as a board member, and see their own tab. */
+export const hasBoardTab = (caps: readonly Capability[]) => has(caps, "BOARD_TAB");
 
 // ── Budget ────────────────────────────────────────────────────────
 
@@ -146,6 +202,8 @@ export const ROLES: readonly Role[] = [
   "RESULTATANSVARIG",
   "STOCKARE",
   "UTHYRNINGSANSVARIG",
+  "CAFE_STOCKARE",
+  "STYRELSE",
   "REVISOR",
   "ORDINARIE",
 ];
@@ -161,8 +219,11 @@ const CAPABILITY_ORDER = {
   BOOKKEEPING: 2,
   ATTEST_VIEW: 3,
   BUDGET_VIEW: 4,
-  STOCK_VIEW: 5,
-  STOCK_MANAGE: 6,
+  ALCOHOL_STOCK_VIEW: 5,
+  ALCOHOL_STOCK_MANAGE: 6,
+  CAFE_STOCK_VIEW: 6.1,
+  CAFE_STOCK_MANAGE: 6.3,
+  BOARD_TAB: 6.4,
   BUDGET_COMMENT: 7,
   BUDGET_LOCK: 8,
   BUDGET_CHANGE_LOCKED: 9,

@@ -70,6 +70,7 @@
     "searchSupplier": "Sök namn, organisationsnummer eller bankgiro",
     "supplierNotInRegister": "{name} finns inte i Fortnox leverantörsregister. Lägg till leverantören i Fortnox, så går den att välja här.",
     "exported": "Exporterad till Fortnox",
+    "linked": "Fanns redan i Fortnox som leverantörsfaktura {number}. Kopplad, och uppgifterna därifrån har tagits över.",
     "giroWarningTitle": "Kontrollera betalningsmottagaren",
     "giroWarning": "Fakturan anger {field} {invoice}, men Fortnox har {register} för leverantören. Ett nytt bankgiro på en faktura från en känd leverantör är det vanligaste sättet att lura till sig en betalning.",
     "giroNone": "inget",
@@ -111,28 +112,7 @@
     "yoursToAttest": "Väntar på din attest"
   },
   "mailbox": {
-    "title": "Inkorgens mejlkonto",
-    "lastSync": "Senast läst {when}",
-    "neverSynced": "Inte läst än",
-    "connected": "Kopplad till {address}.",
-    "connectedBy": "Kopplad till {address} av {name} {when}.",
-    "notConnected": "Inte kopplad. Inga mejl läses förrän någon loggar in som {address}.",
-    "connect": "Koppla inkorgen",
-    "reconnect": "Koppla om",
-    "disconnect": "Koppla från",
-    "disconnectConfirm": "Inga mejl till {address} läses medan inkorgen är frånkopplad. När den kopplas igen läses det som kommit under tiden, upp till en vecka bakåt.",
-    "disconnected": "Inkorgen är frånkopplad.",
-    "result": {
-      "connected": "Inkorgen är kopplad. Nya mejl dyker upp här inom några sekunder.",
-      "denied": "Inloggningen avbröts. Inkorgen är inte kopplad.",
-      "invalidState": "Inloggningen gick ut eller startades någon annanstans. Försök igen.",
-      "forbidden": "Du har inte behörighet att koppla inkorgen.",
-      "unconfigured": "Gmail är inte konfigurerat på servern.",
-      "wrongMailbox": "Du loggade in med fel konto. Logga in som inkorgens adress.",
-      "watchFailed": "Inkorgen är kopplad, men Gmail kunde inte börja skicka aviseringar. Kontrollera att gmail-api-push@system.gserviceaccount.com får publicera på Pub/Sub-ämnet.",
-      "failed": "Det gick inte att koppla inkorgen. Försök igen."
-    },
-    "error": "Senaste läsningen misslyckades: {error}",
+    "title": "Avvisade mejl",
     "noneRejected": "Inga mejl har avvisats de senaste 30 dagarna.",
     "rejectedLead": "Avvisade de senaste 30 dagarna:",
     "unknownSender": "Okänd avsändare",
@@ -141,7 +121,11 @@
       "foreignDomain": "inte från dsek.se",
       "notAuthenticated": "avsändaren kunde inte verifieras",
       "noPdf": "ingen PDF bifogad"
-    }
+    },
+    "notConnected": "Inkorgens mejlkonto är inte kopplat. Fakturor som mejlas till {address} kommer inte in förrän det kopplas.",
+    "failing": "Inkorgens mejlkonto kunde inte läsas senast: {error}",
+    "fixInSettings": "Koppla under Inställningar > E-post",
+    "askAdmin": "Be någon med tillgång till inställningarna att koppla om det."
   },
   "event": {
     "RECEIVED": "Inkommen",
@@ -242,7 +226,6 @@
     "unit": "Resultatenhet",
     "waitingFor": "Väntar på {units}",
     "split": "Kostnadsfördelning",
-    "fortnoxLine": "Leverantörsfaktura {number}, skapad {date}",
     "book": "Kontera",
     "allocate": "Fördela",
     "send": "Skicka till Fortnox",
@@ -252,7 +235,10 @@
     "fortnoxNotSignedIn": "Du är inte inloggad mot Fortnox. Logga in via din profil, så går det att skicka.",
     "rebook": "Ändra kontering",
     "booking": "Kontering",
-    "fortnoxNumber": "Fortnox {number}",
+    "fortnoxLine": "Leverantörsfaktura {number} i Fortnox, skapad {date}",
+    "giroInRegister": "Finns i leverantörsregistret",
+    "giroNotInRegister": "Stämmer inte med leverantörsregistret i Fortnox",
+    "bookedBy": "Konterad",
     "notAllocated": "{unit} har inte fördelat fakturan än.",
     "sendWarningsTitle": "Värt att titta på innan den skickas",
     "warning": {

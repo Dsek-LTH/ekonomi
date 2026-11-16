@@ -1,6 +1,7 @@
 // Domain types shared by server and client. Enums alias the generated Prisma enums
 // (lib/domain/boundary.test.ts admits that one import path).
 import type * as Schema from "@/lib/generated/prisma/enums";
+import type { StockSlug } from "@/lib/stock/stocks";
 
 export type Role = Schema.Role;
 
@@ -55,7 +56,15 @@ export interface User {
   initials: string;
 }
 
-export interface CurrentUser extends User {
+/** The signed-in user: a User, and what only their own session needs to know. */
+export interface SessionUser extends User {
+  /** The stock places this person may log moves to and from, from their Authentik groups at sign-in. */
+  stockPlaceIds: string[];
+  /** The stocks those places are in. */
+  placeStocks: StockSlug[];
+}
+
+export interface CurrentUser extends SessionUser {
   holdsCard: boolean;
 }
 

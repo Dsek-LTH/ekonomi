@@ -136,7 +136,7 @@ export const GUIDES: Guide[] = [
   },
   {
     id: "stock",
-    page: "/stock",
+    page: "/stock/alcohol",
     steps: [
       { key: "intro" },
       { key: "sections", target: "section-tabs" },

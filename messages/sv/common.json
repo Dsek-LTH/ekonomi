@@ -3,6 +3,11 @@
   "theme": "Tema",
   "language": "Språk",
   "signOut": "Logga ut",
+  "leaveGuard": {
+    "title": "Lämna utan att spara?",
+    "message": "Det du har ändrat här sparas inte.",
+    "leave": "Lämna sidan"
+  },
   "status": {
     "DRAFT": "Utkast",
     "PENDING_APPROVAL": "Väntar på attest",
@@ -34,6 +39,8 @@
     "ORDINARIE": "Medlem",
     "STOCKARE": "Stockare",
     "UTHYRNINGSANSVARIG": "Uthyrningsansvarig",
+    "CAFE_STOCKARE": "Caféstockare",
+    "STYRELSE": "Styrelseledamot",
     "REVISOR": "Revisor"
   },
   "table": {
@@ -98,10 +105,16 @@
     "ATTEST_VIEW_hint": "Se kön att attestera. Vad som faktiskt går att attestera avgörs per utlägg.",
     "BUDGET_VIEW": "Budget",
     "BUDGET_VIEW_hint": "Se budgetsidorna.",
-    "STOCK_VIEW": "Lager",
-    "STOCK_VIEW_hint": "Läsa lageröversikten och loggen.",
-    "STOCK_MANAGE": "Lagerföring",
-    "STOCK_MANAGE_hint": "Registrera lagerrörelser och köra ett tillfälle, från uttag till inventering.",
+    "ALCOHOL_STOCK_VIEW": "Alkohollager",
+    "ALCOHOL_STOCK_VIEW_hint": "Läsa alkohollagrets översikt och logg.",
+    "ALCOHOL_STOCK_MANAGE": "Föra alkohollagret",
+    "ALCOHOL_STOCK_MANAGE_hint": "Registrera lagerrörelser och köra ett tillfälle, från uttag till inventering.",
+    "CAFE_STOCK_VIEW": "Cafélager",
+    "CAFE_STOCK_VIEW_hint": "Läsa cafélagrets översikt och logg.",
+    "CAFE_STOCK_MANAGE": "Föra cafélagret",
+    "CAFE_STOCK_MANAGE_hint": "Sköta produkter, leveranser och inventering i cafélagret.",
+    "BOARD_TAB": "Styrelsekonto",
+    "BOARD_TAB_hint": "Logga egna uttag ur cafélagret som styrelseledamot och se sitt eget konto.",
     "BUDGET_COMMENT": "Budgetkommentarer",
     "BUDGET_COMMENT_hint": "Kommentera ett budgetkonto.",
     "BUDGET_LOCK": "Låsa budget",
@@ -161,6 +174,9 @@
     "debit": "Debet",
     "credit": "Kredit",
     "debitShort": "D",
-    "creditShort": "K"
+    "creditShort": "K",
+    "inFortnox": "I Fortnox som <n>{number}</n>",
+    "sentOn": "{date}",
+    "sentOnBy": "{date} av {name}"
   }
 }

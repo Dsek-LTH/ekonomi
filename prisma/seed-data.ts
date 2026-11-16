@@ -7,12 +7,7 @@ import type { User } from "../src/lib/domain/types";
 export type SeedUser = Omit<User, "capabilities"> & { studentId: string };
 
 export type SeedStatus =
-  | "DRAFT"
-  | "PENDING_APPROVAL"
-  | "CHANGES_REQUESTED"
-  | "APPROVED"
-  | "BOOKED"
-  | "EXPORTED";
+  "DRAFT" | "PENDING_APPROVAL" | "CHANGES_REQUESTED" | "APPROVED" | "BOOKED" | "EXPORTED";
 
 /**
  * One cost-centre row of an utlägg, and what happened to it: who attested it,
@@ -352,8 +347,20 @@ export const EXPENSES: SeedExpense[] = [
     status: "BOOKED",
     daysAgo: 22,
     allocations: [
-      { costCenterCode: "SEX04", amount: 1800, attestedBy: "Maja Holm", account: "4310", project: "1" },
-      { costCenterCode: "NOLL04", amount: 950, attestedBy: "Maja Holm", account: "4310", project: "1" },
+      {
+        costCenterCode: "SEX04",
+        amount: 1800,
+        attestedBy: "Maja Holm",
+        account: "4310",
+        project: "1",
+      },
+      {
+        costCenterCode: "NOLL04",
+        amount: 950,
+        attestedBy: "Maja Holm",
+        account: "4310",
+        project: "1",
+      },
     ],
     bookedBy: "Maja Holm",
     receipt: {
@@ -466,7 +473,9 @@ export const EXPENSES: SeedExpense[] = [
     status: "EXPORTED",
     daysAgo: 120,
     submittedAfterDays: 3,
-    allocations: [{ costCenterCode: "SEX03", amount: 356, attestedBy: "Klara Ström", account: "4101" }],
+    allocations: [
+      { costCenterCode: "SEX03", amount: 356, attestedBy: "Klara Ström", account: "4101" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -485,7 +494,9 @@ export const EXPENSES: SeedExpense[] = [
     daysAgo: 75,
     submittedAfterDays: 25,
     bankImportedAfterDays: 2,
-    allocations: [{ costCenterCode: "SEX03", amount: 189, attestedBy: "Klara Ström", account: "4101" }],
+    allocations: [
+      { costCenterCode: "SEX03", amount: 189, attestedBy: "Klara Ström", account: "4101" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -504,7 +515,9 @@ export const EXPENSES: SeedExpense[] = [
     submittedAfterDays: 48,
     bankImportedAfterDays: 3,
     returnedOnce: { by: "Oskar Berg", comment: "Skriv vilka som var med på lunchen." },
-    allocations: [{ costCenterCode: "NARU01", amount: 486, attestedBy: "Oskar Berg", account: "6071" }],
+    allocations: [
+      { costCenterCode: "NARU01", amount: 486, attestedBy: "Oskar Berg", account: "6071" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -522,7 +535,9 @@ export const EXPENSES: SeedExpense[] = [
     daysAgo: 210,
     submittedAfterDays: 80,
     bankImportedAfterDays: 4,
-    allocations: [{ costCenterCode: "NARU02", amount: 274, attestedBy: "Oskar Berg", account: "4002" }],
+    allocations: [
+      { costCenterCode: "NARU02", amount: 274, attestedBy: "Oskar Berg", account: "4002" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -540,7 +555,9 @@ export const EXPENSES: SeedExpense[] = [
     daysAgo: 100,
     submittedAfterDays: 33,
     bankImportedAfterDays: 2,
-    allocations: [{ costCenterCode: "NARU02", amount: 398, attestedBy: "Oskar Berg", account: "5410" }],
+    allocations: [
+      { costCenterCode: "NARU02", amount: 398, attestedBy: "Oskar Berg", account: "5410" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -559,7 +576,9 @@ export const EXPENSES: SeedExpense[] = [
     submittedAfterDays: 40,
     bankImportedAfterDays: 2,
     returnedOnce: { by: "Oskar Berg", comment: "Kvittot saknas, ladda upp det." },
-    allocations: [{ costCenterCode: "NARU01", amount: 450, attestedBy: "Oskar Berg", account: "6071" }],
+    allocations: [
+      { costCenterCode: "NARU01", amount: 450, attestedBy: "Oskar Berg", account: "6071" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -577,7 +596,9 @@ export const EXPENSES: SeedExpense[] = [
     daysAgo: 90,
     submittedAfterDays: 55,
     returnedOnce: { by: "Klara Ström", comment: "Beloppet stämmer inte med kvittot." },
-    allocations: [{ costCenterCode: "SEX02", amount: 540, attestedBy: "Klara Ström", account: "4310" }],
+    allocations: [
+      { costCenterCode: "SEX02", amount: 540, attestedBy: "Klara Ström", account: "4310" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -596,7 +617,9 @@ export const EXPENSES: SeedExpense[] = [
     daysAgo: 140,
     submittedAfterDays: 58,
     returnedOnce: { by: "Klara Ström", comment: "Ange vilken sittning det gäller." },
-    allocations: [{ costCenterCode: "SEX02", amount: 312, attestedBy: "Klara Ström", account: "4310" }],
+    allocations: [
+      { costCenterCode: "SEX02", amount: 312, attestedBy: "Klara Ström", account: "4310" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -614,7 +637,9 @@ export const EXPENSES: SeedExpense[] = [
     status: "EXPORTED",
     daysAgo: 170,
     submittedAfterDays: 45,
-    allocations: [{ costCenterCode: "SEX02", amount: 168, attestedBy: "Klara Ström", account: "4310" }],
+    allocations: [
+      { costCenterCode: "SEX02", amount: 168, attestedBy: "Klara Ström", account: "4310" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -664,7 +689,9 @@ export const EXPENSES: SeedExpense[] = [
     status: "EXPORTED",
     daysAgo: 80,
     submittedAfterDays: 2,
-    allocations: [{ costCenterCode: "INFU01", amount: 620, attestedBy: "Oskar Berg", account: "6150" }],
+    allocations: [
+      { costCenterCode: "INFU01", amount: 620, attestedBy: "Oskar Berg", account: "6150" },
+    ],
     bookedBy: "Ludwig Gehlsdorf",
     exportedBy: "Maja Holm",
     receipt: {
@@ -685,7 +712,9 @@ export const EXPENSES: SeedExpense[] = [
     // after: two days by the score's count, not twenty-three.
     bankImportedAfterDays: 21,
     submittedAfterDays: 23,
-    allocations: [{ costCenterCode: "INFU01", amount: 229, attestedBy: "Oskar Berg", account: "5410" }],
+    allocations: [
+      { costCenterCode: "INFU01", amount: 229, attestedBy: "Oskar Berg", account: "5410" },
+    ],
     bookedBy: "Maja Holm",
     exportedBy: "Maja Holm",
     receipt: {
@@ -724,7 +753,13 @@ export const BANK_TRANSACTIONS: SeedBankTransaction[] = [
   // ago, so it is still inside his week: the import was the treasury's delay.
   { daysAgo: 19, description: "CLAS OHLSON LUND", amount: -259, cardLast4: "8842" },
   { daysAgo: 44, description: "BAUHAUS MALMO", amount: -1149, cardLast4: "5517" },
-  { daysAgo: 30, description: "KJELL & COMPANY", amount: -399, cardLast4: "3310", importedAfterDays: 28 },
+  {
+    daysAgo: 30,
+    description: "KJELL & COMPANY",
+    amount: -399,
+    cardLast4: "3310",
+    importedAfterDays: 28,
+  },
 ];
 
 // Section cards ("sektionskort"). Only some members hold one, and a card
@@ -855,14 +890,183 @@ export interface SeedStockProduct {
 }
 
 export const STOCK_PRODUCTS: SeedStockProduct[] = [
-  { name: "Norrlands Guld 33 cl", kind: "UNIT", category: "OL", abv: 5.3, ml: 330, costPriceOre: 1290, tags: ["Pub"], delivered: 192 },
-  { name: "Mariestads Export 50 cl", kind: "UNIT", category: "OL", abv: 5.3, ml: 500, costPriceOre: 1690, tags: ["Pub"], delivered: 96 },
-  { name: "Brooklyn Lager 35,5 cl", kind: "UNIT", category: "OL", abv: 5.2, ml: 355, costPriceOre: 2290, delivered: 48 },
-  { name: "Somersby Pear 33 cl", kind: "UNIT", category: "OVRIG_JASTDRYCK", abv: 4.5, ml: 330, costPriceOre: 1490, tags: ["Pub"], delivered: 96 },
-  { name: "Absolut Vodka 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 40, ml: 700, costPriceOre: 26900, delivered: 6 },
-  { name: "Fireball 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 33, ml: 700, costPriceOre: 24900, delivered: 4 },
-  { name: "Jägermeister 70 cl", kind: "VOLUME", category: "SPRITDRYCK", abv: 35, ml: 700, costPriceOre: 26900, delivered: 4 },
-  { name: "Santa Helena Merlot 75 cl", kind: "VOLUME", category: "VIN", abv: 13.5, ml: 750, costPriceOre: 8990, tags: ["Sittning"], delivered: 24 },
+  {
+    name: "Norrlands Guld 33 cl",
+    kind: "UNIT",
+    category: "OL",
+    abv: 5.3,
+    ml: 330,
+    costPriceOre: 1290,
+    tags: ["Pub"],
+    delivered: 192,
+  },
+  {
+    name: "Mariestads Export 50 cl",
+    kind: "UNIT",
+    category: "OL",
+    abv: 5.3,
+    ml: 500,
+    costPriceOre: 1690,
+    tags: ["Pub"],
+    delivered: 96,
+  },
+  {
+    name: "Brooklyn Lager 35,5 cl",
+    kind: "UNIT",
+    category: "OL",
+    abv: 5.2,
+    ml: 355,
+    costPriceOre: 2290,
+    delivered: 48,
+  },
+  {
+    name: "Somersby Pear 33 cl",
+    kind: "UNIT",
+    category: "OVRIG_JASTDRYCK",
+    abv: 4.5,
+    ml: 330,
+    costPriceOre: 1490,
+    tags: ["Pub"],
+    delivered: 96,
+  },
+  {
+    name: "Absolut Vodka 70 cl",
+    kind: "VOLUME",
+    category: "SPRITDRYCK",
+    abv: 40,
+    ml: 700,
+    costPriceOre: 26900,
+    delivered: 6,
+  },
+  {
+    name: "Fireball 70 cl",
+    kind: "VOLUME",
+    category: "SPRITDRYCK",
+    abv: 33,
+    ml: 700,
+    costPriceOre: 24900,
+    delivered: 4,
+  },
+  {
+    name: "Jägermeister 70 cl",
+    kind: "VOLUME",
+    category: "SPRITDRYCK",
+    abv: 35,
+    ml: 700,
+    costPriceOre: 26900,
+    delivered: 4,
+  },
+  {
+    name: "Santa Helena Merlot 75 cl",
+    kind: "VOLUME",
+    category: "VIN",
+    abv: 13.5,
+    ml: 750,
+    costPriceOre: 8990,
+    tags: ["Sittning"],
+    delivered: 24,
+  },
+];
+
+/** The migration's group for each drink category (prisma/migrations/20261111130100_stocks). */
+export const STOCK_GROUP_OF: Record<SeedStockProduct["category"], string> = {
+  OL: "stockgroup-ol",
+  OVRIG_JASTDRYCK: "stockgroup-cider",
+  VIN: "stockgroup-vin",
+  SPRITDRYCK: "stockgroup-sprit",
+};
+
+/** What the café keeps in its storage room: drinks, bought by the flak. */
+export const CAFE_PRODUCTS: {
+  name: string;
+  ml: number;
+  packSize: number;
+  costPriceOre: number;
+  /** Bought in at term start. Zero for something listed but not yet stocked. */
+  delivered: number;
+}[] = [
+  { name: "Coca-Cola 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 240 },
+  { name: "Coca-Cola Zero 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 192 },
+  { name: "Pepsi Max 33 cl", ml: 330, packSize: 24, costPriceOre: 650, delivered: 144 },
+  { name: "Fanta 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 96 },
+  { name: "Fanta Exotic 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 48 },
+  { name: "Sprite 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 72 },
+  { name: "Sprite Zero 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 24 },
+  { name: "Trocadero 33 cl", ml: 330, packSize: 24, costPriceOre: 720, delivered: 96 },
+  { name: "Trocadero Zero 33 cl", ml: 330, packSize: 24, costPriceOre: 720, delivered: 24 },
+  { name: "Champis 33 cl", ml: 330, packSize: 24, costPriceOre: 720, delivered: 48 },
+  { name: "Zingo Apelsin 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 48 },
+  { name: "Cuba Cola 33 cl", ml: 330, packSize: 24, costPriceOre: 650, delivered: 24 },
+  { name: "Julmust 33 cl", ml: 330, packSize: 24, costPriceOre: 750, delivered: 0 },
+  { name: "Loka Citron 33 cl", ml: 330, packSize: 24, costPriceOre: 590, delivered: 144 },
+  { name: "Loka Naturell 33 cl", ml: 330, packSize: 24, costPriceOre: 590, delivered: 96 },
+  { name: "Loka Crush Hallon 33 cl", ml: 330, packSize: 24, costPriceOre: 690, delivered: 48 },
+  { name: "Ramlösa Citrus 33 cl", ml: 330, packSize: 24, costPriceOre: 620, delivered: 72 },
+  { name: "Ramlösa Naturell 50 cl", ml: 500, packSize: 24, costPriceOre: 890, delivered: 48 },
+  { name: "Bonaqua Naturell 50 cl", ml: 500, packSize: 24, costPriceOre: 790, delivered: 24 },
+  { name: "Red Bull 25 cl", ml: 250, packSize: 24, costPriceOre: 1290, delivered: 96 },
+  { name: "Red Bull Sugarfree 25 cl", ml: 250, packSize: 24, costPriceOre: 1290, delivered: 48 },
+  { name: "Monster Energy 50 cl", ml: 500, packSize: 24, costPriceOre: 1690, delivered: 48 },
+  { name: "Monster Ultra White 50 cl", ml: 500, packSize: 24, costPriceOre: 1690, delivered: 24 },
+  { name: "Nocco Caribbean 33 cl", ml: 330, packSize: 24, costPriceOre: 1590, delivered: 72 },
+  { name: "Nocco Miami 33 cl", ml: 330, packSize: 24, costPriceOre: 1590, delivered: 48 },
+  { name: "Celsius Peach Vibe 35,5 cl", ml: 355, packSize: 24, costPriceOre: 1490, delivered: 24 },
+  { name: "Vitamin Well Reload 50 cl", ml: 500, packSize: 12, costPriceOre: 1490, delivered: 36 },
+  { name: "Vitamin Well Care 50 cl", ml: 500, packSize: 12, costPriceOre: 1490, delivered: 12 },
+  { name: "Festis Päron 25 cl", ml: 250, packSize: 27, costPriceOre: 490, delivered: 81 },
+  {
+    name: "Festis Hallon Svartvinbär 25 cl",
+    ml: 250,
+    packSize: 27,
+    costPriceOre: 490,
+    delivered: 54,
+  },
+  { name: "Bravo Apelsin 25 cl", ml: 250, packSize: 24, costPriceOre: 790, delivered: 48 },
+  { name: "Proviva Blåbär 25 cl", ml: 250, packSize: 24, costPriceOre: 890, delivered: 24 },
+  { name: "Pucko 25 cl", ml: 250, packSize: 27, costPriceOre: 890, delivered: 54 },
+  { name: "Mer Apelsin 20 cl", ml: 200, packSize: 24, costPriceOre: 450, delivered: 48 },
+  { name: "Arizona Green Tea 50 cl", ml: 500, packSize: 12, costPriceOre: 1290, delivered: 24 },
+  { name: "Lipton Ice Tea Peach 33 cl", ml: 330, packSize: 24, costPriceOre: 790, delivered: 48 },
+];
+
+/**
+ * Café stock carried to its places since term start, by product and place name (see StockPlace). A move
+ * with `back` brought that many back to Mauer the same day. Chosen so the shelf varies: plenty, a few,
+ * none at all, and one product never stocked.
+ */
+export const CAFE_MOVES: {
+  product: string;
+  place: string;
+  units: number;
+  date: string;
+  back?: number;
+}[] = [
+  { product: "Coca-Cola 33 cl", place: "Kyl 1", units: 48, date: "2026-09-08" },
+  { product: "Coca-Cola 33 cl", place: "Kyl 2", units: 24, date: "2026-09-15" },
+  { product: "Coca-Cola 33 cl", place: "Sexet", units: 24, date: "2026-10-02", back: 10 },
+  { product: "Coca-Cola Zero 33 cl", place: "Kyl 1", units: 72, date: "2026-09-22" },
+  { product: "Pepsi Max 33 cl", place: "Kyl 2", units: 140, date: "2026-10-06" },
+  { product: "Fanta 33 cl", place: "Kyl 1", units: 48, date: "2026-09-29" },
+  { product: "Fanta 33 cl", place: "Sexet", units: 12, date: "2026-10-16" },
+  { product: "Sprite 33 cl", place: "Kyl 1", units: 24, date: "2026-10-13" },
+  { product: "Sprite Zero 33 cl", place: "Kyl 2", units: 24, date: "2026-09-25" },
+  { product: "Trocadero 33 cl", place: "Kyl 1", units: 72, date: "2026-10-20" },
+  { product: "Champis 33 cl", place: "Kyl 1", units: 45, date: "2026-11-03" },
+  { product: "Cuba Cola 33 cl", place: "Sexet", units: 24, date: "2026-10-30", back: 4 },
+  { product: "Loka Citron 33 cl", place: "Kyl 1", units: 96, date: "2026-10-01" },
+  { product: "Loka Naturell 33 cl", place: "Kyl 2", units: 30, date: "2026-10-09" },
+  { product: "Ramlösa Citrus 33 cl", place: "Sexet", units: 24, date: "2026-11-06", back: 12 },
+  { product: "Bonaqua Naturell 50 cl", place: "Kyl 2", units: 22, date: "2026-11-10" },
+  { product: "Red Bull 25 cl", place: "Kyl 1", units: 72, date: "2026-10-23" },
+  { product: "Red Bull 25 cl", place: "Sexet", units: 12, date: "2026-11-13" },
+  { product: "Monster Energy 50 cl", place: "Kyl 2", units: 46, date: "2026-11-04" },
+  { product: "Monster Ultra White 50 cl", place: "Kyl 2", units: 24, date: "2026-10-27" },
+  { product: "Nocco Caribbean 33 cl", place: "Kyl 1", units: 36, date: "2026-10-14" },
+  { product: "Vitamin Well Care 50 cl", place: "Kyl 1", units: 11, date: "2026-11-11" },
+  { product: "Festis Päron 25 cl", place: "Kyl 1", units: 54, date: "2026-10-08" },
+  { product: "Pucko 25 cl", place: "Sexet", units: 27, date: "2026-11-14" },
+  { product: "Mer Apelsin 20 cl", place: "Kyl 2", units: 47, date: "2026-11-12" },
+  { product: "Lipton Ice Tea Peach 33 cl", place: "Kyl 1", units: 24, date: "2026-10-28" },
 ];
 
 /**
@@ -873,7 +1077,12 @@ export const STOCK_PRODUCTS: SeedStockProduct[] = [
 export interface SeedStockEvent {
   name: string;
   date: string;
-  moves: { product: string; out: number; back?: number; backOpen?: Partial<Record<80 | 60 | 40 | 20, number>> }[];
+  moves: {
+    product: string;
+    out: number;
+    back?: number;
+    backOpen?: Partial<Record<80 | 60 | 40 | 20, number>>;
+  }[];
 }
 
 export const STOCK_EVENTS: SeedStockEvent[] = [

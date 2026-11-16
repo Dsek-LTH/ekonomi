@@ -21,7 +21,6 @@
   "members": "Members",
   "brandTagline": "Finance",
   "toDsek": "To dsek.se",
-  "openMenu": "Open menu",
   "doneMenu": "Done",
   "fortnoxSignIn": "Sign in to Fortnox",
   "fortnoxSignedIn": "Signed in to Fortnox",
@@ -32,7 +31,10 @@
   "closing": "Year-end closing",
   "stock": "Products",
   "stockHistory": "History",
-  "groupStock": "Stock",
+  "groupStock": "Alcohol stock",
+  "groupCafeStock": "Café stock",
+  "cafeStock": "Products",
+  "cafeStockHistory": "History",
   "stockEvents": "Occasions",
   "roles": "Roles & permissions",
   "contracts": "Archive",
@@ -54,5 +56,12 @@
   "salesSettings": "Sales",
   "groupIncome": "Income",
   "incomeZettle": "Zettle",
-  "incomeSwish": "Swish"
+  "incomeSwish": "Swish",
+  "cafeMove": "Move",
+  "groupBoard": "Board tab",
+  "boardLog": "Log",
+  "boardHistory": "My withdrawals",
+  "boardInvoices": "Invoicing",
+  "boardPrices": "Prices",
+  "stockBookkeeping": "Bookkeeping"
 }

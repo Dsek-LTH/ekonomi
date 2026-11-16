@@ -229,7 +229,7 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
                 >
                   <Icon className="size-4 shrink-0" />
                   {i.label}
-                  {i.count > 0 && <NavCount count={i.count} alert />}
+                  {i.count > 0 && <NavCount count={i.count} />}
                 </Link>
               </li>
             );

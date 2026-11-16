@@ -12,7 +12,10 @@ import {
   canBookkeep,
   canChangeLockedBudget,
   canCommentBudget,
+  canEnterStock,
   canLockBudget,
+  canMoveBetween,
+  canMoveStock,
   canUnexport,
   canViewBookkeeping,
   hasAttestRole,
@@ -62,7 +65,9 @@ describe("the defaults the section starts from", () => {
       "REVIEW_OWN_BOOKING",
       "EXPENSE_DEADLINE_WAIVE",
       "SEND_REMINDERS",
-      "STOCK_MANAGE",
+      "ALCOHOL_STOCK_MANAGE",
+      "CAFE_STOCK_MANAGE",
+      "BOARD_TAB",
       "BUDGET_COMMENT",
       "BUDGET_LOCK",
       "BUDGET_CHANGE_LOCKED",
@@ -151,6 +156,44 @@ describe("the helpers themselves", () => {
     expect(canBookkeep(none)).toBe(false);
     expect(canViewBookkeeping(none)).toBe(false);
     expect(canAccessBudget(none)).toBe(false);
+  });
+});
+
+// Moves in a stock with places (docs/stock.md, section 11). Storage is `null`, held by nobody.
+describe("moving stock between places", () => {
+  const sexmastare = {
+    capabilities: [] as Capability[],
+    stockPlaceIds: ["sexet"],
+    placeStocks: ["cafe" as const],
+  };
+  const keeper = {
+    capabilities: ["CAFE_STOCK_MANAGE"] as Capability[],
+    stockPlaceIds: [],
+    placeStocks: [],
+  };
+  const member = { capabilities: [] as Capability[], stockPlaceIds: [], placeStocks: [] };
+
+  it("lets a place's group take from storage to it and bring back from it to anywhere", () => {
+    expect(canMoveBetween(sexmastare, "cafe", null, "sexet")).toBe(true);
+    expect(canMoveBetween(sexmastare, "cafe", "sexet", null)).toBe(true);
+    expect(canMoveBetween(sexmastare, "cafe", "sexet", "kyl-2")).toBe(true);
+  });
+
+  it("does not let a group log for a place it does not hold", () => {
+    expect(canMoveBetween(sexmastare, "cafe", null, "kyl-1")).toBe(false);
+    expect(canMoveBetween(sexmastare, "cafe", "kyl-1", "kyl-2")).toBe(false);
+  });
+
+  it("lets the keeper log any move, and nobody else into a stock without places", () => {
+    expect(canMoveBetween(keeper, "cafe", "kyl-1", "kyl-2")).toBe(true);
+    expect(canMoveStock(member, "cafe")).toBe(false);
+    expect(canMoveStock({ ...sexmastare, placeStocks: ["alcohol"] }, "alcohol")).toBe(false);
+  });
+
+  it("opens the stock to someone who holds a place in it and nothing else", () => {
+    expect(canEnterStock(sexmastare, "cafe")).toBe(true);
+    expect(canEnterStock(sexmastare, "alcohol")).toBe(false);
+    expect(canEnterStock(member, "cafe")).toBe(false);
   });
 });
 

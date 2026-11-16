@@ -55,6 +55,8 @@ const OwnerRole = z.enum([
   "RESULTATANSVARIG",
   "STOCKARE",
   "UTHYRNINGSANSVARIG",
+  "CAFE_STOCKARE",
+  "STYRELSE",
   "REVISOR",
   "ORDINARIE",
 ]);

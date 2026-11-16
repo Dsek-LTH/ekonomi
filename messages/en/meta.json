@@ -55,6 +55,12 @@
     "roles": "Roles & permissions",
     "stockSettings": "Stock settings",
     "users": "Users",
-    "incomeDay": "Day of income"
+    "incomeDay": "Day of income",
+    "stockMove": "Move stock",
+    "stockVouchers": "Bookkeeping",
+    "board": "Log a withdrawal",
+    "boardPrices": "Board prices",
+    "boardHistory": "My withdrawals",
+    "boardInvoices": "Invoicing"
   }
 }

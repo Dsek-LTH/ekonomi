@@ -31,7 +31,7 @@ vi.mock("@/lib/server/storage", () => ({
 
 const { PUT, DELETE } = await import("./route");
 
-const upload = (bytes: Uint8Array, type = "image/png") => {
+const upload = (bytes: Uint8Array<ArrayBuffer>, type = "image/png") => {
   const form = new FormData();
   form.append("file", new File([bytes], "me.png", { type }));
   return new Request("http://test/api/profile/avatar", { method: "PUT", body: form });

@@ -22,7 +22,10 @@ import {
   EXTRA_ACCOUNTS,
   PROJECTS,
   RENTAL_ITEMS,
+  CAFE_MOVES,
+  CAFE_PRODUCTS,
   STOCK_EVENTS,
+  STOCK_GROUP_OF,
   STOCK_PRODUCTS,
   UNIT_OWNERS,
 } from "./seed-data";
@@ -41,8 +44,7 @@ const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-const ascii = (name: string) =>
-  name.toLowerCase().replace(/å|ä/g, "a").replace(/ö/g, "o");
+const ascii = (name: string) => name.toLowerCase().replace(/å|ä/g, "a").replace(/ö/g, "o");
 
 // "Elsa Lindqvist" → "elsa.lindqvist@user.dsek.se"
 const emailFor = (name: string) => ascii(name).replace(/\s+/g, ".") + "@user.dsek.se";
@@ -55,9 +57,10 @@ const emailFor = (name: string) => ascii(name).replace(/\s+/g, ".") + "@user.dse
 // sign-in (app/login/page.tsx) keep working.
 const studentIdFor = (name: string) => {
   const [first = "", last = ""] = ascii(name).split(/\s+/);
-  const digits = String(
-    [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 10000, 7),
-  ).padStart(4, "0");
+  const digits = String([...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 10000, 7)).padStart(
+    4,
+    "0",
+  );
   return `${first.slice(0, 2)}${digits}${last.slice(0, 2)}-s`;
 };
 
@@ -77,11 +80,11 @@ const payoutFor = (name: string) => {
 // to (lib/server/authority-defaults.ts), so a unit seeded under the workbook's
 // name would be one nobody's group answers for.
 const APP_UNIT_NAMES: Record<string, string> = {
-  "Cafémästeriet": "Caféutskottet",
-  "Centralprocessutskottet": "CPU",
-  "Informationsutskottet": "Infoutskottet",
-  "Medaljelelekommitén": "Medaljkommittén",
-  "Trivselrådet": "Trivselutskottet",
+  Cafémästeriet: "Caféutskottet",
+  Centralprocessutskottet: "CPU",
+  Informationsutskottet: "Infoutskottet",
+  Medaljelelekommitén: "Medaljkommittén",
+  Trivselrådet: "Trivselutskottet",
 };
 const appUnitName = (sheet: string) => APP_UNIT_NAMES[sheet] ?? sheet;
 
@@ -116,11 +119,22 @@ async function seedLedger(
     include: {
       variables: true,
       changes: { include: { entries: true } },
-      costCenters: { include: { costCenter: true, accounts: { include: { lineItems: true } } } },
+      costCenters: {
+        include: {
+          costCenter: true,
+          accounts: { include: { lineItems: true, account: { select: { name: true } } } },
+        },
+      },
     },
   });
   const inputs = evaluatorInputs(budget);
-  const { accounts } = evaluate(inputs.variables, inputs.lineItems, [], inputs.adjustments, inputs.knownAccounts);
+  const { accounts } = evaluate(
+    inputs.variables,
+    inputs.lineItems,
+    [],
+    inputs.adjustments,
+    inputs.knownAccounts,
+  );
 
   await prisma.fortnoxFinancialYear.create({
     data: {
@@ -142,7 +156,7 @@ async function seedLedger(
       const ore = accounts.get(`${code}:${a.accountCode}`) ?? 0;
       if (!ore) return [];
       const income = effectiveKind(a.accountCode) === "INCOME";
-      return [{ account: a.accountCode, name: a.accountName, ore: Math.abs(ore), income }];
+      return [{ account: a.accountCode, name: a.account.name, ore: Math.abs(ore), income }];
     });
     if (lines.length === 0) continue;
 
@@ -212,6 +226,9 @@ async function seedStock(actorId: string) {
       data: {
         name: p.name,
         kind: p.kind,
+        stockId: "alcohol",
+        // The groups are made by the migration, one per drink category.
+        groupId: STOCK_GROUP_OF[p.category],
         category: p.category,
         abv: p.abv,
         unitMl: p.kind === "UNIT" ? p.ml : null,
@@ -235,9 +252,58 @@ async function seedStock(actorId: string) {
     });
   }
 
+  // The café's shelf: drinks by the flak, one delivery at term start (none for a product not yet stocked).
+  // What has left for the places since is CAFE_MOVES, below.
+  for (const p of CAFE_PRODUCTS) {
+    const row = await prisma.stockProduct.create({
+      data: {
+        name: p.name,
+        kind: "UNIT",
+        stockId: "cafe",
+        groupId: "stockgroup-dryck",
+        unitMl: p.ml,
+        packSize: p.packSize,
+        costPriceOre: p.costPriceOre,
+        shelfLifeMonths: 9,
+      },
+    });
+    productId.set(p.name, row.id);
+    if (p.delivered === 0) continue;
+    await prisma.stockEntry.create({
+      data: {
+        productId: row.id,
+        kind: "PURCHASE",
+        units: p.delivered,
+        unitCostOre: p.costPriceOre,
+        occurredAt: new Date("2026-09-01"),
+        actorId,
+        note: "Leverans till terminsstarten",
+      },
+    });
+  }
+
+  // The café's places: two fridges and a committee. No cost centre or groups, so the keeper chooses them in
+  // Inställningar -> Lager, and until then only the keeper may move stock.
+  const placeId = new Map<string, string>();
+  for (const [sortOrder, name] of ["Kyl 1", "Kyl 2", "Sexet"].entries()) {
+    const place = await prisma.stockPlace.create({ data: { stockId: "cafe", name, sortOrder } });
+    placeId.set(name, place.id);
+  }
+
+  // What has been carried out to the places since, and what came back to Mauer. Valued by the replay below.
+  for (const m of CAFE_MOVES) {
+    const product = productId.get(m.product);
+    const place = placeId.get(m.place);
+    if (!product || !place)
+      throw new Error(`CAFE_MOVES names "${m.product}" or "${m.place}", which does not exist`);
+    const at = { productId: product, placeId: place, occurredAt: new Date(m.date), actorId };
+    await prisma.stockEntry.create({ data: { ...at, kind: "ISSUE", units: -m.units } });
+    if (m.back) await prisma.stockEntry.create({ data: { ...at, kind: "RETURN", units: m.back } });
+  }
+
   for (const e of STOCK_EVENTS) {
     const event = await prisma.stockEvent.create({
-      data: { name: e.name, date: new Date(e.date), actorId },
+      data: { name: e.name, stockId: "alcohol", date: new Date(e.date), actorId },
     });
     for (const m of e.moves) {
       const id = productId.get(m.product);
@@ -267,18 +333,16 @@ async function seedStock(actorId: string) {
       orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
     });
     const settled = replay(
-      rows.map(
-        (r): ReplayRow => ({
-          id: r.id,
-          kind: r.kind,
-          level: r.level,
-          units: r.units,
-          open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
-          countedQty: r.countedQty,
-          valueDeltaOre: r.valueDeltaOre,
-          unitCostOre: r.unitCostOre,
-        }),
-      ),
+      rows.map((r): ReplayRow => ({
+        id: r.id,
+        kind: r.kind,
+        level: r.level,
+        units: r.units,
+        open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
+        countedQty: r.countedQty,
+        valueDeltaOre: r.valueDeltaOre,
+        unitCostOre: r.unitCostOre,
+      })),
     );
     for (const r of rows) {
       const want = settled.get(r.id);
@@ -304,6 +368,7 @@ async function main() {
   await prisma.stockChange.deleteMany();
   await prisma.stockEntry.deleteMany();
   await prisma.stockEvent.deleteMany();
+  await prisma.stockPlace.deleteMany(); // cascades → its groups
   await prisma.stockProductChange.deleteMany();
   await prisma.stockProduct.deleteMany();
   await prisma.expenseEvent.deleteMany();
@@ -409,7 +474,8 @@ async function main() {
 
   for (const [name, units] of Object.entries(UNIT_OWNERS)) {
     for (const unit of units)
-      if (!resultUnitByName.has(unit)) throw new Error(`UNIT_OWNERS names "${unit}", which the budget has no unit for`);
+      if (!resultUnitByName.has(unit))
+        throw new Error(`UNIT_OWNERS names "${unit}", which the budget has no unit for`);
     await prisma.user.update({ where: { id: userId(name) }, data: { resultUnits: units } });
   }
 
@@ -475,13 +541,13 @@ async function main() {
     create: { id: "singleton", ...settings },
     update: settings,
   });
-  await prisma.stockSettings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", expiryLeadDays: 30 },
-    update: {},
-  });
+  // The two stocks and their product types come from the migration. Only the notice period is a seed value.
+  await prisma.stock.updateMany({ data: { expiryLeadDays: 30 } });
   const accountNames = new Map(
-    (await prisma.account.findMany({ select: { number: true, name: true } })).map((a) => [a.number, a.name]),
+    (await prisma.account.findMany({ select: { number: true, name: true } })).map((a) => [
+      a.number,
+      a.name,
+    ]),
   );
 
   // A milersättning is valued at the rate in force on its day, and there is
@@ -538,7 +604,9 @@ async function main() {
   // also refuses to write any utlägg the app's own rules would not allow.
   const rolesOf = (name: string) => rolesByName.get(name) ?? ["ORDINARIE"];
   const capsOf = (name: string): Capability[] => [
-    ...new Set(ROLE_CAPS.filter((rc) => rolesOf(name).includes(rc.role)).map((rc) => rc.capability)),
+    ...new Set(
+      ROLE_CAPS.filter((rc) => rolesOf(name).includes(rc.role)).map((rc) => rc.capability),
+    ),
   ];
   const unitOfCode = new Map<string, string>();
   for (const [unit, prefixes] of prefixesByUnit)
@@ -561,7 +629,9 @@ async function main() {
     hasPayout: (name) => rolesByName.has(name),
     costCenter: (code) => {
       const id = costCenterByCode.get(code);
-      return id ? { id, name: costCenterNames.get(code) ?? code, resultUnit: unitOfCode.get(code) ?? null } : undefined;
+      return id
+        ? { id, name: costCenterNames.get(code) ?? code, resultUnit: unitOfCode.get(code) ?? null }
+        : undefined;
     },
     cardOf: (name) => cardByHolder.get(name),
     cardByLast4: (last4) => cardIdByLast4.get(last4),
@@ -575,14 +645,18 @@ async function main() {
       if (known) return known;
       const id = Math.max(...years.values()) + 1;
       await prisma.fortnoxFinancialYear.create({
-        data: { id, fromDate: new Date(`${year}-01-01`), toDate: new Date(`${year}-12-31`), lastSyncAt: new Date() },
+        data: {
+          id,
+          fromDate: new Date(`${year}-01-01`),
+          toDate: new Date(`${year}-12-31`),
+          lastSyncAt: new Date(),
+        },
       });
       years.set(year, id);
       return id;
     },
     nextVoucherNumber: () => (voucherNumber += 1),
   });
-
 
   const counts = {
     users: await prisma.user.count(),

@@ -39,6 +39,8 @@ export const MESSAGE_NAMESPACES = [
   "closing",
   "score",
   "guides",
+  "stockVouchers",
+  "board",
   "pwa",
 ] as const;
 

@@ -21,7 +21,6 @@
   "members": "Medlemmar",
   "brandTagline": "Ekonomi",
   "toDsek": "Till dsek.se",
-  "openMenu": "Öppna menyn",
   "doneMenu": "Klar",
   "fortnoxSignIn": "Logga in i Fortnox",
   "fortnoxSignedIn": "Inloggad i Fortnox",
@@ -32,7 +31,10 @@
   "closing": "Bokslut",
   "stock": "Produkter",
   "stockHistory": "Historik",
-  "groupStock": "Lager",
+  "groupStock": "Alkohollager",
+  "groupCafeStock": "Cafélager",
+  "cafeStock": "Produkter",
+  "cafeStockHistory": "Historik",
   "stockEvents": "Tillfällen",
   "roles": "Roller & behörigheter",
   "contracts": "Arkiv",
@@ -54,5 +56,12 @@
   "salesSettings": "Försäljning",
   "groupIncome": "Intäkter",
   "incomeZettle": "Zettle",
-  "incomeSwish": "Swish"
+  "incomeSwish": "Swish",
+  "cafeMove": "Flytta",
+  "groupBoard": "Styrelseborder",
+  "boardLog": "Logga",
+  "boardHistory": "Mina uttag",
+  "boardInvoices": "Fakturering",
+  "boardPrices": "Priser",
+  "stockBookkeeping": "Bokföring"
 }

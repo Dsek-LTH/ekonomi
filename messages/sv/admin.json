@@ -11,7 +11,7 @@
       "stockSettings": "Konton och inställningar för lagerbokföringen.",
       "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
       "users": "Vem som finns och vilka roller de har.",
-      "email": "Alla mejl appen skickat, vart de tog vägen, och testutskick."
+      "email": "Alla mejl appen skickat, vart de tog vägen, testutskick och inkorgens mejlkonto."
     }
   },
   "users": {
@@ -248,7 +248,7 @@
     "connectHint": "Anslut sektionens Fortnox-konto för att kunna exportera och synka. Kräver att du är systemadministratör i Fortnox.",
     "disconnect": "Koppla från",
     "disconnectTitle": "Koppla från Fortnox?",
-    "disconnectMessage": "Export och synk slutar fungera tills någon ansluter igen. Kontoplan, kostnadsställen och redan hämtad huvudbok ligger kvar.",
+    "disconnectMessage": "Export och synk slutar fungera tills någon ansluter igen, och alla som är inloggade i Fortnox personligen loggas ut. Kontoplan, kostnadsställen och redan hämtad huvudbok ligger kvar.",
     "disconnected": "Fortnox frånkopplat.",
     "disconnectFailed": "Kunde inte koppla från",
     "voucherSeries": "Verifikationsserie",
@@ -456,6 +456,92 @@
       "hint": "Vi vet aldrig vad som står på en back. Det vi vet är när en leverans kom in och hur länge produkten håller, och utifrån det ber vi någon gå ner och läsa på förpackningen.",
       "leadDays": "Varsel i dagar",
       "leadDaysHint": "Hur långt innan det beräknade datumet vi börjar fråga. 30 dagar är lagom: en back hinner drickas upp på en månad om någon vet om det."
+    },
+    "saved": "Sparat",
+    "chooseCostCenter": "Välj kostnadsställe",
+    "stock": {
+      "alcohol": "Alkohollager",
+      "cafe": "Cafélager"
+    },
+    "gaps": {
+      "intro": "Det här behöver väljas innan lagervärdet kan bokföras i Fortnox:",
+      "left": "{count, plural, one {# sak kvar} other {# saker kvar}}",
+      "none": "Klart att bokföra",
+      "stockAccount": "Lagerkonto för {group}",
+      "consumptionAccount": "Kostnadskonto för {group}",
+      "purchaseOffsetAccount": "Kontot som inköpen bokförs på",
+      "boardCostAccount": "Kostnadskonto för styrelsens uttag",
+      "postingStartsOn": "Dagen bokföringen av lagervärdet börjar"
+    },
+    "groups": {
+      "title": "Produkttyper",
+      "hint": "Varje typ har sitt eget lagerkonto och sitt eget kostnadskonto. En produkt hör till en typ, och det är typen som avgör var dess värde bokförs.",
+      "products": "{count, plural, =0 {inga produkter} one {# produkt} other {# produkter}}",
+      "stockAccount": "Lagerkonto",
+      "consumptionAccount": "Kostnadskonto",
+      "lossAccount": "Konto för kassation",
+      "countDiffAccount": "Konto för inventeringsdifferens",
+      "sameAsCost": "Samma som kostnadskontot",
+      "newPlaceholder": "Ny produkttyp",
+      "add": "Lägg till",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort produkttypen {name}?",
+      "removeMessage": "Typen har inga produkter. Dess konton försvinner med den."
+    },
+    "booking": {
+      "title": "Bokföring",
+      "hint": {
+        "CAPITALISED": "Inköpen bokförs direkt på lagerkontot när utlägget eller leverantörsfakturan bokförs. Dagsverifikatet flyttar bara det som lämnar lagret till kostnad.",
+        "EXPENSED": "Inköpen bokförs som kostnad. Dagsverifikatet tar upp en leverans i lagret genom att kreditera den kostnaden, och kostnadsför den igen när den lämnar förrådet."
+      }
+    },
+    "field": {
+      "consumptionCostCenterId": "Kostnadsställe för förbrukning",
+      "purchaseOffsetAccount": "Konto som inköpen bokförs på",
+      "purchaseCostCenterId": "Kostnadsställe för inköpen",
+      "lossCostCenterId": "Kostnadsställe för kassation",
+      "countDiffCostCenterId": "Kostnadsställe för inventeringsdifferens",
+      "boardCostAccount": "Kostnadskonto för styrelsens uttag",
+      "boardCostCenterId": "Kostnadsställe för styrelsens uttag",
+      "boardSalesAccount": "Intäktskonto för styrelsens fakturor",
+      "boardSalesCostCenterId": "Kostnadsställe för styrelsens fakturor",
+      "voucherSeries": "Verifikationsserie",
+      "postingStartsOn": "Bokföringen börjar"
+    },
+    "hint": {
+      "consumptionCostCenterId": "Där det som lämnar lagret för försäljning kostnadsförs. Ett tillfälle kan ha ett eget.",
+      "purchaseOffsetAccount": "Krediteras när en leverans tas upp i lagret.",
+      "purchaseCostCenterId": "Samma kostnadsställe som inköpen bokförs på.",
+      "lossCostCenterId": "Kontot väljs per produkttyp ovan.",
+      "countDiffCostCenterId": "Kontot väljs per produkttyp ovan.",
+      "boardCostAccount": "Det styrelsen tar ut lämnar lagret till inköpspris och kostnadsförs här.",
+      "boardCostCenterId": "Frivilligt.",
+      "boardSalesAccount": "Krediteras på fakturan till varje ledamot vid årets slut, till styrelsepris.",
+      "boardSalesCostCenterId": "Frivilligt.",
+      "voucherSeries": "Lämna tomt för att använda serie {series}, som allt annat.",
+      "voucherSeriesUnconnected": "Lämna tomt för att använda samma serie som allt annat.",
+      "postingStartsOn": "Första dagen som ger ett verifikat. Lämna tomt så länge lagervärdet inte ska bokföras."
+    },
+    "places": {
+      "title": "Platser",
+      "hint": "Dit lagret bärs ut, till exempel en kyl eller ett utskott som jobbar. Det som når en plats räknas som använt och belastar platsens kostnadsställe. Medlemmar i platsens Authentik-grupper får flytta till och från den.",
+      "name": "Namn",
+      "costCenter": "Kostnadsställe",
+      "costCenterFallback": "Samma som för förbrukning",
+      "groups": "Authentik-grupper som får flytta",
+      "noGroups": "Bara de som sköter lagret",
+      "searchGroups": "Sök grupp",
+      "useGroup": "Använd {group}",
+      "holders": "{count, plural, =0 {ingen kan flytta hit} one {# person kan flytta hit} other {# personer kan flytta hit}}",
+      "archived": "Arkiverad",
+      "archive": "Arkivera",
+      "restore": "Återställ",
+      "newPlaceholder": "Ny plats",
+      "add": "Lägg till",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort platsen {name}?",
+      "removeMessage": "Inget har flyttats till eller från platsen, så den kan tas bort helt. Dess grupper försvinner med den.",
+      "removed": "{name} är borttagen"
     }
   },
   "email": {
@@ -501,6 +587,32 @@
     "testHint": "Byggs på medlemmens riktiga data: ett utlägg de kan se, deras senaste korttransaktioner eller det som väntar på dem. [Test] står i ämnet. Skickas oavsett vad medlemmen valt i sin profil.",
     "testSend": "Skicka",
     "testSent": "Testmejl skickat till {name}.",
-    "testFailed": "Kunde inte skicka testmejlet"
+    "testFailed": "Kunde inte skicka testmejlet",
+    "mailbox": {
+      "title": "Inkommande post",
+      "subtitle": "Mejlkontot som Inkorgen läser leverantörsfakturor från.",
+      "lastSync": "Senast läst {when}",
+      "neverSynced": "Inte läst än",
+      "connected": "Kopplad till {address}.",
+      "connectedBy": "Kopplad till {address} av {name} {when}.",
+      "notConnected": "Inte kopplad. Inga mejl läses förrän någon loggar in som {address}.",
+      "connect": "Koppla inkorgen",
+      "reconnect": "Koppla om",
+      "disconnect": "Koppla från",
+      "disconnectConfirm": "Inga mejl till {address} läses medan inkorgen är frånkopplad. När den kopplas igen läses det som kommit under tiden, upp till en vecka bakåt.",
+      "disconnected": "Inkorgen är frånkopplad.",
+      "result": {
+        "connected": "Inkorgen är kopplad. Nya mejl dyker upp i Inkorgen inom några sekunder.",
+        "denied": "Inloggningen avbröts. Inkorgen är inte kopplad.",
+        "invalidState": "Inloggningen gick ut eller startades någon annanstans. Försök igen.",
+        "forbidden": "Du har inte behörighet att koppla inkorgen.",
+        "unconfigured": "Gmail är inte konfigurerat på servern.",
+        "wrongMailbox": "Du loggade in med fel konto. Logga in som inkorgens adress.",
+        "watchFailed": "Inkorgen är kopplad, men Gmail kunde inte börja skicka aviseringar. Kontrollera att gmail-api-push@system.gserviceaccount.com får publicera på Pub/Sub-ämnet.",
+        "failed": "Det gick inte att koppla inkorgen. Försök igen."
+      },
+      "error": "Senaste läsningen misslyckades: {error}",
+      "unconfigured": "Gmail är inte konfigurerat på servern (GMAIL_-variablerna saknas, se docs/gmail-inbound.md). Inga mejl läses."
+    }
   }
 }

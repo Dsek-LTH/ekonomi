@@ -184,6 +184,7 @@
     "importBadQuery": "Budgetens år eller namn saknas eller är ogiltigt",
     "emptyFile": "Filen är tom",
     "fileTooLarge": "Filen är för stor",
+    "unknownAccounts": "Kontona {codes} finns inte i kontoplanen. Synka kontoplanen under Inställningar → Fortnox eller rätta filen.",
     "noRows": "Inga budgetrader kunde läsas från filen",
     "changeError": {
       "empty": "Lägg till minst en kontopost.",
@@ -210,6 +211,8 @@
     "missingCostCenterScope": "Fortnox saknar behörighet för kostnadsställen. Koppla från och anslut igen för att ge appen 'costcenter'-behörighet.",
     "missingProjectScope": "Fortnox saknar behörighet för projekt. Koppla från och anslut igen för att ge appen 'project'-behörighet.",
     "syncRunning": "En synk från Fortnox pågår redan. Försök igen om en stund.",
+    "missingSupplierInvoiceScope": "Fortnox-anslutningen saknar behörighet för leverantörsfakturor. Koppla från och anslut igen för att ge appen 'supplierinvoice'-behörighet.",
+    "missingCustomerScope": "Fortnox-anslutningen saknar behörighet för kundregistret. Koppla från och anslut igen för att ge appen 'customer'-behörighet.",
     "missingSupplierScope": "Fortnox-anslutningen saknar behörighet för leverantörsregistret. Koppla från och anslut igen för att ge appen 'supplier'-behörighet."
   },
   "database": "Databasfel",
@@ -280,7 +283,6 @@
     "prefixExists": "Prefixet {code} finns redan.",
     "prefixNotFound": "Prefixet finns inte.",
     "fallbackNotFound": "Beloppsregeln finns inte.",
-    "alreadyInFortnox": "Det finns redan en verifikation i Fortnox för den här dagen ({voucher}). Ingenting exporterades.",
     "unitNotFound": "Resultatenheten finns inte.",
     "unitHasIncome": "{name} har redan intäktsinställningar.",
     "keyFromName": "Namnet \"{name}\" ger ingen användbar nyckel. Det behöver bokstäver eller siffror.",
@@ -342,7 +344,26 @@
     "internalCodeTyped": "Koder som börjar på 2 delas ut av appen till produkter utan streckkod. Markera att produkten saknar streckkod i stället.",
     "onlyStocktake": "Bara en inventering kan göras om till ett inköp.",
     "stocktakeFoundNothing": "Inventeringen hittade inte fler oöppnade än loggen, så det finns inget inköp att göra av den.",
-    "costRequired": "Produkten behöver ett inköpspris innan inköpet kan värderas. Ange det på produkten först."
+    "costRequired": "Produkten behöver ett inköpspris innan inköpet kan värderas. Ange det på produkten först.",
+    "unknownStock": "Lagret finns inte.",
+    "categoryRequired": "Dryckesslag och alkoholhalt behövs till restaurangrapporten.",
+    "unitOnly": "Det här lagret räknar allt i styck.",
+    "groupRequired": "Välj en produkttyp som hör till lagret.",
+    "kindNotHere": "Den sortens rörelse finns inte i det här lagret.",
+    "onTheBoardTab": "Ett styrelseuttag ändras på styrelsekontot.",
+    "accountUnknown": "Konto {account} finns inte i kontoplanen.",
+    "costCenterUnknown": "Kostnadsstället finns inte.",
+    "groupNameTaken": "Det finns redan en produkttyp med det namnet.",
+    "groupNotFound": "Produkttypen hittades inte.",
+    "groupInUse": "{count, plural, one {# produkt hör} other {# produkter hör}} till typen. Flytta dem till en annan typ först.",
+    "notEnoughOnShelf": "Lagret har bara {have} st {name}, inte {want}. Registrera leveransen eller inventera först.",
+    "moveNotYours": "Du kan bara flytta till eller från en plats du hör till. En flytt ångras av den som gjorde den, samma dag.",
+    "moveNowhere": "Från och Till är samma ställe.",
+    "placeNotFound": "Platsen finns inte, eller är arkiverad.",
+    "moreThanTaken": "{place} har bara tagit {have} st {name} i år, inte {want}.",
+    "moveReturnedSince": "En del av det som flyttades har lämnats tillbaka sedan dess. Ångra återlämningen först.",
+    "placeNameTaken": "Lagret har redan en plats med det namnet.",
+    "placeInUse": "Det har flyttats till eller från platsen, så den finns kvar i historiken. Arkivera den i stället."
   },
   "mileage": {
     "noReadings": "Milersättningen saknar mätarställning före eller efter resan.",
@@ -449,5 +470,33 @@
   },
   "gmail": {
     "unconfigured": "Gmail är inte konfigurerat på servern (GMAIL_* saknas)."
+  },
+  "stockVoucher": {
+    "notSetUp": "Konton saknas innan lagervärdet kan bokföras. Välj dem i Inställningar, Lager.",
+    "uncertainFirst": "Verifikatet för {date} måste utredas först.",
+    "inProgress": "{name} bokför {date} just nu.",
+    "nothingToSend": "Det finns inget att bokföra till och med det datumet.",
+    "changed": "Siffrorna har ändrats sedan sidan visades. Ladda om och titta igen.",
+    "alreadySent": "Lagret är redan bokfört till och med {date}. Det som ändrats sedan dess skickas som en rättelse.",
+    "duplicateCheckFailed": "Kunde inte kontrollera i Fortnox om verifikatet redan finns. Inget skickades.",
+    "uncertain": "Fortnox svarade inte tydligt för {date}. Kontrollera i Fortnox innan något mer bokförs.",
+    "notFound": "Verifikatet hittades inte.",
+    "syncLedgerFirst": "Synka huvudboken med Fortnox först, så att skillnaden är aktuell.",
+    "closedPeriod": "Fortnox har inget öppet räkenskapsår för {date}."
+  },
+  "board": {
+    "noTab": "Du har inget styrelsekonto.",
+    "notYourTab": "Bara skattmästeriet kan logga uttag åt någon annan.",
+    "memberNotFound": "Ledamoten hittades inte.",
+    "futureDate": "Ett uttag kan inte dateras framåt i tiden.",
+    "noPrice": "En av produkterna har inget styrelsepris den dagen.",
+    "withdrawalNotFound": "Uttaget hittades inte.",
+    "alreadyInvoiced": "Uttaget är redan fakturerat och kan inte ändras här.",
+    "tooLate": "Ett uttag kan bara tas bort samma dag. Be skattmästaren om det är fel.",
+    "salesAccountUnset": "Välj intäktskontot för styrelsens fakturor i Inställningar, Lager.",
+    "noFiscalYear": "Inget räkenskapsår är hämtat från Fortnox ännu.",
+    "costCenterNotFound": "Kostnadsstället hittades inte.",
+    "customerMissing": "Välj en kund i Fortnox för varje ledamot. Finns kunden inte, lägg upp den i Fortnox först.",
+    "invoiceNotFound": "Fakturan hittades inte."
   }
 }

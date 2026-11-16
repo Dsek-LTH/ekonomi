@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { carriedSection } from "./routes";
 
-const ROUTES = ["/dashboard", "/expenses", "/approvals", "/bookkeeping", "/stock", "/stock/events"];
+const ROUTES = ["/dashboard", "/expenses", "/approvals", "/bookkeeping", "/stock", "/stock/events", "/invoices", "/invoices/inbox"];
 
 describe("carriedSection", () => {
   it("lights a nav route as itself, whatever came before", () => {
@@ -12,6 +12,12 @@ describe("carriedSection", () => {
   it("keeps the section an utlägg was opened from", () => {
     expect(carriedSection("/expenses/abc", "/approvals", ROUTES)).toBe("/approvals");
     expect(carriedSection("/expenses/abc/book", "/bookkeeping", ROUTES)).toBe("/bookkeeping");
+  });
+
+  it("drops a subsection once the page leaves it", () => {
+    expect(carriedSection("/invoices/inbox/abc", "/invoices/inbox", ROUTES)).toBe("/invoices/inbox");
+    expect(carriedSection("/invoices/abc", "/invoices/inbox", ROUTES)).toBe("/invoices");
+    expect(carriedSection("/invoices/abc/book", "/invoices/inbox", ROUTES)).toBe("/invoices");
   });
 
   it("falls back to the URL with nothing before it", () => {

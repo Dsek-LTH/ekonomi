@@ -6,7 +6,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/server/db";
 import { capabilitiesOf } from "@/lib/server/capabilities";
 import { initials } from "@/lib/ui/format";
-import type { Capability, Role, User } from "@/lib/domain/types";
+import type { Capability, Role, SessionUser } from "@/lib/domain/types";
+import { isStockSlug, type StockSlug } from "@/lib/stock/stocks";
 
 /** Deduped per request: the shell and the page both call `requireUser()` concurrently, and two decodes race for one refresh token. */
 export const resolveUserId = cache(async (): Promise<string | null> => {
@@ -27,19 +28,36 @@ export const loadUser = cache(
     studentId: string;
     roles: Role[];
     capabilities: Capability[];
+    stockPlaceIds: string[];
+    placeStocks: StockSlug[];
   } | null> => {
     const row = await prisma.user.findUnique({
       where: { id },
       // studentId is the STIL-ID printed on an intäktsräkning (lib/income/config.ts).
-      select: { name: true, email: true, studentId: true, roles: true },
+      select: { name: true, email: true, studentId: true, roles: true, stockPlaceIds: true },
     });
     if (!row) return null;
-    return { ...row, capabilities: await capabilitiesOf(row.roles) };
+    const [capabilities, placeStocks] = await Promise.all([
+      capabilitiesOf(row.roles),
+      stocksOfPlaces(row.stockPlaceIds),
+    ]);
+    return { ...row, capabilities, placeStocks };
   },
 );
 
-// The full acting user mapped to the UI `User` shape. Null when unauthenticated or the account is gone.
-async function resolveSessionUser(): Promise<User | null> {
+/** The stocks a person holds a place in, so the gates need not load the places themselves. Archived places count for nothing. */
+async function stocksOfPlaces(ids: readonly string[]): Promise<StockSlug[]> {
+  if (ids.length === 0) return [];
+  const rows = await prisma.stockPlace.findMany({
+    where: { id: { in: [...ids] }, archived: false },
+    select: { stockId: true },
+    distinct: ["stockId"],
+  });
+  return rows.map((r) => r.stockId).filter(isStockSlug);
+}
+
+// The full acting user mapped to the UI `SessionUser` shape. Null when unauthenticated or the account is gone.
+async function resolveSessionUser(): Promise<SessionUser | null> {
   const id = await resolveUserId();
   if (!id) return null;
 
@@ -53,12 +71,14 @@ async function resolveSessionUser(): Promise<User | null> {
     email: row.email,
     roles: row.roles,
     capabilities: row.capabilities,
+    stockPlaceIds: row.stockPlaceIds,
+    placeStocks: row.placeStocks,
     initials: initials(name),
   };
 }
 
 /** The acting user, or a redirect to sign-in. */
-export async function requireUser(): Promise<User> {
+export async function requireUser(): Promise<SessionUser> {
   const user = await resolveSessionUser();
   if (!user) redirect("/login");
   return user;
@@ -68,7 +88,9 @@ export async function requireUser(): Promise<User> {
  * The acting user, provided they may reach this page. Otherwise the dashboard. Takes a capability
  * predicate from lib/domain/permissions.ts, e.g. `requirePage(canAccessSettings)`.
  */
-export async function requirePage(can: (caps: readonly Capability[]) => boolean): Promise<User> {
+export async function requirePage(
+  can: (caps: readonly Capability[]) => boolean,
+): Promise<SessionUser> {
   const user = await requireUser();
   if (!can(user.capabilities)) redirect("/dashboard");
   return user;

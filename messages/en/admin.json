@@ -11,7 +11,7 @@
       "stockSettings": "Accounts and settings for the stock bookkeeping.",
       "roles": "What each role may do. Changed here, not in the code.",
       "users": "Who exists and which roles they hold.",
-      "email": "Every email the app has sent, where it went, and test emails."
+      "email": "Every email the app has sent, where it went, test emails, and the inbox mail account."
     }
   },
   "users": {
@@ -248,7 +248,7 @@
     "connectHint": "Connect the guild's Fortnox account to export and sync. Requires you to be a system administrator in Fortnox.",
     "disconnect": "Disconnect",
     "disconnectTitle": "Disconnect Fortnox?",
-    "disconnectMessage": "Export and sync stop working until someone connects again. The chart of accounts, cost centers and already-fetched ledger stay.",
+    "disconnectMessage": "Export and sync stop working until someone connects again, and everybody logged in to Fortnox personally is logged out. The chart of accounts, cost centers and already-fetched ledger stay.",
     "disconnected": "Fortnox disconnected.",
     "disconnectFailed": "Could not disconnect",
     "voucherSeries": "Voucher series",
@@ -456,6 +456,92 @@
       "hint": "We never know what is printed on a crate. What we know is when a delivery arrived and how long the product keeps, and from that we ask somebody to go down and read the packaging.",
       "leadDays": "Notice in days",
       "leadDaysHint": "How far ahead of the estimated date to start asking. 30 days is about right: a crate can be drunk in a month if somebody knows about it."
+    },
+    "saved": "Saved",
+    "chooseCostCenter": "Choose a cost centre",
+    "stock": {
+      "alcohol": "Alcohol stock",
+      "cafe": "Café stock"
+    },
+    "gaps": {
+      "intro": "These have to be chosen before the stock value can be booked in Fortnox:",
+      "left": "{count, plural, one {# thing left} other {# things left}}",
+      "none": "Ready to book",
+      "stockAccount": "Stock account for {group}",
+      "consumptionAccount": "Cost account for {group}",
+      "purchaseOffsetAccount": "The account purchases are booked on",
+      "boardCostAccount": "Cost account for the board's withdrawals",
+      "postingStartsOn": "The day booking of the stock value starts"
+    },
+    "groups": {
+      "title": "Product types",
+      "hint": "Each type has its own stock account and its own cost account. A product belongs to one type, and the type decides where its value is booked.",
+      "products": "{count, plural, =0 {no products} one {# product} other {# products}}",
+      "stockAccount": "Stock account",
+      "consumptionAccount": "Cost account",
+      "lossAccount": "Spoilage account",
+      "countDiffAccount": "Stocktake difference account",
+      "sameAsCost": "Same as the cost account",
+      "newPlaceholder": "New product type",
+      "add": "Add",
+      "remove": "Remove",
+      "removeTitle": "Remove the product type {name}?",
+      "removeMessage": "The type has no products. Its accounts go with it."
+    },
+    "booking": {
+      "title": "Booking",
+      "hint": {
+        "CAPITALISED": "Purchases are booked straight to the stock account when the expense or supplier invoice is booked. The daily voucher only moves what leaves the stock to cost.",
+        "EXPENSED": "Purchases are booked as a cost. The daily voucher takes a delivery into stock by crediting that cost, and charges it again when it leaves storage."
+      }
+    },
+    "field": {
+      "consumptionCostCenterId": "Cost centre for consumption",
+      "purchaseOffsetAccount": "Account purchases are booked on",
+      "purchaseCostCenterId": "Cost centre for purchases",
+      "lossCostCenterId": "Cost centre for spoilage",
+      "countDiffCostCenterId": "Cost centre for stocktake differences",
+      "boardCostAccount": "Cost account for the board's withdrawals",
+      "boardCostCenterId": "Cost centre for the board's withdrawals",
+      "boardSalesAccount": "Revenue account for the board's invoices",
+      "boardSalesCostCenterId": "Cost centre for the board's invoices",
+      "voucherSeries": "Voucher series",
+      "postingStartsOn": "Booking starts"
+    },
+    "hint": {
+      "consumptionCostCenterId": "Where what leaves the stock for sale is charged. An occasion can have its own.",
+      "purchaseOffsetAccount": "Credited when a delivery is taken into stock.",
+      "purchaseCostCenterId": "The same cost centre the purchases are booked on.",
+      "lossCostCenterId": "The account is chosen per product type above.",
+      "countDiffCostCenterId": "The account is chosen per product type above.",
+      "boardCostAccount": "What the board takes leaves the stock at cost and is charged here.",
+      "boardCostCenterId": "Optional.",
+      "boardSalesAccount": "Credited on each member's invoice at year end, at board price.",
+      "boardSalesCostCenterId": "Optional.",
+      "voucherSeries": "Leave empty to use series {series}, like everything else.",
+      "voucherSeriesUnconnected": "Leave empty to use the same series as everything else.",
+      "postingStartsOn": "The first day that produces a voucher. Leave empty while the stock value is not to be booked."
+    },
+    "places": {
+      "title": "Places",
+      "hint": "Where stock is carried to, such as a fridge or a committee working a shift. What reaches a place counts as used and is charged to the place's cost centre. Members of the place's Authentik groups may move stock to and from it.",
+      "name": "Name",
+      "costCenter": "Cost centre",
+      "costCenterFallback": "Same as for consumption",
+      "groups": "Authentik groups that may move",
+      "noGroups": "Only those who keep the stock",
+      "searchGroups": "Search groups",
+      "useGroup": "Use {group}",
+      "holders": "{count, plural, =0 {nobody can move here} one {# person can move here} other {# people can move here}}",
+      "archived": "Archived",
+      "archive": "Archive",
+      "restore": "Restore",
+      "newPlaceholder": "New place",
+      "add": "Add",
+      "remove": "Delete",
+      "removeTitle": "Delete the place {name}?",
+      "removeMessage": "Nothing has been moved to or from the place, so it can be deleted outright. Its groups go with it.",
+      "removed": "{name} has been deleted"
     }
   },
   "email": {
@@ -501,6 +587,32 @@
     "testHint": "Built from the member's real data: an expense they can see, their latest card transactions or what is waiting on them. [Test] is in the subject. Sent regardless of what the member has chosen in their profile.",
     "testSend": "Send",
     "testSent": "Test email sent to {name}.",
-    "testFailed": "Could not send the test email"
+    "testFailed": "Could not send the test email",
+    "mailbox": {
+      "title": "Incoming mail",
+      "subtitle": "The mail account the Inbox reads supplier invoices from.",
+      "lastSync": "Last read {when}",
+      "neverSynced": "Not read yet",
+      "connected": "Connected to {address}.",
+      "connectedBy": "Connected to {address} by {name} {when}.",
+      "notConnected": "Not connected. No mail is read until someone logs in as {address}.",
+      "connect": "Connect inbox",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "disconnectConfirm": "No mail to {address} is read while the inbox is disconnected. When it is connected again, what arrived in the meantime is read, up to a week back.",
+      "disconnected": "The inbox is disconnected.",
+      "result": {
+        "connected": "The inbox is connected. New mail shows up in the Inbox within a few seconds.",
+        "denied": "The login was cancelled. The inbox is not connected.",
+        "invalidState": "The login expired or was started somewhere else. Try again.",
+        "forbidden": "You are not allowed to connect the inbox.",
+        "unconfigured": "Gmail is not configured on the server.",
+        "wrongMailbox": "You logged in with the wrong account. Log in as the inbox address.",
+        "watchFailed": "The inbox is connected, but Gmail could not start sending notifications. Check that gmail-api-push@system.gserviceaccount.com may publish to the Pub/Sub topic.",
+        "failed": "The inbox could not be connected. Try again."
+      },
+      "error": "The last read failed: {error}",
+      "unconfigured": "Gmail is not configured on the server (the GMAIL_ variables are not set, see docs/gmail-inbound.md). No mail is read."
+    }
   }
 }

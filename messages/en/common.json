@@ -3,6 +3,11 @@
   "theme": "Theme",
   "language": "Language",
   "signOut": "Sign out",
+  "leaveGuard": {
+    "title": "Leave without saving?",
+    "message": "What you have changed here is not saved.",
+    "leave": "Leave page"
+  },
   "status": {
     "DRAFT": "Draft",
     "PENDING_APPROVAL": "Awaiting approval",
@@ -34,6 +39,8 @@
     "ORDINARIE": "Member",
     "STOCKARE": "Stockare",
     "UTHYRNINGSANSVARIG": "Rental manager",
+    "CAFE_STOCKARE": "Café stock keeper",
+    "STYRELSE": "Board member",
     "REVISOR": "Auditor"
   },
   "table": {
@@ -98,10 +105,16 @@
     "ATTEST_VIEW_hint": "See the approvals queue. What can actually be attested is decided per expense.",
     "BUDGET_VIEW": "Budget",
     "BUDGET_VIEW_hint": "See the budget pages.",
-    "STOCK_VIEW": "Stock",
-    "STOCK_VIEW_hint": "Read the stock overview and the log.",
-    "STOCK_MANAGE": "Stock management",
-    "STOCK_MANAGE_hint": "Book stock movements and run an occasion, from takeout to stocktake.",
+    "ALCOHOL_STOCK_VIEW": "Alcohol stock",
+    "ALCOHOL_STOCK_VIEW_hint": "Read the alcohol stock's overview and log.",
+    "ALCOHOL_STOCK_MANAGE": "Keep the alcohol stock",
+    "ALCOHOL_STOCK_MANAGE_hint": "Book stock movements and run an occasion, from takeout to stocktake.",
+    "CAFE_STOCK_VIEW": "Café stock",
+    "CAFE_STOCK_VIEW_hint": "Read the café stock's overview and log.",
+    "CAFE_STOCK_MANAGE": "Keep the café stock",
+    "CAFE_STOCK_MANAGE_hint": "Look after products, deliveries and stocktakes in the café stock.",
+    "BOARD_TAB": "Board tab",
+    "BOARD_TAB_hint": "Log your own withdrawals from the café stock as a board member, and see your own tab.",
     "BUDGET_COMMENT": "Budget comments",
     "BUDGET_COMMENT_hint": "Comment on a budget account.",
     "BUDGET_LOCK": "Lock budget",
@@ -161,6 +174,9 @@
     "debit": "Debit",
     "credit": "Credit",
     "debitShort": "Dr",
-    "creditShort": "Cr"
+    "creditShort": "Cr",
+    "inFortnox": "In Fortnox as <n>{number}</n>",
+    "sentOn": "{date}",
+    "sentOnBy": "{date} by {name}"
   }
 }

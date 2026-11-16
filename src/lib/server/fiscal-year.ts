@@ -24,6 +24,12 @@ export const getFiscalYear = cache(async (): Promise<FiscalYear | null> => {
   );
 });
 
+/** The bounds of the financial year a day falls in, or null where Fortnox has none for it (before the first sync). */
+export async function fiscalYearAround(isoDate: string): Promise<During | null> {
+  const year = (await getFiscalYears()).find((y) => y.fromDate <= isoDate && isoDate <= y.toDate);
+  return year ? fiscalYearWhere(year) : null;
+}
+
 /** A year's bounds as a Prisma date filter (`during`), for a `@db.Date` column or a timestamp. */
 export type During = { gte: Date; lte: Date };
 
