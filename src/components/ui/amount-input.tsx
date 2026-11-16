@@ -1,10 +1,10 @@
 "use client";
 
-// Accepts a full stop (a device-locale decimal pad) and shows a comma on blur. No sign key: a phone's number pad has no minus.
+// Accepts a full stop (a device-locale decimal pad). On blur the value is written out in full, "700" → "700,00". No sign key: a phone's number pad has no minus.
 // Not type="number": it drops a lone "-", refuses "1 234,50" and blanks half-typed input.
 import { useState } from "react";
 
-import { commaForm, groupForm, isAmountInput } from "@/lib/domain/money";
+import { fullAmountForm, groupForm, isAmountInput } from "@/lib/domain/money";
 import { Input, SuffixedInput, type ControlSize } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
 
@@ -24,7 +24,7 @@ export function amountFieldProps({
     },
     // On blur, not per keystroke: rewriting the separator moves the caret.
     onBlur: () => {
-      const shown = commaForm(value);
+      const shown = fullAmountForm(value);
       if (shown !== value) onChange(shown);
     },
   };

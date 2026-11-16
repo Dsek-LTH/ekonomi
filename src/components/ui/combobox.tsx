@@ -145,6 +145,10 @@ function ComboboxBase({
 
   const offer =
     Boolean(onCreate) && q.length > 0 && !options.some((o) => o.label.trim().toLowerCase() === q);
+  // The create row is the last stop for the keyboard, after the matches, so Enter on a partial
+  // match still picks it and Tab or the arrows reach "Skapa" past them.
+  const createIndex = offer ? filtered.length : -1;
+  const stops = filtered.length + (offer ? 1 : 0);
 
   const triggerLabel =
     picked.length === 0
@@ -189,6 +193,13 @@ function ComboboxBase({
       close();
       triggerRef.current?.focus();
     }
+  }
+
+  function create() {
+    const text = query.trim();
+    close();
+    triggerRef.current?.focus();
+    onCreate?.(text);
   }
 
   // Escape closes only the menu: a dialog listening on the document must not close too (lib/ui/escape.ts).
@@ -244,20 +255,20 @@ function ComboboxBase({
   function onSearchKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => Math.min(a + 1, filtered.length - 1));
+      setActive((a) => Math.min(a + 1, stops - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const o = filtered[active];
-      if (o) commit(o.value);
+      if (active === createIndex) create();
+      else if (filtered[active]) commit(filtered[active].value);
     } else if (e.key === "Tab") {
       // Tab walks the options like the arrows (wrapping), moving the same highlight so no second focus ring appears.
       e.preventDefault();
-      if (filtered.length === 0) return;
+      if (stops === 0) return;
       const step = e.shiftKey ? -1 : 1;
-      setActive((a) => (a + step + filtered.length) % filtered.length);
+      setActive((a) => (a + step + stops) % stops);
     }
   }
 
@@ -329,7 +340,7 @@ function ComboboxBase({
           role="combobox"
           aria-expanded
           aria-controls={listId}
-          aria-activedescendant={filtered[active] ? optionId(active) : undefined}
+          aria-activedescendant={active < stops ? optionId(active) : undefined}
           aria-autocomplete="list"
           data-combobox-search=""
           aria-label={ariaLabel ?? searchPlaceholder ?? t("searchPlaceholder")}
@@ -394,7 +405,7 @@ function ComboboxBase({
                   role="combobox"
                   aria-expanded
                   aria-controls={listId}
-                  aria-activedescendant={filtered[active] ? optionId(active) : undefined}
+                  aria-activedescendant={active < stops ? optionId(active) : undefined}
                   aria-autocomplete="list"
                   value={query}
                   onChange={(e) => {
@@ -417,7 +428,7 @@ function ComboboxBase({
               id={listId}
               role="listbox"
               aria-multiselectable={multiple || undefined}
-              aria-activedescendant={!searchable && filtered[active] ? optionId(active) : undefined}
+              aria-activedescendant={!searchable && active < stops ? optionId(active) : undefined}
               tabIndex={-1}
               onKeyDown={searchable ? undefined : onSearchKey}
               className={cn(
@@ -448,24 +459,6 @@ function ComboboxBase({
               )}
               {filtered.length === 0 && !offer && (
                 <li className="px-3 py-2 text-sm text-muted">{emptyText ?? t("empty")}</li>
-              )}
-              {offer && (
-                <li>
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => {
-                      close();
-                      onCreate?.(query.trim());
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-control px-3 text-left font-medium text-accent hover:bg-hover",
-                      row,
-                    )}
-                  >
-                    {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
-                  </button>
-                </li>
               )}
               {filtered.map((o, i) => (
                 <Fragment key={o.value}>
@@ -500,6 +493,27 @@ function ComboboxBase({
                   </li>
                 </Fragment>
               ))}
+              {offer && (
+                <li>
+                  <button
+                    type="button"
+                    id={optionId(createIndex)}
+                    data-index={createIndex}
+                    tabIndex={-1}
+                    role="option"
+                    aria-selected={false}
+                    onMouseEnter={() => setActive(createIndex)}
+                    onClick={create}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-control px-3 text-left font-medium text-accent transition-colors",
+                      row,
+                      active === createIndex && "bg-hover",
+                    )}
+                  >
+                    {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
+                  </button>
+                </li>
+              )}
             </ul>
           </div>,
           document.body,

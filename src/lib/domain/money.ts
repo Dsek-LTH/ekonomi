@@ -22,6 +22,10 @@ export const commaForm = (input: string): string => input.replace(/\./g, ",");
 export const sekToInput = (sek: number | null): string =>
   sek == null ? "" : commaForm(oreToSEK(sekToOre(sek)).toFixed(2));
 
+/** An amount field as it is left: always two decimals with a comma, "700" → "700,00", "1234.5" → "1234,50". Blank stays blank. */
+export const fullAmountForm = (input: string): string =>
+  /\d/.test(input) ? sekToInput(parseSEK(input)) : input;
+
 export function isAmountInput(input: string): boolean {
   return AMOUNT_INPUT.test(input);
 }
@@ -57,8 +61,9 @@ export function parseSEK(input: string): number {
 export function groupForm(input: string): string {
   if (!/\d/.test(input)) return input;
   const n = parseSEK(input);
+  // Always öre, ",00" included, so the idle field matches the focused one.
   return new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n);
 }

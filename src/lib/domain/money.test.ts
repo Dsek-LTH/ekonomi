@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   commaForm,
+  fullAmountForm,
   groupForm,
   isAmountInput,
   isSumInput,
@@ -127,7 +128,7 @@ describe("groupForm", () => {
   it("groups a figure the way it is read", () => {
     // A non-breaking space is what Swedish uses and must be taken back when pasted.
     expect(groupForm("1234.5")).toBe("1\u00a0234,50");
-    expect(groupForm("700")).toBe("700");
+    expect(groupForm("700")).toBe("700,00");
     expect(isAmountInput(groupForm("1234.5"))).toBe(true);
   });
 
@@ -135,6 +136,20 @@ describe("groupForm", () => {
     // Including between the separator and the öre, where formatting would rewrite what is being typed.
     expect(groupForm("")).toBe("");
     expect(groupForm(" ")).toBe(" ");
+  });
+});
+
+describe("fullAmountForm", () => {
+  it("writes the amount out with two decimals and a comma", () => {
+    expect(fullAmountForm("700")).toBe("700,00");
+    expect(fullAmountForm("1234.5")).toBe("1234,50");
+    expect(fullAmountForm("1 234,5")).toBe("1234,50");
+    expect(fullAmountForm("12,")).toBe("12,00");
+  });
+
+  it("leaves a blank field blank", () => {
+    expect(fullAmountForm("")).toBe("");
+    expect(fullAmountForm(" ")).toBe(" ");
   });
 });
 

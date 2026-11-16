@@ -1,9 +1,64 @@
 "use client";
 
-// The bar pinned to the foot of a long form or sheet: totals, what is missing, and the way out.
+// The bars pinned to the foot of a long form or sheet: totals, what is missing, and the way out.
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/ui/utils";
+
+/**
+ * The shell every pinned form bar shares. From md it sticks to the foot of the window while the page runs on under
+ * it: the page fades out above it and the bar turns to frosted glass. Resting at the end of a page that fits, it is a
+ * plain card. On a phone it scrolls with the form (`phone="flow"`, pinned it covered the field being typed in), or is
+ * docked to the bottom edge within a thumb's reach (`phone="dock"`, for a page that is mostly tapping).
+ */
+export function PinnedBar({
+  phone = "flow",
+  className,
+  children,
+}: {
+  phone?: "flow" | "dock";
+  /** The layout of what is inside the bar. */
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const { stuck: pinned, sentinel } = useStuck();
+  const wide = useWide();
+  const stuck = pinned && wide;
+  const dock = phone === "dock";
+  return (
+    // While `stuck` only: the negative bottom margin hands back the main column's bottom padding (shell/app-shell.tsx).
+    <>
+      <div
+        className={cn(
+          "pointer-events-none z-20 -mx-2 mt-4 px-2 md:sticky md:bottom-0 md:-mb-17 md:pb-3",
+          dock && "max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:m-0 max-md:p-0",
+          stuck && "bg-gradient-to-t from-canvas from-60% to-transparent",
+        )}
+      >
+        {stuck && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-canvas to-transparent"
+          />
+        )}
+        <div
+          className={cn(
+            "pointer-events-auto rounded-panel border border-border px-inset py-3 transition-shadow",
+            stuck
+              ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
+              : "bg-background shadow-[var(--shadow-card)]",
+            dock &&
+              "max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-4 max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-md:shadow-[var(--shadow-dock)]",
+            className,
+          )}
+        >
+          {children}
+        </div>
+      </div>
+      <div ref={sentinel} aria-hidden className="h-px" />
+    </>
+  );
+}
 
 /** Pinned to the foot of the form: what this utlägg comes to, what is missing before it can be sent, and the two ways out. */
 export function ActionBar({
@@ -31,68 +86,59 @@ export function ActionBar({
   /** Left out where the utlägg can no longer be sent from here. */
   submit?: { label: string; onClick: () => void; disabled: boolean; loading: boolean };
 }) {
-  const { stuck: pinned, sentinel } = useStuck();
-  // Pinned only from md. On a phone it scrolls with the form (pinned, it covered the field being typed in).
-  const wide = useWide();
-  const stuck = pinned && wide;
   return (
-    // While `stuck` only: the form fades out above the bar, the bar blurs what is behind it, and the negative
-    // bottom margin hands back the main column's bottom padding (shell/app-shell.tsx).
-    <>
-      <div
-        className={cn(
-          "pointer-events-none z-20 -mx-2 mt-4 px-2 md:sticky md:bottom-0 md:-mb-17 md:pb-3",
-          stuck && "bg-gradient-to-t from-canvas from-60% to-transparent",
+    // A column on a phone, the buttons sharing a row under the text.
+    <PinnedBar className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-x-4">
+      <div className="min-w-0 text-sm md:flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{summary}</div>
+        {missing.length > 0 ? (
+          <p className="mt-0.5 text-xs text-warning">{`${missingLabel}: ${missing.join(", ")}`}</p>
+        ) : (
+          note && <div className="mt-0.5">{note}</div>
         )}
-      >
-        {stuck && (
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-canvas to-transparent"
-          />
-        )}
-        <div
-          className={cn(
-            // A column on a phone, the buttons sharing a row under the text.
-            "pointer-events-auto flex flex-col gap-3 rounded-panel border border-border px-inset py-3 transition-shadow md:flex-row md:flex-wrap md:items-center md:gap-x-4",
-            stuck
-              ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
-              : "bg-background shadow-[var(--shadow-card)]",
-          )}
-        >
-          <div className="min-w-0 text-sm md:flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{summary}</div>
-            {missing.length > 0 ? (
-              <p className="mt-0.5 text-xs text-warning">{`${missingLabel}: ${missing.join(", ")}`}</p>
-            ) : (
-              note && <div className="mt-0.5">{note}</div>
-            )}
-          </div>
-          <div className="flex gap-2.5 md:shrink-0">
-            <Button
-              variant="secondary"
-              onClick={onSave}
-              loading={saving}
-              disabled={saveDisabled}
-              className="flex-1 md:flex-none"
-            >
-              {saveLabel}
-            </Button>
-            {submit && (
-              <Button
-                onClick={submit.onClick}
-                loading={submit.loading}
-                disabled={submit.disabled}
-                className="flex-1 md:flex-none"
-              >
-                {submit.label}
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
-      <div ref={sentinel} aria-hidden className="h-px" />
-    </>
+      <div className="flex gap-2.5 md:shrink-0">
+        <Button
+          variant="secondary"
+          onClick={onSave}
+          loading={saving}
+          disabled={saveDisabled}
+          className="flex-1 md:flex-none"
+        >
+          {saveLabel}
+        </Button>
+        {submit && (
+          <Button
+            onClick={submit.onClick}
+            loading={submit.loading}
+            disabled={submit.disabled}
+            className="flex-1 md:flex-none"
+          >
+            {submit.label}
+          </Button>
+        )}
+      </div>
+    </PinnedBar>
+  );
+}
+
+/** The last row of a card, stuck to the foot of the window while the card runs on under it. */
+export function CardFooterBar({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 

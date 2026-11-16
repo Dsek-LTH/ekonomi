@@ -13,8 +13,15 @@ import {
 } from "./data-table";
 import type { ClientControls } from "@/lib/data/use-list-query";
 
-/** A tab and the rows it selects. An option without a predicate (e.g. "Alla") matches everything. */
-export type ClientTabOption<T> = TabOption & { predicate?: (row: T) => boolean };
+/**
+ * A tab and the rows it selects. An option without a predicate (e.g. "Alla") matches everything.
+ * `waitingOn` makes the table count the tab's rows that wait on the reader and show them as a pink
+ * badge: `true` for every row in the tab, or a test for which of them do.
+ */
+export type ClientTabOption<T> = TabOption & {
+  predicate?: (row: T) => boolean;
+  waitingOn?: true | ((row: T) => boolean);
+};
 export type ClientTabFilter<T> = ClientTabOption<T>[];
 
 /** A dropdown filter whose options each select rows, OR-ed across the picked. */
@@ -141,9 +148,17 @@ export function ClientDataTable<T>({
     [rows, cols, tabs, filter, controls.tab, query, dateFrom, dateTo, picks, sortKey, sortDir],
   );
 
+  // Counted over every row, not the searched or filtered ones, so the badge says what is waiting.
   const plainTabs: TabFilter | undefined = useMemo(
-    () => tabs?.map(({ value, label, badge, waiting }) => ({ value, label, badge, waiting })),
-    [tabs],
+    () =>
+      tabs?.map(({ value, label, badge, waiting, predicate, waitingOn }) => {
+        if (!waitingOn) return { value, label, badge, waiting };
+        const n = rows.filter(
+          (r) => (!predicate || predicate(r)) && (waitingOn === true || waitingOn(r)),
+        ).length;
+        return { value, label, badge: n || undefined, waiting: true };
+      }),
+    [tabs, rows],
   );
   const plainFilter: SelectFilter[] = useMemo(
     () =>

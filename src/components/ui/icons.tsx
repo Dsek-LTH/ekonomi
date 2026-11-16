@@ -77,6 +77,12 @@ export const IconPlus = (p: P) => (
   </Svg>
 );
 
+export const IconMinus = (p: P) => (
+  <Svg {...p}>
+    <path d="M5 12h14" />
+  </Svg>
+);
+
 export const IconCheck = (p: P) => (
   <Svg {...p}>
     <path d="M20 6 9 17l-5-5" />

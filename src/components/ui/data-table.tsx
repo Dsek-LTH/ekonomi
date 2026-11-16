@@ -90,7 +90,12 @@ export interface Column<T> {
   mobileOrder?: number;
   /** What the column shows on a phone where that differs from `cell`. */
   mobileCell?: (row: T) => React.ReactNode;
+  /** The table's first breakpoint showing the column. Below it the column is dropped, so a narrow laptop gets the columns that matter instead of a side scroll. Unset shows it at every width the table renders. */
+  from?: "lg" | "xl";
 }
+
+// Whole class names, so Tailwind sees them.
+const FROM_CLS = { lg: "hidden lg:table-cell", xl: "hidden xl:table-cell" } as const;
 
 //   title    - what the row is. One column.
 //   trailing - the figure opposite it, usually the amount. One column.
@@ -219,14 +224,26 @@ export function DataTable<T>({
               key={c.key}
               sortKey={c.key}
               controls={controls}
-              className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}
+              className={cn(
+                CELL_X,
+                "py-2 font-medium",
+                alignCls(c.align),
+                c.from && FROM_CLS[c.from],
+                c.className,
+              )}
             >
               {c.header}
             </SortableHeader>
           ) : (
             <th
               key={c.key}
-              className={cn(CELL_X, "py-2 font-medium", alignCls(c.align), c.className)}
+              className={cn(
+                CELL_X,
+                "py-2 font-medium",
+                alignCls(c.align),
+                c.from && FROM_CLS[c.from],
+                c.className,
+              )}
             >
               {c.header}
             </th>
@@ -439,7 +456,11 @@ export function DataTable<T>({
                       {t("expand")}
                     </button>
                   )}
-                  {open && <div className="px-inset pb-3">{under}</div>}
+                  {open && (
+                    <div className="row-expand">
+                      <div className="px-inset pb-3">{under}</div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -468,7 +489,13 @@ export function DataTable<T>({
                         {cols.map((c) => (
                           <td
                             key={c.key}
-                            className={cn(CELL_X, "py-2", alignCls(c.align), c.className)}
+                            className={cn(
+                              CELL_X,
+                              "py-2",
+                              alignCls(c.align),
+                              c.from && FROM_CLS[c.from],
+                              c.className,
+                            )}
                           >
                             {/* The link goes in the title cell only; before: stretches its hit area over the row. A cell with its own control needs relative z-10 to climb over that overlay (see budget-list-client.tsx). */}
                             {href && c === slots.title ? (
@@ -506,7 +533,9 @@ export function DataTable<T>({
                       {open && (
                         <tr className="bg-surface">
                           <td colSpan={cols.length} className={cn(CELL_X, "py-0")}>
-                            {under}
+                            <div className="row-expand">
+                              <div>{under}</div>
+                            </div>
                           </td>
                         </tr>
                       )}

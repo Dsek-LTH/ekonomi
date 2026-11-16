@@ -132,12 +132,15 @@ export function Field({
   hint,
   error,
   requirement,
+  className,
   children,
 }: {
   label: string;
   hint?: string;
   error?: string;
   requirement?: Requirement;
+  /** Placement in a grid (a column span), not looks. */
+  className?: string;
   children: React.ReactNode;
 }) {
   const id = useId();
@@ -146,7 +149,7 @@ export function Field({
   return (
     // The label wraps the control (no htmlFor: a Field takes arbitrary children). The provider is outside the label, or the label stops looking like one to the tree.
     <FieldCtx.Provider value={{ id, describedBy, invalid: Boolean(error) }}>
-      <label className="block">
+      <label className={cn("block min-w-0", className)}>
         <FieldContent
           label={label}
           hint={hint}
@@ -167,16 +170,19 @@ export function FieldGroup({
   hint,
   action,
   requirement,
+  className,
   children,
 }: {
   label: string;
   hint?: string;
   action?: React.ReactNode;
   requirement?: Requirement;
+  /** Placement in a grid (a column span), not looks. */
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div role="group" aria-label={label} className="block">
+    <div role="group" aria-label={label} className={cn("block min-w-0", className)}>
       <FieldContent label={label} hint={hint} action={action} requirement={requirement}>
         {children}
       </FieldContent>

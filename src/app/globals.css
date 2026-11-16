@@ -27,16 +27,17 @@
  * never matched on an iPhone. */
 @custom-variant typing (:root[data-typing] &);
 
-/* The phone's app bar (app-shell.tsx): 56px for its row, and the status bar's
- * strip above that when the app is installed to a home screen and the page
- * starts under the clock. In a browser tab the inset is nought. One value for
- * the bar and for everything that sticks under it, so the two cannot drift
- * apart the way a `top-14` beside a taller bar would. */
+/* The phone's app bar (app-shell.tsx): the desktop header's 48px row and its
+ * 1px border, so the bar keeps one height across the md breakpoint, plus the
+ * status bar's strip above that when the app is installed to a home screen and
+ * the page starts under the clock. In a browser tab the inset is nought. One
+ * value for the bar and for everything that sticks under it, so the two cannot
+ * drift apart the way a `top-14` beside a taller bar would. */
 @utility h-app-bar {
-  height: calc(3.5rem + env(safe-area-inset-top));
+  height: calc(3rem + 1px + env(safe-area-inset-top));
 }
 @utility top-app-bar {
-  top: calc(3.5rem + env(safe-area-inset-top));
+  top: calc(3rem + 1px + env(safe-area-inset-top));
 }
 
 @theme {
@@ -312,6 +313,8 @@
 
   --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
   --shadow-pop: 0 4px 12px rgb(29 29 31 / 0.08), 0 12px 32px rgb(29 29 31 / 0.12);
+  /* A bar docked to the bottom of the window: the shadow is cast upward, over the content it covers. */
+  --shadow-dock: 0 -4px 12px rgb(29 29 31 / 0.08), 0 -12px 32px rgb(29 29 31 / 0.1);
 
   /* For something raised inside a track rather than above the page: the
         selected pill of a switcher, sitting in a 4px gutter. The other two lean
@@ -328,7 +331,13 @@
   /* How long the receipt panel takes to fold away or come back. Read by
        both halves of the motion and by the timer that unmounts the panel
        after it (RECEIPT_FOLD_MS), so the two cannot drift apart. */
-  --receipt-fold-ms: 240ms;
+  --receipt-fold-ms: 320ms;
+  /* The fold's own curve. The quint above covers most of the distance in
+       the first few frames, which is fine for a slide but not for a move that
+       reflows the page beside it every frame: the reflow drops exactly those
+       frames, and the panel appears to teleport and then crawl. This one starts
+       gentler and spreads the distance more evenly. */
+  --ease-fold: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /*
@@ -453,6 +462,7 @@
   --shadow-pill: 0 0 3px rgb(0 0 0 / 0.4), 0 0 10px rgb(0 0 0 / 0.25);
 
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45), 0 20px 48px rgb(0 0 0 / 0.35);
+  --shadow-dock: 0 -6px 16px rgb(0 0 0 / 0.35), 0 -16px 40px rgb(0 0 0 / 0.25);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -564,6 +574,7 @@
     --shadow-pill: 0 0 3px rgb(0 0 0 / 0.4), 0 0 10px rgb(0 0 0 / 0.25);
 
     --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45), 0 20px 48px rgb(0 0 0 / 0.35);
+    --shadow-dock: 0 -6px 16px rgb(0 0 0 / 0.35), 0 -16px 40px rgb(0 0 0 / 0.25);
   }
 }
 
@@ -889,6 +900,49 @@ summary {
   }
 }
 
+/* The theme switch (lib/ui/theme-transition.ts). The browser photographs the
+   page in the old theme and holds the picture over the live page, which is
+   already in the new theme. The script cuts the picture away from the left
+   edge. These rules only apply while a theme switch is running, so any other
+   view transition keeps its defaults.
+
+   The old picture goes on top, where it is normally underneath, and both are
+   drawn plainly: the browser's own cross-fade adds the two pictures together,
+   which would brighten the part of the page not yet wiped.
+
+   Colour transitions are held off for the same span. Without that, every
+   button and row with `transition-colors` would fade from its old colours in
+   the holes, and the new theme would arrive muddy. The icon is let through:
+   its turn is the other half of the motion. */
+
+/* The transition lays its pictures over the whole page, and they would take
+   every click while it plays. A click on the toggle then lands on nothing, and
+   the account menu reads it as a click outside and closes. Let clicks through
+   to the live page underneath. */
+.theme-switching::view-transition {
+  pointer-events: none;
+}
+.theme-switching::view-transition-group(root),
+.theme-switching::view-transition-old(root),
+.theme-switching::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.theme-switching::view-transition-old(root) {
+  z-index: 1;
+}
+.theme-switching *:not([data-theme-icon]) {
+  transition: none !important;
+}
+
+/* The sun turns away as the moon turns in, and back. */
+.theme-icon {
+  transition:
+    rotate 450ms var(--ease-out-quint),
+    scale 450ms var(--ease-out-quint),
+    opacity 200ms ease-out;
+}
+
 /* Nothing in an app this dense should move for someone who asked it not to.
    State changes still happen, they just arrive rather than travel. */
 @media (prefers-reduced-motion: reduce) {
@@ -975,7 +1029,22 @@ summary {
    ending on the resting state, so the panel simply arrives, which is what it
    did before any of this existed. */
 .receipt-panel {
-  transition: translate var(--receipt-fold-ms) var(--ease-out-quint);
+  transition: translate var(--receipt-fold-ms) var(--ease-fold);
+}
+
+/* The room the panel takes from the page, from md. The panel itself lies over
+   it, so the page column eases to its new width in step with the slide instead
+   of jumping the moment the panel mounts or leaves. The class is off while the
+   panel is being dragged wider, for the same reason the panel's width never
+   eases: it would lag the pointer. */
+.receipt-spacer {
+  transition: width var(--receipt-fold-ms) var(--ease-fold);
+}
+
+/* The page's right padding widens to clear the tab once the panel folds away.
+   It moves with the fold, or it would land as a jump at the start of it. */
+.receipt-main {
+  transition: padding-right var(--receipt-fold-ms) var(--ease-fold);
 }
 
 /* Promised while it moves, and taken back when it stops.
@@ -1275,4 +1344,29 @@ summary {
   td {
     break-inside: avoid;
   }
+}
+
+/* A table row opening into its lines (DataTable's `expansion`): the height
+   grows from nothing while the lines fade in. Grid rows rather than height,
+   since the height is not known. Only the opening moves, closing is at once. */
+@keyframes row-expand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+.row-expand {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: row-expand 180ms ease-out;
+}
+
+.row-expand > * {
+  min-height: 0;
+  overflow: hidden;
 }
