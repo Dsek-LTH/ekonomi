@@ -52,5 +52,10 @@ export async function typeset(template: string, data: unknown, what: string): Pr
     // Typst diagnostics go to the server log; the caller gets a sentence.
     console.error(`[typst] ${what} failed`, e);
     throw new TypstError(`${what} could not be typeset`);
+  } finally {
+    // Typst memoises every compile in a process-wide cache that is never trimmed on its own. With one
+    // compiler living as long as the server, each document's results would stay in memory for good. An entry
+    // not hit for ten renders is dropped (the value Typst suggests for tools that are not watching files).
+    compiler?.evictCache(10);
   }
 }
