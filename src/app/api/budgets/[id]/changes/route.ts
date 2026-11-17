@@ -47,10 +47,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // Resolve entries first; nothing is written until all of them check out.
   const resolved: ResolvedEntry[] = [];
   // Keyed on sheet and code so duplicate new accounts hit the duplicate rule.
-  const toCreate = new Map<
-    string,
-    { budgetCostCenterId: string; accountCode: string }
-  >();
+  const toCreate = new Map<string, { budgetCostCenterId: string; accountCode: string }>();
 
   for (const raw of rawEntries) {
     const sheet = sheets.get(raw.costCenterId);

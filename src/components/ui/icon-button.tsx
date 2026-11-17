@@ -45,7 +45,7 @@ export function IconButton({
       // Firefox restores a button's disabled state before hydration, leaving a stale one. Off lets the server's answer stand (as in Button).
       {...{ autoComplete: "off" }}
       className={cn(
-        "shrink-0 text-muted transition disabled:pointer-events-none",
+        "inline-flex shrink-0 items-center justify-center text-muted transition disabled:pointer-events-none",
         // Busy is not unavailable: no 40% fade on a spinner.
         loading ? "opacity-100" : "disabled:opacity-40",
         SIZES[size],

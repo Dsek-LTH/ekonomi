@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { carriedSection } from "./routes";
 
-const ROUTES = ["/dashboard", "/expenses", "/approvals", "/bookkeeping", "/stock", "/stock/events", "/invoices", "/invoices/inbox"];
+const ROUTES = [
+  "/dashboard",
+  "/expenses",
+  "/approvals",
+  "/bookkeeping",
+  "/stock",
+  "/stock/events",
+  "/invoices",
+  "/invoices/inbox",
+];
 
 describe("carriedSection", () => {
   it("lights a nav route as itself, whatever came before", () => {
@@ -15,7 +24,9 @@ describe("carriedSection", () => {
   });
 
   it("drops a subsection once the page leaves it", () => {
-    expect(carriedSection("/invoices/inbox/abc", "/invoices/inbox", ROUTES)).toBe("/invoices/inbox");
+    expect(carriedSection("/invoices/inbox/abc", "/invoices/inbox", ROUTES)).toBe(
+      "/invoices/inbox",
+    );
     expect(carriedSection("/invoices/abc", "/invoices/inbox", ROUTES)).toBe("/invoices");
     expect(carriedSection("/invoices/abc/book", "/invoices/inbox", ROUTES)).toBe("/invoices");
   });
