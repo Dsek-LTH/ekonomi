@@ -99,6 +99,8 @@
     "ADMIN_hint": "Attestera och redigera vems utlägg som helst.",
     "SETTINGS": "Inställningar",
     "SETTINGS_hint": "Nå Inställningar, den här sidan inräknad.",
+    "GRANT_ACCESS": "Ge behörigheter",
+    "GRANT_ACCESS_hint": "Ge en person en roll eller en behörighet, tills vidare eller för en period, och ta bort den igen. Även till sig själv, så den är lika mycket värd som alla andra tillsammans.",
     "BOOKKEEPING": "Bokföring",
     "BOOKKEEPING_hint": "Se alla utlägg och kontera verifikaten. Skicka tillbaka det som attesterats fel.",
     "ATTEST_VIEW": "Attestvyn",
@@ -178,5 +180,11 @@
     "inFortnox": "I Fortnox som <n>{number}</n>",
     "sentOn": "{date}",
     "sentOnBy": "{date} av {name}"
+  },
+  "settingsForm": {
+    "save": "Spara",
+    "reset": "Ångra ändringar",
+    "unsaved": "Osparade ändringar",
+    "saved": "Sparat."
   }
 }

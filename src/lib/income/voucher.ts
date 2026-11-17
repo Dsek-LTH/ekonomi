@@ -14,14 +14,13 @@ export function incomeVoucherDescription(source: IncomeSource): string {
 }
 
 /**
- * The Fortnox verifikationsserie for a day's takings, falling back to the connection's series.
+ * The Fortnox verifikationsserie for a day's takings, or null when none is chosen (there is no shared default).
  * Must be the one source for both the duplicate check and the export, or days get written twice.
  */
 export function incomeVoucherSeries(
   settings: { incomeVoucherSeries: string | null } | null,
-  connectionSeries: string | null,
 ): string | null {
-  return settings?.incomeVoucherSeries?.trim() || connectionSeries;
+  return settings?.incomeVoucherSeries?.trim() || null;
 }
 
 /**

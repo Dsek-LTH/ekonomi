@@ -64,8 +64,8 @@ model Stock {
   boardSalesCostCenter   CostCenter? @relation("StockBoardSalesCostCenter", fields: [boardSalesCostCenterId], references: [id], onDelete: SetNull)
   boardSalesCostCenterId String?
 
-  /// The verifikationsserie the daily vouchers land in. Null means
-  /// FortnoxConnection.voucherSeries.
+  /// The verifikationsserie the daily vouchers land in. Chosen per stock, with
+  /// no shared default: null means nobody chose one, and nothing is posted.
   voucherSeries String?
 
   /// The first day that produces a voucher. Null means posting is off.

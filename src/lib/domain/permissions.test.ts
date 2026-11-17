@@ -59,6 +59,7 @@ describe("the defaults the section starts from", () => {
     const acting: Capability[] = [
       "ADMIN",
       "SETTINGS",
+      "GRANT_ACCESS",
       "BOOKKEEPING",
       "FORTNOX_LOGIN",
       "EXPORT_UNDO",

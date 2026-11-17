@@ -209,17 +209,14 @@ describe("incomeVoucherKey", () => {
 });
 
 describe("incomeVoucherSeries", () => {
-  it("is the connection's series when income has no opinion", () => {
-    expect(incomeVoucherSeries(null, "A")).toBe("A");
-    expect(incomeVoucherSeries({ incomeVoucherSeries: null }, "A")).toBe("A");
-  });
-
-  it("is income's own once it has one", () => {
-    expect(incomeVoucherSeries({ incomeVoucherSeries: "I" }, "A")).toBe("I");
+  it("is income's own series, with nothing to fall back on", () => {
+    expect(incomeVoucherSeries({ incomeVoucherSeries: "I" })).toBe("I");
+    expect(incomeVoucherSeries(null)).toBeNull();
+    expect(incomeVoucherSeries({ incomeVoucherSeries: null })).toBeNull();
   });
 
   it("treats blank as unset rather than as a series called nothing", () => {
     // A row left as "" would otherwise export to a series Fortnox does not have.
-    expect(incomeVoucherSeries({ incomeVoucherSeries: "   " }, "A")).toBe("A");
+    expect(incomeVoucherSeries({ incomeVoucherSeries: "   " })).toBeNull();
   });
 });

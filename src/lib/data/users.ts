@@ -5,22 +5,32 @@ import { prisma } from "@/lib/server/db";
 import { initials } from "@/lib/ui/format";
 import { ASSIGNABLE_ROLES } from "@/lib/domain/permissions";
 import { roleCapabilities } from "@/lib/server/capabilities";
-import type { Capability, Role, User } from "@/lib/domain/types";
+import { combine, holdingWhere, inForce, personalGrantsOf } from "@/lib/server/access";
+import type { Role, User } from "@/lib/domain/types";
 
-// Initials and capabilities are derived, not stored. Capabilities come from one request-cached matrix query.
+// Initials, roles and capabilities are derived, not stored: the groups' roles and the personal grants in
+// force together (lib/server/access.ts), against one request-cached matrix query.
 async function toUsers(
   rows: { id: string; name: string; email: string; roles: Role[] }[],
 ): Promise<User[]> {
-  const matrix = await roleCapabilities();
+  const [matrix, granted] = await Promise.all([
+    roleCapabilities(),
+    personalGrantsOf(rows.map((u) => u.id)),
+  ]);
   return rows.map((u) => {
-    const caps = new Set<Capability>();
-    for (const role of u.roles) for (const cap of matrix.get(role) ?? []) caps.add(cap);
+    const own = granted.get(u.id);
+    const { roles, capabilities } = combine(
+      matrix,
+      u.roles,
+      own ?? { roles: [], capabilities: [] },
+    );
     return {
       id: u.id,
       name: u.name,
       email: u.email,
-      roles: u.roles,
-      capabilities: [...caps],
+      roles,
+      capabilities,
+      hasPersonalGrants: own !== undefined,
       initials: initials(u.name),
     };
   });
@@ -37,10 +47,10 @@ export async function getUsers(): Promise<User[]> {
   return toUsers(users);
 }
 
-// Only members holding something beyond the baseline ORDINARIE.
+// Only members holding something beyond the baseline ORDINARIE, through a group or a personal grant in force.
 export async function getRoleHolders(): Promise<User[]> {
   const users = await prisma.user.findMany({
-    where: { roles: { hasSome: [...ASSIGNABLE_ROLES] } },
+    where: { OR: [holdingWhere(ASSIGNABLE_ROLES), { accessGrants: { some: inForce() } }] },
     orderBy: [{ name: "asc" }, { id: "asc" }],
     select: userSelect,
   });

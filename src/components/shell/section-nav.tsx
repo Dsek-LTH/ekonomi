@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useGoBack } from "@/components/shell/route-history";
 import { IconChevronLeft } from "@/components/ui/icons";
-import { PageTitle } from "@/components/shell/settings-title";
+import { PageTitle, SettingsTitleSlot, TitleOrBar } from "@/components/shell/settings-title";
 import { usePhone } from "@/lib/ui/media";
 import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
@@ -80,14 +80,17 @@ export function PageHeader({
   back,
   right,
   aside,
+  menu,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   back?: string;
   right?: React.ReactNode;
   aside?: React.ReactNode;
+  menu?: React.ReactNode;
 }) {
   const { nav, slot, reportOwn } = useContext(Ctx);
+  const inSettings = useContext(SettingsTitleSlot) !== undefined;
   const phone = usePhone();
   const own = Boolean(nav) && !back;
   useLayoutEffect(() => {
@@ -101,6 +104,35 @@ export function PageHeader({
       <>
         {right && (phone ? <div className="mb-4">{right}</div> : slot && createPortal(right, slot))}
         {subtitle && <p className="-mt-3 mb-6 text-lg font-medium tracking-tight">{subtitle}</p>}
+      </>
+    );
+  }
+
+  // In the settings overlay the title, and a record's back arrow, stand in the overlay's own bar (docs/settings.md).
+  if (inSettings) {
+    return (
+      <>
+        <TitleOrBar
+          page={null}
+          bar={
+            <div className="flex min-w-0 items-center gap-1">
+              {back && <BackLink href={back} />}
+              <h1 className="min-w-0 truncate text-base font-semibold">{title}</h1>
+              {menu && <div className="shrink-0">{menu}</div>}
+            </div>
+          }
+        />
+        {(subtitle || aside || right) && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            {subtitle && <p className="min-w-0 truncate text-sm text-muted">{subtitle}</p>}
+            {(aside || right) && (
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {right}
+                {aside}
+              </div>
+            )}
+          </div>
+        )}
       </>
     );
   }
@@ -120,10 +152,11 @@ export function PageHeader({
             {subtitle}
           </p>
         )}
-        {(aside || end) && (
+        {(aside || end || menu) && (
           <div className="col-span-2 row-start-3 mt-3 flex min-w-0 items-center justify-end gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mt-0 md:flex-wrap">
             {end}
             {aside}
+            {menu}
           </div>
         )}
       </div>

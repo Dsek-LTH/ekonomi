@@ -48,5 +48,6 @@ export async function getBookkeepingSettings(): Promise<BookkeepingSettings> {
   return {
     bankAccount: row.bankAccount,
     memberDebtAccount: row.memberDebtAccount,
+    expenseVoucherSeries: row.expenseVoucherSeries,
   };
 }

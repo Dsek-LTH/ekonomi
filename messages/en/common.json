@@ -99,6 +99,8 @@
     "ADMIN_hint": "Attest and edit anybody's expense.",
     "SETTINGS": "Settings",
     "SETTINGS_hint": "Reach Settings, this page included.",
+    "GRANT_ACCESS": "Grant access",
+    "GRANT_ACCESS_hint": "Give a person a role or a permission, until removed or for a period, and take it away again. Also to yourself, so it is worth as much as all the others together.",
     "BOOKKEEPING": "Bookkeeping",
     "BOOKKEEPING_hint": "See every expense and book its voucher. Send back one that was approved by mistake.",
     "ATTEST_VIEW": "Approvals view",
@@ -178,5 +180,11 @@
     "inFortnox": "In Fortnox as <n>{number}</n>",
     "sentOn": "{date}",
     "sentOnBy": "{date} by {name}"
+  },
+  "settingsForm": {
+    "save": "Save",
+    "reset": "Undo changes",
+    "unsaved": "Unsaved changes",
+    "saved": "Saved."
   }
 }

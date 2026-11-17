@@ -16,12 +16,15 @@ const isKeyRef = (v: ErrorValue): v is { key: string } =>
 const API_ERROR_ACTIONS: Readonly<Record<string, { href: string; label: string }>> = {
   "expense.payoutRequired": { href: "/profile", label: "common.action.goToProfile" },
   // A setting nobody has chosen yet: link to where it is chosen.
-  "settings.bankAccountUnset": { href: "/admin/fortnox", label: "common.action.goToSettings" },
+  "settings.bankAccountUnset": { href: "/admin/expenses", label: "common.action.goToSettings" },
   "settings.memberDebtAccountUnset": {
-    href: "/admin/fortnox",
+    href: "/admin/expenses",
     label: "common.action.goToSettings",
   },
-  "settings.voucherSeriesUnset": { href: "/admin/fortnox", label: "common.action.goToSettings" },
+  // Each kind of export has its own series, chosen on its own page.
+  "settings.expenseSeriesUnset": { href: "/admin/expenses", label: "common.action.goToSettings" },
+  "settings.incomeSeriesUnset": { href: "/admin/income", label: "common.action.goToSettings" },
+  "settings.stockSeriesUnset": { href: "/admin/stock", label: "common.action.goToSettings" },
   "settings.zettleClearingAccountUnset": {
     href: "/admin/income",
     label: "common.action.goToSettings",

@@ -36,6 +36,16 @@ export const canReviewOwnBooking = (caps: readonly Capability[]) => has(caps, "R
 /** May reach Inställningar, so lib/server/capabilities.ts refuses to let the last holder go. */
 export const canAccessSettings = (caps: readonly Capability[]) => has(caps, "SETTINGS");
 
+/**
+ * May give a member a role or a capability of their own (AccessGrant), oneself included, and take it away.
+ * As much as holding everything, since it can grant anything.
+ */
+export const canGrantAccess = (caps: readonly Capability[]) => has(caps, "GRANT_ACCESS");
+
+/** May open Inställningar → Användare: to look people up, or to give them access. */
+export const canSeeUsers = (caps: readonly Capability[]) =>
+  canAccessSettings(caps) || canGrantAccess(caps);
+
 // Lagerbokföring is not bookkeeping, so these are their own capabilities.
 
 // Per stock: the people who keep the bar's stock are not the people who keep the café's.
@@ -211,11 +221,18 @@ export const ROLES: readonly Role[] = [
 // ORDINARIE is the baseline every member holds, so it says nothing about a person. These are the roles worth managing.
 export const ASSIGNABLE_ROLES: readonly Role[] = ROLES.filter((r) => r !== "ORDINARIE");
 
+// The roles a personal grant may give. Not RESULTATANSVARIG: it means nothing without result units, and those
+// come from groups only.
+export const GRANTABLE_ROLES: readonly Role[] = ASSIGNABLE_ROLES.filter(
+  (r) => r !== "RESULTATANSVARIG",
+);
+
 // Every capability, in the order the Inställningar → Roller grid draws them. A keyed object so the
 // compiler requires all of them.
 const CAPABILITY_ORDER = {
   ADMIN: 0,
   SETTINGS: 1,
+  GRANT_ACCESS: 1.5,
   BOOKKEEPING: 2,
   ATTEST_VIEW: 3,
   BUDGET_VIEW: 4,

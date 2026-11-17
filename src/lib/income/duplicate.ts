@@ -48,7 +48,7 @@ export async function fortnoxIncomeVouchers(
   if (!conn) return empty("notConnected", null);
   // Read the income series here: the wrong series would answer "nothing booked".
   const settings = await loadBookkeepingSettings();
-  const series = incomeVoucherSeries(settings, conn.voucherSeries);
+  const series = incomeVoucherSeries(settings);
   // No series chosen, so there is nowhere to look. Said, not taken as "clear".
   if (!series) return empty("seriesUnset", null);
 

@@ -172,14 +172,9 @@ export async function saveConnection(
 ) {
   const expiresAt = new Date(Date.now() + token.expires_in * 1000);
   return prisma.$transaction(async (tx) => {
-    // Keep a chosen series across a reconnect to the same company.
-    const previous = await tx.fortnoxConnection.findFirst({
-      select: { voucherSeries: true, orgNumber: true },
-    });
+    const previous = await tx.fortnoxConnection.findFirst({ select: { orgNumber: true } });
     const sameCompany =
       previous != null && previous.orgNumber != null && previous.orgNumber === opts.orgNumber;
-    const voucherSeries =
-      previous && previous.orgNumber === (opts.orgNumber ?? null) ? previous.voucherSeries : null;
     // A personal login was let in for the company the connection had (see the callback). Another company, or one
     // that cannot be told, ends them all: they could write into the wrong books. The same company keeps them, since
     // reconnecting for a new scope should not log everybody out.
@@ -187,7 +182,6 @@ export async function saveConnection(
     await tx.fortnoxConnection.deleteMany({});
     return tx.fortnoxConnection.create({
       data: {
-        voucherSeries,
         accessToken: encryptSecret(token.access_token),
         refreshToken: encryptSecret(token.refresh_token),
         expiresAt,

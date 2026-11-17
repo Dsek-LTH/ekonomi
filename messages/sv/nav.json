@@ -13,7 +13,6 @@
   "costCenters": "Kostnadsställen",
   "resultUnits": "Resultatenheter",
   "cards": "Sektionskort",
-  "mileageRates": "Milersättning",
   "stockSettings": "Lager",
   "users": "Användare",
   "faq": "Frågor & svar",
@@ -63,5 +62,6 @@
   "boardHistory": "Mina uttag",
   "boardInvoices": "Fakturering",
   "boardPrices": "Priser",
-  "stockBookkeeping": "Bokföring"
+  "stockBookkeeping": "Bokföring",
+  "expenseSettings": "Bokföring & milersättning"
 }

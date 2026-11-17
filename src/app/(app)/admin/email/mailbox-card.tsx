@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CardBody } from "@/components/ui/card";
+import { SettingsCard } from "@/components/settings/settings-card";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
@@ -67,34 +68,32 @@ export function MailboxCard({ health }: { health: InboxHealth }) {
   };
 
   return (
-    <Card>
-      <CardHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
-        action={
-          health.enabled && (
-            <div className="flex gap-2">
-              {health.connected && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  loading={disconnector.busy}
-                  onClick={disconnect}
-                >
-                  {t("disconnect")}
-                </Button>
-              )}
-              <ButtonLink
-                href="/api/gmail/connect"
+    <SettingsCard
+      title={t("title")}
+      action={
+        health.enabled && (
+          <div className="flex gap-2">
+            {health.connected && (
+              <Button
+                variant="secondary"
                 size="sm"
-                variant={health.connected ? "secondary" : "primary"}
+                loading={disconnector.busy}
+                onClick={disconnect}
               >
-                {health.connected ? t("reconnect") : t("connect")}
-              </ButtonLink>
-            </div>
-          )
-        }
-      />
+                {t("disconnect")}
+              </Button>
+            )}
+            <ButtonLink
+              href="/api/gmail/connect"
+              size="sm"
+              variant={health.connected ? "secondary" : "primary"}
+            >
+              {health.connected ? t("reconnect") : t("connect")}
+            </ButtonLink>
+          </div>
+        )
+      }
+    >
       <CardBody className="space-y-1 text-sm">
         {!health.enabled ? (
           <p className="text-muted">{t("unconfigured")}</p>
@@ -122,6 +121,6 @@ export function MailboxCard({ health }: { health: InboxHealth }) {
           <p className="text-danger">{t("error", { error: health.lastError })}</p>
         )}
       </CardBody>
-    </Card>
+    </SettingsCard>
   );
 }

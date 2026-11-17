@@ -8,6 +8,7 @@ const alcohol: StockBookingSettings = {
   boardCostAccount: null,
   boardSalesAccount: null,
   postingStartsOn: "2027-01-01",
+  voucherSeries: "L",
   groups: [
     { name: "Öl", stockAccount: "1461", consumptionAccount: "4011", products: 3 },
     { name: "Vin", stockAccount: null, consumptionAccount: null, products: 0 },
@@ -17,6 +18,11 @@ const alcohol: StockBookingSettings = {
 describe("postingGaps", () => {
   it("is empty when every type in use has its accounts", () => {
     expect(postingGaps(alcohol)).toEqual([]);
+  });
+
+  it("asks for the stock's own series, with nothing to fall back on", () => {
+    expect(postingGaps({ ...alcohol, voucherSeries: null })).toEqual([{ key: "voucherSeries" }]);
+    expect(postingGaps({ ...alcohol, voucherSeries: "  " })).toEqual([{ key: "voucherSeries" }]);
   });
 
   it("asks for both accounts of a type that has products", () => {

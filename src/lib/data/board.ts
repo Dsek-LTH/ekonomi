@@ -2,6 +2,7 @@ import "server-only";
 
 // The board's tab, read: the price list, what each member has taken, and what they owe. See docs/stock.md.
 import { prisma } from "@/lib/server/db";
+import { holdingWhere, rolesWith } from "@/lib/server/access";
 import { isoDay, stockholmDay, today } from "@/lib/domain/date";
 import type { StockSlug } from "@/lib/stock/stocks";
 
@@ -160,7 +161,7 @@ export async function getBoardWithdrawals(filter: {
 export interface BoardMemberDto {
   id: string;
   name: string;
-  /** Still holds a role that gives a tab. Roles follow Authentik at sign-in, so this can lag. */
+  /** Still holds a tab, through a group or a personal grant. Groups follow Authentik at sign-in, so this can lag. */
   onBoard: boolean;
   uninvoicedOre: number;
   uninvoicedCount: number;
@@ -168,14 +169,13 @@ export interface BoardMemberDto {
 
 /** Everybody with a tab: who holds one now, and anybody with withdrawals that are not invoiced. */
 export async function getBoardMembers(): Promise<BoardMemberDto[]> {
-  const [holders, open] = await Promise.all([
-    prisma.roleCapability.findMany({ where: { capability: "BOARD_TAB" }, select: { role: true } }),
+  const [roles, open] = await Promise.all([
+    rolesWith("BOARD_TAB"),
     prisma.boardWithdrawal.findMany({
       where: { invoiceLineId: null },
       select: { memberId: true, qty: true, unitPriceOre: true },
     }),
   ]);
-  const roles = holders.map((h) => h.role);
   const owing = new Map<string, { ore: number; count: number }>();
   for (const w of open) {
     const held = owing.get(w.memberId) ?? { ore: 0, count: 0 };
@@ -183,17 +183,20 @@ export async function getBoardMembers(): Promise<BoardMemberDto[]> {
     held.count += 1;
     owing.set(w.memberId, held);
   }
-  const users = await prisma.user.findMany({
-    where: {
-      OR: [{ active: true, roles: { hasSome: roles } }, { id: { in: [...owing.keys()] } }],
-    },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, roles: true, active: true },
-  });
+  const holding = holdingWhere(roles, "BOARD_TAB");
+  const [users, onBoard] = await Promise.all([
+    prisma.user.findMany({
+      where: { OR: [{ active: true, ...holding }, { id: { in: [...owing.keys()] } }] },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.user.findMany({ where: { active: true, ...holding }, select: { id: true } }),
+  ]);
+  const holds = new Set(onBoard.map((u) => u.id));
   return users.map((u) => ({
     id: u.id,
     name: u.name,
-    onBoard: u.active && u.roles.some((r) => roles.includes(r)),
+    onBoard: holds.has(u.id),
     uninvoicedOre: owing.get(u.id)?.ore ?? 0,
     uninvoicedCount: owing.get(u.id)?.count ?? 0,
   }));

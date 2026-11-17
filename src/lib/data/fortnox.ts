@@ -34,7 +34,6 @@ export async function getFortnoxStatus(userId?: string): Promise<FortnoxStatus> 
     configured: fortnoxConfigured(),
     connected: Boolean(conn),
     companyName: conn?.companyName ?? undefined,
-    voucherSeries: conn?.voucherSeries ?? undefined,
     refreshFailed: conn?.refreshFailedAt
       ? { at: conn.refreshFailedAt.toISOString(), error: conn.refreshError ?? "" }
       : undefined,

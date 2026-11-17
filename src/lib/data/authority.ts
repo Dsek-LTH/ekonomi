@@ -5,20 +5,19 @@ import "server-only";
 import { prisma } from "@/lib/server/db";
 import { explainGrants, groupMapping } from "@/lib/server/authentik-roles";
 import { ROLES } from "@/lib/domain/permissions";
+import { grantState, lastDay, stockholmDayOf } from "@/lib/domain/access-grant";
 import type { Capability, Role } from "@/lib/domain/types";
 
 export type GroupRow = {
   /** The Authentik group, lower-cased, as everything here compares it. */
   group: string;
   roles: Role[];
-  resultUnits: { id: string; name: string }[];
   /** People who signed in since `authentikGroups` existed and hold this group. `0` on a mapped group means a misspelled name granting nothing. */
   holders: number;
 };
 
 export type AuthorityData = {
   groups: GroupRow[];
-  resultUnits: { id: string; name: string }[];
   roleCapabilities: { role: Role; capability: Capability }[];
   roleHolders: Record<string, number>;
   /** People whose group list we have never seen. Outside the group counts, inside `roleHolders`. */
@@ -26,25 +25,17 @@ export type AuthorityData = {
 };
 
 export async function getAuthority(): Promise<AuthorityData> {
-  const [groupRoles, groupUnits, resultUnits, roleCapabilities, users, withoutGroups] =
-    await Promise.all([
-      prisma.groupRole.findMany({ select: { group: true, role: true } }),
-      prisma.groupResultUnit.findMany({
-        select: { group: true, resultUnit: { select: { id: true, name: true } } },
-      }),
-      prisma.resultUnit.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      }),
-      prisma.roleCapability.findMany({ select: { role: true, capability: true } }),
-      // Every *active* member, not only those whose group list we have seen: role counts come off a
-      // column every member has, and the narrower set made the grid skip its confirmation.
-      prisma.user.findMany({
-        where: { active: true },
-        select: { authentikGroups: true, roles: true },
-      }),
-      prisma.user.count({ where: { active: true, authentikGroups: { isEmpty: true } } }),
-    ]);
+  const [groupRoles, roleCapabilities, users, withoutGroups] = await Promise.all([
+    prisma.groupRole.findMany({ select: { group: true, role: true } }),
+    prisma.roleCapability.findMany({ select: { role: true, capability: true } }),
+    // Every *active* member, not only those whose group list we have seen: role counts come off a
+    // column every member has, and the narrower set made the grid skip its confirmation.
+    prisma.user.findMany({
+      where: { active: true },
+      select: { authentikGroups: true, roles: true },
+    }),
+    prisma.user.count({ where: { active: true, authentikGroups: { isEmpty: true } } }),
+  ]);
 
   const holders = new Map<string, number>();
   for (const u of users) {
@@ -58,28 +49,30 @@ export async function getAuthority(): Promise<AuthorityData> {
   }
 
   // Union of the mapping and what people hold: both, only mapped (probably a typo), only held (undecided).
-  const names = new Set<string>([
-    ...groupRoles.map((r) => r.group),
-    ...groupUnits.map((r) => r.group),
-    ...holders.keys(),
-  ]);
+  const names = new Set<string>([...groupRoles.map((r) => r.group), ...holders.keys()]);
 
   const groups: GroupRow[] = [...names]
     .sort((a, b) => a.localeCompare(b, "sv"))
     .map((group) => ({
       group,
       roles: groupRoles.filter((r) => r.group === group).map((r) => r.role),
-      resultUnits: groupUnits.filter((r) => r.group === group).map((r) => r.resultUnit),
       holders: holders.get(group) ?? 0,
     }));
 
   return {
     groups,
-    resultUnits,
     roleCapabilities,
     roleHolders,
     membersWithoutGroups: withoutGroups,
   };
+}
+
+/** Every section group an active member held at their last sign-in, for the group pickers (a unit's attesters, a place). */
+export async function getKnownGroups(): Promise<string[]> {
+  // `authentikGroups` is already only section groups, normalised (sectionGroups at sign-in).
+  const rows = await prisma.$queryRaw<{ group: string }[]>`
+    SELECT DISTINCT unnest("authentikGroups") AS "group" FROM "User" WHERE "active" ORDER BY 1`;
+  return rows.map((r) => r.group);
 }
 
 // Why one person holds what they hold: re-runs the derivation from the stored group list and lays it
@@ -116,6 +109,20 @@ export type UserAuthority = {
   pendingUnits: string[];
   /** No group list stored: not signed in since the column was added, so nothing is explainable. */
   neverSeen: boolean;
+  /** Personal grants that have not ended, running ones first (AccessGrant, lib/server/access.ts). */
+  grants: GrantRow[];
+};
+
+export type GrantRow = {
+  id: string;
+  role: Role | null;
+  capability: Capability | null;
+  /** The first day it is in force, a Stockholm day. */
+  from: string;
+  /** The last day it is in force, as the form named it. Null for until removed. */
+  until: string | null;
+  scheduled: boolean;
+  grantedBy: string | null;
 };
 
 export async function getUserAuthority(userId: string): Promise<UserAuthority | null> {
@@ -134,6 +141,31 @@ export async function getUserAuthority(userId: string): Promise<UserAuthority | 
     groupMapping(),
   ]);
   if (!user) return null;
+
+  const now = new Date();
+  const grantRows = await prisma.accessGrant.findMany({
+    where: { userId, OR: [{ validUntil: null }, { validUntil: { gt: now } }] },
+    orderBy: [{ validFrom: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      role: true,
+      capability: true,
+      validFrom: true,
+      validUntil: true,
+      grantedBy: { select: { name: true } },
+    },
+  });
+  const grants: GrantRow[] = grantRows
+    .map((g) => ({
+      id: g.id,
+      role: g.role,
+      capability: g.capability,
+      from: stockholmDayOf(g.validFrom),
+      until: lastDay(g.validUntil),
+      scheduled: grantState(g, now) === "scheduled",
+      grantedBy: g.grantedBy?.name ?? null,
+    }))
+    .sort((a, b) => Number(a.scheduled) - Number(b.scheduled));
 
   const sources = explainGrants(mapping, user.authentikGroups);
   const behindRole = new Map(sources.roles.map((r) => [r.role, r.groups]));
@@ -180,5 +212,6 @@ export async function getUserAuthority(userId: string): Promise<UserAuthority | 
       .map((u) => u.unit)
       .filter((u) => !user.resultUnits.includes(u)),
     neverSeen: user.authentikGroups.length === 0,
+    grants,
   };
 }

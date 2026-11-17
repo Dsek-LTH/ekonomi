@@ -19,6 +19,7 @@ import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
 import { mergeCoverAndReceipts, PdfMergeError } from "@/lib/server/pdf-merge";
 import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import {
   attachBestEffort,
   recordExport,
@@ -84,9 +85,9 @@ async function exportHolding(
 
   const conn = await getConnection();
   if (!conn) return fail(409, "fortnox.notConnectedBookkeeping");
-  // The voucher series is a choice nobody has made. Refused before anything goes to Fortnox.
-  const series = conn.voucherSeries;
-  if (!series) return fail(409, "settings.voucherSeriesUnset");
+  // The utlägg series is a choice nobody has made. Refused before anything goes to Fortnox.
+  const series = (await loadBookkeepingSettings()).expenseVoucherSeries;
+  if (!series) return fail(409, "settings.expenseSeriesUnset");
 
   const rows = voucherRows(verification.lines);
 

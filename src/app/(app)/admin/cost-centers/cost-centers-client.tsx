@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { SettingsCard } from "@/components/settings/settings-card";
+import { SettingsForm, useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { FieldGroup, Input } from "@/components/ui/field";
@@ -19,9 +20,16 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { cn } from "@/lib/ui/utils";
 import { SHORT_NAME_MAX, suggestShortName } from "@/lib/domain/cost-center-short-name";
 import type { CostCenter } from "@/lib/domain/types";
-import { ShortNamesDialog, type Suggestion } from "./short-names-dialog";
 
 export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
+  return (
+    <SettingsForm>
+      <CostCentersTable costCenters={costCenters} />
+    </SettingsForm>
+  );
+}
+
+function CostCentersTable({ costCenters }: { costCenters: CostCenter[] }) {
   const t = useTranslations("admin.costCenters");
   const tCommon = useTranslations("common");
   const notify = useNotify();
@@ -37,15 +45,10 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
 
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ code: "", name: "" });
-  const [suggesting, setSuggesting] = useState(false);
-
-  const suggestions = useMemo<Suggestion[]>(
+  // How many could be given a short name by the suggestion page (`short-names/`).
+  const suggestable = useMemo(
     () =>
-      costCenters.flatMap((cc) => {
-        if (cc.shortName) return [];
-        const shortName = suggestShortName(cc.name, cc.resultUnit);
-        return shortName ? [{ cc, shortName }] : [];
-      }),
+      costCenters.filter((cc) => !cc.shortName && suggestShortName(cc.name, cc.resultUnit)).length,
     [costCenters],
   );
 
@@ -62,37 +65,55 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
     setAdding(false);
   }
 
-  async function saveName(cc: CostCenter, raw: string) {
+  // A name or short name typed in the table waits for the page's Spara (docs/settings.md).
+  const edits = useDraftRows(costCenters);
+  const shown = costCenters.map(edits.get);
+
+  function setName(cc: CostCenter, raw: string) {
     const name = raw.trim();
     if (!name) {
       notify.error(t("nameRequired"));
       return false;
     }
-    const data = await mutate(`/api/cost-centers/${cc.id}`, {
-      key: `name-${cc.id}`,
-      method: "PATCH",
-      body: { name },
-      error: t("renameFailed"),
-      success: t("renamed", { code: cc.code, name }),
-    });
-    return data !== null;
+    edits.set(cc.id, { name });
+    return true;
   }
 
-  // Any row, Fortnox ones included: the short name is this app's own, so the next sync
-  // leaves it alone.
-  async function saveShortName(cc: CostCenter, raw: string) {
-    const shortName = raw.trim() || null;
-    const data = await mutate("/api/cost-centers/short-names", {
-      key: `short-${cc.id}`,
-      method: "PUT",
-      body: { names: [{ id: cc.id, shortName }] },
-      error: t("shortNameFailed"),
-      success: shortName
-        ? t("shortNameSaved", { code: cc.code, name: shortName })
-        : t("shortNameCleared", { code: cc.code }),
-    });
-    return data !== null;
+  // Any row, Fortnox ones included: the short name is this app's own, so the next sync leaves it alone.
+  function setShortName(cc: CostCenter, raw: string) {
+    edits.set(cc.id, { shortName: raw.trim() || null });
+    return true;
   }
+
+  useDraftPart({
+    dirty: edits.dirty,
+    save: async () => {
+      for (const [id, change] of edits.changes) {
+        if (change.name === undefined) continue;
+        const ok = await mutate(`/api/cost-centers/${id}`, {
+          method: "PATCH",
+          body: { name: change.name },
+          error: t("renameFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      const names = edits.changes
+        .filter(([, change]) => change.shortName !== undefined)
+        .map(([id, change]) => ({ id, shortName: change.shortName ?? null }));
+      if (names.length === 0) return true;
+      return (
+        (await mutate("/api/cost-centers/short-names", {
+          method: "PUT",
+          body: { names },
+          error: t("shortNameFailed"),
+          refresh: false,
+        })) !== null
+      );
+    },
+    commit: edits.commit,
+    reset: edits.reset,
+  });
 
   async function setActive(cc: CostCenter, active: boolean) {
     await mutate(`/api/cost-centers/${cc.id}`, {
@@ -155,7 +176,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
           value={c.name}
           label={t("renameAria", { code: c.code })}
           disabled={c.source !== "LOCAL"}
-          onSave={(v) => saveName(c, v)}
+          onSave={(v) => setName(c, v)}
         />
       ),
     },
@@ -172,7 +193,7 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
           label={t("editShortName", { code: c.code })}
           placeholder={t("shortNameNone")}
           maxLength={SHORT_NAME_MAX}
-          onSave={(v) => saveShortName(c, v)}
+          onSave={(v) => setShortName(c, v)}
         />
       ),
     },
@@ -242,13 +263,10 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
   ];
 
   return (
-    <Card>
-      {suggesting && (
-        <ShortNamesDialog suggestions={suggestions} onClose={() => setSuggesting(false)} />
-      )}
+    <SettingsCard>
       <ClientDataTable
         columns={columns}
-        rows={costCenters}
+        rows={shown}
         controls={controls}
         tabs={tabs}
         actionPanel={
@@ -309,11 +327,11 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         action={
           !adding && (
             <div className="flex flex-wrap items-center gap-2">
-              {suggestions.length > 0 && (
-                <Button variant="secondary" size="sm" onClick={() => setSuggesting(true)}>
+              {suggestable > 0 && (
+                <ButtonLink variant="secondary" size="sm" href="/admin/cost-centers/short-names">
                   {t("suggest")}
-                  <span className="tabular-nums text-muted">{suggestions.length}</span>
-                </Button>
+                  <span className="tabular-nums text-muted">{suggestable}</span>
+                </ButtonLink>
               )}
               <Button size="sm" onClick={() => setAdding(true)}>
                 <IconPlus className="size-4" />
@@ -327,6 +345,6 @@ export function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }
         rowClassName={(c) => cn(!c.active && "opacity-55")}
         empty={costCenters.length === 0 ? t("emptyNone") : t("emptyNoMatch")}
       />
-    </Card>
+    </SettingsCard>
   );
 }

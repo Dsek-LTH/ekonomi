@@ -1,17 +1,12 @@
 {
   "index": {
     "title": "Settings",
-    "section": {
-      "fortnox": "The Fortnox connection, and syncing the chart of accounts and cost centres.",
-      "costCenters": "The cost centres expenses and budgets can be split across.",
-      "income": "Which committees sell, which products are theirs and where the income is booked.",
-      "resultUnits": "Which cost centres belong together, and who attests them.",
-      "cards": "The section's cards and who holds which.",
-      "mileageRates": "What a kilometre is worth, and from which day.",
-      "stockSettings": "Accounts and settings for the stock bookkeeping.",
-      "roles": "What each role may do. Changed here, not in the code.",
-      "users": "Who exists and which roles they hold.",
-      "email": "Every email the app has sent, where it went, test emails, and the inbox mail account."
+    "group": {
+      "bookkeeping": "Bookkeeping",
+      "expenses": "Expenses",
+      "operations": "Operations",
+      "access": "Access",
+      "system": "System"
     }
   },
   "users": {
@@ -20,14 +15,9 @@
     "searching": "Searching…",
     "noMatch": "No member matches.",
     "onlyBaseRole": "Only holds {role}, the baseline every member has.",
-    "rolesSubtitle": "The list shows everyone holding a role beyond {role}, which every member has. Who is in a group is decided in Authentik, and what a group grants is changed under Roles.",
     "nobodyHasRole": "Nobody holds this role.",
-    "explainFor": "Show why {name} holds their roles",
     "whyTitle": "Where the roles come from",
-    "whyLoading": "Looking up where the roles come from…",
-    "whyFailed": "Could not look up where the roles come from.",
     "neverSeen": "We have no group list for this member, because they have not signed in since we started keeping one. The roles below come from an earlier sign-in and cannot be traced until they sign in again.",
-    "noGrantedRoles": "No roles beyond the baseline to trace.",
     "via": "from",
     "leftover": "No group grants this",
     "leftoverExplained": "A role with no group behind it is left over from an earlier sign-in: the mandate is gone from Authentik, but the role stays on the row until the holder next signs in. It clears itself then, and there is nothing to change in the mapping.",
@@ -35,7 +25,6 @@
     "unitMissing": "No such result unit",
     "pending": "Their next sign-in adds: {items}. Their Authentik groups have changed since the row was written.",
     "groupsTitle": "Groups at their last sign-in",
-    "groupsHint": "Dimmed groups grant nothing here. Which group confers which role is edited under Roles.",
     "payoutTitle": "Account details",
     "payoutLoading": "Looking up account details…",
     "payoutFailed": "Could not look up account details.",
@@ -45,7 +34,34 @@
     "colName": "Name",
     "colRoles": "Roles",
     "filterRole": "Role",
-    "emailTitle": "Email"
+    "emailTitle": "Email",
+    "personalTag": "Personal access",
+    "grantsTitle": "Personal access",
+    "noGrants": "No personal access. Everything above comes from the groups in Authentik.",
+    "grantAdd": "Grant access",
+    "grantKind": "What to grant",
+    "grantKindRole": "Role",
+    "grantKindCapability": "Permission",
+    "grantPickRole": "Pick a role",
+    "grantPickCapability": "Pick a permission",
+    "grantFromLabel": "From",
+    "grantFromHint": "Empty means from now.",
+    "grantUntilLabel": "Up to and including",
+    "grantUntilHint": "Empty means until removed.",
+    "grantSave": "Grant",
+    "granted": "Access granted.",
+    "grantFailed": "Could not save the access.",
+    "grantForever": "until removed",
+    "grantUntil": "up to and including {until}",
+    "grantFrom": "from {from}, until removed",
+    "grantFromUntil": "{from} up to and including {until}",
+    "grantedBy": "granted by {name}",
+    "grantScheduled": "Not started",
+    "removeGrantLabel": "Remove {what}",
+    "removeGrantTitle": "Remove the access?",
+    "removeGrantBody": "{what} is removed right away. What the groups give is not affected.",
+    "removeGrantAction": "Remove",
+    "rolesTitle": "Roles"
   },
   "cards": {
     "title": "Guild cards",
@@ -73,15 +89,10 @@
     "colPurchases": "Purchases",
     "noHolder": "No holder",
     "holderFor": "Holder of card ····{last4}",
-    "assigned": "Card ····{last4} assigned to {name}.",
-    "unassigned": "Card ····{last4} no longer has a holder.",
     "assignFailed": "Could not change the holder",
     "colResultUnit": "Result unit",
     "noResultUnit": "No result unit",
     "resultUnitFor": "Result unit for card ····{last4}",
-    "unitAssigned": "Card ····{last4} now belongs to {name}.",
-    "unitUnassigned": "Card ····{last4} no longer belongs to a result unit.",
-    "unitAssignFailed": "Could not change the result unit",
     "searchPlaceholder": "Search card or holder…",
     "noMatch": "No cards match.",
     "addHint": "Cards are also added on their own when a bank file mentions a new card number."
@@ -103,7 +114,6 @@
     "add": "Add",
     "created": "{code} added.",
     "createFailed": "Could not create the cost center",
-    "renamed": "{code} is now called {name}.",
     "renameFailed": "Could not rename it",
     "updateFailed": "Could not change the cost center",
     "activated": "{code} was activated.",
@@ -139,17 +149,13 @@
     "shortNameHint": "What the cost center is called under its result unit's heading, for example in the budget. Empty shows the full name.",
     "shortNameNone": "None",
     "editShortName": "Change the short name of {code}",
-    "shortNameSaved": "{code} is now called {name} under its result unit.",
-    "shortNameCleared": "{code} is shown with its full name.",
     "shortNameFailed": "Could not save the short name",
     "suggest": "Suggest short names",
-    "suggestSubtitle": "The result unit's name is taken off the start of the name. Check the suggestions before you save. Nothing changes in Fortnox.",
     "suggestInclude": "Include {code}",
     "suggestAll": "All suggestions",
-    "suggestSave": "Save {count} short names",
-    "suggestSaved": "{count} short names saved.",
     "suggestFailed": "Could not save the short names",
-    "suggestBlocked": "Pick at least one suggestion, and give each one you pick a name."
+    "suggestBlocked": "Pick at least one suggestion, and give each one you pick a name.",
+    "suggestNone": "Every cost centre that can get a short name already has one."
   },
   "resultUnits": {
     "title": "Result units",
@@ -165,10 +171,8 @@
     "deleteTitle": "Delete {name}?",
     "deleteMessage": "The result unit has no prefixes and therefore owns no cost centers.",
     "deleteMessagePrefixes": "The prefixes {prefixes} are removed, and the cost centers they match are left without a result unit.",
-    "deleteAria": "Delete {name}",
     "deleted": "{name} deleted.",
     "deleteFailed": "Could not delete the result unit",
-    "renamed": "The result unit is now called {name}.",
     "renameFailed": "Could not rename it",
     "renameAria": "Rename {name}",
     "prefixes": "Starts with",
@@ -181,9 +185,7 @@
     "noPrefix": "No prefix",
     "noPrefixHint": "Without a prefix the result unit owns no cost centers.",
     "unassigned": "No result unit",
-    "unassignedSubtitle": "No prefix matches these, so only administrators can approve their expenses.",
     "unassignedEmpty": "No cost centers.",
-    "activeCostCenters": "{count} active cost centers",
     "noCostCentersForPrefix": "No cost centers match the result unit's prefixes.",
     "inactive": "Inactive",
     "income": {
@@ -211,7 +213,6 @@
       "prefixCostCenterDefault": "Committee default"
     },
     "saveFailed": "Could not save.",
-    "noOwnerGroups": "No group grants the role for this unit yet. Link a group under Roles.",
     "noOwnersHolding": "Nobody holds the post right now.",
     "colName": "Name",
     "colPrefixes": "Cost centers starting with",
@@ -223,21 +224,20 @@
     "unassignedNotice": "{count, plural, one {# active cost center has} other {# active cost centers have}} no result unit, so only administrators can attest their expenses.",
     "showThem": "Show them",
     "sectionCostCenters": "Cost centers",
-    "sectionCostCentersHint": "Every cost center whose code starts with one of the prefixes belongs to the unit.",
     "matches": "{count, plural, one {# cost center matches} other {# cost centers match}}",
-    "sectionAttest": "Attest",
-    "sectionAttestHint": "Result owners attest expenses on the unit's cost centers.",
-    "grantedBy": "The role is granted by",
-    "editInRoles": "Change under Roles",
     "sectionSales": "Sales",
-    "sectionSalesHint": "Whether the unit takes money in, and how it is booked.",
     "salesOnSummary": "Sells, with {count, plural, =0 {no products yet} one {# product prefix} other {# product prefixes}}.",
     "salesOffSummary": "Does not sell.",
-    "editInSales": "Edit under Sales"
+    "editInSales": "Edit under Sales",
+    "ownerGroups": "Groups in Authentik",
+    "ownersNow": "Held now by",
+    "noOwnerGroupsPlaceholder": "No group",
+    "searchGroups": "Search group names…",
+    "useGroup": "Use {group}",
+    "unitActions": "Actions for {name}"
   },
   "fortnox": {
     "connection": "Connection",
-    "connectionSubtitle": "The guild's link to Fortnox. Everything else here needs it connected.",
     "unconfigured": "The server is missing the Fortnox client id, secret or redirect URI. Add them to the environment variables and restart.",
     "notConfigured": "Not configured",
     "notConnected": "Not connected",
@@ -251,10 +251,6 @@
     "disconnectMessage": "Export and sync stop working until someone connects again, and everybody logged in to Fortnox personally is logged out. The chart of accounts, cost centers and already-fetched ledger stay.",
     "disconnected": "Fortnox disconnected.",
     "disconnectFailed": "Could not disconnect",
-    "voucherSeries": "Voucher series",
-    "voucherSeriesHint": "The series exported vouchers land in. Nothing is posted until a series is chosen.",
-    "voucherSeriesSaved": "Voucher series saved.",
-    "save": "Save",
     "saveFailed": "Could not save",
     "chart": "Chart of accounts",
     "chartSubtitle": "{count} accounts - last synced {time}",
@@ -263,12 +259,8 @@
     "chartSyncFailed": "Could not sync the chart of accounts",
     "chartSynced": "Chart of accounts synced",
     "chartNoMatch": "No accounts match the search.",
-    "bankAccount": "Bank account",
-    "bankAccountHint": "Credited when a card purchase is booked.",
-    "bankAccountSaved": "Bank account saved.",
+    "bankAccount": "Card account",
     "debtAccount": "Debt to member",
-    "debtAccountHint": "Credited when an out-of-pocket expense is to be reimbursed.",
-    "debtAccountSaved": "Debt account saved.",
     "ledger": "General ledger",
     "syncCurrentYear": "Sync the current year",
     "syncYear": "Sync {year}",
@@ -281,18 +273,13 @@
       "fetched": "{count} accounts fetched",
       "retired": "{count} deactivated"
     },
-    "booking": "Bookkeeping",
-    "bookingSubtitle": "Where exported vouchers land and which accounts they credit.",
     "sync": "Sync",
-    "syncSubtitle": "What is fetched from Fortnox.",
     "showAccounts": "Show accounts",
     "hideAccounts": "Hide accounts",
     "costCenters": "Cost centers",
     "costCentersSubtitle": "{count} from Fortnox - last synced {time}",
     "costCentersSubtitleNever": "Never synced from Fortnox",
     "groupRegisters": "Registers",
-    "groupRegistersHint": "Accounts, cost centres, projects and suppliers that expenses, invoices, budgets and vouchers point at.",
-    "groupLedgerHint": "Booked vouchers, one financial year at a time. Drives the Outcome reports.",
     "projects": "Projects",
     "projectsSubtitle": "{count} projects - last synced {time}",
     "projectsSubtitleNever": "Never synced from Fortnox",
@@ -321,18 +308,15 @@
   },
   "income": {
     "title": "Sales",
-    "save": "Save",
     "saved": "Saved",
     "saveFailed": "Could not save",
     "cancel": "Cancel",
     "booking": {
-      "title": "3. Booking",
-      "description": "Where the day's takings are booked. Accounts and the cost center save as soon as you pick them."
+      "title": "3. Booking"
     },
     "export": {
       "series": "Voucher series",
-      "seriesHint": "Empty = the same series as expenses ({series}). Give it one of its own to keep takings apart.",
-      "seriesHintUnconnected": "Empty = the same series as expenses. Fortnox is not connected yet."
+      "seriesHint": "The series the takings are sent to in Fortnox."
     },
     "accounts": {
       "zettleClearing": "Clearing account, Zettle",
@@ -346,8 +330,6 @@
     },
     "fallbacks": {
       "title": "4. Swish amounts",
-      "description": "Payments with no usable message are matched on the exact amount.",
-      "hint": "The message runs through the same prefix pipeline, so \"c-Cola\" lands with Cafémästeriet exactly as a labelled payment would.",
       "empty": "No amount rules.",
       "add": "Add",
       "amount": "Amount",
@@ -356,19 +338,16 @@
       "messagePlaceholder": "c-Cola",
       "remove": "Remove"
     },
-    "ready": "Everything is set up. Income can be fetched and booked.",
     "optional": "Optional",
     "done": "Done",
     "stepsLeft": "{count, plural, one {# step left} other {# steps left}}",
     "service": {
       "title": "1. Zettle",
-      "description": "The connection that fetches sales and fees from Zettle. Swish is read from the bank's file and needs no connection.",
       "connected": "Zettle is connected.",
       "missing": "Zettle is not connected. Whoever runs the app needs to set ZETTLE_CLIENT_ID and ZETTLE_API_KEY. Swish can be fetched anyway."
     },
     "units": {
       "title": "2. Committees and products",
-      "description": "Which result units sell, and which products are theirs. A product belongs to the committee whose prefix its name starts with.",
       "notSelling": "Does not sell",
       "noProducts": "Sells, but has no products yet",
       "needsProducts": "No products",
@@ -383,7 +362,8 @@
       "noSellingUnits": "No committee sells yet. Turn on sales below first.",
       "account": "Account for unknown products",
       "accountHint": "The revenue account they are booked to."
-    }
+    },
+    "needed": "Needed before the takings can be booked."
   },
   "roles": {
     "title": "Roles & permissions",
@@ -400,18 +380,13 @@
       "all": "All groups"
     },
     "noRoles": "No roles",
-    "noResultUnits": "No result units",
     "rolesFor": "Roles for {group}",
-    "resultUnitsFor": "Result units for {group}",
     "holderCount": "{count, plural, =0 {nobody} =1 {1 person} other {# people}}",
     "probablyTypo": "Grants nobody anything",
     "removeGroupLabel": "Remove {group}",
     "removeGroupTitle": "Remove the mapping?",
     "removeGroupBody": "{group} will stop granting roles and result units. This affects {count, plural, =0 {nobody right now} =1 {1 person} other {# people}}.",
     "removeGroupAction": "Remove",
-    "capabilitiesSubtitle": "What each role may do. Applies from the next page load, for everyone holding the role.",
-    "capabilityColumn": "Permission",
-    "attestNote": "Attest authority is not on this grid. It is a rule in the code, not a tickbox. Whether an expense is yours to attest depends on whose it is, what roles the person who filed it holds, and which result unit the cost centre falls under. The approvals view above only decides whether the queue is visible.",
     "staleCounts": "{count, plural, =1 {1 member has} other {# members have}} not signed in since group lists started being kept, and so are not counted in the group figures below. The role figures cover every member.",
     "saved": "Saved.",
     "savedAffecting": "Saved. {count, plural, =1 {1 person} other {# people}} got new roles.",
@@ -425,15 +400,9 @@
     "confirmOwnTitle": "You are taking something from yourself",
     "confirmOwnBody": "You hold the {role} role. Removing {capability} from it removes it from you too.",
     "confirmOwnAction": "Remove anyway",
-    "viewLabel": "Show",
-    "view": {
-      "groups": "Groups",
-      "capabilities": "Permissions"
-    },
     "colGroup": "Group",
     "colHolders": "People",
     "colRoles": "Roles",
-    "colResultUnits": "Result owner for",
     "pickGroup": "Pick a group",
     "searchGroups": "Search group names…",
     "useGroup": "Use {group}",
@@ -445,17 +414,22 @@
       "stock": "Stock",
       "contracts": "Contracts and rentals",
       "settings": "Settings"
+    },
+    "pickRole": "Pick a role",
+    "capabilityCount": "{count, plural, =0 {none} =1 {1 permission} other {# permissions}}",
+    "section": {
+      "roles": "What the roles may do",
+      "groups": "Groups in Authentik"
     }
   },
   "stock": {
     "title": "Stock",
-    "save": "Save",
     "saveFailed": "Could not save the setting",
     "expiry": {
       "title": "Best-before reminder",
-      "hint": "We never know what is printed on a crate. What we know is when a delivery arrived and how long the product keeps, and from that we ask somebody to go down and read the packaging.",
       "leadDays": "Notice in days",
-      "leadDaysHint": "How far ahead of the estimated date to start asking. 30 days is about right: a crate can be drunk in a month if somebody knows about it."
+      "leadDaysHint": "How far ahead of the estimated date to start asking. 30 days is about right: a crate can be drunk in a month if somebody knows about it.",
+      "invalid": "The number of days must be a whole number from 0 to 365."
     },
     "saved": "Saved",
     "chooseCostCenter": "Choose a cost centre",
@@ -464,18 +438,11 @@
       "cafe": "Café stock"
     },
     "gaps": {
-      "intro": "These have to be chosen before the stock value can be booked in Fortnox:",
       "left": "{count, plural, one {# thing left} other {# things left}}",
-      "none": "Ready to book",
-      "stockAccount": "Stock account for {group}",
-      "consumptionAccount": "Cost account for {group}",
-      "purchaseOffsetAccount": "The account purchases are booked on",
-      "boardCostAccount": "Cost account for the board's withdrawals",
-      "postingStartsOn": "The day booking of the stock value starts"
+      "none": "Ready to book"
     },
     "groups": {
       "title": "Product types",
-      "hint": "Each type has its own stock account and its own cost account. A product belongs to one type, and the type decides where its value is booked.",
       "products": "{count, plural, =0 {no products} one {# product} other {# products}}",
       "stockAccount": "Stock account",
       "consumptionAccount": "Cost account",
@@ -489,11 +456,7 @@
       "removeMessage": "The type has no products. Its accounts go with it."
     },
     "booking": {
-      "title": "Booking",
-      "hint": {
-        "CAPITALISED": "Purchases are booked straight to the stock account when the expense or supplier invoice is booked. The daily voucher only moves what leaves the stock to cost.",
-        "EXPENSED": "Purchases are booked as a cost. The daily voucher takes a delivery into stock by crediting that cost, and charges it again when it leaves storage."
-      }
+      "title": "Booking"
     },
     "field": {
       "consumptionCostCenterId": "Cost centre for consumption",
@@ -518,13 +481,11 @@
       "boardCostCenterId": "Optional.",
       "boardSalesAccount": "Credited on each member's invoice at year end, at board price.",
       "boardSalesCostCenterId": "Optional.",
-      "voucherSeries": "Leave empty to use series {series}, like everything else.",
-      "voucherSeriesUnconnected": "Leave empty to use the same series as everything else.",
+      "voucherSeries": "The series the stock's daily vouchers are sent to in Fortnox.",
       "postingStartsOn": "The first day that produces a voucher. Leave empty while the stock value is not to be booked."
     },
     "places": {
       "title": "Places",
-      "hint": "Where stock is carried to, such as a fridge or a committee working a shift. What reaches a place counts as used and is charged to the place's cost centre. Members of the place's Authentik groups may move stock to and from it.",
       "name": "Name",
       "costCenter": "Cost centre",
       "costCenterFallback": "Same as for consumption",
@@ -542,7 +503,8 @@
       "removeTitle": "Delete the place {name}?",
       "removeMessage": "Nothing has been moved to or from the place, so it can be deleted outright. Its groups go with it.",
       "removed": "{name} has been deleted"
-    }
+    },
+    "needed": "Needed before the stock can be booked."
   },
   "email": {
     "title": "Email",
@@ -580,7 +542,6 @@
     "viewHtml": "As email",
     "viewText": "As text",
     "retry": "Retry now",
-    "retryHint": "Sent again right away, with all attempts reset.",
     "retried": "The email is queued again.",
     "retryFailed": "Could not queue the email again",
     "testTitle": "Send test email",
@@ -590,7 +551,6 @@
     "testFailed": "Could not send the test email",
     "mailbox": {
       "title": "Incoming mail",
-      "subtitle": "The mail account the Inbox reads supplier invoices from.",
       "lastSync": "Last read {when}",
       "neverSynced": "Not read yet",
       "connected": "Connected to {address}.",
@@ -613,6 +573,21 @@
       },
       "error": "The last read failed: {error}",
       "unconfigured": "Gmail is not configured on the server (the GMAIL_ variables are not set, see docs/gmail-inbound.md). No mail is read."
-    }
+    },
+    "logTitle": "Sent mail",
+    "factsTitle": "Delivery",
+    "bodyTitle": "Content"
+  },
+  "expenses": {
+    "title": "Booking & mileage",
+    "booking": "Booking",
+    "voucherSeries": "Voucher series",
+    "voucherSeriesHint": "The series expenses are sent to in Fortnox.",
+    "bankAccount": "Card account",
+    "bankAccountHint": "Credited when a card purchase is booked.",
+    "debtAccount": "Debt to member",
+    "debtAccountHint": "Credited when an out-of-pocket expense is to be reimbursed.",
+    "needed": "Needed before expenses can be booked.",
+    "saveFailed": "Could not save."
   }
 }

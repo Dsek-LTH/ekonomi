@@ -7,29 +7,37 @@ import { useTranslations } from "next-intl";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useNotify } from "@/components/shell/notifications";
+import {
+  SettingsForm,
+  useDraft,
+  useDraftPart,
+  useDraftRows,
+} from "@/components/settings/settings-draft";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import {
+  SettingRow,
+  SettingsCard,
+  SettingsSection,
+  SetupStatus,
+} from "@/components/settings/settings-card";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
-import { DateInput, Input } from "@/components/ui/field";
+import { DateInput, Field, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconCheck, IconPlus, IconTrash } from "@/components/ui/icons";
-import { Notice } from "@/components/ui/notice";
-import type { PatchStockGroup, UpdateStock } from "@/lib/api/schemas/stock";
+import { IconPlus, IconTrash } from "@/components/ui/icons";
+import type { PatchStockGroup } from "@/lib/api/schemas/stock";
 import type {
   StockGroupSettings,
   StockPlaceSettings,
   StockSettingsView,
 } from "@/lib/data/stock-settings";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
-import type { StockSetupGap } from "@/lib/stock/setup";
 import { STOCKS } from "@/lib/stock/stocks";
-import { cn } from "@/lib/ui/utils";
 import { PlaceTable } from "./place-table";
 
 type Shared = {
   accountOptions: ComboOption[];
   costCenterOptions: ComboOption[];
-  defaultSeries: string | null;
   knownGroups: string[];
 };
 
@@ -37,14 +45,12 @@ export function StockSettingsClient({
   stocks,
   accounts,
   costCenters,
-  defaultSeries,
   places,
   knownGroups,
 }: {
   stocks: StockSettingsView[];
   accounts: AccountRecord[];
   costCenters: CostCenter[];
-  defaultSeries: string | null;
   places: StockPlaceSettings[];
   knownGroups: string[];
 }) {
@@ -59,20 +65,21 @@ export function StockSettingsClient({
       label: `${c.code} - ${c.name}`,
       short: c.code,
     })),
-    defaultSeries,
     knownGroups,
   };
   return (
-    <div className="space-y-10">
-      {stocks.map((s) => (
-        <StockSection
-          key={s.stock}
-          settings={s}
-          places={places.filter((p) => p.stock === s.stock)}
-          {...shared}
-        />
-      ))}
-    </div>
+    <SettingsForm>
+      <div className="space-y-10">
+        {stocks.map((s) => (
+          <StockSection
+            key={s.stock}
+            settings={s}
+            places={places.filter((p) => p.stock === s.stock)}
+            {...shared}
+          />
+        ))}
+      </div>
+    </SettingsForm>
   );
 }
 
@@ -81,40 +88,71 @@ function StockSection({
   places,
   accountOptions,
   costCenterOptions,
-  defaultSeries,
   knownGroups,
 }: { settings: StockSettingsView; places: StockPlaceSettings[] } & Shared) {
   const t = useTranslations("admin.stock");
   const tBook = useTranslations("book");
-  const { pending, mutate } = useMutation();
+  const { mutate } = useMutation();
+  const notify = useNotify();
   const stock = settings.stock;
   const traits = STOCKS[stock];
 
-  // Shown from local state so a pick reads at once; the refresh after the save brings the server's view back.
-  const [s, setS] = useState(settings);
-  const [series, setSeries] = useState(settings.voucherSeries ?? "");
-  const [days, setDays] = useState(
-    settings.expiryLeadDays === null ? "" : String(settings.expiryLeadDays),
-  );
-  const [startsOn, setStartsOn] = useState(settings.postingStartsOn ?? "");
+  // Every value here waits for the page's Spara (docs/settings.md). Held as text, the way the fields hold it.
+  const draft = useDraft({
+    consumptionCostCenterId: settings.consumptionCostCenterId ?? "",
+    purchaseOffsetAccount: settings.purchaseOffsetAccount ?? "",
+    purchaseCostCenterId: settings.purchaseCostCenterId ?? "",
+    lossCostCenterId: settings.lossCostCenterId ?? "",
+    countDiffCostCenterId: settings.countDiffCostCenterId ?? "",
+    boardCostAccount: settings.boardCostAccount ?? "",
+    boardCostCenterId: settings.boardCostCenterId ?? "",
+    boardSalesAccount: settings.boardSalesAccount ?? "",
+    boardSalesCostCenterId: settings.boardSalesCostCenterId ?? "",
+    voucherSeries: settings.voucherSeries ?? "",
+    postingStartsOn: settings.postingStartsOn ?? "",
+    expiryLeadDays: settings.expiryLeadDays === null ? "" : String(settings.expiryLeadDays),
+  });
+  const s = draft.value;
 
-  async function save(patch: UpdateStock, key: string) {
-    setS((now) => ({ ...now, ...patch }));
-    await mutate(`/api/stock/stocks/${stock}`, {
-      key: `${stock}.${key}`,
-      method: "PATCH",
-      body: patch,
-      error: t("saveFailed"),
-      success: t("saved"),
-    });
-  }
+  const days = s.expiryLeadDays.trim();
+  const parsedDays = Number(days);
+  const daysValid =
+    days === "" || (Number.isInteger(parsedDays) && parsedDays >= 0 && parsedDays <= 365);
+
+  useDraftPart({
+    dirty: draft.dirty,
+    save: async () => {
+      if (!daysValid) {
+        notify.error(t("expiry.invalid"));
+        return false;
+      }
+      const body: Record<string, string | number | null> = {};
+      for (const [key, value] of Object.entries(draft.changes)) {
+        const text = String(value ?? "").trim();
+        body[key] = key === "expiryLeadDays" ? (text === "" ? null : Number(text)) : text || null;
+      }
+      return (
+        (await mutate(`/api/stock/stocks/${stock}`, {
+          method: "PATCH",
+          body,
+          error: t("saveFailed"),
+          refresh: false,
+        })) !== null
+      );
+    },
+    commit: draft.commit,
+    reset: draft.reset,
+  });
+
+  // What an empty required field holds up, under its name in place of the hint.
+  const needed = (value: string) => (value ? null : t("needed"));
 
   const account = (key: "purchaseOffsetAccount" | "boardCostAccount" | "boardSalesAccount") => (
     <Combobox
       size="sm"
       options={accountOptions}
-      value={s[key] ?? ""}
-      onChange={(v) => save({ [key]: v || null }, key)}
+      value={s[key]}
+      onChange={(v) => draft.set(key, v)}
       placeholder={tBook("accountPlaceholder")}
       searchPlaceholder={tBook("accountSearch")}
       allowClear
@@ -133,177 +171,147 @@ function StockSection({
     <Combobox
       size="sm"
       options={costCenterOptions}
-      value={s[key] ?? ""}
-      onChange={(v) => save({ [key]: v || null }, key)}
+      value={s[key]}
+      onChange={(v) => draft.set(key, v)}
       placeholder={t("chooseCostCenter")}
       allowClear
       aria-label={t(`field.${key}`)}
     />
   );
 
-  const parsedDays = Number(days.trim());
-  const daysValid =
-    days.trim() === "" || (Number.isInteger(parsedDays) && parsedDays >= 0 && parsedDays <= 365);
-  const daysValue = days.trim() === "" ? null : parsedDays;
-
   return (
-    <section id={stock} className="scroll-mt-4 space-y-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{t(`stock.${stock}`)}</h2>
-        <Status gaps={settings.gaps} />
-      </div>
-
-      {settings.gaps.length > 0 && (
-        <Notice tone="info">
-          <p>{t("gaps.intro")}</p>
-          <ul className="mt-1 list-disc pl-5">
-            {settings.gaps.map((gap) => (
-              <li key={`${gap.key}:${gap.group ?? ""}`}>
-                {gap.group
-                  ? t(`gaps.${gap.key}`, { group: gap.group })
-                  : t(`gaps.${gap.key}`, { group: "" })}
-              </li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-
-      <Card>
-        <CardHeader title={t("groups.title")} subtitle={t("groups.hint")} />
+    <SettingsSection
+      id={stock}
+      title={t(`stock.${stock}`)}
+      aside={
+        <SetupStatus
+          left={settings.gaps.length}
+          label={
+            settings.gaps.length ? t("gaps.left", { count: settings.gaps.length }) : t("gaps.none")
+          }
+        />
+      }
+    >
+      <SettingsCard title={t("groups.title")}>
         <GroupTable stock={stock} groups={settings.groups} accountOptions={accountOptions} />
-      </Card>
+      </SettingsCard>
 
       {traits.usesPlaces && (
-        <Card>
-          <CardHeader title={t("places.title")} subtitle={t("places.hint")} />
+        <SettingsCard title={t("places.title")}>
           <PlaceTable
             stock={stock}
             places={places}
             knownGroups={knownGroups}
             costCenterOptions={costCenterOptions}
           />
-        </Card>
+        </SettingsCard>
       )}
 
-      <Card>
-        <CardHeader title={t("booking.title")} subtitle={t(`booking.hint.${s.purchaseMode}`)} />
+      <SettingsCard title={t("booking.title")}>
         <ul>
-          <Row label={t("field.consumptionCostCenterId")} hint={t("hint.consumptionCostCenterId")}>
+          <SettingRow
+            label={t("field.consumptionCostCenterId")}
+            hint={t("hint.consumptionCostCenterId")}
+          >
             {costCenter("consumptionCostCenterId")}
-          </Row>
-          {s.purchaseMode === "EXPENSED" && (
+          </SettingRow>
+          {settings.purchaseMode === "EXPENSED" && (
             <>
-              <Row label={t("field.purchaseOffsetAccount")} hint={t("hint.purchaseOffsetAccount")}>
+              <SettingRow
+                label={t("field.purchaseOffsetAccount")}
+                hint={t("hint.purchaseOffsetAccount")}
+                required
+                missing={needed(s.purchaseOffsetAccount)}
+              >
                 {account("purchaseOffsetAccount")}
-              </Row>
-              <Row label={t("field.purchaseCostCenterId")} hint={t("hint.purchaseCostCenterId")}>
+              </SettingRow>
+              <SettingRow
+                label={t("field.purchaseCostCenterId")}
+                hint={t("hint.purchaseCostCenterId")}
+              >
                 {costCenter("purchaseCostCenterId")}
-              </Row>
+              </SettingRow>
             </>
           )}
-          <Row label={t("field.lossCostCenterId")} hint={t("hint.lossCostCenterId")}>
+          <SettingRow label={t("field.lossCostCenterId")} hint={t("hint.lossCostCenterId")}>
             {costCenter("lossCostCenterId")}
-          </Row>
-          <Row label={t("field.countDiffCostCenterId")} hint={t("hint.countDiffCostCenterId")}>
+          </SettingRow>
+          <SettingRow
+            label={t("field.countDiffCostCenterId")}
+            hint={t("hint.countDiffCostCenterId")}
+          >
             {costCenter("countDiffCostCenterId")}
-          </Row>
+          </SettingRow>
           {traits.allowsBoardWithdrawals && (
             <>
-              <Row label={t("field.boardCostAccount")} hint={t("hint.boardCostAccount")}>
+              <SettingRow
+                label={t("field.boardCostAccount")}
+                hint={t("hint.boardCostAccount")}
+                required
+                missing={needed(s.boardCostAccount)}
+              >
                 {account("boardCostAccount")}
-              </Row>
-              <Row label={t("field.boardCostCenterId")} hint={t("hint.boardCostCenterId")}>
+              </SettingRow>
+              <SettingRow label={t("field.boardCostCenterId")} hint={t("hint.boardCostCenterId")}>
                 {costCenter("boardCostCenterId")}
-              </Row>
-              <Row label={t("field.boardSalesAccount")} hint={t("hint.boardSalesAccount")}>
+              </SettingRow>
+              <SettingRow label={t("field.boardSalesAccount")} hint={t("hint.boardSalesAccount")}>
                 {account("boardSalesAccount")}
-              </Row>
-              <Row
+              </SettingRow>
+              <SettingRow
                 label={t("field.boardSalesCostCenterId")}
                 hint={t("hint.boardSalesCostCenterId")}
               >
                 {costCenter("boardSalesCostCenterId")}
-              </Row>
+              </SettingRow>
             </>
           )}
-          <Row
+          <SettingRow
             label={t("field.voucherSeries")}
-            hint={
-              defaultSeries
-                ? t("hint.voucherSeries", { series: defaultSeries })
-                : t("hint.voucherSeriesUnconnected")
-            }
+            hint={t("hint.voucherSeries")}
+            required
+            missing={needed(s.voucherSeries)}
           >
-            <div className="flex gap-2">
-              <Input
-                size="sm"
-                className="min-w-0 font-mono uppercase"
-                value={series}
-                onChange={(e) => setSeries(e.target.value.toUpperCase())}
-                placeholder={defaultSeries ?? ""}
-                maxLength={4}
-                aria-label={t("field.voucherSeries")}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={series === (settings.voucherSeries ?? "")}
-                loading={pending === `${stock}.voucherSeries`}
-                onClick={() => save({ voucherSeries: series || null }, "voucherSeries")}
-              >
-                {t("save")}
-              </Button>
-            </div>
-          </Row>
-          <Row label={t("field.postingStartsOn")} hint={t("hint.postingStartsOn")}>
-            <div className="flex gap-2">
-              <DateInput
-                size="sm"
-                value={startsOn}
-                onChange={(e) => setStartsOn(e.target.value)}
-                aria-label={t("field.postingStartsOn")}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={startsOn === (settings.postingStartsOn ?? "")}
-                loading={pending === `${stock}.postingStartsOn`}
-                onClick={() => save({ postingStartsOn: startsOn || null }, "postingStartsOn")}
-              >
-                {t("save")}
-              </Button>
-            </div>
-          </Row>
+            <Input
+              size="sm"
+              className="min-w-0 font-mono uppercase"
+              value={s.voucherSeries}
+              onChange={(e) => draft.set("voucherSeries", e.target.value.toUpperCase())}
+              maxLength={4}
+              aria-label={t("field.voucherSeries")}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("field.postingStartsOn")}
+            hint={t("hint.postingStartsOn")}
+            required
+            missing={needed(s.postingStartsOn)}
+          >
+            <DateInput
+              size="sm"
+              value={s.postingStartsOn}
+              onChange={(e) => draft.set("postingStartsOn", e.target.value)}
+              aria-label={t("field.postingStartsOn")}
+            />
+          </SettingRow>
         </ul>
-      </Card>
+      </SettingsCard>
 
-      <Card>
-        <CardHeader title={t("expiry.title")} subtitle={t("expiry.hint")} />
+      <SettingsCard title={t("expiry.title")}>
         <ul>
-          <Row label={t("expiry.leadDays")} hint={t("expiry.leadDaysHint")}>
-            <div className="flex gap-2">
-              <Input
-                size="sm"
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-                inputMode="numeric"
-                className="min-w-0 tabular-nums"
-                aria-label={t("expiry.leadDays")}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={!daysValid || daysValue === settings.expiryLeadDays}
-                loading={pending === `${stock}.expiryLeadDays`}
-                onClick={() => save({ expiryLeadDays: daysValue }, "expiryLeadDays")}
-              >
-                {t("save")}
-              </Button>
-            </div>
-          </Row>
+          <SettingRow label={t("expiry.leadDays")} hint={t("expiry.leadDaysHint")}>
+            <Input
+              size="sm"
+              value={s.expiryLeadDays}
+              onChange={(e) => draft.set("expiryLeadDays", e.target.value)}
+              inputMode="numeric"
+              className="min-w-0 tabular-nums"
+              aria-label={t("expiry.leadDays")}
+            />
+          </SettingRow>
         </ul>
-      </Card>
-    </section>
+      </SettingsCard>
+    </SettingsSection>
   );
 }
 
@@ -329,26 +337,29 @@ function GroupTable({
   const tBook = useTranslations("book");
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
-  const [rows, setRows] = useState(groups);
   const [name, setName] = useState("");
 
-  // The list follows the server after a save (a new or removed type), adjusted during render.
-  const [seen, setSeen] = useState(groups);
-  if (seen !== groups) {
-    setSeen(groups);
-    setRows(groups);
-  }
+  // The accounts wait for the page's Spara. Adding and removing a type happen at once.
+  const edits = useDraftRows(groups);
+  const rows = groups.map(edits.get);
 
-  async function patch(group: StockGroupSettings, body: PatchStockGroup, key: string) {
-    setRows((now) => now.map((g) => (g.id === group.id ? { ...g, ...body } : g)));
-    await mutate(`/api/stock/groups/${group.id}`, {
-      key: `${group.id}.${key}`,
-      method: "PATCH",
-      body,
-      error: t("saveFailed"),
-      success: t("saved"),
-    });
-  }
+  useDraftPart({
+    dirty: edits.dirty,
+    save: async () => {
+      for (const [id, change] of edits.changes) {
+        const ok = await mutate(`/api/stock/groups/${id}`, {
+          method: "PATCH",
+          body: change satisfies PatchStockGroup,
+          error: t("saveFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      return true;
+    },
+    commit: edits.commit,
+    reset: edits.reset,
+  });
 
   async function add() {
     const made = await mutate("/api/stock/groups", {
@@ -398,26 +409,35 @@ function GroupTable({
               )}
             </div>
             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {GROUP_ACCOUNTS.map((key: GroupAccount) => (
-                <label key={key} className="block min-w-0">
-                  <span className="mb-1 block text-xs text-muted">{t(`groups.${key}`)}</span>
-                  <Combobox
-                    size="sm"
-                    options={accountOptions}
-                    value={group[key] ?? ""}
-                    onChange={(v) => patch(group, { [key]: v || null }, key)}
-                    // The two optional ones fall back to the cost account, and say so while empty.
-                    placeholder={
-                      key === "lossAccount" || key === "countDiffAccount"
-                        ? t("groups.sameAsCost")
-                        : tBook("accountPlaceholder")
-                    }
-                    searchPlaceholder={tBook("accountSearch")}
-                    allowClear
-                    aria-label={`${group.name}: ${t(`groups.${key}`)}`}
-                  />
-                </label>
-              ))}
+              {GROUP_ACCOUNTS.map((key: GroupAccount) => {
+                // A type with products in it needs its two accounts before a day can be posted (lib/stock/setup.ts).
+                const required =
+                  group.products > 0 && (key === "stockAccount" || key === "consumptionAccount");
+                return (
+                  <Field
+                    key={key}
+                    label={t(`groups.${key}`)}
+                    requirement={required ? "required" : undefined}
+                    error={required && !group[key] ? t("needed") : undefined}
+                  >
+                    <Combobox
+                      size="sm"
+                      options={accountOptions}
+                      value={group[key] ?? ""}
+                      onChange={(v) => edits.set(group.id, { [key]: v || null })}
+                      // The two optional ones fall back to the cost account, and say so while empty.
+                      placeholder={
+                        key === "lossAccount" || key === "countDiffAccount"
+                          ? t("groups.sameAsCost")
+                          : tBook("accountPlaceholder")
+                      }
+                      searchPlaceholder={tBook("accountSearch")}
+                      allowClear
+                      aria-label={`${group.name}: ${t(`groups.${key}`)}`}
+                    />
+                  </Field>
+                );
+              })}
             </div>
           </li>
         ))}
@@ -443,41 +463,5 @@ function GroupTable({
         </Button>
       </div>
     </div>
-  );
-}
-
-function Status({ gaps }: { gaps: StockSetupGap[] }) {
-  const t = useTranslations("admin.stock");
-  const left = gaps.length;
-  return (
-    <span
-      className={cn(
-        "flex items-center gap-1 text-xs font-medium",
-        left ? "text-warning" : "text-success",
-      )}
-    >
-      {left === 0 && <IconCheck className="size-3.5" />}
-      {left ? t("gaps.left", { count: left }) : t("gaps.none")}
-    </span>
-  );
-}
-
-function Row({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <li className="grid gap-2 border-t border-border px-inset py-3 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center sm:gap-6">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted">{hint}</p>
-      </div>
-      <div className="min-w-0">{children}</div>
-    </li>
   );
 }

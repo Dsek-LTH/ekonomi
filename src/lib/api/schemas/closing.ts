@@ -1,6 +1,7 @@
 // Bodies for the bokslut routes under /api/closing.
 import { z } from "zod";
 import { NonEmpty, Trimmed } from "./common";
+import { RoleName } from "./admin";
 
 /** The version of the voucher the screen showed: a changed voucher is refused rather than reviewed unseen. */
 const ContentHash = z.string().min(1);
@@ -47,19 +48,7 @@ const ClosingCheckName = z.enum([
   "AUDITORS_REVIEWED",
 ]);
 
-const OwnerRole = z.enum([
-  "SKATTMASTARE",
-  "ORDFORANDE",
-  "VICE_SKATTMASTARE",
-  "SKATTFORMAN",
-  "RESULTATANSVARIG",
-  "STOCKARE",
-  "UTHYRNINGSANSVARIG",
-  "CAFE_STOCKARE",
-  "STYRELSE",
-  "REVISOR",
-  "ORDINARIE",
-]);
+const OwnerRole = RoleName;
 
 /** POST /api/closing/template. */
 export const TemplateItemBody = z.object({

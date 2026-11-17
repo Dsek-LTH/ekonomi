@@ -57,6 +57,37 @@ const FILTERS: Record<Exclude<EmailFilter, "">, Prisma.OutboundEmailWhereInput> 
   failed: { sentAt: null, lastError: { not: null } },
 };
 
+const ROW_SELECT = {
+  id: true,
+  kind: true,
+  subject: true,
+  createdAt: true,
+  sentAt: true,
+  attempts: true,
+  lastError: true,
+  recipient: { select: { id: true, name: true, email: true } },
+  sentBy: { select: { name: true } },
+} satisfies Prisma.OutboundEmailSelect;
+
+const toRow = (r: Prisma.OutboundEmailGetPayload<{ select: typeof ROW_SELECT }>): EmailLogRow => ({
+  id: r.id,
+  kind: r.kind,
+  subject: r.subject,
+  recipient: r.recipient,
+  sentBy: r.sentBy?.name ?? null,
+  createdAt: r.createdAt.toISOString(),
+  sentAt: r.sentAt?.toISOString() ?? null,
+  attempts: r.attempts,
+  lastError: r.lastError,
+  status: status(r),
+});
+
+/** One mail as the log shows it, for its own page. Null when there is no such mail. */
+export async function getEmailRow(id: string): Promise<EmailLogRow | null> {
+  const row = await prisma.outboundEmail.findUnique({ where: { id }, select: ROW_SELECT });
+  return row && toRow(row);
+}
+
 export async function getEmailLog(opts: {
   recipientId?: string;
   filter?: EmailFilter;
@@ -82,32 +113,11 @@ export async function getEmailLog(opts: {
     where: { AND: and },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
-    select: {
-      id: true,
-      kind: true,
-      subject: true,
-      createdAt: true,
-      sentAt: true,
-      attempts: true,
-      lastError: true,
-      recipient: { select: { id: true, name: true, email: true } },
-      sentBy: { select: { name: true } },
-    },
+    select: ROW_SELECT,
   });
 
   return {
-    rows: rows.slice(0, take).map((r) => ({
-      id: r.id,
-      kind: r.kind,
-      subject: r.subject,
-      recipient: r.recipient,
-      sentBy: r.sentBy?.name ?? null,
-      createdAt: r.createdAt.toISOString(),
-      sentAt: r.sentAt?.toISOString() ?? null,
-      attempts: r.attempts,
-      lastError: r.lastError,
-      status: status(r),
-    })),
+    rows: rows.slice(0, take).map(toRow),
     more: rows.length > take,
     mailEnabled: mailEnabled(),
   };

@@ -156,7 +156,7 @@ One row per stock. Two rows to start with: `alcohol` and `cafe`.
 | `countDiffCostCenterId` | Cost centre for stocktake differences and reconciliation. The account is on the group |
 | `boardCostAccount`, `boardCostCenterId` | Cost of what the board took |
 | `boardSalesAccount`, `boardSalesCostCenterId` | Revenue on the board's invoices |
-| `voucherSeries` | Null means `FortnoxConnection.voucherSeries` |
+| `voucherSeries` | Chosen per stock and required; there is no shared default |
 | `postingStartsOn` | First day that produces a voucher. Null means posting is off |
 | `expiryLeadDays` | Moves here from `StockSettings`, which is dropped |
 

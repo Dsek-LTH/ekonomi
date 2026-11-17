@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card } from "@/components/ui/card";
+import { SettingsCard } from "@/components/settings/settings-card";
+import { SettingsForm, useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
 import { Button } from "@/components/ui/button";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { Combobox } from "@/components/ui/combobox";
@@ -18,15 +19,21 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { useTableControls } from "@/lib/data/use-list-query";
 import type { Card as SectionCard, User } from "@/lib/domain/types";
 
-export function CardsClient({
-  cards,
-  users,
-  resultUnits,
-}: {
+type CardsProps = {
   cards: SectionCard[];
   users: User[];
   resultUnits: { id: string; name: string }[];
-}) {
+};
+
+export function CardsClient(props: CardsProps) {
+  return (
+    <SettingsForm>
+      <CardsTable {...props} />
+    </SettingsForm>
+  );
+}
+
+function CardsTable({ cards, users, resultUnits }: CardsProps) {
   const t = useTranslations("admin.cards");
   const tCommon = useTranslations("common");
   const notify = useNotify();
@@ -61,31 +68,31 @@ export function CardsClient({
     setAdding(false);
   }
 
-  async function assign(card: SectionCard, holderId: string) {
-    const holder = users.find((u) => u.id === holderId);
-    await mutate(`/api/cards/${card.id}`, {
-      key: `holder-${card.id}`,
-      method: "PATCH",
-      body: { holderId },
-      error: t("assignFailed"),
-      success: holder
-        ? t("assigned", { last4: card.last4, name: holder.name })
-        : t("unassigned", { last4: card.last4 }),
-    });
-  }
+  // Who holds a card, and which unit it is spent for, wait for the page's Spara (docs/settings.md).
+  const edits = useDraftRows(cards);
+  const shown = cards.map(edits.get);
 
-  async function assignUnit(card: SectionCard, resultUnitId: string) {
-    const unit = resultUnits.find((u) => u.id === resultUnitId);
-    await mutate(`/api/cards/${card.id}`, {
-      key: `unit-${card.id}`,
-      method: "PATCH",
-      body: { resultUnitId },
-      error: t("unitAssignFailed"),
-      success: unit
-        ? t("unitAssigned", { last4: card.last4, name: unit.name })
-        : t("unitUnassigned", { last4: card.last4 }),
-    });
-  }
+  useDraftPart({
+    dirty: edits.dirty,
+    save: async () => {
+      for (const [id, change] of edits.changes) {
+        const ok = await mutate(`/api/cards/${id}`, {
+          method: "PATCH",
+          body: {
+            // A cleared pick is the key with no value: sent as "", which the route takes as none.
+            ...("holderId" in change && { holderId: change.holderId ?? "" }),
+            ...("resultUnitId" in change && { resultUnitId: change.resultUnitId ?? "" }),
+          },
+          error: t("assignFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      return true;
+    },
+    commit: edits.commit,
+    reset: edits.reset,
+  });
 
   async function deleteCard(card: SectionCard) {
     const ok = await confirm({
@@ -129,8 +136,12 @@ export function CardsClient({
           className="w-full sm:w-64"
           options={userOptions}
           value={c.holderId ?? ""}
-          onChange={(v) => assign(c, v)}
-          disabled={pending === `holder-${c.id}`}
+          onChange={(v) =>
+            edits.set(c.id, {
+              holderId: v || undefined,
+              holderName: users.find((u) => u.id === v)?.name,
+            })
+          }
           placeholder={t("noHolder")}
           allowClear
           aria-label={t("holderFor", { last4: c.last4 })}
@@ -151,8 +162,12 @@ export function CardsClient({
           className="w-full sm:w-56"
           options={unitOptions}
           value={c.resultUnitId ?? ""}
-          onChange={(v) => assignUnit(c, v)}
-          disabled={pending === `unit-${c.id}`}
+          onChange={(v) =>
+            edits.set(c.id, {
+              resultUnitId: v || undefined,
+              resultUnitName: resultUnits.find((u) => u.id === v)?.name,
+            })
+          }
           placeholder={t("noResultUnit")}
           allowClear
           aria-label={t("resultUnitFor", { last4: c.last4 })}
@@ -198,10 +213,10 @@ export function CardsClient({
   ];
 
   return (
-    <Card>
+    <SettingsCard>
       <ClientDataTable
         columns={columns}
-        rows={cards}
+        rows={shown}
         controls={controls}
         tabs={tabs}
         searchPlaceholder={t("searchPlaceholder")}
@@ -250,6 +265,6 @@ export function CardsClient({
           )
         }
       />
-    </Card>
+    </SettingsCard>
   );
 }

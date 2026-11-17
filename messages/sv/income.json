@@ -207,15 +207,11 @@
       "noFallback": "Välj reserv för okända varor: vilken verksamhet och vilket konto varor utan prefix bokförs på.",
       "swishClearing": "Välj likvidkonto för Swish.",
       "zettleClearing": "Välj likvidkonto för Zettle.",
-      "zettleFee": "Välj konto för Zettles avgifter."
+      "zettleFee": "Välj konto för Zettles avgifter.",
+      "series": "Välj verifikationsserie för intäkterna."
     },
     "askAdmin": "Stegen görs under Inställningar → Försäljning, som bara den med behörighet till inställningarna når. Be någon med den behörigheten.",
-    "openSettings": "Öppna Inställningar → Försäljning",
-    "goTo": {
-      "service": "Se Zettle",
-      "units": "Gå till Verksamheter och varor",
-      "booking": "Gå till Bokföring"
-    }
+    "openSettings": "Öppna Inställningar → Försäljning"
   },
   "blocker": {
     "alreadyBooked": "Redan bokförd här.",

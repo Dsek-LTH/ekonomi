@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card } from "@/components/ui/card";
+import { SettingsCard } from "@/components/settings/settings-card";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Field, Input, DateInput } from "@/components/ui/field";
@@ -115,7 +115,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
   }
 
   return (
-    <Card>
+    <SettingsCard title={t("title")}>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-inset py-4">
         {current ? (
           <div className="min-w-0 flex-1">
@@ -213,6 +213,6 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
           )}
         </div>
       )}
-    </Card>
+    </SettingsCard>
   );
 }

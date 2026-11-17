@@ -1,17 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { FilterTabs } from "@/components/ui/filter-tabs";
-import { IconButton } from "@/components/ui/icon-button";
-import { IconX } from "@/components/ui/icons";
-import { Modal, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { Notice } from "@/components/ui/notice";
 import { SearchInput } from "@/components/ui/search-input";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Spinner } from "@/components/ui/spinner";
 import { Tag } from "@/components/ui/status-pill";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -25,7 +22,7 @@ import { cn } from "@/lib/ui/utils";
 // Mirrors EMAIL_LOG_PAGE in lib/data/emails.ts, which is server-only.
 const PAGE = 50;
 
-const STATUS_TONE: Record<EmailStatus, "success" | "neutral" | "warning" | "danger"> = {
+export const STATUS_TONE: Record<EmailStatus, "success" | "neutral" | "warning" | "danger"> = {
   SENT: "success",
   QUEUED: "neutral",
   RETRYING: "warning",
@@ -37,7 +34,6 @@ export function EmailLog({ recipient }: { recipient?: { id: string; name: string
   const [filter, setFilter] = useState<EmailFilter>("");
   const [q, setQ] = useState("");
   const [take, setTake] = useState(PAGE);
-  const [open, setOpen] = useState<EmailLogRow | null>(null);
 
   const params = new URLSearchParams();
   if (recipient) params.set("recipient", recipient.id);
@@ -106,7 +102,7 @@ export function EmailLog({ recipient }: { recipient?: { id: string; name: string
         >
           {data.rows.map((row) => (
             <li key={row.id}>
-              <LogRow row={row} showRecipient={!recipient} onOpen={() => setOpen(row)} />
+              <LogRow row={row} showRecipient={!recipient} />
             </li>
           ))}
         </ul>
@@ -124,36 +120,18 @@ export function EmailLog({ recipient }: { recipient?: { id: string; name: string
           </Button>
         </div>
       )}
-
-      {open && (
-        <EmailDialog
-          key={open.id}
-          row={data?.rows.find((r) => r.id === open.id) ?? open}
-          onClose={() => setOpen(null)}
-          onRetried={reload}
-        />
-      )}
     </div>
   );
 }
 
-function LogRow({
-  row,
-  showRecipient,
-  onOpen,
-}: {
-  row: EmailLogRow;
-  showRecipient: boolean;
-  onOpen: () => void;
-}) {
+function LogRow({ row, showRecipient }: { row: EmailLogRow; showRecipient: boolean }) {
   const t = useTranslations("admin.email");
   const tKind = useTranslations("profile.notifications.kind");
   const { dateTime } = useFormat();
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <Link
+      href={`/admin/email/${row.id}`}
       className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-hover"
     >
       <span className="min-w-0 flex-1">
@@ -177,125 +155,7 @@ function LogRow({
           {t(`status.${row.status}`)}
         </Tag>
       </span>
-    </button>
-  );
-}
-
-function EmailDialog({
-  row,
-  onClose,
-  onRetried,
-}: {
-  row: EmailLogRow;
-  onClose: () => void;
-  onRetried: () => void;
-}) {
-  const t = useTranslations("admin.email");
-  const tCommon = useTranslations("common");
-  const tKind = useTranslations("profile.notifications.kind");
-  const { dateTime } = useFormat();
-  const { pending, mutate } = useMutation();
-  const [view, setView] = useState<"html" | "text">("html");
-  const { data, error } = useQuery<{ subject: string; text: string; html: string | null }>(
-    `/api/emails/${row.id}`,
-  );
-  const shown = data && !data.html ? "text" : view;
-
-  const retry = async () => {
-    const ok = await mutate(`/api/emails/${row.id}/retry`, {
-      key: "retry",
-      success: t("retried"),
-      error: t("retryFailed"),
-      refresh: false,
-    });
-    if (ok) {
-      onRetried();
-      setTimeout(onRetried, 3000);
-    }
-  };
-
-  const facts: [string, string][] = [
-    [t("fact.to"), `${row.recipient.name} <${row.recipient.email}>`],
-    [t("fact.kind"), tKind(row.kind)],
-    [t("fact.created"), dateTime(row.createdAt)],
-    [t("fact.sent"), row.sentAt ? dateTime(row.sentAt) : t("notSent")],
-    [t("fact.attempts"), String(row.attempts)],
-  ];
-  if (row.sentBy) facts.push([t("fact.sentBy"), row.sentBy]);
-
-  return (
-    <Modal label={row.subject} onClose={onClose} className="sm:max-w-3xl">
-      <div className="flex shrink-0 items-center gap-3 border-b border-border px-inset py-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold">{row.subject}</h2>
-        </div>
-        <Tag size="sm" tone={STATUS_TONE[row.status]}>
-          {t(`status.${row.status}`)}
-        </Tag>
-        <IconButton label={tCommon("close")} onClick={onClose}>
-          <IconX className="size-4" />
-        </IconButton>
-      </div>
-
-      <ModalBody>
-        <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
-          {facts.map(([label, value]) => (
-            <div key={label} className="contents">
-              <dt className="text-muted">{label}</dt>
-              <dd className="min-w-0 break-words">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        {row.lastError && row.status !== "SENT" && (
-          <Notice tone="danger">
-            <span className="font-mono text-xs">{row.lastError}</span>
-          </Notice>
-        )}
-
-        {data?.html && (
-          <SegmentedControl
-            size="sm"
-            value={shown}
-            onChange={setView}
-            options={[
-              { value: "html", label: t("viewHtml") },
-              { value: "text", label: t("viewText") },
-            ]}
-          />
-        )}
-        {error && <Notice tone="danger">{error}</Notice>}
-        {!data && !error && (
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <Spinner size="sm" />
-            {t("loading")}
-          </p>
-        )}
-        {data &&
-          (shown === "html" ? (
-            // Sandboxed with nothing allowed: no scripts, no forms, no navigating the
-            // app from inside a mail.
-            <iframe
-              title={row.subject}
-              sandbox=""
-              srcDoc={data.html ?? ""}
-              className="h-[60dvh] w-full rounded-panel border border-border bg-white"
-            />
-          ) : (
-            <pre className="max-h-[60dvh] overflow-auto whitespace-pre-wrap rounded-panel border border-border bg-surface p-4 font-mono text-xs">
-              {data.text}
-            </pre>
-          ))}
-      </ModalBody>
-
-      {row.status !== "SENT" && (
-        <ModalFooter>
-          <p className="text-xs text-muted">{t("retryHint")}</p>
-          <Button variant="secondary" loading={pending === "retry"} onClick={retry}>
-            {t("retry")}
-          </Button>
-        </ModalFooter>
-      )}
-    </Modal>
+    </Link>
   );
 }
 

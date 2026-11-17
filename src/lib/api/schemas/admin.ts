@@ -4,7 +4,8 @@ import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode } from "./common";
 import { ALL_KINDS, SWITCHABLE_KINDS } from "@/lib/domain/notifications";
 import { GUIDE_STEP_IDS } from "@/lib/domain/guides";
 import { SHORT_NAME_MAX } from "@/lib/domain/cost-center-short-name";
-import type { NotificationKind } from "@/lib/domain/types";
+import { GRANTABLE_ROLES, ROLES } from "@/lib/domain/permissions";
+import type { NotificationKind, Role } from "@/lib/domain/types";
 
 /** POST /api/cards: register a section card. */
 export const CreateCard = z.object({
@@ -60,6 +61,15 @@ export const ResultUnitBody = z.object({
 });
 export type ResultUnitBody = z.infer<typeof ResultUnitBody>;
 
+/**
+ * PUT /api/result-units/[id]/groups: the Authentik groups whose holders answer for the unit (resultatansvariga). The
+ * whole set, not a delta. Lower-cased, as everything compares groups.
+ */
+export const PutResultUnitGroups = z.object({
+  groups: z.array(NonEmpty.toLowerCase()).max(50),
+});
+export type PutResultUnitGroups = z.infer<typeof PutResultUnitGroups>;
+
 /** POST /api/result-units/[id]/prefixes. */
 export const AddPrefix = z.object({
   value: UpperCode.pipe(NonEmpty),
@@ -74,15 +84,15 @@ export const PatchProfile = z.object({
 export type PatchProfile = z.infer<typeof PatchProfile>;
 
 /**
- * PATCH /api/fortnox/settings: the voucher series exports land in, and the two accounts the payment row is posted
- * against (the route checks them against the synced chart).
+ * PATCH /api/expense-settings: the series utlägg are exported into, and the two accounts the payment row is posted
+ * against (the route checks them against the synced chart). The series may be cleared: setup goes in steps.
  */
-export const FortnoxSettings = z.object({
-  voucherSeries: UpperCode.pipe(NonEmpty).optional(),
+export const ExpenseSettings = z.object({
+  expenseVoucherSeries: Clearable(UpperCode).optional(),
   bankAccount: NonEmpty.optional(),
   memberDebtAccount: NonEmpty.optional(),
 });
-export type FortnoxSettings = z.infer<typeof FortnoxSettings>;
+export type ExpenseSettings = z.infer<typeof ExpenseSettings>;
 
 /**
  * POST /api/fortnox/sync: pull the ledger. `financialYearId` is Fortnox's own id for a financial year (a small integer
@@ -109,19 +119,7 @@ export type MileageRateInput = z.infer<typeof MileageRateInput>;
 // Roles and capabilities arrive as bare strings and are checked against the vocabulary here: these bodies are the only
 // way into the tables every gate reads.
 
-const RoleName = z.enum([
-  "SKATTMASTARE",
-  "ORDFORANDE",
-  "VICE_SKATTMASTARE",
-  "SKATTFORMAN",
-  "RESULTATANSVARIG",
-  "STOCKARE",
-  "UTHYRNINGSANSVARIG",
-  "CAFE_STOCKARE",
-  "STYRELSE",
-  "REVISOR",
-  "ORDINARIE",
-]);
+export const RoleName = z.enum(ROLES as [Role, ...Role[]]);
 
 /**
  * The capabilities a settings screen may write. Written out, not derived from the Prisma enum, so a request body does
@@ -133,6 +131,7 @@ export const CapabilityName = z.enum([
   "FORTNOX_LOGIN",
   "EXPORT_UNDO",
   "SETTINGS",
+  "GRANT_ACCESS",
   "ALCOHOL_STOCK_VIEW",
   "ALCOHOL_STOCK_MANAGE",
   "CAFE_STOCK_VIEW",
@@ -158,13 +157,13 @@ export const CapabilityName = z.enum([
 ]);
 
 /**
- * PUT /api/authority/groups: what one Authentik group confers. The whole grant for one group, not a delta, so two people
- * saving at once cannot interleave. The group is lower-cased (`normaliseGroup` in lib/server/authentik-roles.ts).
+ * PUT /api/authority/groups: the roles one Authentik group confers. The whole set for one group, not a delta, so two
+ * people saving at once cannot interleave. The group is lower-cased (`normaliseGroup` in lib/server/authentik-roles.ts).
+ * Which result units a group answers for is set on the unit (PutResultUnitGroups), and a stock place's groups on the place.
  */
 export const PutGroupGrant = z.object({
   group: NonEmpty.toLowerCase(),
   roles: z.array(RoleName),
-  resultUnitIds: z.array(Id),
 });
 export type PutGroupGrant = z.infer<typeof PutGroupGrant>;
 
@@ -178,6 +177,24 @@ export const PutRoleCapabilities = z.object({
   capabilities: z.array(CapabilityName),
 });
 export type PutRoleCapabilities = z.infer<typeof PutRoleCapabilities>;
+
+/**
+ * POST /api/access-grants: give one member a role or a capability of their own. Exactly one of the two. `from` and
+ * `until` are inclusive Stockholm days; no `from` is now and no `until` is until removed (lib/domain/access-grant.ts).
+ */
+export const CreateAccessGrant = z
+  .object({
+    userId: Id,
+    role: z
+      .enum(GRANTABLE_ROLES as [Role, ...Role[]])
+      .nullable()
+      .default(null),
+    capability: CapabilityName.nullable().default(null),
+    from: IsoDate.nullable().default(null),
+    until: IsoDate.nullable().default(null),
+  })
+  .refine((b) => (b.role === null) !== (b.capability === null), { path: ["role"] });
+export type CreateAccessGrant = z.input<typeof CreateAccessGrant>;
 
 /**
  * PUT /api/profile/notifications: switch one kind of email on or off for the signed-in member. The weekly digest is not

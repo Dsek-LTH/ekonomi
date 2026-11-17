@@ -28,7 +28,7 @@
   "lockedRow": "Locked row",
   "lockedRowHint": "The payment row is locked and cannot be removed",
   "dragRow": "Drag to move the row (or Alt + arrow key)",
-  "unknownPaymentAccount": "The payment account {account} is not in the chart of accounts. Fix it under Settings → Fortnox before booking.",
+  "unknownPaymentAccount": "The payment account {account} is not in the chart of accounts. Fix it under Settings → Expenses before booking.",
   "balanced": "Balanced",
   "difference": "Difference {amount}",
   "sum": "Total",
@@ -53,8 +53,8 @@
   "revenueAccounts": "An expense cannot be booked against a revenue account in the 3000 range: {list}. Pick a cost account instead.",
   "colProject": "Project",
   "projectSearch": "Search projects…",
-  "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox before booking.",
-  "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox before booking.",
+  "bankAccountUnset": "No card account is chosen. Choose it under Settings → Expenses.",
+  "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Expenses before booking.",
   "correction": {
     "reason": "Why is the date wrong?",
     "placeholder": "For example: the receipt says 14 October"

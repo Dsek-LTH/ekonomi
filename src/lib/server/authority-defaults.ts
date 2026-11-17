@@ -70,6 +70,7 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "SKATTMASTARE", capability: "REVIEW_OWN_BOOKING" },
 
   { role: "SKATTMASTARE", capability: "SETTINGS" },
+  { role: "SKATTMASTARE", capability: "GRANT_ACCESS" },
 
   { role: "STOCKARE", capability: "ALCOHOL_STOCK_VIEW" },
   { role: "SKATTMASTARE", capability: "ALCOHOL_STOCK_VIEW" },

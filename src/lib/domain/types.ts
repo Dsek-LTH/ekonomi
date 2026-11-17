@@ -50,9 +50,12 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  /** The roles their groups give and the roles granted to them personally, together. */
   roles: Role[];
-  /** Resolved per request from RoleCapability (lib/server/capabilities.ts), never stored or in the session. `roles` stays for rules that turn on the role itself. */
+  /** Resolved per request from RoleCapability and personal grants (lib/server/access.ts), never stored or in the session. `roles` stays for rules that turn on the role itself. */
   capabilities: Capability[];
+  /** Holds a personal grant in force (AccessGrant). Only set by lib/data/users.ts. */
+  hasPersonalGrants?: boolean;
   initials: string;
 }
 
@@ -185,13 +188,14 @@ export interface ProjectRecord {
 export interface BookkeepingSettings {
   bankAccount: string | null;
   memberDebtAccount: string | null;
+  /** The series utlägg are exported into. Null until chosen. */
+  expenseVoucherSeries: string | null;
 }
 
 export interface FortnoxStatus {
   configured: boolean; // server has client id/secret/redirect configured
   connected: boolean; // the org's service connection is stored (reads + sync)
   companyName?: string;
-  voucherSeries?: string;
   // Set when Fortnox refused to renew the connection. Nothing reads from Fortnox until it is reconnected.
   refreshFailed?: { at: string; error: string };
 

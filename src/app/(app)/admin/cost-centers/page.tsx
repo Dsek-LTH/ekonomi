@@ -14,7 +14,7 @@ export default async function AdminCostCentersPage() {
   const costCenters = await getCostCenters();
 
   return (
-    <PageShell title={t("title")} width="content">
+    <PageShell title={t("title")}>
       <CostCentersClient costCenters={costCenters} />
     </PageShell>
   );

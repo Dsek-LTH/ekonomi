@@ -9,11 +9,9 @@ import type { IncomeSetupStep } from "@/lib/income/setup";
 export function IncomeSetupNotice({
   steps,
   canSetUp,
-  onPage = false,
 }: {
   steps: IncomeSetupStep[];
   canSetUp: boolean;
-  onPage?: boolean;
 }) {
   const t = useTranslations("income.setup");
   if (steps.length === 0) return null;
@@ -24,18 +22,11 @@ export function IncomeSetupNotice({
     <Notice>
       <p className="font-medium">{t(fetchBlocked ? "titleFetch" : "titleBook")}</p>
       <ol className="list-decimal space-y-1 pl-5">
-        {steps.map((s, i) => (
-          <li key={s.key}>
-            {t(`steps.${s.key}`)}{" "}
-            {onPage && s.inApp && steps.findIndex((o) => o.section === s.section) === i && (
-              <a href={`#${s.section}`} className="font-medium underline">
-                {t(`goTo.${s.section}`)}
-              </a>
-            )}
-          </li>
+        {steps.map((s) => (
+          <li key={s.key}>{t(`steps.${s.key}`)}</li>
         ))}
       </ol>
-      {!onPage && inApp && (
+      {inApp && (
         <p>
           {canSetUp ? (
             <Link href="/admin/income" className="font-medium underline">

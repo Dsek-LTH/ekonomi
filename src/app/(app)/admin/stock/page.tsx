@@ -6,7 +6,6 @@ import { getCostCenters } from "@/lib/data/cost-centers";
 import { getAllStockSettings, getPlaceSettings } from "@/lib/data/stock-settings";
 import { canAccessSettings } from "@/lib/domain/permissions";
 import { requirePage } from "@/lib/server/current-user";
-import { getConnection } from "@/lib/fortnox";
 
 import { StockSettingsClient } from "./stock-settings-client";
 import { titled } from "@/lib/server/page-title";
@@ -30,10 +29,9 @@ export default async function AdminStockPage() {
       g.countDiffAccount,
     ]),
   ]);
-  const [accounts, costCenters, connection, places] = await Promise.all([
+  const [accounts, costCenters, places] = await Promise.all([
     getActiveAccounts(chosen),
     getCostCenters(),
-    getConnection(),
     getPlaceSettings(),
   ]);
 
@@ -44,7 +42,6 @@ export default async function AdminStockPage() {
         accounts={accounts}
         // Only what Fortnox has and has active can travel on a voucher row, plus whatever is already chosen.
         costCenters={costCenters.filter((c) => c.active)}
-        defaultSeries={connection?.voucherSeries ?? null}
         places={places.places}
         knownGroups={places.knownGroups}
       />

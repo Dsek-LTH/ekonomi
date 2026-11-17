@@ -10,6 +10,7 @@ export interface StockBookingSettings {
   boardCostAccount: string | null;
   boardSalesAccount: string | null;
   postingStartsOn: string | null;
+  voucherSeries: string | null;
   groups: readonly {
     name: string;
     stockAccount: string | null;
@@ -26,7 +27,8 @@ export interface StockSetupGap {
     | "consumptionAccount"
     | "purchaseOffsetAccount"
     | "boardCostAccount"
-    | "postingStartsOn";
+    | "postingStartsOn"
+    | "voucherSeries";
   group?: string;
 }
 
@@ -49,6 +51,8 @@ export function postingGaps(s: StockBookingSettings): StockSetupGap[] {
     gaps.push({ key: "boardCostAccount" });
   }
   if (!s.postingStartsOn) gaps.push({ key: "postingStartsOn" });
+  // Chosen per stock, with no shared default to fall back on.
+  if (!s.voucherSeries?.trim()) gaps.push({ key: "voucherSeries" });
   return gaps;
 }
 

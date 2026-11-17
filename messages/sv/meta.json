@@ -50,7 +50,6 @@
     "email": "E-post",
     "fortnox": "Fortnox",
     "salesSettings": "Försäljning",
-    "mileageRates": "Milersättning",
     "resultUnits": "Resultatenheter",
     "roles": "Roller & behörigheter",
     "stockSettings": "Lagerinställningar",
@@ -61,6 +60,7 @@
     "board": "Logga uttag",
     "boardPrices": "Styrelsepriser",
     "boardHistory": "Mina uttag",
-    "boardInvoices": "Fakturering"
+    "boardInvoices": "Fakturering",
+    "expenseSettings": "Bokföring & milersättning"
   }
 }

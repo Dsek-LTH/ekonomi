@@ -28,7 +28,7 @@
   "lockedRow": "Låst rad",
   "lockedRowHint": "Betalningsraden är låst och kan inte tas bort",
   "dragRow": "Dra för att flytta raden (eller Alt + piltangent)",
-  "unknownPaymentAccount": "Betalningskontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Fortnox innan du konterar.",
+  "unknownPaymentAccount": "Betalningskontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Utlägg innan du konterar.",
   "balanced": "Balanserar",
   "difference": "Differens {amount}",
   "sum": "Summa",
@@ -53,8 +53,8 @@
   "revenueAccounts": "Ett utlägg kan inte konteras mot ett intäktskonto i 3000-serien: {list}. Välj ett kostnadskonto i stället.",
   "colProject": "Projekt",
   "projectSearch": "Sök projekt…",
-  "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox innan du konterar.",
-  "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Fortnox innan du konterar.",
+  "bankAccountUnset": "Inget kortkonto är valt. Välj det under Inställningar → Utlägg.",
+  "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Utlägg innan du konterar.",
   "correction": {
     "reason": "Varför är datumet fel?",
     "placeholder": "Till exempel: kvittot visar 14 oktober"

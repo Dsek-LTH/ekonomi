@@ -54,12 +54,10 @@ export interface IncomeSettingsRow {
   zettleFeeAccount: string | null;
   zettleFeeCostCenterId: string | null;
   zettleFeeCostCenterCode: string | null;
-  /** The verifikationsserie takings export to; null means the connection's. */
+  /** The verifikationsserie takings export to. Null until chosen; there is no fallback. */
   incomeVoucherSeries: string | null;
   incomeFallbackIncomeId: string | null;
   incomeFallbackAccount: string | null;
-  /** What the null falls back to: the series everything else is exported to. Null if Fortnox was never connected. */
-  connectionVoucherSeries: string | null;
 }
 
 export interface IncomeConfigView {
@@ -71,17 +69,10 @@ export interface IncomeConfigView {
 
 /** The four settings the booking screen needs, read from the same row the booking route reads, with no defaults. */
 export async function getIncomeSettings(): Promise<IncomeSettingsRow> {
-  const [row, connection] = await Promise.all([
-    loadBookkeepingSettings(),
-    prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
-  ]);
-  return incomeSettingsRow(row, connection?.voucherSeries ?? null);
+  return incomeSettingsRow(await loadBookkeepingSettings());
 }
 
-function incomeSettingsRow(
-  row: BookkeepingSettingsValues,
-  connectionVoucherSeries: string | null,
-): IncomeSettingsRow {
+function incomeSettingsRow(row: BookkeepingSettingsValues): IncomeSettingsRow {
   return {
     zettleClearingAccount: row.zettleClearingAccount,
     swishClearingAccount: row.swishClearingAccount,
@@ -91,12 +82,11 @@ function incomeSettingsRow(
     incomeVoucherSeries: row.incomeVoucherSeries,
     incomeFallbackIncomeId: row.incomeFallbackIncomeId,
     incomeFallbackAccount: row.incomeFallbackAccount,
-    connectionVoucherSeries,
   };
 }
 
 export async function getIncomeConfig(): Promise<IncomeConfigView> {
-  const [units, accounts, settings, connection, fallbacks, used] = await Promise.all([
+  const [units, accounts, settings, fallbacks, used] = await Promise.all([
     prisma.resultUnit.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -111,7 +101,6 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
     }),
     prisma.account.findMany({ select: { number: true, name: true } }),
     loadBookkeepingSettings(),
-    prisma.fortnoxConnection.findFirst({ select: { voucherSeries: true } }),
     prisma.swishAmountFallback.findMany({ orderBy: { amount: "asc" } }),
     // Units with takings: an old per-verksamhet report, or a sold line on a per-day one. Only "any" is needed.
     Promise.all([
@@ -148,7 +137,7 @@ export async function getIncomeConfig(): Promise<IncomeConfigView> {
       },
     })),
     fallbacks: fallbacks.map((f) => ({ amount: oreToSEK(f.amount), message: f.message })),
-    settings: incomeSettingsRow(settings, connection?.voucherSeries ?? null),
+    settings: incomeSettingsRow(settings),
     knownAccounts: accounts.map((a) => a.number),
   };
 }

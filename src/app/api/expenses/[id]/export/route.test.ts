@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //   the lock           a second press is refused while the first holds it; released only when certainly no voucher was made
 
 const h = vi.hoisted(() => ({
+  expenseVoucherSeries: "A" as string | null,
   capabilities: ["BOOKKEEPING"] as string[],
   reviewBlocker: null as "ownBooking" | null,
   status: "BOOKED" as string,
@@ -111,8 +112,13 @@ class FortnoxError extends Error {
   }
 }
 
+// The utlägg series is the expense page's own setting (BookkeepingSettings.expenseVoucherSeries).
+vi.mock("@/lib/server/bookkeeping-settings", () => ({
+  loadBookkeepingSettings: async () => ({ expenseVoucherSeries: h.expenseVoucherSeries }),
+}));
+
 vi.mock("@/lib/fortnox", () => ({
-  getConnection: async () => ({ voucherSeries: "A" }),
+  getConnection: async () => ({}),
   getUserToken: (...a: unknown[]) => h.getUserToken(...a),
   createVoucher: (...a: unknown[]) => {
     h.calls.push("createVoucher");
@@ -162,6 +168,7 @@ const exportIt = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.expenseVoucherSeries = "A";
   h.calls = [];
   h.capabilities = ["BOOKKEEPING"];
   h.reviewBlocker = null;
@@ -219,6 +226,14 @@ describe("POST /api/expenses/[id]/export", () => {
         error: "expense.exportOnlyBooked",
       });
     }
+    expect(h.calls).toEqual([]);
+  });
+
+  it("refuses when no series is chosen for utlägg: there is no shared default", async () => {
+    h.expenseVoucherSeries = null;
+    const res = await exportIt();
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "settings.expenseSeriesUnset" });
     expect(h.calls).toEqual([]);
   });
 

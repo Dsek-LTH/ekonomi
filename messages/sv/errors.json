@@ -17,7 +17,8 @@
     "treasurerEditorialChanges": "Endast skattmästaren kan göra redaktionella ändringar",
     "treasurerConnectFortnox": "Endast skattmästaren kan ansluta sektionens Fortnox",
     "treasuryLoginFortnox": "Endast skattmästare, vice skattmästare och skattförmän kan logga in mot Fortnox",
-    "adminSyncProjects": "Endast administratörer kan synka projekt"
+    "adminSyncProjects": "Endast administratörer kan synka projekt",
+    "grantAccessOnly": "Kräver behörighet att ge behörigheter"
   },
   "notFound": "Hittades inte",
   "request": {
@@ -199,7 +200,6 @@
   "fortnox": {
     "notConnected": "Fortnox är inte anslutet.",
     "notConnectedBookkeeping": "Fortnox är inte anslutet. Anslut under Bokföring.",
-    "notConnectedSeries": "Fortnox är inte anslutet. Verifikationsserien går inte att ändra.",
     "noFinancialYears": "Fortnox har inga räkenskapsår att hämta kontoplan för.",
     "unconfigured": "Fortnox är inte konfigurerat på servern (saknar klient-id/secret).",
     "loginRequired": "Du behöver logga in mot Fortnox för att bokföra.",
@@ -448,12 +448,14 @@
     "badRounding": "Öresutjämningen får vara högst 0,99 kr åt något håll."
   },
   "settings": {
-    "bankAccountUnset": "Inget bankkonto är valt för kortköp. Välj det under Inställningar → Fortnox.",
-    "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Fortnox.",
-    "voucherSeriesUnset": "Ingen verifikationsserie är vald. Välj den under Inställningar → Fortnox.",
+    "bankAccountUnset": "Inget kortkonto är valt. Välj det under Inställningar → Utlägg.",
+    "memberDebtAccountUnset": "Inget konto är valt för skuld till medlem. Välj det under Inställningar → Utlägg.",
     "zettleClearingAccountUnset": "Inget konto är valt för Zettle-försäljning. Välj det under Inställningar → Intäkter.",
     "swishClearingAccountUnset": "Inget konto är valt för Swish-försäljning. Välj det under Inställningar → Intäkter.",
-    "zettleFeeAccountUnset": "Inget konto är valt för Zettles avgifter. Välj det under Inställningar → Intäkter."
+    "zettleFeeAccountUnset": "Inget konto är valt för Zettles avgifter. Välj det under Inställningar → Intäkter.",
+    "expenseSeriesUnset": "Ingen verifikationsserie är vald för utlägg. Välj den under Inställningar → Utlägg.",
+    "incomeSeriesUnset": "Ingen verifikationsserie är vald för intäkter. Välj den under Inställningar → Försäljning.",
+    "stockSeriesUnset": "Ingen verifikationsserie är vald för lagret. Välj den under Inställningar → Lager."
   },
   "closing": {
     "voucherNotFound": "Verifikationen finns inte i huvudboken",
@@ -498,5 +500,10 @@
     "costCenterNotFound": "Kostnadsstället hittades inte.",
     "customerMissing": "Välj en kund i Fortnox för varje ledamot. Finns kunden inte, lägg upp den i Fortnox först.",
     "invoiceNotFound": "Fakturan hittades inte."
+  },
+  "grant": {
+    "endsInPast": "Slutdatumet har redan passerat.",
+    "endsBeforeStart": "Slutdatumet ligger före startdatumet.",
+    "inactiveUser": "Personen är inte längre aktiv."
   }
 }

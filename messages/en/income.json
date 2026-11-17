@@ -207,15 +207,11 @@
       "noFallback": "Choose the fallback for unknown products: which committee and which account products without a prefix are booked to.",
       "swishClearing": "Choose the clearing account for Swish.",
       "zettleClearing": "Choose the clearing account for Zettle.",
-      "zettleFee": "Choose the account for Zettle's fees."
+      "zettleFee": "Choose the account for Zettle's fees.",
+      "series": "Choose a voucher series for the takings."
     },
     "askAdmin": "The steps are done under Settings → Sales, which only people with access to settings can reach. Ask someone who has it.",
-    "openSettings": "Open Settings → Sales",
-    "goTo": {
-      "service": "See Zettle",
-      "units": "Go to Committees and products",
-      "booking": "Go to Booking"
-    }
+    "openSettings": "Open Settings → Sales"
   },
   "blocker": {
     "alreadyBooked": "Already booked here.",

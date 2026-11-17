@@ -121,16 +121,18 @@ enum Capability {
   /// Log what one takes from the café stock as a board member, and see one's
   /// own tab. See BoardWithdrawal.
   BOARD_TAB
+  /// Give a member a role or a capability of their own, for a period or
+  /// until removed (AccessGrant), and take it away again. Includes giving
+  /// oneself anything, so holding this is as much as holding all of them.
+  /// Opens Inställningar → Användare. See canGrantAccess in
+  /// lib/domain/permissions.ts.
+  GRANT_ACCESS
 }
 
 // Section role. A user may hold several (e.g. skattförman + resultatansvarig),
-// so it's stored as an array. Access and attest authority are derived from the
-// set of roles in lib/permissions.ts, never from a single value.
-//   SKATTMASTARE / ORDFORANDE       admins; full access; attest any expense but their own
-//   VICE_SKATTMASTARE               bookkeeping; attest expenses by "ordinarie" submitters
-//   SKATTFORMAN                     bookkeeping (book + return wrongly-approved)
-//   RESULTATANSVARIG                attest/handle expenses for the result unit(s) they answer for
-//   ORDINARIE                       regular functionary; submits own expenses
+// so it's stored as an array. What a role may do is the RoleCapability table.
+//   RESULTATANSVARIG                derived from GroupResultUnit, never mapped or granted by hand
+//   ORDINARIE                       the baseline every member holds
 enum Role {
   SKATTMASTARE
   ORDFORANDE
@@ -285,6 +287,9 @@ model User {
   exportedSupplierInvoices         SupplierInvoice[]           @relation("SupplierInvoiceExporter")
   supplierInvoiceExports           SupplierInvoice[]           @relation("SupplierInvoiceExportClaim")
 
+  accessGrants      AccessGrant[] @relation("AccessGrantHolder")
+  givenAccessGrants AccessGrant[] @relation("AccessGrantGranter")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -362,4 +367,38 @@ model RoleCapability {
 
   @@id([role, capability])
   @@index([role])
+}
+
+/// A role or a capability given to one member by hand, on top of what their
+/// Authentik groups give them. Exactly one of `role` and `capability` is set
+/// (a CHECK in the migration).
+///
+/// In force from `validFrom` until `validUntil`, or until removed when that is
+/// null. Read at request time (lib/server/access.ts), so a grant starts and
+/// ends to the second with nothing to recompute. Removing one deletes the row:
+/// there is no history kept.
+///
+/// RESULTATANSVARIG and ORDINARIE cannot be granted. The first only means
+/// something together with result units, which come from groups; the second is
+/// everyone's already.
+model AccessGrant {
+  id String @id @default(cuid())
+
+  user   User   @relation("AccessGrantHolder", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  role       Role?
+  capability Capability?
+
+  validFrom  DateTime  @default(now())
+  validUntil DateTime?
+
+  grantedBy   User?   @relation("AccessGrantGranter", fields: [grantedById], references: [id], onDelete: SetNull)
+  grantedById String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([role])
+  @@index([capability])
 }

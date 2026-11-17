@@ -45,7 +45,7 @@ import {
   canSeeInvoices,
   canViewBookkeeping,
   canAccessBudget,
-  canAccessSettings,
+  canSeeUsers,
   canManageRentals,
   canTriageInvoices,
   canViewContracts,
@@ -91,7 +91,7 @@ const SETTINGS: NavItem = {
   href: SETTINGS_HOME,
   label: "settings",
   icon: IconGear,
-  visible: (u) => canAccessSettings(u.capabilities),
+  visible: (u) => canSeeUsers(u.capabilities),
 };
 
 const NAV_GROUPS: NavGroup[] = [

@@ -8,7 +8,7 @@ import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 
 /** Each a message key under `income.setup.steps`. */
 export type IncomeSetupKey =
-  "service" | IncomeConfigBlocker | "swishClearing" | "zettleClearing" | "zettleFee";
+  "service" | IncomeConfigBlocker | "swishClearing" | "zettleClearing" | "zettleFee" | "series";
 
 /** The parts of Inställningar → Försäljning, each an anchor on that page. */
 export type IncomeSetupSection = "service" | "units" | "booking";
@@ -49,6 +49,7 @@ export async function incomeSetupSteps(): Promise<IncomeSetupStep[]> {
   if (!settings.swishClearingAccount) steps.push(booking("swishClearing"));
   if (!settings.zettleClearingAccount) steps.push(booking("zettleClearing"));
   if (!settings.zettleFeeAccount) steps.push(booking("zettleFee"));
+  if (!settings.incomeVoucherSeries?.trim()) steps.push(booking("series"));
 
   return steps;
 }

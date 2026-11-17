@@ -17,7 +17,8 @@
     "treasurerEditorialChanges": "Only the treasurer can make editorial changes",
     "treasurerConnectFortnox": "Only the treasurer can connect the guild's Fortnox",
     "treasuryLoginFortnox": "Only the treasurer, vice treasurer and assistant treasurers can sign in to Fortnox",
-    "adminSyncProjects": "Only administrators can sync projects"
+    "adminSyncProjects": "Only administrators can sync projects",
+    "grantAccessOnly": "Requires permission to grant access"
   },
   "notFound": "Not found",
   "request": {
@@ -199,7 +200,6 @@
   "fortnox": {
     "notConnected": "Fortnox is not connected.",
     "notConnectedBookkeeping": "Fortnox is not connected. Connect it under Bookkeeping.",
-    "notConnectedSeries": "Fortnox is not connected. The voucher series cannot be changed.",
     "noFinancialYears": "Fortnox has no financial years to fetch a chart of accounts for.",
     "unconfigured": "Fortnox is not configured on the server (missing client id / secret).",
     "loginRequired": "You need to sign in to Fortnox to book.",
@@ -448,12 +448,14 @@
     "badRounding": "The rounding may be at most 0.99 kr either way."
   },
   "settings": {
-    "bankAccountUnset": "No bank account is chosen for card purchases. Choose it under Settings → Fortnox.",
-    "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Fortnox.",
-    "voucherSeriesUnset": "No voucher series is chosen. Choose it under Settings → Fortnox.",
+    "bankAccountUnset": "No card account is chosen. Choose it under Settings → Expenses.",
+    "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Expenses.",
     "zettleClearingAccountUnset": "No account is chosen for Zettle sales. Choose it under Settings → Income.",
     "swishClearingAccountUnset": "No account is chosen for Swish sales. Choose it under Settings → Income.",
-    "zettleFeeAccountUnset": "No account is chosen for Zettle's fees. Choose it under Settings → Income."
+    "zettleFeeAccountUnset": "No account is chosen for Zettle's fees. Choose it under Settings → Income.",
+    "expenseSeriesUnset": "No voucher series is chosen for expenses. Choose it under Settings → Expenses.",
+    "incomeSeriesUnset": "No voucher series is chosen for income. Choose it under Settings → Sales.",
+    "stockSeriesUnset": "No voucher series is chosen for the stock. Choose it under Settings → Stock."
   },
   "closing": {
     "voucherNotFound": "The voucher is not in the ledger",
@@ -498,5 +500,10 @@
     "costCenterNotFound": "The cost centre was not found.",
     "customerMissing": "Choose a Fortnox customer for every member. If the customer is missing, add it in Fortnox first.",
     "invoiceNotFound": "The invoice was not found."
+  },
+  "grant": {
+    "endsInPast": "The end date has already passed.",
+    "endsBeforeStart": "The end date is before the start date.",
+    "inactiveUser": "This person is no longer active."
   }
 }

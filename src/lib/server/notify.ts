@@ -5,12 +5,12 @@ import "server-only";
 
 import { after } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { roleCapabilities } from "@/lib/server/capabilities";
+import { holdersOf } from "@/lib/server/access";
 import { getPrefixes, resultUnitNameForCode } from "@/lib/server/result-units";
 import { sendMail } from "@/lib/server/mail";
 import type { TxClient } from "@/lib/server/tx";
 import { wants } from "@/lib/domain/notifications";
-import type { Capability, NotificationKind, Role } from "@/lib/domain/types";
+import type { NotificationKind } from "@/lib/domain/types";
 import { renderHtml, renderText, type Email } from "@/lib/email/render";
 
 /**
@@ -70,22 +70,8 @@ export async function retryEmail(id: string): Promise<boolean> {
   return count > 0;
 }
 
-/** The roles that currently hold `cap`, from the editable matrix. */
-async function rolesWith(cap: Capability): Promise<Role[]> {
-  const matrix = await roleCapabilities();
-  return [...matrix].filter(([, caps]) => caps.includes(cap)).map(([role]) => role);
-}
-
-/** Every active member holding `cap` through one of their roles. */
-export async function holdersOf(cap: Capability): Promise<string[]> {
-  const roles = await rolesWith(cap);
-  if (roles.length === 0) return [];
-  const users = await prisma.user.findMany({
-    where: { active: true, roles: { hasSome: roles } },
-    select: { id: true },
-  });
-  return users.map((u) => u.id);
-}
+// Who holds a capability, through a group or a personal grant. Lives in lib/server/access.ts.
+export { holdersOf };
 
 /**
  * Who should be asked to attest these allocations: the resultatansvarig for each result unit. Admins only

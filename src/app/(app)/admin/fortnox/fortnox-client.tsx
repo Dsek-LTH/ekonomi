@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CardBody } from "@/components/ui/card";
+import {
+  SettingRow,
+  SettingsCard,
+  SettingsGroup,
+  SettingsStack,
+} from "@/components/settings/settings-card";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { EmptyNote } from "@/components/ui/empty-state";
-import { FieldGroup, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconSync } from "@/components/ui/icons";
 import { SearchInput } from "@/components/ui/search-input";
@@ -66,14 +70,9 @@ export function FortnoxClient({
   const { pending, mutate } = useMutation();
 
   const [accountQuery, setAccountQuery] = useState("");
-  const [series, setSeries] = useState(fortnox.voucherSeries ?? "");
   const [showAccounts, setShowAccounts] = useState(false);
 
   const connected = fortnox.connected;
-  const savedSeries = fortnox.voucherSeries ?? "";
-  const accountOptions: ComboOption[] = accounts
-    .filter((a) => a.active)
-    .map((a) => ({ value: a.number, label: `${a.number} - ${a.name}` }));
 
   const q = accountQuery.trim().toLowerCase();
   const visibleAccounts = q
@@ -186,16 +185,6 @@ export function FortnoxClient({
     notify.success(t("ledgerSummary", { count: data.totalVouchers }), t("ledgerSynced"));
   }
 
-  async function saveSetting(body: Record<string, string>, success: string) {
-    await mutate("/api/fortnox/settings", {
-      key: Object.keys(body)[0],
-      method: "PATCH",
-      body,
-      success,
-      error: t("saveFailed"),
-    });
-  }
-
   function syncButton(key: string, label: string, onClick: () => void) {
     return (
       <IconButton
@@ -210,38 +199,36 @@ export function FortnoxClient({
   }
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader
-          title={t("connection")}
-          subtitle={t("connectionSubtitle")}
-          action={
-            connected && fortnox.refreshFailed ? (
-              <ButtonLink
-                href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
-                size="sm"
-              >
-                {t("reconnect")}
-              </ButtonLink>
-            ) : connected ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                loading={pending === "disconnect"}
-                onClick={disconnect}
-              >
-                {t("disconnect")}
-              </Button>
-            ) : fortnox.configured ? (
-              <ButtonLink
-                href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
-                size="sm"
-              >
-                {t("connect")}
-              </ButtonLink>
-            ) : undefined
-          }
-        />
+    <SettingsStack>
+      <SettingsCard
+        title={t("connection")}
+        action={
+          connected && fortnox.refreshFailed ? (
+            <ButtonLink
+              href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
+              size="sm"
+            >
+              {t("reconnect")}
+            </ButtonLink>
+          ) : connected ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={pending === "disconnect"}
+              onClick={disconnect}
+            >
+              {t("disconnect")}
+            </Button>
+          ) : fortnox.configured ? (
+            <ButtonLink
+              href={`/api/fortnox/connect?mode=service&returnTo=${encodeURIComponent("/admin/fortnox")}`}
+              size="sm"
+            >
+              {t("connect")}
+            </ButtonLink>
+          ) : undefined
+        }
+      >
         <CardBody>
           <FortnoxBanner
             ok={connected && !fortnox.refreshFailed}
@@ -267,71 +254,22 @@ export function FortnoxClient({
             </p>
           )}
         </CardBody>
-      </Card>
+      </SettingsCard>
 
-      <Card>
-        <CardHeader title={t("booking")} subtitle={t("bookingSubtitle")} />
-        <CardBody>
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,1fr)]">
-            <FieldGroup label={t("voucherSeries")} hint={t("voucherSeriesHint")}>
-              <div className="flex gap-2">
-                <Input
-                  value={series}
-                  onChange={(e) => setSeries(e.target.value.toUpperCase().slice(0, 4))}
-                  disabled={!connected}
-                  aria-label={t("voucherSeries")}
-                  className="min-w-0 uppercase"
-                />
-                <Button
-                  variant="secondary"
-                  disabled={!connected || series === savedSeries}
-                  loading={pending === "voucherSeries"}
-                  onClick={() => saveSetting({ voucherSeries: series }, t("voucherSeriesSaved"))}
-                >
-                  {t("save")}
-                </Button>
-              </div>
-            </FieldGroup>
-            <FieldGroup label={t("bankAccount")} hint={t("bankAccountHint")}>
-              <Combobox
-                options={accountOptions}
-                value={settings.bankAccount ?? ""}
-                onChange={(v) => saveSetting({ bankAccount: v }, t("bankAccountSaved"))}
-                placeholder={tBook("accountPlaceholder")}
-                searchPlaceholder={tBook("accountSearch")}
-                aria-label={t("bankAccount")}
-              />
-            </FieldGroup>
-            <FieldGroup label={t("debtAccount")} hint={t("debtAccountHint")}>
-              <Combobox
-                options={accountOptions}
-                value={settings.memberDebtAccount ?? ""}
-                onChange={(v) => saveSetting({ memberDebtAccount: v }, t("debtAccountSaved"))}
-                placeholder={tBook("accountPlaceholder")}
-                searchPlaceholder={tBook("accountSearch")}
-                aria-label={t("debtAccount")}
-              />
-            </FieldGroup>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader
-          title={t("sync")}
-          subtitle={t("syncSubtitle")}
-          action={
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!connected || Boolean(lastSync.runningSince)}
-              loading={pending === "all"}
-              onClick={syncEverything}
-            >
-              {t("syncAll")}
-            </Button>
-          }
-        />
+      <SettingsCard
+        title={t("sync")}
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!connected || Boolean(lastSync.runningSince)}
+            loading={pending === "all"}
+            onClick={syncEverything}
+          >
+            {t("syncAll")}
+          </Button>
+        }
+      >
         {!connected ? (
           <p className="border-b border-border px-inset py-3 text-sm text-muted">
             {tBookkeeping("connectFirst")}
@@ -356,7 +294,7 @@ export function FortnoxClient({
           </div>
         )}
 
-        <SyncGroup title={t("groupRegisters")} hint={t("groupRegistersHint")}>
+        <SettingsGroup title={t("groupRegisters")}>
           <SyncRow
             label={t("chart")}
             meta={
@@ -454,9 +392,9 @@ export function FortnoxClient({
           >
             {syncButton("suppliers", t("syncSuppliers"), syncSuppliers)}
           </SyncRow>
-        </SyncGroup>
+        </SettingsGroup>
 
-        <SyncGroup title={t("ledger")} hint={t("groupLedgerHint")}>
+        <SettingsGroup title={t("ledger")}>
           {ledgerYears.length === 0 ? (
             <SyncRow label={t("noYears")}>
               {syncButton("ledger-current", t("syncCurrentYear"), () => syncLedger("current"))}
@@ -483,32 +421,13 @@ export function FortnoxClient({
           <li className="px-inset py-3 text-xs text-muted">
             {t.rich("openingBalancesNote", { code: (chunks) => <code>{chunks}</code> })}
           </li>
-        </SyncGroup>
-      </Card>
-    </div>
+        </SettingsGroup>
+      </SettingsCard>
+    </SettingsStack>
   );
 }
 
-function SyncGroup({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="border-b border-border last:border-0">
-      <div className="border-b border-border bg-surface px-inset py-2.5">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <p className="text-xs text-muted">{hint}</p>
-      </div>
-      <ul>{children}</ul>
-    </section>
-  );
-}
-
+/** A register or a year to fetch: what it is and when it was last fetched, and its buttons at the end. */
 function SyncRow({
   label,
   meta,
@@ -519,12 +438,8 @@ function SyncRow({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex items-center gap-3 border-b border-border px-inset py-3 last:border-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        {meta && <p className="text-xs text-muted">{meta}</p>}
-      </div>
-      {children}
-    </li>
+    <SettingRow label={label} hint={meta}>
+      <div className="flex items-center justify-end gap-2">{children}</div>
+    </SettingRow>
   );
 }

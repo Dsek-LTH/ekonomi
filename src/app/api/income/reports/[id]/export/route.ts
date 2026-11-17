@@ -59,8 +59,8 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
 
   // The series takings are filed under; the duplicate check reads the same one.
   const settings = await loadBookkeepingSettings();
-  const series = incomeVoucherSeries(settings, conn.voucherSeries);
-  if (!series) return fail(409, "settings.voucherSeriesUnset");
+  const series = incomeVoucherSeries(settings);
+  if (!series) return fail(409, "settings.incomeSeriesUnset");
 
   // Last gate before anything is written: runs against the day as it is now (not as at import), before
   // the file upload so a refusal leaves nothing behind. A whole day is refused if any voucher already

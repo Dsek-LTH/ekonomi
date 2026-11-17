@@ -1,12 +1,14 @@
 "use client";
 
 // A stock's places (docs/stock.md, section 11): where stock is carried to, whose cost centre it is charged to, and
-// which Authentik groups may log moves to and from it. Everything saves as it is picked, like the rest of the page.
+// which Authentik groups may log moves to and from it. Its name, cost centre and groups wait for the page's Spara;
+// adding, archiving and removing a place happen at once.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
 import { Button } from "@/components/ui/button";
 import { Combobox, MultiCombobox, type ComboOption } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
@@ -33,22 +35,39 @@ export function PlaceTable({
   const tStock = useTranslations("admin.stock");
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
-  const [rows, setRows] = useState(places);
   const [name, setName] = useState("");
+  const edits = useDraftRows(places);
+  const rows = places.map(edits.get);
 
-  // The list follows the server after a save (a new or archived place), adjusted during render.
-  const [seen, setSeen] = useState(places);
-  if (seen !== places) {
-    setSeen(places);
-    setRows(places);
-  }
+  useDraftPart({
+    dirty: edits.dirty,
+    save: async () => {
+      for (const [id, change] of edits.changes) {
+        const body: PatchStockPlace = {
+          ...(change.name !== undefined && { name: change.name }),
+          ...("costCenterId" in change && { costCenterId: change.costCenterId ?? null }),
+          ...(change.groups !== undefined && { groups: change.groups }),
+        };
+        const ok = await mutate(`/api/stock/places/${id}`, {
+          method: "PATCH",
+          body,
+          error: tStock("saveFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      return true;
+    },
+    commit: edits.commit,
+    reset: edits.reset,
+  });
 
-  async function patch(place: StockPlaceSettings, body: PatchStockPlace, key: string) {
-    setRows((now) => now.map((p) => (p.id === place.id ? { ...p, ...body } : p)));
-    return mutate(`/api/stock/places/${place.id}`, {
-      key: `${place.id}.${key}`,
+  /** Archiving is not a value: it happens at once. */
+  async function setArchived(place: StockPlaceSettings, archived: boolean) {
+    await mutate(`/api/stock/places/${place.id}`, {
+      key: `${place.id}.archived`,
       method: "PATCH",
-      body,
+      body: { archived },
       error: tStock("saveFailed"),
       success: tStock("saved"),
     });
@@ -98,9 +117,10 @@ export function PlaceTable({
                   label={t("name")}
                   maxLength={60}
                   disabled={place.archived}
-                  onSave={async (next) =>
-                    (await patch(place, { name: next.trim() }, "name")) !== null
-                  }
+                  onSave={(next) => {
+                    if (!next.trim()) return false;
+                    edits.set(place.id, { name: next.trim() });
+                  }}
                   className="text-sm font-medium"
                 />
                 <span className="shrink-0 text-xs text-muted">
@@ -114,7 +134,7 @@ export function PlaceTable({
                     label={place.archived ? t("restore") : t("archive")}
                     title={place.archived ? t("restore") : t("archive")}
                     loading={pending === `${place.id}.archived`}
-                    onClick={() => patch(place, { archived: !place.archived }, "archived")}
+                    onClick={() => setArchived(place, !place.archived)}
                   >
                     {place.archived ? (
                       <IconUndo className="size-4" />
@@ -143,7 +163,7 @@ export function PlaceTable({
                     size="sm"
                     options={costCenterOptions}
                     value={place.costCenterId ?? ""}
-                    onChange={(v) => patch(place, { costCenterId: v || null }, "costCenterId")}
+                    onChange={(v) => edits.set(place.id, { costCenterId: v || null })}
                     // Until one is chosen the stock's own consumption cost centre is charged, and it says so.
                     placeholder={t("costCenterFallback")}
                     allowClear
@@ -156,13 +176,11 @@ export function PlaceTable({
                     size="sm"
                     options={groupOptions(place.groups)}
                     values={place.groups}
-                    onChange={(groups) => patch(place, { groups }, "groups")}
+                    onChange={(groups) => edits.set(place.id, { groups })}
                     onCreate={(text) =>
-                      patch(
-                        place,
-                        { groups: [...place.groups, text.trim().toLowerCase()] },
-                        "groups",
-                      )
+                      edits.set(place.id, {
+                        groups: [...place.groups, text.trim().toLowerCase()],
+                      })
                     }
                     createLabel={(text) => t("useGroup", { group: text.trim().toLowerCase() })}
                     placeholder={t("noGroups")}

@@ -1,17 +1,12 @@
 {
   "index": {
     "title": "Inställningar",
-    "section": {
-      "fortnox": "Kopplingen till Fortnox, och synk av kontoplan och kostnadsställen.",
-      "costCenters": "Kostnadsställen som utlägg och budget kan fördelas på.",
-      "income": "Vilka verksamheter som säljer, vilka varor som är deras och var intäkterna bokförs.",
-      "resultUnits": "Vilka kostnadsställen som hör ihop, och vem som attesterar dem.",
-      "cards": "Sektionens kort och vem som håller vilket.",
-      "mileageRates": "Vad en kilometer är värd, och från vilken dag.",
-      "stockSettings": "Konton och inställningar för lagerbokföringen.",
-      "roles": "Vad varje roll får göra. Ändras här, inte i koden.",
-      "users": "Vem som finns och vilka roller de har.",
-      "email": "Alla mejl appen skickat, vart de tog vägen, testutskick och inkorgens mejlkonto."
+    "group": {
+      "bookkeeping": "Bokföring",
+      "expenses": "Utlägg",
+      "operations": "Verksamhet",
+      "access": "Åtkomst",
+      "system": "System"
     }
   },
   "users": {
@@ -20,14 +15,9 @@
     "searching": "Söker…",
     "noMatch": "Ingen medlem matchar.",
     "onlyBaseRole": "Har bara {role}, grundnivån alla medlemmar har.",
-    "rolesSubtitle": "Listan visar alla som har en roll utöver {role}, som alla medlemmar har. Vem som sitter i en grupp bestäms i Authentik, och vad en grupp ger ändras under Roller.",
     "nobodyHasRole": "Ingen har den här rollen.",
-    "explainFor": "Visa varför {name} har sina roller",
     "whyTitle": "Varifrån rollerna kommer",
-    "whyLoading": "Hämtar rollernas ursprung…",
-    "whyFailed": "Kunde inte hämta varifrån rollerna kommer.",
     "neverSeen": "Vi har ingen grupplista för den här personen, eftersom hen inte har loggat in sedan vi började spara den. Rollerna nedan kommer från en tidigare inloggning och går inte att härleda förrän hen loggar in igen.",
-    "noGrantedRoles": "Inga roller utöver grundnivån att härleda.",
     "via": "från",
     "leftover": "Ingen grupp ger den här",
     "leftoverExplained": "En roll utan grupp bakom sig ligger kvar från en tidigare inloggning: mandatet finns inte längre i Authentik, men rollen står kvar på raden tills personen loggar in nästa gång. Den försvinner då av sig själv, och kopplingen behöver inte ändras här.",
@@ -35,7 +25,6 @@
     "unitMissing": "Resultatenheten finns inte",
     "pending": "Vid nästa inloggning tillkommer: {items}. Personens grupper i Authentik har ändrats sedan raden skrevs.",
     "groupsTitle": "Grupper vid senaste inloggningen",
-    "groupsHint": "Dämpade grupper ger ingenting här. Kopplingen mellan grupp och roll ändras under Roller.",
     "payoutTitle": "Kontouppgifter",
     "payoutLoading": "Hämtar kontouppgifter…",
     "payoutFailed": "Kunde inte hämta kontouppgifter.",
@@ -45,7 +34,34 @@
     "colName": "Namn",
     "colRoles": "Roller",
     "filterRole": "Roll",
-    "emailTitle": "E-post"
+    "emailTitle": "E-post",
+    "personalTag": "Personlig behörighet",
+    "grantsTitle": "Personliga behörigheter",
+    "noGrants": "Inga personliga behörigheter. Allt ovan kommer från grupperna i Authentik.",
+    "grantAdd": "Ge behörighet",
+    "grantKind": "Vad ska ges",
+    "grantKindRole": "Roll",
+    "grantKindCapability": "Behörighet",
+    "grantPickRole": "Välj roll",
+    "grantPickCapability": "Välj behörighet",
+    "grantFromLabel": "Från",
+    "grantFromHint": "Tomt betyder från nu.",
+    "grantUntilLabel": "Till och med",
+    "grantUntilHint": "Tomt betyder tills den tas bort.",
+    "grantSave": "Ge",
+    "granted": "Behörigheten är given.",
+    "grantFailed": "Kunde inte spara behörigheten.",
+    "grantForever": "tills vidare",
+    "grantUntil": "till och med {until}",
+    "grantFrom": "från {from}, tills vidare",
+    "grantFromUntil": "{from} till och med {until}",
+    "grantedBy": "gavs av {name}",
+    "grantScheduled": "Inte börjat",
+    "removeGrantLabel": "Ta bort {what}",
+    "removeGrantTitle": "Ta bort behörigheten?",
+    "removeGrantBody": "{what} tas bort direkt. Det som grupperna ger påverkas inte.",
+    "removeGrantAction": "Ta bort",
+    "rolesTitle": "Roller"
   },
   "cards": {
     "title": "Sektionskort",
@@ -73,15 +89,10 @@
     "colPurchases": "Köp",
     "noHolder": "Ingen innehavare",
     "holderFor": "Innehavare för kort ····{last4}",
-    "assigned": "Kort ····{last4} tilldelat {name}.",
-    "unassigned": "Kort ····{last4} har ingen innehavare längre.",
     "assignFailed": "Kunde inte byta innehavare",
     "colResultUnit": "Resultatenhet",
     "noResultUnit": "Ingen resultatenhet",
     "resultUnitFor": "Resultatenhet för kort ····{last4}",
-    "unitAssigned": "Kort ····{last4} hör nu till {name}.",
-    "unitUnassigned": "Kort ····{last4} hör inte längre till någon resultatenhet.",
-    "unitAssignFailed": "Kunde inte byta resultatenhet",
     "searchPlaceholder": "Sök kort eller innehavare…",
     "noMatch": "Inga kort matchar.",
     "addHint": "Kort läggs också upp av sig själva när en bankfil nämner ett nytt kortnummer."
@@ -103,7 +114,6 @@
     "add": "Lägg till",
     "created": "{code} tillagt.",
     "createFailed": "Kunde inte skapa kostnadsstället",
-    "renamed": "{code} heter nu {name}.",
     "renameFailed": "Kunde inte byta namn",
     "updateFailed": "Kunde inte ändra kostnadsstället",
     "activated": "{code} aktiverades.",
@@ -139,17 +149,13 @@
     "shortNameHint": "Vad kostnadsstället heter under sin resultatenhets rubrik, till exempel i budgeten. Tomt visar hela benämningen.",
     "shortNameNone": "Inget",
     "editShortName": "Ändra kortnamn för {code}",
-    "shortNameSaved": "{code} heter nu {name} under sin resultatenhet.",
-    "shortNameCleared": "{code} visas med hela benämningen.",
     "shortNameFailed": "Kunde inte spara kortnamnet",
     "suggest": "Föreslå kortnamn",
-    "suggestSubtitle": "Resultatenhetens namn tas bort från början av benämningen. Granska förslagen innan du sparar. Inget ändras i Fortnox.",
     "suggestInclude": "Ta med {code}",
     "suggestAll": "Alla förslag",
-    "suggestSave": "Spara {count} kortnamn",
-    "suggestSaved": "{count} kortnamn sparade.",
     "suggestFailed": "Kunde inte spara kortnamnen",
-    "suggestBlocked": "Välj minst ett förslag, och ge varje valt ett namn."
+    "suggestBlocked": "Välj minst ett förslag, och ge varje valt ett namn.",
+    "suggestNone": "Alla kostnadsställen som kan få ett kortnamn har redan ett."
   },
   "resultUnits": {
     "title": "Resultatenheter",
@@ -165,10 +171,8 @@
     "deleteTitle": "Radera {name}?",
     "deleteMessage": "Resultatenheten har inga prefix och äger därför inga kostnadsställen.",
     "deleteMessagePrefixes": "Prefixen {prefixes} tas bort, och kostnadsställena de matchar blir utan resultatenhet.",
-    "deleteAria": "Radera {name}",
     "deleted": "{name} raderat.",
     "deleteFailed": "Kunde inte radera resultatenheten",
-    "renamed": "Resultatenheten heter nu {name}.",
     "renameFailed": "Kunde inte byta namn",
     "renameAria": "Byt namn på {name}",
     "prefixes": "Börjar på",
@@ -181,9 +185,7 @@
     "noPrefix": "Inget prefix",
     "noPrefixHint": "Utan prefix äger resultatenheten inga kostnadsställen.",
     "unassigned": "Utan resultatenhet",
-    "unassignedSubtitle": "Inget prefix matchar dessa, så bara administratörer kan attestera deras utlägg.",
     "unassignedEmpty": "Inga kostnadsställen.",
-    "activeCostCenters": "{count} aktiva kostnadsställen",
     "noCostCentersForPrefix": "Inga kostnadsställen matchar resultatenhetens prefix.",
     "inactive": "Inaktiva",
     "income": {
@@ -211,7 +213,6 @@
       "prefixCostCenterDefault": "Verksamhetens"
     },
     "saveFailed": "Kunde inte spara.",
-    "noOwnerGroups": "Ingen grupp ger rollen för den här enheten än. Koppla en grupp under Roller.",
     "noOwnersHolding": "Ingen innehar posten just nu.",
     "colName": "Namn",
     "colPrefixes": "Kostnadsställen som börjar på",
@@ -223,21 +224,20 @@
     "unassignedNotice": "{count} aktiva kostnadsställen saknar resultatenhet, så bara administratörer kan attestera deras utlägg.",
     "showThem": "Visa dem",
     "sectionCostCenters": "Kostnadsställen",
-    "sectionCostCentersHint": "Alla kostnadsställen vars kod börjar på ett av prefixen tillhör enheten.",
     "matches": "{count} kostnadsställen matchar",
-    "sectionAttest": "Attest",
-    "sectionAttestHint": "Resultatansvariga attesterar utlägg på enhetens kostnadsställen.",
-    "grantedBy": "Rollen ges av",
-    "editInRoles": "Ändra under Roller",
     "sectionSales": "Försäljning",
-    "sectionSalesHint": "Om enheten tar in pengar, och hur de bokförs.",
     "salesOnSummary": "Säljer, med {count, plural, =0 {inga varor än} one {# varuprefix} other {# varuprefix}}.",
     "salesOffSummary": "Säljer inte.",
-    "editInSales": "Ändra under Försäljning"
+    "editInSales": "Ändra under Försäljning",
+    "ownerGroups": "Grupper i Authentik",
+    "ownersNow": "Innehas nu av",
+    "noOwnerGroupsPlaceholder": "Ingen grupp",
+    "searchGroups": "Sök bland gruppernas namn…",
+    "useGroup": "Använd {group}",
+    "unitActions": "Åtgärder för {name}"
   },
   "fortnox": {
     "connection": "Anslutning",
-    "connectionSubtitle": "Sektionens koppling till Fortnox. Allt annat här kräver att den är ansluten.",
     "unconfigured": "Servern saknar Fortnox klient-id, secret eller redirect-URI. Lägg till dem i miljövariablerna och starta om.",
     "notConfigured": "Inte konfigurerat",
     "notConnected": "Inte anslutet",
@@ -251,10 +251,6 @@
     "disconnectMessage": "Export och synk slutar fungera tills någon ansluter igen, och alla som är inloggade i Fortnox personligen loggas ut. Kontoplan, kostnadsställen och redan hämtad huvudbok ligger kvar.",
     "disconnected": "Fortnox frånkopplat.",
     "disconnectFailed": "Kunde inte koppla från",
-    "voucherSeries": "Verifikationsserie",
-    "voucherSeriesHint": "Serien exporterade verifikationer hamnar i. Inget bokförs förrän en serie är vald.",
-    "voucherSeriesSaved": "Verifikationsserie sparad.",
-    "save": "Spara",
     "saveFailed": "Kunde inte spara",
     "chart": "Kontoplan",
     "chartSubtitle": "{count} konton - senast synkad {time}",
@@ -263,12 +259,8 @@
     "chartSyncFailed": "Kunde inte synka kontoplanen",
     "chartSynced": "Kontoplan synkad",
     "chartNoMatch": "Inga konton matchar sökningen.",
-    "bankAccount": "Bankkonto",
-    "bankAccountHint": "Krediteras när ett kortköp bokförs.",
-    "bankAccountSaved": "Bankkonto sparat.",
+    "bankAccount": "Kortkonto",
     "debtAccount": "Skuld till medlem",
-    "debtAccountHint": "Krediteras när ett eget utlägg ska ersättas.",
-    "debtAccountSaved": "Skuldkonto sparat.",
     "ledger": "Huvudbok",
     "syncCurrentYear": "Synka innevarande år",
     "syncYear": "Synka {year}",
@@ -281,18 +273,13 @@
       "fetched": "{count} konton hämtade",
       "retired": "{count} inaktiverade"
     },
-    "booking": "Bokföring",
-    "bookingSubtitle": "Var bokförda verifikationer hamnar och vilka konton de krediterar.",
     "sync": "Synk",
-    "syncSubtitle": "Det som hämtas från Fortnox.",
     "showAccounts": "Visa konton",
     "hideAccounts": "Dölj konton",
     "costCenters": "Kostnadsställen",
     "costCentersSubtitle": "{count} från Fortnox - senast synkad {time}",
     "costCentersSubtitleNever": "Aldrig synkad från Fortnox",
     "groupRegisters": "Register",
-    "groupRegistersHint": "Konton, kostnadsställen, projekt och leverantörer som utlägg, fakturor, budgetar och verifikationer pekar på.",
-    "groupLedgerHint": "Bokförda verifikationer, ett räkenskapsår i taget. Driver Utfall-rapporterna.",
     "projects": "Projekt",
     "projectsSubtitle": "{count} projekt - senast synkad {time}",
     "projectsSubtitleNever": "Aldrig synkad från Fortnox",
@@ -321,18 +308,15 @@
   },
   "income": {
     "title": "Försäljning",
-    "save": "Spara",
     "saved": "Sparat",
     "saveFailed": "Kunde inte spara",
     "cancel": "Avbryt",
     "booking": {
-      "title": "3. Bokföring",
-      "description": "Var dagens försäljning bokförs. Konton och kostnadsställe sparas direkt när du väljer dem."
+      "title": "3. Bokföring"
     },
     "export": {
       "series": "Verifikationsserie",
-      "seriesHint": "Tom = samma serie som utlägg ({series}). Ange en egen för att hålla intäkterna för sig.",
-      "seriesHintUnconnected": "Tom = samma serie som utlägg. Fortnox är inte anslutet än."
+      "seriesHint": "Serien intäkterna skickas till i Fortnox."
     },
     "accounts": {
       "zettleClearing": "Likvidkonto, Zettle",
@@ -346,8 +330,6 @@
     },
     "fallbacks": {
       "title": "4. Swish-belopp",
-      "description": "Betalningar utan användbart meddelande matchas på exakt belopp.",
-      "hint": "Meddelandet körs genom samma prefixlogik, så \"c-Cola\" hamnar hos Cafémästeriet precis som en märkt betalning.",
       "empty": "Inga beloppsregler.",
       "add": "Lägg till",
       "amount": "Belopp",
@@ -356,19 +338,16 @@
       "messagePlaceholder": "c-Cola",
       "remove": "Ta bort"
     },
-    "ready": "Allt är klart. Intäkter kan hämtas och bokföras.",
     "optional": "Valfritt",
     "done": "Klart",
     "stepsLeft": "{count, plural, one {# steg kvar} other {# steg kvar}}",
     "service": {
       "title": "1. Zettle",
-      "description": "Kopplingen som hämtar försäljning och avgifter från Zettle. Swish läses från bankens fil och behöver ingen koppling.",
       "connected": "Zettle är anslutet.",
       "missing": "Zettle är inte anslutet. Den som driftar appen behöver sätta ZETTLE_CLIENT_ID och ZETTLE_API_KEY. Swish kan hämtas ändå."
     },
     "units": {
       "title": "2. Verksamheter och varor",
-      "description": "Vilka resultatenheter som säljer, och vilka varor som är deras. En vara hör till den verksamhet vars prefix dess namn börjar på.",
       "notSelling": "Säljer inte",
       "noProducts": "Säljer, men har inga varor än",
       "needsProducts": "Saknar varor",
@@ -383,7 +362,8 @@
       "noSellingUnits": "Ingen verksamhet säljer än. Slå på försäljning nedan först.",
       "account": "Konto för okända varor",
       "accountHint": "Intäktskontot de bokförs på."
-    }
+    },
+    "needed": "Behövs innan intäkterna kan bokföras."
   },
   "roles": {
     "title": "Roller & behörigheter",
@@ -400,18 +380,13 @@
       "all": "Alla grupper"
     },
     "noRoles": "Inga roller",
-    "noResultUnits": "Inga resultatenheter",
     "rolesFor": "Roller för {group}",
-    "resultUnitsFor": "Resultatenheter för {group}",
     "holderCount": "{count, plural, =0 {ingen} =1 {1 person} other {# personer}}",
     "probablyTypo": "Ger ingen något",
     "removeGroupLabel": "Ta bort {group}",
     "removeGroupTitle": "Ta bort kopplingen?",
     "removeGroupBody": "{group} slutar ge roller och resultatenheter. Det påverkar {count, plural, =0 {ingen just nu} =1 {1 person} other {# personer}}.",
     "removeGroupAction": "Ta bort",
-    "capabilitiesSubtitle": "Vad varje roll får göra. Gäller från nästa sidladdning, för alla som har rollen.",
-    "capabilityColumn": "Behörighet",
-    "attestNote": "Attesträtt står inte här. Det är en regel i koden, inte en kryssruta. Om ett utlägg är ditt att attestera beror på vems det är, vad inlämnaren har för roller och vilken resultatenhet kostnadsstället tillhör. Attestvyn ovan styr bara om kön syns.",
     "staleCounts": "{count, plural, =1 {1 medlem} other {# medlemmar}} har inte loggat in sedan grupplistorna började sparas, och räknas därför inte i gruppernas siffror nedan. Rollsiffrorna omfattar alla medlemmar.",
     "saved": "Sparat.",
     "savedAffecting": "Sparat. {count, plural, =1 {1 person} other {# personer}} fick nya roller.",
@@ -425,15 +400,9 @@
     "confirmOwnTitle": "Du tar bort något från dig själv",
     "confirmOwnBody": "Du har rollen {role}. Tar du bort {capability} från den förlorar du den också.",
     "confirmOwnAction": "Ta bort ändå",
-    "viewLabel": "Visa",
-    "view": {
-      "groups": "Grupper",
-      "capabilities": "Behörigheter"
-    },
     "colGroup": "Grupp",
     "colHolders": "Personer",
     "colRoles": "Roller",
-    "colResultUnits": "Resultatansvarig för",
     "pickGroup": "Välj grupp",
     "searchGroups": "Sök bland gruppernas namn…",
     "useGroup": "Använd {group}",
@@ -445,17 +414,22 @@
       "stock": "Lager",
       "contracts": "Avtal och uthyrning",
       "settings": "Inställningar"
+    },
+    "pickRole": "Välj roll",
+    "capabilityCount": "{count, plural, =0 {inga} =1 {1 behörighet} other {# behörigheter}}",
+    "section": {
+      "roles": "Vad rollerna får göra",
+      "groups": "Grupper i Authentik"
     }
   },
   "stock": {
     "title": "Lager",
-    "save": "Spara",
     "saveFailed": "Kunde inte spara inställningen",
     "expiry": {
       "title": "Påminnelse om bäst före",
-      "hint": "Vi vet aldrig vad som står på en back. Det vi vet är när en leverans kom in och hur länge produkten håller, och utifrån det ber vi någon gå ner och läsa på förpackningen.",
       "leadDays": "Varsel i dagar",
-      "leadDaysHint": "Hur långt innan det beräknade datumet vi börjar fråga. 30 dagar är lagom: en back hinner drickas upp på en månad om någon vet om det."
+      "leadDaysHint": "Hur långt innan det beräknade datumet vi börjar fråga. 30 dagar är lagom: en back hinner drickas upp på en månad om någon vet om det.",
+      "invalid": "Antal dagar ska vara ett heltal mellan 0 och 365."
     },
     "saved": "Sparat",
     "chooseCostCenter": "Välj kostnadsställe",
@@ -464,18 +438,11 @@
       "cafe": "Cafélager"
     },
     "gaps": {
-      "intro": "Det här behöver väljas innan lagervärdet kan bokföras i Fortnox:",
       "left": "{count, plural, one {# sak kvar} other {# saker kvar}}",
-      "none": "Klart att bokföra",
-      "stockAccount": "Lagerkonto för {group}",
-      "consumptionAccount": "Kostnadskonto för {group}",
-      "purchaseOffsetAccount": "Kontot som inköpen bokförs på",
-      "boardCostAccount": "Kostnadskonto för styrelsens uttag",
-      "postingStartsOn": "Dagen bokföringen av lagervärdet börjar"
+      "none": "Klart att bokföra"
     },
     "groups": {
       "title": "Produkttyper",
-      "hint": "Varje typ har sitt eget lagerkonto och sitt eget kostnadskonto. En produkt hör till en typ, och det är typen som avgör var dess värde bokförs.",
       "products": "{count, plural, =0 {inga produkter} one {# produkt} other {# produkter}}",
       "stockAccount": "Lagerkonto",
       "consumptionAccount": "Kostnadskonto",
@@ -489,11 +456,7 @@
       "removeMessage": "Typen har inga produkter. Dess konton försvinner med den."
     },
     "booking": {
-      "title": "Bokföring",
-      "hint": {
-        "CAPITALISED": "Inköpen bokförs direkt på lagerkontot när utlägget eller leverantörsfakturan bokförs. Dagsverifikatet flyttar bara det som lämnar lagret till kostnad.",
-        "EXPENSED": "Inköpen bokförs som kostnad. Dagsverifikatet tar upp en leverans i lagret genom att kreditera den kostnaden, och kostnadsför den igen när den lämnar förrådet."
-      }
+      "title": "Bokföring"
     },
     "field": {
       "consumptionCostCenterId": "Kostnadsställe för förbrukning",
@@ -518,13 +481,11 @@
       "boardCostCenterId": "Frivilligt.",
       "boardSalesAccount": "Krediteras på fakturan till varje ledamot vid årets slut, till styrelsepris.",
       "boardSalesCostCenterId": "Frivilligt.",
-      "voucherSeries": "Lämna tomt för att använda serie {series}, som allt annat.",
-      "voucherSeriesUnconnected": "Lämna tomt för att använda samma serie som allt annat.",
+      "voucherSeries": "Serien lagrets dagliga verifikationer skickas till i Fortnox.",
       "postingStartsOn": "Första dagen som ger ett verifikat. Lämna tomt så länge lagervärdet inte ska bokföras."
     },
     "places": {
       "title": "Platser",
-      "hint": "Dit lagret bärs ut, till exempel en kyl eller ett utskott som jobbar. Det som når en plats räknas som använt och belastar platsens kostnadsställe. Medlemmar i platsens Authentik-grupper får flytta till och från den.",
       "name": "Namn",
       "costCenter": "Kostnadsställe",
       "costCenterFallback": "Samma som för förbrukning",
@@ -542,7 +503,8 @@
       "removeTitle": "Ta bort platsen {name}?",
       "removeMessage": "Inget har flyttats till eller från platsen, så den kan tas bort helt. Dess grupper försvinner med den.",
       "removed": "{name} är borttagen"
-    }
+    },
+    "needed": "Behövs innan lagret kan bokföras."
   },
   "email": {
     "title": "E-post",
@@ -580,7 +542,6 @@
     "viewHtml": "Som mejl",
     "viewText": "Som text",
     "retry": "Försök igen nu",
-    "retryHint": "Skickas om direkt, med alla försök återställda.",
     "retried": "Mejlet ligger i kö igen.",
     "retryFailed": "Kunde inte lägga mejlet i kö igen",
     "testTitle": "Skicka testmejl",
@@ -590,7 +551,6 @@
     "testFailed": "Kunde inte skicka testmejlet",
     "mailbox": {
       "title": "Inkommande post",
-      "subtitle": "Mejlkontot som Inkorgen läser leverantörsfakturor från.",
       "lastSync": "Senast läst {when}",
       "neverSynced": "Inte läst än",
       "connected": "Kopplad till {address}.",
@@ -613,6 +573,21 @@
       },
       "error": "Senaste läsningen misslyckades: {error}",
       "unconfigured": "Gmail är inte konfigurerat på servern (GMAIL_-variablerna saknas, se docs/gmail-inbound.md). Inga mejl läses."
-    }
+    },
+    "logTitle": "Skickade mejl",
+    "factsTitle": "Utskick",
+    "bodyTitle": "Innehåll"
+  },
+  "expenses": {
+    "title": "Bokföring & milersättning",
+    "booking": "Bokföring",
+    "voucherSeries": "Verifikationsserie",
+    "voucherSeriesHint": "Serien utlägg skickas till i Fortnox.",
+    "bankAccount": "Kortkonto",
+    "bankAccountHint": "Krediteras när ett kortköp bokförs.",
+    "debtAccount": "Skuld till medlem",
+    "debtAccountHint": "Krediteras när ett eget utlägg ska ersättas.",
+    "needed": "Behövs innan utlägg kan bokföras.",
+    "saveFailed": "Kunde inte spara."
   }
 }

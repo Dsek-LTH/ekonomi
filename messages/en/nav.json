@@ -13,7 +13,6 @@
   "costCenters": "Cost centers",
   "resultUnits": "Result units",
   "cards": "Guild cards",
-  "mileageRates": "Mileage",
   "stockSettings": "Stock",
   "users": "Users",
   "faq": "FAQ",
@@ -63,5 +62,6 @@
   "boardHistory": "My withdrawals",
   "boardInvoices": "Invoicing",
   "boardPrices": "Prices",
-  "stockBookkeeping": "Bookkeeping"
+  "stockBookkeeping": "Bookkeeping",
+  "expenseSettings": "Booking & mileage"
 }

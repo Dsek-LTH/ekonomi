@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/server/db";
-import { capabilitiesOf } from "@/lib/server/capabilities";
+import { effectiveAuthority, personalGrants } from "@/lib/server/access";
 import { initials } from "@/lib/ui/format";
 import type { Capability, Role, SessionUser } from "@/lib/domain/types";
 import { isStockSlug, type StockSlug } from "@/lib/stock/stocks";
@@ -16,8 +16,9 @@ export const resolveUserId = cache(async (): Promise<string | null> => {
 });
 
 /**
- * The user row behind a session, plus what its roles currently allow. Deduped per request. Shared with
- * `gate()` in lib/api/guard.ts. Capabilities are resolved from the matrix here, not stored on the row.
+ * The user row behind a session, plus what it may currently do. Deduped per request. Shared with `gate()` in
+ * lib/api/guard.ts. `roles` and `capabilities` are the groups' roles and the personal grants in force
+ * (lib/server/access.ts) together, resolved here and never stored.
  */
 export const loadUser = cache(
   async (
@@ -37,11 +38,12 @@ export const loadUser = cache(
       select: { name: true, email: true, studentId: true, roles: true, stockPlaceIds: true },
     });
     if (!row) return null;
-    const [capabilities, placeStocks] = await Promise.all([
-      capabilitiesOf(row.roles),
+    const [granted, placeStocks] = await Promise.all([
+      personalGrants(id),
       stocksOfPlaces(row.stockPlaceIds),
     ]);
-    return { ...row, capabilities, placeStocks };
+    const { roles, capabilities } = await effectiveAuthority(row.roles, granted);
+    return { ...row, roles, capabilities, placeStocks };
   },
 );
 

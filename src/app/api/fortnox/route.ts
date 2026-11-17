@@ -13,7 +13,6 @@ export async function GET() {
     configured: fortnoxConfigured(),
     connected: Boolean(conn),
     companyName: conn?.companyName ?? null,
-    voucherSeries: conn?.voucherSeries ?? null,
     expiresAt: conn?.expiresAt.toISOString() ?? null,
   });
 }

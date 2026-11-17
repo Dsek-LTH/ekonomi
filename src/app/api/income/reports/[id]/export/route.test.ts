@@ -4,7 +4,7 @@ const h = vi.hoisted(() => ({
   capabilities: ["BOOKKEEPING"] as string[],
   status: "BOOKED" as string,
   documentKey: "doc/1" as string | null,
-  incomeVoucherSeries: null as string | null,
+  incomeVoucherSeries: "A" as string | null,
   /** Whether the report is in the shape booked before the per-day voucher. */
   legacy: false,
   /** Vouchers Fortnox already has: date, description, label. */
@@ -74,7 +74,7 @@ class FortnoxError extends Error {
 }
 
 vi.mock("@/lib/fortnox", () => ({
-  getConnection: async () => ({ voucherSeries: "A" }),
+  getConnection: async () => ({}),
   getUserToken: async () => "tok",
   createVoucher: (...a: unknown[]) => {
     h.calls.push("createVoucher");
@@ -127,7 +127,7 @@ beforeEach(() => {
   h.capabilities = ["BOOKKEEPING"];
   h.status = "BOOKED";
   h.documentKey = "doc/1";
-  h.incomeVoucherSeries = null;
+  h.incomeVoucherSeries = "A";
   h.legacy = false;
   h.existing = [];
   h.uploadInboxFile.mockResolvedValue("file-1");
@@ -166,9 +166,12 @@ describe("POST /api/income/reports/[id]/export", () => {
     expect(h.createVoucher.mock.calls[0][1]).toMatchObject({ series: "B" });
   });
 
-  it("falls back to the connection's series when none is set", async () => {
-    await exportIt();
-    expect(h.createVoucher.mock.calls[0][1]).toMatchObject({ series: "A" });
+  it("refuses when no series is chosen for takings: there is no shared default", async () => {
+    h.incomeVoucherSeries = null;
+    const res = await exportIt();
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "settings.incomeSeriesUnset" });
+    expect(h.createVoucher).not.toHaveBeenCalled();
   });
 
   it("checks for a duplicate before it uploads anything", async () => {

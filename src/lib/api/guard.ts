@@ -28,8 +28,8 @@ export async function orNotFound<T>(
 }
 
 /**
- * Who is acting. `capabilities` is what every gate reads; `roles` is for the relational attest rules
- * (vice-skattmästare and resultatansvarig clauses in lib/domain/permissions.ts).
+ * Who is acting. `capabilities` is what every gate reads; `roles` is for the rules that turn on the role
+ * itself (the resultatansvarig clause in lib/domain/permissions.ts). Both include personal grants in force.
  */
 // `name` is for words written on the actor's behalf (notifications), never for a decision.
 export type Actor = {

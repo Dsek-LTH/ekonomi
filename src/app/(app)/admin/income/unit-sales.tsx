@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
+import { useDraft, useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { ExpandToggle } from "@/components/ui/expand-toggle";
@@ -15,6 +16,8 @@ import { Tag } from "@/components/ui/status-pill";
 import type { CostCenter, ResultUnit } from "@/lib/domain/types";
 
 type Mutate = ReturnType<typeof useMutation>["mutate"];
+
+const NO_PREFIXES: NonNullable<ResultUnit["income"]>["prefixes"] = [];
 
 export function UnitSales({
   unit,
@@ -57,15 +60,53 @@ export function UnitSales({
     if (ok) setOpen(true);
   }
 
-  async function updateIncome(body: Record<string, unknown>) {
-    if (!income) return;
-    await mutate(`/api/income/units/${income.id}`, {
-      key: `income-${income.id}`,
-      method: "PATCH",
-      body,
-      error: t("saveFailed"),
-    });
-  }
+  // The text, the cost centre and each prefix's cost centre wait for the page's Spara. Turning sales on or off and
+  // adding or removing a prefix happen at once.
+  const draft = useDraft({
+    description: income?.description ?? "",
+    defaultCostCenterId: income?.defaultCostCenterId ?? "",
+  });
+  const prefixEdits = useDraftRows(income?.prefixes ?? NO_PREFIXES);
+
+  useDraftPart({
+    dirty: draft.dirty || prefixEdits.dirty,
+    save: async () => {
+      if (!income) return true;
+      if (draft.dirty) {
+        const { description, defaultCostCenterId } = draft.changes;
+        const ok = await mutate(`/api/income/units/${income.id}`, {
+          method: "PATCH",
+          body: {
+            ...(description !== undefined && { description }),
+            ...(defaultCostCenterId !== undefined && {
+              defaultCostCenterId: defaultCostCenterId || null,
+            }),
+          },
+          error: t("saveFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      for (const [id, change] of prefixEdits.changes) {
+        const ok = await mutate(`/api/income/prefixes/${id}`, {
+          method: "PATCH",
+          body: { costCenterId: change.costCenterId || null },
+          error: t("saveFailed"),
+          refresh: false,
+        });
+        if (ok === null) return false;
+      }
+      return true;
+    },
+    commit: () => {
+      draft.commit();
+      prefixEdits.commit();
+    },
+    reset: () => {
+      draft.reset();
+      prefixEdits.reset();
+    },
+  });
 
   async function removeIncome() {
     if (!income) return;
@@ -95,15 +136,6 @@ export function UnitSales({
       error: t("saveFailed"),
     });
     if (ok) setProductDraft(null);
-  }
-
-  async function setPrefixCostCenter(id: string, costCenterId: string) {
-    await mutate(`/api/income/prefixes/${id}`, {
-      key: `product-${id}`,
-      method: "PATCH",
-      body: { costCenterId: costCenterId || null },
-      error: t("saveFailed"),
-    });
   }
 
   async function removeProductPrefix(id: string) {
@@ -158,12 +190,9 @@ export function UnitSales({
             <FieldGroup label={tIncome("description")} hint={tIncome("descriptionHint")}>
               <Input
                 size="sm"
-                defaultValue={income.description}
+                value={draft.value.description}
                 aria-label={tIncome("description")}
-                onBlur={(e) =>
-                  e.target.value !== income.description &&
-                  updateIncome({ description: e.target.value })
-                }
+                onChange={(e) => draft.set("description", e.target.value)}
               />
             </FieldGroup>
             <FieldGroup
@@ -173,8 +202,8 @@ export function UnitSales({
               <Combobox
                 size="sm"
                 options={ccOptions}
-                value={income.defaultCostCenterId ?? ""}
-                onChange={(v) => updateIncome({ defaultCostCenterId: v || null })}
+                value={draft.value.defaultCostCenterId}
+                onChange={(v) => draft.set("defaultCostCenterId", v)}
                 placeholder={tIncome("noCostCenter")}
                 emptyText={tIncome("noOwnCostCenters")}
                 allowClear
@@ -185,7 +214,7 @@ export function UnitSales({
 
           <FieldGroup label={tIncome("productPrefixes")} hint={tIncome("productHint")}>
             <ul className="rounded-control border border-border">
-              {income.prefixes.map((p) => (
+              {income.prefixes.map(prefixEdits.get).map((p) => (
                 <li
                   key={p.id}
                   className="flex items-center gap-3 border-b border-border px-3 py-1.5 last:border-0"
@@ -202,7 +231,7 @@ export function UnitSales({
                       size="sm"
                       options={ccOptions}
                       value={p.costCenterId ?? ""}
-                      onChange={(v) => v !== (p.costCenterId ?? "") && setPrefixCostCenter(p.id, v)}
+                      onChange={(v) => prefixEdits.set(p.id, { costCenterId: v || null })}
                       allowClear
                       placeholder={tIncome("prefixCostCenterDefault")}
                       aria-label={tIncome("prefixCostCenter", { code: p.code })}

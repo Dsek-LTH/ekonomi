@@ -34,13 +34,16 @@ model BookkeepingSettings {
   zettleFeeCostCenterId  String?
   // Which verifikationsserie a day's takings are filed under in Fortnox.
   //
-  // Null means "the same one everything else uses", FortnoxConnection's
-  // voucherSeries, which is what every export did before this column existed.
-  // Set, it separates a term of Swish from the utlägg they would otherwise be
-  // interleaved with, and it is also the series the duplicate check reads: a
-  // day is recognised over there by its series, its date and its voucher text
-  // (lib/income/duplicate.ts), so the two must be decided in one place.
+  // Each kind of export names its own series, chosen on its own settings page;
+  // there is no shared default to fall back on. Null means nobody chose one,
+  // and takings are not exported until somebody does. It is also the series
+  // the duplicate check reads: a day is recognised over there by its series,
+  // its date and its voucher text (lib/income/duplicate.ts), so the two must
+  // be decided in one place.
   incomeVoucherSeries    String?
+  // The verifikationsserie utlägg are exported into. Null until chosen, and no
+  // utlägg is exported until then.
+  expenseVoucherSeries   String?
   // Where a sale that matches no product prefix goes: whose takings it counts
   // as, and which revenue account it is credited to. One answer for the whole
   // section, so it is a setting of its own rather than a flag on one of the
@@ -116,9 +119,6 @@ model FortnoxConnection {
   expiresAt     DateTime // when the access token expires
   scopes        String // space-delimited granted scopes
   tokenType     String   @default("Bearer")
-  // The verifikationsserie exports land in. Null until somebody chooses one,
-  // and nothing is exported until then.
-  voucherSeries String?
   companyName   String? // from /3/companyinformation, for display
   orgNumber     String? // organisationsnummer, personal logins are checked against it
 

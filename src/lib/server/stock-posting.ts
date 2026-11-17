@@ -11,7 +11,6 @@ import {
   createVoucher,
   financialYearsFor,
   FortnoxError,
-  getConnection,
   getServiceToken,
   listFinancialYears,
   listVouchers,
@@ -379,10 +378,9 @@ const refuse = (
 /** What to send: every unsent day through a date, or the corrections. */
 export type ExportTarget = { kind: "DAILY"; date: string } | { kind: "CORRECTION" };
 
-/** The series a stock's vouchers land in, or null when none has been chosen anywhere. */
+/** The series a stock's vouchers land in, or null when none has been chosen for it (there is no shared default). */
 export async function stockVoucherSeries(settings: StockSettingsView): Promise<string | null> {
-  if (settings.voucherSeries) return settings.voucherSeries;
-  return (await getConnection())?.voucherSeries ?? null;
+  return settings.voucherSeries?.trim() || null;
 }
 
 /**
@@ -568,7 +566,7 @@ export async function exportStockVoucher(
 ): Promise<ExportOutcome> {
   const settings = await getStockSettings(stock);
   const series = await stockVoucherSeries(settings);
-  if (!series) return refuse(409, "settings.voucherSeriesUnset");
+  if (!series) return refuse(409, "settings.stockSeriesUnset");
 
   const frozen = await freeze(stock, target, seen, actorId);
   if (!frozen.ok) return frozen;
@@ -650,7 +648,7 @@ export async function resolveStockVoucher(
   // The series it was sent in is the one in force when it was sent, which is what the setting still says
   // unless somebody changed it in between. Both are looked in.
   const series = await stockVoucherSeries(settings);
-  if (!series) return refuse(409, "settings.voucherSeriesUnset");
+  if (!series) return refuse(409, "settings.stockSeriesUnset");
 
   const date = isoDay(voucher.date);
   let existing;
@@ -851,7 +849,7 @@ export async function exportReconciliation(
 ): Promise<ExportOutcome> {
   const settings = await getStockSettings(stock);
   const series = await stockVoucherSeries(settings);
-  if (!series) return refuse(409, "settings.voucherSeriesUnset");
+  if (!series) return refuse(409, "settings.stockSeriesUnset");
 
   const recon = await getReconciliation(stock);
   // The difference is read off the ledger mirror. After a voucher it is wrong until the mirror is read again.

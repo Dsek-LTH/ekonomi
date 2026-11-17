@@ -33,20 +33,40 @@ export async function capabilitiesOf(roles: readonly Role[]): Promise<Capability
 
 /**
  * Whether at least one live person would still be able to reach Inställningar. The invariant this feature
- * cannot break: a grid saved with nobody holding SETTINGS locks everyone out. Checked against roles people
+ * cannot break: a grid saved with nobody holding SETTINGS locks everyone out. Checked against what people
  * actually hold, after the write inside its transaction. See app/api/authority.
+ *
+ * A personal grant counts only when it has no end: one that runs out would leave the lock-out for later.
  */
 export async function someoneCanReachSettings(
   tx: Pick<typeof prisma, "roleCapability" | "user">,
+  now: Date = new Date(),
 ): Promise<boolean> {
   const holders = await tx.roleCapability.findMany({
     where: { capability: "SETTINGS" },
     select: { role: true },
   });
-  if (holders.length === 0) return false;
+  const roles = holders.map((h) => h.role);
 
   const count = await tx.user.count({
-    where: { active: true, roles: { hasSome: holders.map((h) => h.role) } },
+    where: {
+      active: true,
+      OR: [
+        ...(roles.length > 0 ? [{ roles: { hasSome: roles } }] : []),
+        {
+          accessGrants: {
+            some: {
+              validFrom: { lte: now },
+              validUntil: null,
+              OR: [
+                { capability: "SETTINGS" },
+                ...(roles.length > 0 ? [{ role: { in: roles } }] : []),
+              ],
+            },
+          },
+        },
+      ],
+    },
   });
   return count > 0;
 }

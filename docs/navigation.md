@@ -118,7 +118,7 @@ Avtal
   Motparter  /contracts/counterparties
 
 Frågor & svar  /faq
-Inställningar  (overlay)
+Inställningar  (overlay, see settings.md)
 ```
 
 Utlägg tabs by status, in the app's own words (kontera here, bokföra in

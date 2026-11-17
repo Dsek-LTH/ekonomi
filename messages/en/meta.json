@@ -50,7 +50,6 @@
     "email": "Email",
     "fortnox": "Fortnox",
     "salesSettings": "Sales",
-    "mileageRates": "Mileage",
     "resultUnits": "Result units",
     "roles": "Roles & permissions",
     "stockSettings": "Stock settings",
@@ -61,6 +60,7 @@
     "board": "Log a withdrawal",
     "boardPrices": "Board prices",
     "boardHistory": "My withdrawals",
-    "boardInvoices": "Invoicing"
+    "boardInvoices": "Invoicing",
+    "expenseSettings": "Booking & mileage"
   }
 }

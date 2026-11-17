@@ -7,40 +7,47 @@ import { useTranslations } from "next-intl";
 import { useMutation } from "@/components/shell/use-mutation";
 import { AmountInput } from "@/components/ui/amount-input";
 import { Button } from "@/components/ui/button";
-import { Notice } from "@/components/ui/notice";
-import { Card, CardHeader } from "@/components/ui/card";
+import { SettingRow, SettingsCard, SetupStatus } from "@/components/settings/settings-card";
+import { SettingsForm, useDraft, useDraftPart } from "@/components/settings/settings-draft";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconCheck, IconPlus, IconTrash } from "@/components/ui/icons";
-import { InfoHint } from "@/components/ui/info-hint";
+import { IconPlus, IconTrash } from "@/components/ui/icons";
 import type { IncomeConfigView } from "@/lib/data/income-config";
 import type { AccountRecord, CostCenter, ResultUnit } from "@/lib/domain/types";
 import type { IncomeSetupSection, IncomeSetupStep } from "@/lib/income/setup";
-import { cn } from "@/lib/ui/utils";
 
-import { IncomeSetupNotice } from "../../income/setup-notice";
 import { UnitSales } from "./unit-sales";
 import { sekToOre } from "@/lib/domain/money";
 
 type AccountKey =
   "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
 
-export function IncomeSettingsClient({
-  config,
-  resultUnits,
-  costCenters,
-  accounts,
-  setup,
-  serviceConfigured,
-}: {
+type IncomeSettingsProps = {
   config: IncomeConfigView;
   resultUnits: ResultUnit[];
   costCenters: CostCenter[];
   accounts: AccountRecord[];
   setup: IncomeSetupStep[];
   serviceConfigured: boolean;
-}) {
+};
+
+export function IncomeSettingsClient(props: IncomeSettingsProps) {
+  return (
+    <SettingsForm>
+      <IncomeSettings {...props} />
+    </SettingsForm>
+  );
+}
+
+function IncomeSettings({
+  config,
+  resultUnits,
+  costCenters,
+  accounts,
+  setup,
+  serviceConfigured,
+}: IncomeSettingsProps) {
   const t = useTranslations("admin.income");
   const left = (section: IncomeSetupSection) => setup.filter((s) => s.section === section).length;
   const tBook = useTranslations("book");
@@ -57,40 +64,38 @@ export function IncomeSettingsClient({
     short: a.number,
   }));
 
-  const [settings, setSettings] = useState(config.settings);
-  const [series, setSeries] = useState(config.settings.incomeVoucherSeries ?? "");
-  const savedSeries = config.settings.incomeVoucherSeries ?? "";
+  const settings = config.settings;
   const [newFallback, setNewFallback] = useState({ amount: "", message: "" });
 
-  async function save(body: Record<string, string | null>, key: string) {
-    await mutate("/api/income/settings", {
-      key,
-      method: "PATCH",
-      body,
-      error: t("saveFailed"),
-      success: t("saved"),
-    });
-  }
+  // The accounts, the series and the fallback wait for the page's Spara (docs/settings.md).
+  const draft = useDraft({
+    zettleClearingAccount: settings.zettleClearingAccount ?? "",
+    swishClearingAccount: settings.swishClearingAccount ?? "",
+    zettleFeeAccount: settings.zettleFeeAccount ?? "",
+    zettleFeeCostCenterId: settings.zettleFeeCostCenterId ?? "",
+    incomeVoucherSeries: settings.incomeVoucherSeries ?? "",
+    incomeFallbackIncomeId: settings.incomeFallbackIncomeId ?? "",
+    incomeFallbackAccount: settings.incomeFallbackAccount ?? "",
+  });
+  const d = draft.value;
+  const needed = (value: string) => (value ? null : t("needed"));
 
-  function pickAccount(key: AccountKey, value: string) {
-    if (!value || value === settings[key]) return;
-    setSettings({ ...settings, [key]: value });
-    save({ [key]: value }, key);
-  }
-
-  function pickFallbackUnit(value: string) {
-    setSettings({ ...settings, incomeFallbackIncomeId: value || null });
-    save({ incomeFallbackIncomeId: value }, "incomeFallbackIncomeId");
-  }
+  useDraftPart({
+    dirty: draft.dirty,
+    save: async () =>
+      (await mutate("/api/income/settings", {
+        method: "PATCH",
+        body: draft.changes,
+        error: t("saveFailed"),
+        refresh: false,
+      })) !== null,
+    commit: draft.commit,
+    reset: draft.reset,
+  });
 
   const sellingOptions: ComboOption[] = resultUnits
     .filter((u) => u.income?.active)
     .map((u) => ({ value: u.income!.id, label: u.resultUnit }));
-
-  function pickFeeCostCenter(value: string) {
-    setSettings({ ...settings, zettleFeeCostCenterId: value || null });
-    save({ zettleFeeCostCenterId: value }, "zettleFeeCostCenterId");
-  }
 
   async function addFallback() {
     const kronor = Number(newFallback.amount.replace(",", "."));
@@ -116,8 +121,8 @@ export function IncomeSettingsClient({
       <Combobox
         size="sm"
         options={accountOptions}
-        value={settings[key] ?? ""}
-        onChange={(v) => pickAccount(key, v)}
+        value={d[key]}
+        onChange={(v) => v && draft.set(key, v)}
         placeholder={tBook("accountPlaceholder")}
         searchPlaceholder={tBook("accountSearch")}
         aria-label={label}
@@ -127,34 +132,18 @@ export function IncomeSettingsClient({
 
   return (
     <div className="space-y-5">
-      {setup.length === 0 ? (
-        <Notice tone="info">{t("ready")}</Notice>
-      ) : (
-        <IncomeSetupNotice steps={setup} canSetUp onPage />
-      )}
-
       <Section id="service">
-        <Card>
-          <CardHeader
-            title={t("service.title")}
-            subtitle={t("service.description")}
-            action={<SectionStatus left={left("service")} />}
-          />
-          <p className="px-inset pt-3 pb-4 text-sm">
+        <SettingsCard title={t("service.title")} action={<SectionStatus left={left("service")} />}>
+          <p className="px-inset py-3 text-sm">
             {serviceConfigured ? t("service.connected") : t("service.missing")}
           </p>
-        </Card>
+        </SettingsCard>
       </Section>
 
       <Section id="units">
-        <Card>
-          <CardHeader
-            title={t("units.title")}
-            subtitle={t("units.description")}
-            action={<SectionStatus left={left("units")} />}
-          />
+        <SettingsCard title={t("units.title")} action={<SectionStatus left={left("units")} />}>
           {resultUnits.length === 0 ? (
-            <p className="px-inset pb-4 text-sm text-muted">
+            <p className="px-inset py-3 text-sm text-muted">
               {t("units.empty")}{" "}
               <Link href="/admin/result-units" className="font-medium underline">
                 {t("units.manageUnits")}
@@ -162,13 +151,13 @@ export function IncomeSettingsClient({
             </p>
           ) : (
             <>
-              <ul className="border-t border-border">
+              <ul className="border-b border-border">
                 <SettingRow label={t("fallback.unit")} hint={t("fallback.unitHint")}>
                   <Combobox
                     size="sm"
                     options={sellingOptions}
-                    value={settings.incomeFallbackIncomeId ?? ""}
-                    onChange={pickFallbackUnit}
+                    value={d.incomeFallbackIncomeId}
+                    onChange={(v) => draft.set("incomeFallbackIncomeId", v)}
                     placeholder={t("fallback.chooseUnit")}
                     emptyText={t("fallback.noSellingUnits")}
                     allowClear
@@ -179,15 +168,13 @@ export function IncomeSettingsClient({
                   {accountPicker("incomeFallbackAccount", t("fallback.account"))}
                 </SettingRow>
               </ul>
-              <ul className="border-t border-border">
+              <ul>
                 {resultUnits.map((u) => (
                   <UnitSales
                     key={u.id}
                     unit={u}
                     costCenters={costCenters}
-                    isFallback={
-                      Boolean(u.income) && u.income?.id === settings.incomeFallbackIncomeId
-                    }
+                    isFallback={Boolean(u.income) && u.income?.id === d.incomeFallbackIncomeId}
                     pending={pending}
                     mutate={mutate}
                   />
@@ -195,32 +182,42 @@ export function IncomeSettingsClient({
               </ul>
             </>
           )}
-        </Card>
+        </SettingsCard>
       </Section>
 
       <Section id="booking">
-        <Card>
-          <CardHeader
-            title={t("booking.title")}
-            subtitle={t("booking.description")}
-            action={<SectionStatus left={left("booking")} />}
-          />
+        <SettingsCard title={t("booking.title")} action={<SectionStatus left={left("booking")} />}>
           <ul>
-            <SettingRow label={t("accounts.zettleClearing")} hint={t("accounts.clearingHint")}>
+            <SettingRow
+              label={t("accounts.zettleClearing")}
+              hint={t("accounts.clearingHint")}
+              required
+              missing={needed(d.zettleClearingAccount)}
+            >
               {accountPicker("zettleClearingAccount", t("accounts.zettleClearing"))}
             </SettingRow>
-            <SettingRow label={t("accounts.swishClearing")} hint={t("accounts.clearingHint")}>
+            <SettingRow
+              label={t("accounts.swishClearing")}
+              hint={t("accounts.clearingHint")}
+              required
+              missing={needed(d.swishClearingAccount)}
+            >
               {accountPicker("swishClearingAccount", t("accounts.swishClearing"))}
             </SettingRow>
-            <SettingRow label={t("accounts.feeAccount")} hint={t("accounts.feeHint")}>
+            <SettingRow
+              label={t("accounts.feeAccount")}
+              hint={t("accounts.feeHint")}
+              required
+              missing={needed(d.zettleFeeAccount)}
+            >
               {accountPicker("zettleFeeAccount", t("accounts.feeAccount"))}
             </SettingRow>
             <SettingRow label={t("accounts.feeCostCenter")} hint={t("accounts.feeCostCenterHint")}>
               <Combobox
                 size="sm"
                 options={ccOptions}
-                value={settings.zettleFeeCostCenterId ?? ""}
-                onChange={pickFeeCostCenter}
+                value={d.zettleFeeCostCenterId}
+                onChange={(v) => draft.set("zettleFeeCostCenterId", v)}
                 placeholder={t("accounts.chooseCostCenter")}
                 allowClear
                 aria-label={t("accounts.feeCostCenter")}
@@ -228,50 +225,27 @@ export function IncomeSettingsClient({
             </SettingRow>
             <SettingRow
               label={t("export.series")}
-              hint={
-                settings.connectionVoucherSeries
-                  ? t("export.seriesHint", {
-                      series: settings.connectionVoucherSeries,
-                    })
-                  : t("export.seriesHintUnconnected")
-              }
+              hint={t("export.seriesHint")}
+              required
+              missing={needed(d.incomeVoucherSeries)}
             >
-              <div className="flex gap-2">
-                <Input
-                  size="sm"
-                  className="min-w-0 font-mono uppercase"
-                  value={series}
-                  onChange={(e) => setSeries(e.target.value.toUpperCase())}
-                  placeholder={settings.connectionVoucherSeries ?? ""}
-                  maxLength={4}
-                  aria-label={t("export.series")}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={series === savedSeries}
-                  loading={pending === "incomeVoucherSeries"}
-                  onClick={() => save({ incomeVoucherSeries: series }, "incomeVoucherSeries")}
-                >
-                  {t("save")}
-                </Button>
-              </div>
+              <Input
+                size="sm"
+                className="min-w-0 font-mono uppercase"
+                value={d.incomeVoucherSeries}
+                onChange={(e) => draft.set("incomeVoucherSeries", e.target.value.toUpperCase())}
+                maxLength={4}
+                aria-label={t("export.series")}
+              />
             </SettingRow>
           </ul>
-        </Card>
+        </SettingsCard>
       </Section>
 
-      <Card>
-        <CardHeader
-          title={t("fallbacks.title")}
-          subtitle={t("fallbacks.description")}
-          action={
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-muted">{t("optional")}</span>
-              <InfoHint label={t("fallbacks.title")}>{t("fallbacks.hint")}</InfoHint>
-            </span>
-          }
-        />
+      <SettingsCard
+        title={t("fallbacks.title")}
+        action={<span className="text-xs text-muted">{t("optional")}</span>}
+      >
         <ul>
           {config.fallbacks.length === 0 && (
             <li className="border-b border-border px-inset py-3 text-sm text-muted">
@@ -331,7 +305,7 @@ export function IncomeSettingsClient({
             </Button>
           </li>
         </ul>
-      </Card>
+      </SettingsCard>
     </div>
   );
 }
@@ -346,35 +320,5 @@ function Section({ id, children }: { id: IncomeSetupSection; children: React.Rea
 
 function SectionStatus({ left }: { left: number }) {
   const t = useTranslations("admin.income");
-  return (
-    <span
-      className={cn(
-        "flex items-center gap-1 text-xs font-medium",
-        left ? "text-warning" : "text-success",
-      )}
-    >
-      {left === 0 && <IconCheck className="size-3.5" />}
-      {left ? t("stepsLeft", { count: left }) : t("done")}
-    </span>
-  );
-}
-
-function SettingRow({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <li className="grid gap-2 border-b border-border px-inset py-3 last:border-0 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center sm:gap-6">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted">{hint}</p>
-      </div>
-      <div className="min-w-0">{children}</div>
-    </li>
-  );
+  return <SetupStatus left={left} label={left ? t("stepsLeft", { count: left }) : t("done")} />;
 }

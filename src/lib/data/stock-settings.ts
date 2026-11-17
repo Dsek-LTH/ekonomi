@@ -2,6 +2,7 @@ import "server-only";
 
 // How each stock is booked, as Inställningar draws it and the export reads it.
 import { prisma } from "@/lib/server/db";
+import { getKnownGroups } from "@/lib/data/authority";
 import { isoDay } from "@/lib/domain/date";
 import type { DrinkCategory } from "@/lib/domain/types";
 import { postingGaps, type StockBookingSettings, type StockSetupGap } from "@/lib/stock/setup";
@@ -117,9 +118,7 @@ export async function getPlaceSettings(): Promise<{
   for (const u of users) {
     for (const id of u.stockPlaceIds) holders.set(id, (holders.get(id) ?? 0) + 1);
   }
-  // `authentikGroups` is already only section groups, normalised (sectionGroups at sign-in).
-  const groupRows = await prisma.$queryRaw<{ group: string }[]>`
-    SELECT DISTINCT unnest("authentikGroups") AS "group" FROM "User" WHERE "active" ORDER BY 1`;
+  const knownGroups = await getKnownGroups();
 
   return {
     places: places.flatMap((p) =>
@@ -138,6 +137,6 @@ export async function getPlaceSettings(): Promise<{
           ]
         : [],
     ),
-    knownGroups: groupRows.map((r) => r.group),
+    knownGroups,
   };
 }

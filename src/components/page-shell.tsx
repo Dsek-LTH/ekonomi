@@ -39,6 +39,7 @@ export function PageShell({
   collectionsHidden = false,
   back,
   aside,
+  menu,
   width = "wide",
   children,
   className,
@@ -61,6 +62,8 @@ export function PageShell({
   back?: string;
   /** Controls at the far end of the title line that apply to the whole page (budget comparison and lock). */
   aside?: React.ReactNode;
+  /** The record's own ⋯ menu (Radera and the like), right after the title. In the settings overlay it stands in the overlay's bar. */
+  menu?: React.ReactNode;
   width?: PageWidth;
   children: React.ReactNode;
   className?: string;
@@ -73,6 +76,7 @@ export function PageShell({
         subtitle={subtitle}
         back={back}
         aside={aside}
+        menu={menu}
         right={
           collections ? (
             <div
