@@ -317,36 +317,19 @@ describe("costTotal", () => {
 });
 
 describe("documentCapabilities", () => {
-  const given = { resultUnitId: "unit-sex" };
-  const loose = { resultUnitId: null };
-
-  it("lets the unit fördela what it was given, or say it is not theirs", () => {
-    expect(documentCapabilities(sexm, given)).toMatchObject({
-      canSee: true,
-      canAllocate: true,
-      canDecline: true,
-      canAssign: false,
-      canDelete: false,
-    });
+  it("keeps the Inkorg from a resultatansvarig, whose documents arrive as invoices", () => {
+    expect(documentCapabilities(sexm).canSee).toBe(false);
   });
 
-  it("keeps another unit's documents from a resultatansvarig", () => {
-    expect(documentCapabilities(cafe, given).canSee).toBe(false);
-    expect(documentCapabilities(sexm, loose).canSee).toBe(false);
-  });
-
-  it("lets triage give out, move and delete, and fördela only once there is a unit", () => {
-    expect(documentCapabilities(triage, loose)).toMatchObject({
+  it("lets triage give out and delete", () => {
+    expect(documentCapabilities(triage)).toEqual({
       canSee: true,
       canAssign: true,
       canDelete: true,
-      canAllocate: false,
-      canDecline: false,
     });
-    expect(documentCapabilities(triage, given).canAllocate).toBe(true);
   });
 
   it("shows nothing to somebody with neither", () => {
-    expect(documentCapabilities(revisor, given).canSee).toBe(false);
+    expect(documentCapabilities(revisor).canSee).toBe(false);
   });
 });

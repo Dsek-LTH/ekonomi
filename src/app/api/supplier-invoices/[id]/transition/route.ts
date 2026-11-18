@@ -2,7 +2,7 @@
 // and the status it was decided under (when), and every write restates that status, so simultaneous actors get a 409.
 // The unit's fördelning is sent with its attest, and the rows the sender may sign are signed in the same write.
 // Only a split onto another unit's cost centre waits in PENDING_APPROVAL.
-// The first fördelning is not here: it makes the invoice, from a document in the Inkorg (../../route.ts).
+// The invoice is made when triage gives its document to a unit (lib/server/invoice-assign.ts), and waits ASSIGNED for this.
 // The treasury's kontering is saved whole at Bokför (../route.ts PATCH) and marked done here (`book`). Export to Fortnox has its own route.
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
@@ -154,6 +154,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const roundOff = rounding !== undefined ? rounding || null : invoice.rounding;
       const due = dueDate ?? (isoDate(invoice.dueDate) || null);
       if (!due) return fail(422, "supplierInvoice.noDueDate");
+      // What it is for names it in every list and to every other unit asked to sign.
+      const forWhat = description === undefined ? invoice.description : description;
+      if (!forWhat?.trim()) return fail(422, "supplierInvoice.noDescription");
       const planning = await planAllocation({
         rows,
         total,

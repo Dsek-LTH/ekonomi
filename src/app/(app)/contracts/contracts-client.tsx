@@ -135,7 +135,7 @@ export function ContractsClient({
 
   const actions = canManage ? (
     <div className="flex gap-2">
-      <ButtonLink href="/contracts/rental/new" variant="accentOutline" size="sm">
+      <ButtonLink href="/contracts/rental/new" variant="soft" size="sm">
         {t("drawRental")}
       </ButtonLink>
       <ButtonLink href="/contracts/upload" variant="secondary" size="sm">

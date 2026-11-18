@@ -103,7 +103,7 @@ export function RentalItemsClient({ items }: { items: RentalItemRow[] }) {
   );
 
   const add = (
-    <Button size="sm" variant="accentOutline" onClick={() => setEditing("new")}>
+    <Button size="sm" variant="soft" onClick={() => setEditing("new")}>
       <IconPlus className="size-4" />
       {t("add")}
     </Button>

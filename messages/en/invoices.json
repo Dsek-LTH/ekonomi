@@ -60,8 +60,7 @@
     "returnedTitle": "{name} wants something changed:",
     "missingTitle": "The invoice does not exist",
     "missingDescription": "It may have been deleted, or you do not have access to it.",
-    "missingAction": "To invoices",
-    "note": "Comment"
+    "missingAction": "To invoices"
   },
   "workspace": {
     "supplier": "Supplier in Fortnox",
@@ -167,30 +166,24 @@
     "col": {
       "document": "Document",
       "from": "Sender",
-      "received": "Received",
-      "unit": "Unit",
-      "dueDate": "Due date"
+      "received": "Received"
     },
     "searchPlaceholder": "Search file, sender or subject",
     "noMatch": "No documents match.",
     "returned": "Back from {unit}: {reason}",
     "returnedTag": "Returned",
-    "tab": {
-      "sort": "To sort",
-      "allocate": "To allocate",
-      "units": "With the units"
-    },
     "assign": "Send",
-    "move": "Change unit",
     "assigned": "Sent to {unit}",
-    "allocate": "Allocate",
-    "decline": "Not ours",
-    "declineConfirm": "The document goes back to the inbox, with your answer as the reason.",
-    "declined": "The document is back in the inbox",
-    "unitEmptyTitle": "Nothing to allocate",
     "dueDate": "Due date",
-    "saveDue": "Save",
-    "dueSaved": "The due date is saved"
+    "viewLabel": "Show",
+    "viewPdf": "PDF",
+    "viewMail": "Mail",
+    "mail": {
+      "from": "From",
+      "subject": "Subject",
+      "received": "Received",
+      "notKept": "The mail's text was not kept, since it arrived before the inbox started keeping it. Only what the sender wrote at the top is here."
+    }
   },
   "attest": {
     "signersTitle": "Who attests",
@@ -249,7 +242,6 @@
   "fromForwarder": "From {name}",
   "allocate": {
     "fromScan": "Read from the invoice. Check that it is right.",
-    "descriptionHint": "What the invoice is called in lists and for other units asked to attest.",
     "descriptionPlaceholder": "For example trailer hire for the introduction week",
     "roundingHint": "If the invoice rounds off. The rows add up to the amount less the rounding."
   }

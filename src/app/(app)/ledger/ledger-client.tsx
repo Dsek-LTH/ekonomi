@@ -12,7 +12,6 @@ import { IconChart, IconDownload, IconViewTable } from "@/components/ui/icons";
 import { EmptyNote, EmptyState } from "@/components/ui/empty-state";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { SkeletonSheet } from "@/components/ui/skeleton";
-import { type ComboOption } from "@/components/ui/combobox";
 
 import type { FortnoxStatus } from "@/lib/domain/types";
 import { ChartParameters, ReportParameters } from "./report-controls";
@@ -32,7 +31,6 @@ import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
 import {
   EMPTY_VIEW,
-  type LedgerYear,
   needsPriorYear,
   type QueryState,
   type ResultColumn,
@@ -42,44 +40,8 @@ import {
   type RowView,
   type ViewOptions,
 } from "./report-types";
-import { isoDay } from "@/lib/domain/date";
 
-// Month names come from the locale (Intl). Two lengths: pickers/readouts have room for "September", an x axis does not.
-const monthName = (locale: string, monthIndex: number, long = true) =>
-  new Date(Date.UTC(2000, monthIndex, 1)).toLocaleString(locale, {
-    month: long ? "long" : "short",
-    timeZone: "UTC",
-  });
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** Every month the financial year spans, as the days it covers (a broken year's first and last are clipped). */
-function monthsOf(
-  year: LedgerYear,
-): { key: string; from: string; to: string; index: number; y: number }[] {
-  const out: { key: string; from: string; to: string; index: number; y: number }[] = [];
-  const start = new Date(`${year.fromDate}T00:00:00Z`);
-  const end = new Date(`${year.toDate}T00:00:00Z`);
-  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
-  while (cursor <= end) {
-    const y = cursor.getUTCFullYear();
-    const m = cursor.getUTCMonth();
-    const first = isoDay(cursor);
-    const last = isoDay(new Date(Date.UTC(y, m + 1, 0)));
-    out.push({
-      key: `${y}-${String(m + 1).padStart(2, "0")}`,
-      from: first < year.fromDate ? year.fromDate : first,
-      to: last > year.toDate ? year.toDate : last,
-      index: m,
-      y,
-    });
-    cursor.setUTCMonth(m + 1);
-  }
-  return out;
-}
-
-const WHOLE_YEAR = "YEAR";
-const CUSTOM = "CUSTOM";
+import { capitalize, monthName, periodOptions } from "@/lib/ui/period";
 
 const INITIAL: QueryState = {
   kind: "RESULT",
@@ -104,6 +66,7 @@ export default function LedgerClient({
   fiscalYearId: number | null;
 }) {
   const t = useTranslations("ledger");
+  const tPeriod = useTranslations("common.period");
   const tCommon = useTranslations("common");
   // Un-namespaced, for resolveApiError: server codes are absolute paths under `errors`.
   const tAll = useTranslations();
@@ -305,38 +268,27 @@ export default function LedgerClient({
   // the `query` of the render it was made in, so a memoised copy would undo later changes.
   const period = (() => {
     if (!selectedYear) return undefined;
-    const months = monthsOf(selectedYear);
-    const options: ComboOption[] = [
-      { value: WHOLE_YEAR, label: t("wholeYear") },
-      ...months.map((m) => ({
-        value: m.key,
-        label: `${capitalize(monthName(locale, m.index))} ${m.y}`,
-      })),
-      { value: CUSTOM, label: t("customPeriod") },
-    ];
     // Before the first answer the dates are unset, which the server reads as the whole year.
-    const from = query.from ?? selectedYear.fromDate;
-    const to = query.to ?? selectedYear.toDate;
-    const value = customPeriod
-      ? CUSTOM
-      : from === selectedYear.fromDate && to === selectedYear.toDate
-        ? WHOLE_YEAR
-        : (months.find((m) => m.from === from && m.to === to)?.key ?? CUSTOM);
+    const choice = periodOptions(
+      selectedYear,
+      {
+        from: query.from ?? selectedYear.fromDate,
+        to: query.to ?? selectedYear.toDate,
+        custom: customPeriod,
+      },
+      { wholeYear: tPeriod("wholeYear"), custom: tPeriod("custom"), locale },
+    );
     return {
-      options,
-      value,
+      options: choice.options,
+      value: choice.value,
       onPick: (v: string) => {
-        if (v === CUSTOM) {
+        const range = choice.rangeOf(v);
+        if (!range) {
           setCustomPeriod(true);
           return;
         }
         setCustomPeriod(false);
-        const month = months.find((m) => m.key === v);
-        update(
-          month
-            ? { from: month.from, to: month.to }
-            : { from: selectedYear.fromDate, to: selectedYear.toDate },
-        );
+        update(range);
       },
       onManual: () => setCustomPeriod(true),
     };

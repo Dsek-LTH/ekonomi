@@ -14,7 +14,7 @@ One per page, and one for Översikt that goes over the whole app.
 | `start` | Översikt | Att göra, every section in the menu the reader can see, Inställningar, the räkenskapsår, Frågor & svar, theme and language |
 | `expenses` | Utlägg | new utlägg, the stages, and each scope the reader has (Mina, Min resultatenhet, Alla) |
 | `bank` | Bankhändelser | Att redovisa, each scope, importing statements |
-| `inbox` | Inkorg | what a document is, the unit's part, Att sortera, Hos enheterna, uploading |
+| `inbox` | Inkorg | what a document is and where it goes, uploading |
 | `invoices` | Fakturor | the stages, each scope |
 | `income` | Intäkter | fetching, reviewing and exporting, the stages |
 | `budget` | Budget | opening a budget, comparing, making a new one |

@@ -124,9 +124,7 @@ model ResultUnit {
   cards Card[]
 
   // Levfakturor given to this unit to kontera. See SupplierInvoice.resultUnit.
-  supplierInvoices         SupplierInvoice[]
-  // Levfaktura documents in this unit's Inkorg, waiting for its fördelning.
-  supplierInvoiceDocuments SupplierInvoiceDocument[]
+  supplierInvoices SupplierInvoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

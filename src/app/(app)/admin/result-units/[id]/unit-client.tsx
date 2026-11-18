@@ -18,7 +18,8 @@ import {
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { SettingsForm, useDraft, useDraftPart } from "@/components/settings/settings-draft";
 import { useMutation } from "@/components/shell/use-mutation";
-import { Button } from "@/components/ui/button";
+import { Button, SOFT_FILL, SOFT_HOVER } from "@/components/ui/button";
+import { cn } from "@/lib/ui/utils";
 import { MultiCombobox } from "@/components/ui/combobox";
 import { EditableText } from "@/components/ui/editable-text";
 import { Input } from "@/components/ui/field";
@@ -266,7 +267,11 @@ function Unit({ unit, knownGroups }: { unit: ResultUnit; knownGroups: string[] }
                     <Link
                       key={u.id}
                       href={`/admin/users/${u.id}`}
-                      className="h-7 rounded-control border border-accent bg-accent-soft px-3 text-xs font-medium leading-7 text-accent hover:underline"
+                      className={cn(
+                        "h-7 rounded-control px-3 text-xs font-medium leading-7",
+                        SOFT_FILL,
+                        SOFT_HOVER,
+                      )}
                     >
                       {u.name}
                     </Link>

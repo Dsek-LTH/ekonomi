@@ -28,7 +28,6 @@ const TODO_TONE: Record<TodoKind, Tone> = {
   attestExpense: "purple",
   attestInvoice: "purple",
   allocateInvoice: "purple",
-  allocateDocument: "purple",
   bookInvoice: "accent",
   sendInvoice: "accent",
 };
@@ -40,7 +39,6 @@ const TODO_HREF: Record<TodoKind, (id: string) => string> = {
   attestExpense: (id) => `/expenses/${id}`,
   attestInvoice: (id) => `/invoices/${id}`,
   allocateInvoice: (id) => `/invoices/${id}/allocate`,
-  allocateDocument: (id) => `/invoices/inbox/${id}`,
   bookInvoice: (id) => `/invoices/${id}/book`,
   sendInvoice: (id) => `/invoices/${id}`,
 };

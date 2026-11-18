@@ -70,11 +70,6 @@ const DOCUMENT_SELECT = {
   filename: true,
   createdAt: true,
   uploadedById: true,
-  resultUnitId: true,
-  assignedById: true,
-  assignedAt: true,
-  dueDate: true,
-  resultUnit: { select: { id: true, name: true } },
   inboundMail: { select: { id: true, senderId: true, receivedAt: true, subject: true } },
 } as const;
 
@@ -88,10 +83,10 @@ export type DocumentAccess =
   | { ok: true; doc: LoadedDocument; viewer: InvoiceViewerCtx; can: DocumentCapabilities }
   | { ok: false; res: NextResponse };
 
-/** A document in an Inkorg as the viewer may see it. One already on an invoice is a 409; one the viewer may not see is a 404. */
+/** A document in the Inkorg as the viewer may see it. One already on an invoice is a 409; one the viewer may not see is a 404. */
 export async function loadInboxDocumentFor(actor: Actor, id: string): Promise<DocumentAccess> {
   const [viewer, doc] = await Promise.all([invoiceViewerOf(actor), findDocument(id)]);
-  const can = doc && documentCapabilities(viewer, doc);
+  const can = doc && documentCapabilities(viewer);
   if (!doc || !can?.canSee)
     return { ok: false, res: fail(404, "supplierInvoice.documentNotFound") };
   if (doc.invoiceId !== null)

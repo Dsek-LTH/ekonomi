@@ -65,6 +65,7 @@ import { carriedSection, owningRoute, routePath } from "@/lib/ui/routes";
 import { useTypingFlag } from "@/lib/ui/typing";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { cn } from "@/lib/ui/utils";
+import { useLiveNavCounts } from "./nav-counts";
 
 export type NavItem = {
   href: string;
@@ -117,10 +118,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/invoices/inbox",
         label: "invoiceInbox",
         icon: IconMail,
-        visible: (u) =>
-          canTriageInvoices(u.capabilities) ||
-          isAdmin(u.capabilities) ||
-          u.roles.includes("RESULTATANSVARIG"),
+        visible: (u) => canTriageInvoices(u.capabilities) || isAdmin(u.capabilities),
       },
       {
         href: "/invoices",
@@ -194,18 +192,18 @@ const NAV_GROUPS: NavGroup[] = [
         icon: IconCalendar,
         visible: (u) => canViewStock(u.capabilities, "alcohol"),
       },
-      {
-        href: "/stock/alcohol/history",
-        label: "stockHistory",
-        icon: IconList,
-        visible: (u) => canViewStock(u.capabilities, "alcohol"),
-      },
       // The stock's vouchers to Fortnox, for bookkeepers (docs/stock.md).
       {
         href: "/stock/alcohol/bookkeeping",
         label: "stockBookkeeping",
         icon: IconLedger,
         visible: (u) => canBookStock(u.capabilities),
+      },
+      {
+        href: "/stock/alcohol/history",
+        label: "stockHistory",
+        icon: IconList,
+        visible: (u) => canViewStock(u.capabilities, "alcohol"),
       },
     ],
   },
@@ -228,16 +226,16 @@ const NAV_GROUPS: NavGroup[] = [
         visible: (u) => canMoveStock(u, "cafe"),
       },
       {
-        href: "/stock/cafe/history",
-        label: "cafeStockHistory",
-        icon: IconList,
-        visible: (u) => canViewStock(u.capabilities, "cafe"),
-      },
-      {
         href: "/stock/cafe/bookkeeping",
         label: "stockBookkeeping",
         icon: IconLedger,
         visible: (u) => canBookStock(u.capabilities),
+      },
+      {
+        href: "/stock/cafe/history",
+        label: "cafeStockHistory",
+        icon: IconList,
+        visible: (u) => canViewStock(u.capabilities, "cafe"),
       },
     ],
   },
@@ -341,7 +339,7 @@ const sectionHref = (path: string): string | null => owningRoute(path, Object.ke
 export function AppShell({
   children,
   fortnox,
-  counts = {},
+  counts: seededCounts = {},
   fiscal = null,
 }: {
   children: React.ReactNode;
@@ -351,6 +349,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const { user } = useRole();
+  const counts = useLiveNavCounts(seededCounts);
   const t = useTranslations("nav");
   const [navOpen, setNavOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
@@ -479,7 +478,7 @@ export function AppShell({
     <div className="flex min-h-dvh flex-col md:h-screen md:overflow-hidden print:block print:h-auto print:overflow-visible">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:border focus:border-brand-edge focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:brand-fill focus:text-on-brand"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:bg-action-from focus:text-white"
       >
         {t("skipToContent")}
       </a>
@@ -584,7 +583,11 @@ export function AppShell({
             )}
           >
             <SectionNavProvider
-              value={{ nav: sectionNav, slot: sectionSlot, reportOwn: setPageOwn }}
+              value={{
+                nav: sectionNav,
+                slot: sectionSlot,
+                reportOwn: setPageOwn,
+              }}
             >
               {sectionNav && (
                 <SectionBand

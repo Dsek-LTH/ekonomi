@@ -125,19 +125,7 @@
   "inbox": {
     "intro": {
       "title": "Inkorg",
-      "body": "Varje leverantörsfaktura börjar här som ett dokument, mejlat eller uppladdat. Den blir en faktura när en resultatenhet har fördelat den."
-    },
-    "unit": {
-      "title": "Din enhets dokument",
-      "body": "Dokument som din enhet har fått hamnar här. Öppna ett, fördela beloppet på dina kostnadsställen och attestera, så går det vidare till Fakturor."
-    },
-    "sort": {
-      "title": "Att sortera",
-      "body": "Nya dokument som ingen enhet har fått än. Ge vart och ett till den enhet det gäller."
-    },
-    "units": {
-      "title": "Hos enheterna",
-      "body": "Dokument som en enhet har fått men inte fördelat än. Här ser du vad som väntar hos vem."
+      "body": "Varje leverantörsfaktura börjar här som ett dokument, mejlat eller uppladdat. Öppna ett, ange förfallodagen om du ser den och skicka det till enheten det gäller. Då blir det en faktura under Fakturor, där enheten fördelar och attesterar den."
     },
     "upload": {
       "title": "Ladda upp",

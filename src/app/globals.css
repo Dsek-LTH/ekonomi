@@ -107,25 +107,21 @@
   --color-grid-line: #d4d4d8;
 
   /* ── Brand ───────────────────────────────────────────────────
-       The primary action, and it is ink rather than the section's pink. A pink
-       fill on every button, nav item and row action read as a consumer app,
-       and with a white label it was 3.31:1, under what a label owes. Near-black
-       carries white at 17:1. The pink is the logo's, and the first chart
-       series keeps it as a value of its own (see --chart-1).
+       Buttons are pink, white or the pink hue (see the action fill below and
+       components/ui/button.tsx). On-brand is the label on a filled state that
+       is not pink, such as a done checklist step.
 
-       Accent is the same ink: the active tab and the required star. A
+       Accent is ink: the active tab and the required star. A
        blue was the obvious alternative and was ruled out because the two blues
        here already mean something (a card purchase, an attested utlägg). The
        soft step is the selected row's fill, one step past the hover so the two
        are never confused, and a selected row carries an ink bar at its start
        as well, so the state is not left to a fill alone. */
-  --color-brand: #18181b;
-  --color-brand-hover: #27272a;
   --color-on-brand: #ffffff;
-  --color-brand-edge: #18181b;
 
   /* The primary button's fill, which is the section's pink again rather than
-       the ink above. Ink stays on the segmented control, the stepper and the
+       ink. A button is full pink, white or the pink hue (SOFT_FILL in
+       components/ui/button.tsx), never ink. Ink stays on the stepper and the
        accent, so the pink is the one thing on a screen that asks to be pressed.
        A gentle diagonal blend ending on the chart pink. White reads 4.0:1 at
        the light end and 4.9:1 at the dark one. */
@@ -384,10 +380,7 @@
   --color-grid-line: #39393b;
 
   /* Brand */
-  --color-brand: #fafafa;
-  --color-brand-hover: #e4e4e7;
   --color-on-brand: #18181b;
-  --color-brand-edge: #fafafa;
   /* The same pink as on paper. It holds on a dark ground. */
   --color-action-from: #f280a1;
   --color-action-to: #ea6f95;
@@ -496,10 +489,7 @@
     --color-grid-line: #39393b;
 
     /* Brand */
-    --color-brand: #fafafa;
-    --color-brand-hover: #e4e4e7;
     --color-on-brand: #18181b;
-    --color-brand-edge: #fafafa;
     /* The same pink as on paper. It holds on a dark ground. */
     --color-action-from: #f280a1;
     --color-action-to: #ea6f95;
@@ -592,20 +582,6 @@
    Reach for the next step up rather than inventing the value
    between two steps. The half-steps are not banned, they are for
    optical corrections, not for structure. */
-
-/* `transition: var(--ease-out-quint)` is what stood here, which is the
-   shorthand carrying an easing function and nothing else, so the duration fell
-   back to 0s and the app's most-clicked control was the one thing in it that
-   snapped. The property is named too: this class is on the nav rail and the
-   segmented control, where `transition: all` would also ease the width. */
-.brand-fill {
-  background: var(--color-brand);
-  transition: background 150ms var(--ease-out-quint);
-}
-
-.brand-fill:hover {
-  background: var(--color-brand-hover);
-}
 
 /* The primary button. A gentle diagonal blend with no highlight and no shade,
    so it reads as a flat colour that shifts rather than a raised surface. The
@@ -1281,13 +1257,7 @@ summary {
     /* The dark palette's hues are tuned for a near-black card and read as
        washed-out highlighter on paper. A printed surplus, deficit or brand
        mark has to stay legible in ink. Each of these is ~5.2:1 on white. */
-    --color-brand: #000000;
-    /* Nothing hovers on paper, so it is the fill itself. It is set rather than
-       left out because leaving it out is how the dark theme's value reaches a
-       printer. */
-    --color-brand-hover: #000000;
     --color-on-brand: #ffffff;
-    --color-brand-edge: #000000;
     --color-action-from: #000000;
     --color-action-to: #000000;
     --color-accent: #000000;

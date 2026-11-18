@@ -24,7 +24,7 @@ export function owningRoute(path: string, routes: readonly string[]): string | n
  * Which section a page is lit under, given the one the previous page was lit under. A page that is not a nav route
  * (an utlägg, its booking form) keeps the section you came from, and so does the next nested page. A nav route is
  * always its own section; with nothing before it (a shared link, a reload) a page is lit by its URL. A subsection only
- * carries to pages beneath it: an invoice opened after fördelning in the Inkorg (/invoices/inbox) has left the Inkorg,
+ * carries to pages beneath it: an invoice made from a document in the Inkorg (/invoices/inbox) has left the Inkorg,
  * so it is lit under /invoices.
  */
 export function carriedSection(

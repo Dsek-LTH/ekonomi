@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useProgressRouter } from "./route-progress";
 import { useNotify } from "./notifications";
+import { markNavCountsStale } from "./nav-counts";
 import { apiErrorAction, resolveApiError } from "@/lib/ui/api-error";
 
 type MutateOptions = {
@@ -59,6 +60,8 @@ export function useMutation() {
           return null;
         }
         if (success) notify.success(success);
+        // The nav's counts live in the layout, which a push after this does not render again.
+        if (method !== "GET") markNavCountsStale();
         if (refresh) router.refresh();
         return data as T;
       } catch {

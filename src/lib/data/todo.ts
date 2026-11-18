@@ -114,11 +114,11 @@ export async function getTodos(
   return { items, groups };
 }
 
-/** Fakturor and Inkorg documents waiting on the reader, and the counts around them. Not narrowed by räkenskapsår: a faktura is due when it is due. */
+/** Fakturor waiting on the reader, and the counts around them. Not narrowed by räkenskapsår: a faktura is due when it is due. */
 async function invoiceTodos(viewer: Viewer, today: string) {
   const v = await invoiceViewerOf(viewer);
   const triage = canTriageInvoices(v.capabilities);
-  const [rows, documents, unsorted] = await Promise.all([
+  const [rows, unsorted] = await Promise.all([
     prisma.supplierInvoice.findMany({
       where: { AND: [invoiceScopeWhere(v), { status: { not: "EXPORTED" } }] },
       select: {
@@ -141,23 +141,7 @@ async function invoiceTodos(viewer: Viewer, today: string) {
         },
       },
     }),
-    v.ownedResultUnitIds.length
-      ? prisma.supplierInvoiceDocument.findMany({
-          where: { invoiceId: null, resultUnitId: { in: [...v.ownedResultUnitIds] } },
-          select: {
-            id: true,
-            filename: true,
-            dueDate: true,
-            assignedAt: true,
-            createdAt: true,
-            resultUnit: { select: { name: true } },
-            inboundMail: { select: { subject: true } },
-          },
-        })
-      : [],
-    triage
-      ? prisma.supplierInvoiceDocument.count({ where: { invoiceId: null, resultUnitId: null } })
-      : 0,
+    triage ? prisma.supplierInvoiceDocument.count({ where: { invoiceId: null } }) : 0,
   ]);
 
   const items: TodoItem[] = [];
@@ -182,22 +166,6 @@ async function invoiceTodos(viewer: Viewer, today: string) {
     } else if (due && due < today) {
       overdueElsewhere++;
     }
-  }
-  for (const d of documents) {
-    const ready = momentDay(d.assignedAt ?? d.createdAt);
-    items.push(
-      todoItem(
-        {
-          kind: "allocateDocument",
-          id: d.id,
-          title: d.inboundMail?.subject || d.filename,
-          who: d.resultUnit?.name ?? null,
-          amount: null,
-          due: dueOf.attest(ready, d.dueDate ? isoDay(d.dueDate) : null),
-        },
-        today,
-      ),
-    );
   }
   return { items, unsorted, overdueElsewhere };
 }

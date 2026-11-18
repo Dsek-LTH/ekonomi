@@ -1,7 +1,6 @@
 import { CollectionSwitch, type Collections } from "@/components/ui/collection-switch";
-import { PageTabs, type PageTabsProps } from "@/components/ui/page-tabs";
-import { ViewToggle } from "@/components/ui/view-toggle";
-import { PageHeader } from "@/components/shell/section-nav";
+import type { PageTabsProps } from "@/components/ui/page-tabs";
+import { BandPageTabs, PageHeader } from "@/components/shell/section-nav";
 import { cn } from "@/lib/ui/utils";
 
 // Standard page wrapper. Widths: form (narrow), content (medium lists), wide (tables, dashboards).
@@ -14,27 +13,11 @@ export const PAGE_WIDTH: Record<PageWidth, string> = {
   wide: "",
 };
 
-/** The view toggle's content. See `views` on PageShell. */
-export interface Views {
-  /** Names the toggle for a screen reader. */
-  label: string;
-  value: string;
-  options: {
-    value: string;
-    label: string;
-    icon: (p: { className?: string }) => React.ReactNode;
-  }[];
-  onChange: (value: string) => void;
-  /** Keep the toggle's room but not the toggle, as `collectionsHidden`. */
-  hidden?: boolean;
-}
-
 export function PageShell({
   title,
   subtitle,
   collections,
   pages,
-  views,
   view,
   collectionsHidden = false,
   back,
@@ -52,8 +35,6 @@ export function PageShell({
   collections?: Collections;
   /** The parts of a nested record (a bokslut year), as underlined links under the title. See docs/navigation.md. */
   pages?: PageTabsProps;
-  /** Tabell or Diagram, detail or frame, as icons on a strip above the content. See docs/navigation.md. */
-  views?: Views;
   /** Which moment the page describes (the stock list's per datum). View state only, no actions. */
   view?: React.ReactNode;
   /** Keep the collection switch's room but not the switch, so the header height does not jump. */
@@ -91,26 +72,8 @@ export function PageShell({
         }
       />
 
-      {(pages || views) && (
-        <div
-          className={cn(
-            "mb-4 flex items-end justify-between gap-4",
-            pages && "border-b border-border",
-          )}
-        >
-          {pages ? <PageTabs {...pages} /> : <span />}
-          {views && (
-            <div className={cn("pb-1.5", views.hidden && "invisible")} inert={views.hidden}>
-              <ViewToggle
-                aria-label={views.label}
-                value={views.value}
-                options={views.options}
-                onChange={views.onChange}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      {/* A view toggle is not placed here: it sits in the page's own toolbar (docs/navigation.md). */}
+      {pages && <BandPageTabs back={back} pages={pages} />}
 
       <div className="space-y-4">{children}</div>
     </div>

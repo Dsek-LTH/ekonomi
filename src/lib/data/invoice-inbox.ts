@@ -1,15 +1,12 @@
-// Every document no invoice has yet that the viewer may see. Not narrowed by räkenskapsår: a
-// document has no date until one is read off it. Triage sees all; a resultatansvarig sees what
-// was given to their units (rule: documentCapabilities).
+// Every document no invoice has yet: the Inkorg, which is triage's (and the admins', to look at). Not narrowed by
+// räkenskapsår: a document has no date until one is read off it.
 import "server-only";
 
 import { prisma } from "@/lib/server/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import { canTriageInvoices, isAdmin } from "@/lib/domain/permissions";
+import { canTriageInvoices } from "@/lib/domain/permissions";
 import { documentCapabilities, type DocumentCapabilities } from "@/lib/domain/supplier-invoice";
-import { invoiceViewerOf, type InvoiceViewerCtx } from "./supplier-invoices";
 import type { Viewer } from "./expense-scope";
-import { isoDate } from "./shared";
 
 export interface InboxDocument {
   id: string;
@@ -20,42 +17,24 @@ export interface InboxDocument {
   fromAddress: string | null;
   subject: string | null;
   note: string | null;
-  /** Who the forwarded mail was from, usually the supplier. Basis for the cost centre suggestion. */
-  originalFrom: string | null;
-  /** YYYY-MM-DD, as triage entered it when sending it to a unit, or "". */
-  dueDate: string;
-  /** The unit whose Inkorg it is in, or null while it waits for triage. */
-  resultUnitId: string | null;
-  resultUnitName: string | null;
-  /** For one sent back by a unit, or with its invoice: which unit, and why. */
+  /** Whether it came by mail, so there is a mail to read beside it. */
+  mailed: boolean;
+  /** For one sent back with its invoice: which unit, and why. */
   returned: { from: string | null; reason: string } | null;
   can: DocumentCapabilities;
 }
 
-/** Whether the Inkorg is the viewer's page at all: triage, admins, any resultatansvarig. */
-export const canSeeInvoiceInbox = (v: Pick<Viewer, "roles" | "capabilities">): boolean =>
-  canTriageInvoices(v.capabilities) ||
-  isAdmin(v.capabilities) ||
-  v.roles.includes("RESULTATANSVARIG");
-
-const seesAll = (v: InvoiceViewerCtx) =>
-  canTriageInvoices(v.capabilities) || isAdmin(v.capabilities);
-
-function inboxWhere(v: InvoiceViewerCtx): Prisma.SupplierInvoiceDocumentWhereInput {
-  if (seesAll(v)) return { invoiceId: null };
-  return { invoiceId: null, resultUnitId: { in: [...v.ownedResultUnitIds] } };
-}
+/** Whether the Inkorg is the viewer's page at all: triage and the admins. */
+export const canSeeInvoiceInbox = (v: Pick<Viewer, "capabilities">): boolean =>
+  documentCapabilities(v).canSee;
 
 const SELECT = {
   id: true,
   filename: true,
   mimeType: true,
   createdAt: true,
-  dueDate: true,
-  resultUnitId: true,
   returnedFrom: true,
   returnNote: true,
-  resultUnit: { select: { name: true } },
   uploadedBy: { select: { name: true } },
   inboundMail: {
     select: {
@@ -63,14 +42,13 @@ const SELECT = {
       fromAddress: true,
       subject: true,
       note: true,
-      originalFrom: true,
       receivedAt: true,
     },
   },
 } satisfies Prisma.SupplierInvoiceDocumentSelect;
 
 function view(
-  v: InvoiceViewerCtx,
+  can: DocumentCapabilities,
   d: Prisma.SupplierInvoiceDocumentGetPayload<{ select: typeof SELECT }>,
 ): InboxDocument {
   return {
@@ -82,40 +60,38 @@ function view(
     fromAddress: d.inboundMail?.fromAddress ?? null,
     subject: d.inboundMail?.subject ?? null,
     note: d.inboundMail?.note ?? null,
-    originalFrom: d.inboundMail?.originalFrom ?? null,
-    dueDate: isoDate(d.dueDate),
-    resultUnitId: d.resultUnitId,
-    resultUnitName: d.resultUnit?.name ?? null,
+    mailed: d.inboundMail !== null,
     returned: d.returnNote ? { from: d.returnedFrom, reason: d.returnNote } : null,
-    can: documentCapabilities(v, d),
+    can,
   };
 }
 
 export async function getInboxDocuments(viewer: Viewer): Promise<InboxDocument[]> {
-  const v = await invoiceViewerOf(viewer);
+  const can = documentCapabilities(viewer);
+  if (!can.canSee) return [];
   const docs = await prisma.supplierInvoiceDocument.findMany({
-    where: inboxWhere(v),
+    where: { invoiceId: null },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: SELECT,
   });
-  return docs.map((d) => view(v, d));
+  return docs.map((d) => view(can, d));
 }
 
-export async function getInboxDocument(id: string, viewer: Viewer): Promise<InboxDocument | null> {
-  const v = await invoiceViewerOf(viewer);
-  const d = await prisma.supplierInvoiceDocument.findFirst({
-    where: { AND: [{ id }, inboxWhere(v)] },
-    select: SELECT,
-  });
-  return d ? view(v, d) : null;
-}
-
-/** Documents waiting on the viewer: for triage those nobody has been given, for anyone those given to their units. */
+/** Documents waiting for triage to give them to a unit. */
 export async function countInboxDocuments(viewer: Viewer): Promise<number> {
-  const v = await invoiceViewerOf(viewer);
-  const OR: Prisma.SupplierInvoiceDocumentWhereInput[] = [];
-  if (canTriageInvoices(v.capabilities)) OR.push({ resultUnitId: null });
-  if (v.ownedResultUnitIds.length) OR.push({ resultUnitId: { in: [...v.ownedResultUnitIds] } });
-  if (OR.length === 0) return 0;
-  return prisma.supplierInvoiceDocument.count({ where: { invoiceId: null, OR } });
+  if (!canTriageInvoices(viewer.capabilities)) return 0;
+  return prisma.supplierInvoiceDocument.count({ where: { invoiceId: null } });
+}
+
+/** The mail one document in the Inkorg came in, to read in full. Null for an upload, or for somebody who may not see it. */
+export async function getInboxMail(
+  documentId: string,
+  viewer: Viewer,
+): Promise<{ body: string | null } | null> {
+  if (!documentCapabilities(viewer).canSee) return null;
+  const doc = await prisma.supplierInvoiceDocument.findFirst({
+    where: { id: documentId, invoiceId: null },
+    select: { inboundMail: { select: { body: true } } },
+  });
+  return doc?.inboundMail ?? null;
 }

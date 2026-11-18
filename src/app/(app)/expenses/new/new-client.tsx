@@ -45,6 +45,7 @@ import { ActionBar } from "@/components/action-bar";
 import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
 import { displayableFile } from "@/lib/ui/heic";
 import { cn, uid } from "@/lib/ui/utils";
+import { SOFT_FILL } from "@/components/ui/button";
 import { underlagCaption } from "@/lib/expense/document-url";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
@@ -61,7 +62,7 @@ const optionCard = (selected: boolean, locked = false) =>
   cn(
     "w-full rounded-control border px-4 py-3 text-left transition-colors",
     selected
-      ? "border-accent bg-accent-soft"
+      ? cn("border-action-from/50", SOFT_FILL)
       : locked
         ? "border-border opacity-50"
         : "border-border hover:bg-hover",

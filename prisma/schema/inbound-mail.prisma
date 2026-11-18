@@ -4,9 +4,8 @@
 // See lib/server/gmail.ts and lib/server/inbound-mail.ts.
 //
 // The mailbox itself stays the archive of what was sent. What is kept here is
-// what the app decided about each mail, and enough of it to show beside the
-// invoices it became: who sent it, what they wrote, and why it was refused if
-// it was.
+// what the app decided about each mail, and enough of it to read in the
+// Inkorg: who sent it, its text, and why it was refused if it was.
 
 enum InboundMailStatus {
   /// From a dsek.se sender whose mail passed DKIM/DMARC and carried a PDF.
@@ -42,6 +41,11 @@ model InboundMail {
   /// the supplier's address, usually. What the supplier-history suggestion is
   /// matched on.
   originalFrom String?
+  /// The mail's whole text as read at intake (its text/plain part, or its HTML
+  /// with the tags taken out), forwarded part and all, so triage can read it
+  /// in the Inkorg. Plain text, so nothing in it is ever rendered as HTML.
+  /// Null for mail from before it was kept, and for refused mail.
+  body         String?
 
   status       InboundMailStatus
   rejectReason String?

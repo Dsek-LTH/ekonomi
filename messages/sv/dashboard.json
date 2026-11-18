@@ -67,7 +67,6 @@
       "attestExpense": "Attestera",
       "attestInvoice": "Attestera",
       "allocateInvoice": "Fördela",
-      "allocateDocument": "Fördela",
       "bookInvoice": "Kontera",
       "sendInvoice": "Skicka"
     },
@@ -78,7 +77,6 @@
       "attestExpense": "Utlägg från {who}",
       "attestInvoice": "Leverantörsfaktura, {who}",
       "allocateInvoice": "Leverantörsfaktura, {who}",
-      "allocateDocument": "I inkorgen, {who}",
       "bookInvoice": "Leverantörsfaktura, {who}",
       "sendInvoice": "Konterad, {who}"
     },

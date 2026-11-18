@@ -19,7 +19,7 @@ import { getAvatarVersions, getSeenGuideSteps, userHoldsCard } from "@/lib/data/
 import { GuideProvider } from "@/components/shell/guide";
 import { AvatarProvider } from "@/components/ui/avatar";
 import { getFortnoxCompany, getFortnoxSession } from "@/lib/data/fortnox";
-import { getNavCounts } from "@/lib/data/nav-counts";
+import { getNavCounts, navCountsByHref } from "@/lib/data/nav-counts";
 import { getFiscalYear, getFiscalYears } from "@/lib/server/fiscal-year";
 import { canLogInToFortnox } from "@/lib/domain/permissions";
 
@@ -90,12 +90,7 @@ export default async function AppLayout({
                       : undefined
                   }
                   fiscal={fiscalYear && { years: fiscalYears, selected: fiscalYear }}
-                  counts={{
-                    "/expenses": counts.expenses,
-                    "/bank": counts.bank,
-                    "/invoices/inbox": counts.invoiceInbox,
-                    "/invoices": counts.invoices,
-                  }}
+                  counts={navCountsByHref(counts)}
                 >
                   {children}
                 </AppShell>

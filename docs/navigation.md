@@ -12,7 +12,7 @@ able to guess where a control is before they look for it.
 | Table tabs | Which stage? Grouped by who acts next, ending in Alla. | `?tab=` | top of the table |
 | Filters | Narrow by attribute: search, date, type, unit. | `?q=`, ... | table toolbar |
 | View toggle | The same data drawn differently (table or chart). | `?view=` | page toolbar, never the band |
-| Page tabs | Parts of one record (a bokslut year). | path | under the detail page's title |
+| Page tabs | Parts of one record (a bokslut year), or two pages over the same data that answer different questions (Historik: Rörelser, Statistik). | path or `?view=` | under the page's title |
 
 Rules:
 
@@ -56,9 +56,8 @@ Utlägg
     scope: Mina | Min resultatenhet | Alla
 
 Leverantörsfakturor
-  Inkorg  /invoices/inbox  (triage, and a resultatansvarig for their units)
-    tabs: Att sortera | Att fördela | Hos enheterna  (each only for who has it)
-    /invoices/inbox/[id]      Fördela a document, which makes it an invoice
+  Inkorg  /invoices/inbox  (triage and admins only) documents with no invoice yet.
+    No tabs. Giving a document to a unit makes the invoice (ASSIGNED).
   Fakturor  /invoices
     scope: Min resultatenhet | Alla
     tabs: Att attestera | Att kontera | Att skicka | I Fortnox | Alla
@@ -92,15 +91,15 @@ Alkohollager
   Produkter  /stock/alcohol
   Tillfällen  /stock/alcohol/events
     /stock/alcohol/events/[id]  page tabs
-  Historik  /stock/alcohol/history  view: Rörelser | Statistik
   Bokföring  /stock/alcohol/bookkeeping   (bookkeepers)
     tabs: Att bokföra | Bokförda. Avstämning above. "Bokför t.o.m. [datum]".
+  Historik  /stock/alcohol/history  page tabs: Rörelser | Statistik (?view=stats)
 
 Cafélager
   Produkter  /stock/cafe
   Flytta  /stock/cafe/move   (a phone in the storage room; anyone holding a place)
-  Historik  /stock/cafe/history  view: Rörelser | Statistik
   Bokföring  /stock/cafe/bookkeeping   (bookkeepers, as for alcohol)
+  Historik  /stock/cafe/history  page tabs: Rörelser | Statistik (?view=stats)
 
 Styrelseborder
   Logga  /board   (board members, and the treasurer for anybody)

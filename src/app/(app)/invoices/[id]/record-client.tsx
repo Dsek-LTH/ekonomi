@@ -152,17 +152,6 @@ function InvoiceRecord(
 
         <FactStrip invoice={invoice} />
 
-        {invoice.mail?.note && (
-          <InspectorSection title={tDetail("note")}>
-            <p className="whitespace-pre-line text-sm">
-              <span className="font-medium">
-                {invoice.mail.fromName ?? invoice.mail.fromAddress}:
-              </span>{" "}
-              {invoice.mail.note}
-            </p>
-          </InspectorSection>
-        )}
-
         <SplitSection invoice={invoice} />
 
         {(invoice.status === "BOOKED" || invoice.status === "EXPORTED") && (

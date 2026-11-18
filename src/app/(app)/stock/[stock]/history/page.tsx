@@ -1,7 +1,7 @@
 import { requireStockPage } from "@/lib/server/stock-page";
 import { getStockLevels, getStockLog, getStockPlaces } from "@/lib/data/stock";
 import { getStockStats } from "@/lib/data/stock-stats";
-import { today } from "@/lib/domain/date";
+import { getFiscalYear } from "@/lib/server/fiscal-year";
 import { canViewBookkeeping } from "@/lib/domain/permissions";
 import type { StockEntryKind } from "@/lib/domain/types";
 import StockLogClient from "./log-client";
@@ -34,15 +34,26 @@ export default async function StockHistoryPage({
   if (first(sp.view) === "stats") {
     const groups = list(sp.groups);
     const tags = list(sp.tags);
-    const stats = await getStockStats({ stock, from, to, groups, tags });
+    // `place`, as the movements view names it, so a filter survives switching views.
+    const places = list(sp.place);
+    // With no period asked for, the header's räkenskapsår, as Utfall & rapporter opens on.
+    const fiscal = await getFiscalYear();
+    const year = fiscal ? { fromDate: fiscal.fromDate, toDate: fiscal.toDate } : null;
+    const asked = from || to;
+    const period = {
+      from: asked ? from : year?.fromDate,
+      to: asked ? to : year?.toDate,
+    };
+    const stats = await getStockStats({ stock, ...period, groups, tags, places });
     return (
       <StockStatsClient
         stats={stats}
-        from={from ?? ""}
-        to={to ?? ""}
-        today={today()}
+        from={period.from ?? ""}
+        to={period.to ?? ""}
+        year={year}
         groups={groups}
         tags={tags}
+        places={places}
       />
     );
   }

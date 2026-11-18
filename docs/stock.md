@@ -821,10 +821,20 @@ below zero, or if a place has since returned what the move gave it.
   top, storage or a place, offering only moves the reader may log. From a
   place the list shows only what it has to give back, with how much. The
   route is kept after saving.
-- **Platser i år** on the café stock page: per place, units and value taken
-  less brought back in the räkenskapsår picked in the header. A row opens the
-  place's movements in the history.
-- **History**: a Plats column and a place filter (`?place=`).
+- **History**: a Plats column and a place filter (`?place=`), shared with
+  Statistik when switching views.
+- **Statistik** (History's other view, a page tab beside Rörelser): laid out
+  like Utfall & rapporter, with the filters in a panel on the left (sticky on
+  desktop, stacked on a phone) and the figures beside it. The period is the
+  same picker as Utfall's (components/report-panel.tsx, lib/ui/period.ts):
+  the whole räkenskapsår, one of its months, or dates of one's own, opening
+  on the header's year. Then a Plats filter beside type and tag,
+  and a "Per plats" card with each place's net for the period (a row narrows
+  the page to it). Narrowed to places, the period card shows Tagit,
+  Tillbaka and Netto, and the product list ranks what those places took, in
+  units and value. The shelf-value chart and Fördelning nu stay the shelf's,
+  since a place holds nothing. This replaced a "Platser i år" card at the
+  foot of the stock page (2026-11-18), which sat under every product.
 - **Inställningar -> Lager -> Platser**: add, rename, cost centre, groups
   (picked from the groups members hold, or typed), archive and restore. A
   place nothing has moved to or from can be deleted outright. One in the log

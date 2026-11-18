@@ -67,7 +67,6 @@
       "attestExpense": "Attest",
       "attestInvoice": "Attest",
       "allocateInvoice": "Allocate",
-      "allocateDocument": "Allocate",
       "bookInvoice": "Book",
       "sendInvoice": "Send"
     },
@@ -78,7 +77,6 @@
       "attestExpense": "Expense from {who}",
       "attestInvoice": "Supplier invoice, {who}",
       "allocateInvoice": "Supplier invoice, {who}",
-      "allocateDocument": "In the inbox, {who}",
       "bookInvoice": "Supplier invoice, {who}",
       "sendInvoice": "Booked, {who}"
     },

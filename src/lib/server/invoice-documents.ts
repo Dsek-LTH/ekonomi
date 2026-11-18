@@ -36,10 +36,7 @@ export async function scanOf(doc: LooseDocument): Promise<InvoiceTextFields> {
 /** What an invoice's documents say, read now for any not read before. The first document to say a thing is believed. Best effort. */
 export const readInvoiceScan = (invoiceId: string) => readScan({ invoiceId });
 
-/** The same for one document in a unit's Inkorg, before it is an invoice. */
-export const readDocumentScan = (documentId: string) => readScan({ id: documentId });
-
-async function readScan(where: { invoiceId: string } | { id: string }): Promise<DocumentReading> {
+async function readScan(where: { invoiceId: string }): Promise<DocumentReading> {
   const docs = await prisma.supplierInvoiceDocument.findMany({
     where,
     orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
@@ -86,10 +83,6 @@ export async function attachDocument(
     data: {
       invoiceId: invoice.id,
       position: (last._max.position ?? -1) + 1,
-      // On an invoice, the unit is the invoice's.
-      resultUnitId: null,
-      assignedById: null,
-      assignedAt: null,
       returnedFrom: null,
       returnNote: null,
     },

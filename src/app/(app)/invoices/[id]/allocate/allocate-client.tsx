@@ -99,7 +99,6 @@ export function InvoiceAllocateClient({
       }
       defaults={defaults}
       fromScan={fromScan}
-      mail={invoice.mail}
       costCenters={costCenters}
       reach={reach}
       documentCount={invoice.documents.length}
@@ -128,7 +127,7 @@ export interface AllocateSubmission {
   amount: number; // öre
   rounding: number | null; // öre, signed
   dueDate: string;
-  description: string | null;
+  description: string;
 }
 
 export function AllocateForm({
@@ -141,7 +140,6 @@ export function AllocateForm({
   initialRows,
   defaults,
   fromScan,
-  mail,
   costCenters,
   reach,
   documentCount,
@@ -159,7 +157,6 @@ export function AllocateForm({
   initialRows: AllocationRow[];
   defaults: AllocateDefaults;
   fromScan: { amount: boolean; dueDate: boolean };
-  mail: { fromName: string | null; fromAddress: string; note: string | null } | null;
   costCenters: CostCenter[];
   reach: AttestReach;
   documentCount: number;
@@ -211,8 +208,9 @@ export function AllocateForm({
       amount: split && r.amount.trim() ? parseOre(r.amount) : null,
       comment: r.comment.trim() || null,
     }));
-  const blocker =
-    totalOre == null
+  const blocker = !description.trim()
+    ? "supplierInvoice.noDescription"
+    : totalOre == null
       ? "supplierInvoice.noAmount"
       : !roundingOk
         ? "supplierInvoice.badRounding"
@@ -250,7 +248,24 @@ export function AllocateForm({
 
       <Card>
         <section className="space-y-4 px-inset py-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_9rem_1fr]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_10rem]">
+            <Field label={tField("description")} requirement="required">
+              <Input
+                value={description}
+                maxLength={200}
+                placeholder={t("descriptionPlaceholder")}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </Field>
+            <Field
+              label={tField("dueDate")}
+              hint={fromScan.dueDate ? t("fromScan") : undefined}
+              requirement="required"
+            >
+              <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[12rem_9rem]">
             <Field
               label={tField("amount")}
               hint={fromScan.amount ? t("fromScan") : undefined}
@@ -273,30 +288,7 @@ export function AllocateForm({
                 className="text-right tabular-nums"
               />
             </Field>
-            <Field
-              label={tField("dueDate")}
-              hint={fromScan.dueDate ? t("fromScan") : undefined}
-              requirement="required"
-            >
-              <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </Field>
           </div>
-          <Field label={tField("description")} hint={t("descriptionHint")} requirement="optional">
-            <Input
-              value={description}
-              maxLength={200}
-              placeholder={t("descriptionPlaceholder")}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </Field>
-          {mail?.note && (
-            <blockquote className="whitespace-pre-line border-l-2 border-border pl-3 text-sm text-muted">
-              <span className="font-medium text-foreground">
-                {mail.fromName ?? mail.fromAddress}:
-              </span>{" "}
-              {mail.note}
-            </blockquote>
-          )}
         </section>
 
         <section className="border-t border-border px-inset py-5">
@@ -344,7 +336,7 @@ export function AllocateForm({
                   amount: totalOre!,
                   rounding: roundingOre || null,
                   dueDate,
-                  description: description.trim() || null,
+                  description: description.trim(),
                 })
               }
             >

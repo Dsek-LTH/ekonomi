@@ -125,19 +125,7 @@
   "inbox": {
     "intro": {
       "title": "Inbox",
-      "body": "Every supplier invoice starts here as a document, emailed or uploaded. It becomes an invoice once a result unit has allocated it."
-    },
-    "unit": {
-      "title": "Your unit's documents",
-      "body": "Documents given to your unit land here. Open one, split the amount over your cost centres and attest it, and it moves on to Invoices."
-    },
-    "sort": {
-      "title": "To sort",
-      "body": "New documents no unit has been given yet. Give each one to the unit it concerns."
-    },
-    "units": {
-      "title": "With the units",
-      "body": "Documents a unit has been given but not allocated yet. See what is waiting with whom."
+      "body": "Every supplier invoice starts here as a document, emailed or uploaded. Open one, enter the due date if you can see it and send it to the unit it concerns. It then becomes an invoice under Invoices, where the unit allocates and attests it."
     },
     "upload": {
       "title": "Upload",

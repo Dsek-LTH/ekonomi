@@ -74,6 +74,11 @@ type Ctx = {
   setWidth: (w: number) => void;
   footerSlot: HTMLElement | null;
   setFooterSlot: (el: HTMLElement | null) => void;
+  coverSlot: HTMLElement | null;
+  setCoverSlot: (el: HTMLElement | null) => void;
+  /** How many ReceiptPanelCovers are mounted. While any is, the documents are hidden under it. */
+  covers: number;
+  setCovers: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const PanelCtx = createContext<Ctx | null>(null);
@@ -118,6 +123,8 @@ export function ReceiptPanelProvider({
   const [collapsed, setCollapsedState] = useState(defaultCollapsed);
   const [width, setWidthState] = useState(defaultWidth);
   const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null);
+  const [coverSlot, setCoverSlot] = useState<HTMLElement | null>(null);
+  const [covers, setCovers] = useState(0);
 
   const setCollapsed = useCallback((next: boolean, persist = true) => {
     setCollapsedState(next);
@@ -136,8 +143,12 @@ export function ReceiptPanelProvider({
       setWidth,
       footerSlot,
       setFooterSlot,
+      coverSlot,
+      setCoverSlot,
+      covers,
+      setCovers,
     }),
-    [source, collapsed, setCollapsed, width, setWidth, footerSlot],
+    [source, collapsed, setCollapsed, width, setWidth, footerSlot, coverSlot, covers],
   );
 
   return <PanelCtx.Provider value={value}>{children}</PanelCtx.Provider>;
@@ -249,8 +260,23 @@ export function ReceiptPanelFooter({ children }: { children: React.ReactNode }) 
   return footerSlot ? createPortal(children, footerSlot) : null;
 }
 
+/**
+ * Something to read in the panel in place of the documents, such as the mail they came in. The documents stay
+ * mounted underneath, so going back to them keeps their page and zoom. The footer stays.
+ */
+export function ReceiptPanelCover({ children }: { children: React.ReactNode }) {
+  const { coverSlot, setCovers } = usePanel();
+  useEffect(() => {
+    setCovers((n) => n + 1);
+    return () => setCovers((n) => n - 1);
+  }, [setCovers]);
+  return coverSlot ? createPortal(children, coverSlot) : null;
+}
+
 export function ReceiptPanelColumn() {
-  const { source, collapsed, setCollapsed, width, setWidth, setFooterSlot } = usePanel();
+  const { source, collapsed, setCollapsed, width, setWidth, setFooterSlot, setCoverSlot, covers } =
+    usePanel();
+  const covered = covers > 0;
   const t = useTranslations("receipt");
   const widthRef = useRef(width);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -530,7 +556,18 @@ export function ReceiptPanelColumn() {
   const viewer = (
     <>
       {controls}
-      {body}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* Laid out at full size under a cover, never display: none. A viewer with no size refits when it is shown
+            again, and the page would visibly snap into place. Invisible, so it is not read or tabbed into. */}
+        <div className={cn("flex min-h-0 flex-1 flex-col", covered && "invisible")}>{body}</div>
+        {/* Over the documents, below the floating controls (z-20), which sit over its top left. */}
+        <div
+          ref={setCoverSlot}
+          className={
+            covered ? "absolute inset-0 z-10 overflow-y-auto bg-background pt-12" : "hidden"
+          }
+        />
+      </div>
       {over && source.docs.length > 0 && !upload?.uploading && (
         <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 text-center backdrop-blur-sm">
           <span className="flex size-12 items-center justify-center rounded-control bg-accent-soft text-accent">

@@ -21,7 +21,7 @@ import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Tag } from "@/components/ui/status-pill";
 import { useTableControls } from "@/lib/data/use-list-query";
-import type { PlaceSummaryDto, StockLevelDto } from "@/lib/data/stock";
+import type { StockLevelDto } from "@/lib/data/stock";
 import type { Check } from "@/lib/stock/expiry";
 import { alcoholPerKrona, unitVolume } from "@/lib/stock/onhand";
 import { hasTag, tagsInUse } from "@/lib/stock/tags";
@@ -34,7 +34,6 @@ import { CategoryMark } from "@/components/stock/category-mark";
 import { BottleLevels } from "@/components/stock/bottle-levels";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { ProductDialog } from "./product-dialog";
-import { PlaceSummary } from "./place-summary";
 import { formatClPerKrona, formatLitres, formatOreKr } from "@/lib/ui/format";
 
 export default function StockClient({
@@ -44,13 +43,8 @@ export default function StockClient({
   asOf,
   today,
   canManage,
-  places,
-  year,
 }: {
   levels: StockLevelDto[];
-  /** What each place has been charged in the picked räkenskapsår. Empty in a stock without places. */
-  places: PlaceSummaryDto[];
-  year?: { from: string; to: string };
   /** Which products want somebody to go and read a crate, by product id. Separate from the level: always as of today. See lib/stock/expiry.ts. */
   checks: Record<string, Check>;
   /** The day the figures are as of, when it is not today. */
@@ -423,8 +417,6 @@ export default function StockClient({
           empty={t("empty.description")}
         />
       </Card>
-
-      <PlaceSummary places={places} from={year?.from} to={year?.to} />
 
       {adding && <ProductDialog product={null} knownTags={tags} onClose={() => setAdding(false)} />}
     </PageShell>

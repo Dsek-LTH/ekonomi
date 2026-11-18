@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { requirePage } from "@/lib/server/current-user";
 import { canSeeInvoices } from "@/lib/domain/permissions";
-import { cleanSubject } from "@/lib/domain/inbound-mail";
 import { getInvoice } from "@/lib/data/supplier-invoices";
 import { readInvoiceScan } from "@/lib/server/invoice-documents";
 import { loadWorkspace } from "../../load";
@@ -28,7 +27,7 @@ export default async function InvoiceAllocatePage({ params }: { params: Promise<
     amount: invoice.amount ?? (scanned.amount == null ? null : scanned.amount / 100),
     rounding: invoice.rounding,
     dueDate: invoice.dueDate || scanned.dueDate || "",
-    description: invoice.description ?? cleanSubject(invoice.mail?.subject) ?? "",
+    description: invoice.description ?? "",
   };
   const fromScan = {
     amount: invoice.amount == null && scanned.amount != null,

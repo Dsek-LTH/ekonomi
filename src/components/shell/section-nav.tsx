@@ -11,6 +11,7 @@ import { usePhone } from "@/lib/ui/media";
 import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
 import { NavCount } from "./nav-count";
+import { PageTabs, type PageTabsProps } from "@/components/ui/page-tabs";
 
 export interface SectionNav {
   label: string;
@@ -160,6 +161,28 @@ export function PageHeader({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A page's tabs (PageTabs). On a page whose title is the section band's, small pills on the page itself, below the
+ * band and apart from it: as far from the band as from the content, so they sit centred between the two and do
+ * not read as a second row of the band. On a page with a title of its own (a record behind a back
+ * link, or no band at all), the underlined bar under that title.
+ */
+export function BandPageTabs({ back, pages }: { back?: string; pages: PageTabsProps }) {
+  const { nav } = useContext(Ctx);
+  if (nav && !back)
+    return (
+      // Up into the band's mb-6 (24px, every page's) so 12px sits on either side, the same above as below.
+      <div className="-mt-3 mb-3">
+        <PageTabs {...pages} variant="pills" />
+      </div>
+    );
+  return (
+    <div className="mb-4 border-b border-border">
+      <PageTabs {...pages} />
     </div>
   );
 }

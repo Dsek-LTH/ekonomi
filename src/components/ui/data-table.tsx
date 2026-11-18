@@ -10,7 +10,7 @@ import { DateInput, FieldGroup } from "./field";
 import { SearchInput } from "./search-input";
 import { IconChevronLeft, IconChevronRight, IconFilter } from "./icons";
 import { FilterTabs } from "./filter-tabs";
-import { Button } from "./button";
+import { Button, SOFT_FILL } from "./button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
 import {
   PAGE_SIZES,
@@ -300,7 +300,7 @@ export function DataTable<T>({
                 className={cn(
                   "flex h-11 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors sm:hidden",
                   activeFilters > 0
-                    ? "border-accent bg-accent-soft text-accent"
+                    ? cn("border-transparent", SOFT_FILL)
                     : "border-border bg-background text-muted",
                 )}
               >

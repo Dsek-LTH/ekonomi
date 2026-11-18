@@ -36,8 +36,6 @@ export interface Guide {
   steps: GuideStep[];
 }
 
-const unitHolder = (u: CurrentUser) => u.roles.includes("RESULTATANSVARIG");
-
 export const GUIDES: Guide[] = [
   {
     id: "start",
@@ -88,14 +86,7 @@ export const GUIDES: Guide[] = [
   {
     id: "inbox",
     page: "/invoices/inbox",
-    steps: [
-      { key: "intro" },
-      // A resultatansvarig alone has one tab, so there is no tab bar to point at.
-      { key: "unit", visible: unitHolder },
-      { key: "sort", target: "tab:sort" },
-      { key: "units", target: "tab:units" },
-      { key: "upload", target: "list-action" },
-    ],
+    steps: [{ key: "intro" }, { key: "upload", target: "list-action" }],
   },
   {
     id: "invoices",

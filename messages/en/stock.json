@@ -82,7 +82,6 @@
     "packSizeInvalid": "A pack holds at least two"
   },
   "log": {
-    "title": "Stock log",
     "empty": "No movements in this selection.",
     "recorded": "entered {date}",
     "expense": "Expense",
@@ -414,17 +413,6 @@
     "failed": "Could not recalculate the stock value."
   },
   "stats": {
-    "title": "Stock statistics",
-    "period": "Period",
-    "range": {
-      "week": "Week",
-      "month": "Month",
-      "halfYear": "6 months",
-      "year": "Year",
-      "all": "All"
-    },
-    "from": "From",
-    "to": "To",
     "clear": "Clear",
     "valueTitle": "Stock value over time",
     "valueNow": "Right now: {value}",
@@ -437,7 +425,10 @@
       "purchased": "Purchased",
       "consumed": "Consumed",
       "wasted": "Spill",
-      "adjusted": "Adjustments"
+      "adjusted": "Adjustments",
+      "taken": "Taken",
+      "returned": "Returned",
+      "net": "Net"
     },
     "mixTitle": "The mix now",
     "mixHint": "Litres and value per drink type, at the end of the period.",
@@ -450,7 +441,10 @@
       "VIN": "Wine",
       "SPRITDRYCK": "Spirits",
       "ALKOHOLDRYCKSLIKNANDE": "Alcohol-like preparations"
-    }
+    },
+    "placeFlowTitle": "Taken by places",
+    "placeMoversTitle": "What the places took",
+    "placesTitle": "By place"
   },
   "ml": "{ml} ml",
   "expiry": {
@@ -532,6 +526,7 @@
     "failed": "Could not turn the stocktake into a purchase"
   },
   "history": {
+    "title": "History",
     "viewLabel": "Show",
     "movements": "Movements",
     "stats": "Statistics"
@@ -565,10 +560,8 @@
     "searchPlace": "Search places"
   },
   "places": {
-    "title": "Places this year",
-    "hint": "What each place has taken, less what was brought back, in the chosen financial year. This is what the place's cost centre has been charged.",
     "defaultCostCenter": "Consumption's",
-    "units": "{units}"
+    "units": "{units} pcs"
   },
   "stepper": {
     "scan": "Scan",

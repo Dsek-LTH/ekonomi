@@ -109,3 +109,11 @@ export async function getNavCounts(viewer: Viewer, year: FiscalYear | null): Pro
     invoices: invoices?.total ?? 0,
   };
 }
+
+/** The counts keyed by the nav link they sit beside, as the shell reads them. */
+export const navCountsByHref = (c: NavCounts): Record<string, number> => ({
+  "/expenses": c.expenses,
+  "/bank": c.bank,
+  "/invoices/inbox": c.invoiceInbox,
+  "/invoices": c.invoices,
+});

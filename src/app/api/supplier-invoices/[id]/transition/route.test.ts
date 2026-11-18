@@ -259,6 +259,14 @@ describe("attest, as the fördelning", () => {
     expect(h.invoiceUpdate).not.toHaveBeenCalled();
   });
 
+  it("needs to say what the invoice is for", async () => {
+    const rows = [{ costCenterCode: "SEX01" }];
+    expect(
+      (await (await call({ action: "attest", rows, ...read, description: null })).json()).error,
+    ).toBe("supplierInvoice.noDescription");
+    expect(h.invoiceUpdate).not.toHaveBeenCalled();
+  });
+
   it("signs its own share of a split and asks the other unit for the rest", async () => {
     h.attesters = ["cafe-chief"];
     const res = await call({

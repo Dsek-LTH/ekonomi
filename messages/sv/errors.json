@@ -427,6 +427,7 @@
     "noSupplier": "Välj leverantör.",
     "noAmount": "Fyll i belopp.",
     "noDueDate": "Fyll i förfallodag.",
+    "noDescription": "Skriv vad fakturan gäller.",
     "noAllocations": "Fördela fakturan på minst ett kostnadsställe.",
     "noLines": "Lägg till minst en konteringsrad.",
     "lineNoAccount": "Varje konteringsrad behöver ett konto.",
@@ -444,7 +445,6 @@
     "exportUncertain": "Fortnox svarade inte säkert. Kontrollera i Fortnox om leverantörsfakturan skapades innan du försöker igen.",
     "nothingToRelease": "Det finns ingen osäker export att reda ut.",
     "documentOnInvoice": "Dokumentet ligger redan på en faktura.",
-    "documentNotAssigned": "Dokumentet har inte skickats till någon resultatenhet än.",
     "badRounding": "Öresutjämningen får vara högst 0,99 kr åt något håll."
   },
   "settings": {

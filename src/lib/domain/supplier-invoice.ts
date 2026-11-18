@@ -38,7 +38,7 @@ export const INVOICE_STATUS_TONE: Record<SupplierInvoiceStatus, Tone> = {
 const WITH_TREASURY: readonly SupplierInvoiceStatus[] = ["APPROVED", "BOOKED"];
 export const isWithTreasury = (s: SupplierInvoiceStatus): boolean => WITH_TREASURY.includes(s);
 
-/** Waiting for its unit to fördela it again, which signs the unit's own rows too. */
+/** Waiting for its unit to fördela it, which signs the unit's own rows too. */
 const ATTESTABLE: readonly SupplierInvoiceStatus[] = ["ASSIGNED", "CHANGES_REQUESTED"];
 export const awaitsAllocation = (s: SupplierInvoiceStatus): boolean => ATTESTABLE.includes(s);
 
@@ -196,28 +196,20 @@ export function invoiceCapabilities(
   };
 }
 
+/** A document in the Inkorg, which is triage's: the admins may look, triage gives it to a unit or deletes it. */
 export interface DocumentCapabilities {
-  /** See it at all: triage and the admins every one, a resultatansvarig the ones given to their units. */
   canSee: boolean;
   canAssign: boolean;
-  /** Fördela it, which makes it an invoice. Only once it has a unit. */
-  canAllocate: boolean;
-  canDecline: boolean;
   canDelete: boolean;
 }
 
 export function documentCapabilities(
-  viewer: InvoiceViewer,
-  doc: { resultUnitId: string | null },
+  viewer: Pick<InvoiceViewer, "capabilities">,
 ): DocumentCapabilities {
   const triage = canTriageInvoices(viewer.capabilities);
-  const admin = isAdmin(viewer.capabilities);
-  const owner = doc.resultUnitId !== null && viewer.ownedResultUnitIds.includes(doc.resultUnitId);
   return {
-    canSee: triage || admin || owner,
+    canSee: triage || isAdmin(viewer.capabilities),
     canAssign: triage,
-    canAllocate: doc.resultUnitId !== null && (owner || triage || admin),
-    canDecline: owner,
     canDelete: triage,
   };
 }

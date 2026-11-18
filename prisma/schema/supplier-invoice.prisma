@@ -16,22 +16,23 @@
 
 /// Where an invoice is. The path through it is
 ///
-///   APPROVED → BOOKED → EXPORTED
+///   ASSIGNED → APPROVED → BOOKED → EXPORTED
 ///
-/// An invoice is born when its unit fördelar it. Until then it is a document
-/// in the Inkorg (see SupplierInvoiceDocument), given to a unit or not yet,
-/// and an invoice sent back there stops being one: its documents return to
-/// the Inkorg and the invoice goes.
+/// An invoice is born when triage gives a document from the Inkorg to a unit
+/// (or the forwarded mail named the unit). Until then it is a document in the
+/// Inkorg (see SupplierInvoiceDocument). An invoice sent back there before
+/// anybody signed stops being one: its documents return to the Inkorg and the
+/// invoice goes.
 ///
-/// The fördelning (which cost centres, how much each) signs the unit's own
-/// rows in the same step, so an invoice with only the unit's rows is born
-/// APPROVED. PENDING_APPROVAL is for one split with another unit, waiting for
-/// that unit's signature, and CHANGES_REQUESTED is the way back with a
-/// comment. The treasury then konterar it (BOOKED) and sends it to Fortnox as
-/// a separate act, the way an utlägg is.
+/// The unit's fördelning (which cost centres, how much each) signs the unit's
+/// own rows in the same step, so an invoice with only the unit's rows goes
+/// straight to APPROVED. PENDING_APPROVAL is for one split with another unit,
+/// waiting for that unit's signature, and CHANGES_REQUESTED is the way back
+/// with a comment. The treasury then konterar it (BOOKED) and sends it to
+/// Fortnox as a separate act, the way an utlägg is.
 enum SupplierInvoiceStatus {
-  /// Waiting for its unit to fördela it again: the split reopened, or the
-  /// last signature on it taken back. Never where an invoice starts.
+  /// Waiting for its unit to fördela it: just given to the unit, the split
+  /// reopened, or the last signature on it taken back.
   ASSIGNED
   /// Attested for some of its rows, waiting for another unit to sign the rest.
   PENDING_APPROVAL
@@ -88,9 +89,9 @@ model SupplierInvoice {
   id        String                @id @default(cuid())
   /// Human-readable, "LEV26-0012", a series of its own beside the utlägg's
   /// DEK26-0042 (lib/domain/reference.ts). Taken when the invoice is made,
-  /// which is when its unit fördelar it: a document that never got that far
-  /// never had a number. Null only on invoices from before the numbering, until the
-  /// migration gave them one. Pages and routes are keyed on `id`.
+  /// which is when triage gives its document to a unit. Null only on
+  /// invoices from before the numbering, until the migration gave them one.
+  /// Pages and routes are keyed on `id`.
   reference String?               @unique
   status    SupplierInvoiceStatus
   source    SupplierInvoiceSource
@@ -167,11 +168,11 @@ model SupplierInvoice {
   // The result unit answering for it, which is who konterar it. Not who attests
   // it. That is still decided per allocation from the cost centre's code, the
   // same as an utlägg, so an invoice split with another unit is signed for by
-  // both. The unit its document was given to, carried over when it was made.
+  // both.
   resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
   resultUnitId String?
-  /// Who gave its document to the unit, carried over from the document. Null
-  /// when it was given automatically, from what the forwarded mail said.
+  /// Who gave it to the unit. Null when it was given automatically, from
+  /// what the forwarded mail said.
   assignedBy   User?       @relation("SupplierInvoiceAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
   assignedById String?
   assignedAt   DateTime?
@@ -269,17 +270,13 @@ model SupplierInvoiceLine {
 /// A file that is, or may become, part of a levfaktura: usually its PDF,
 /// sometimes a specification that only makes sense beside it.
 ///
-/// With no invoice it is in the Inkorg. Everything that arrives lands there
-/// first (forwarded mail, a hand upload), and triage gives it to a result
-/// unit or deletes it. Given to a unit, it is in that unit's Inkorg, and the
-/// unit fördelar it, which is what makes the invoice, or says it is not
-/// theirs, which puts it back with triage. Once on an invoice it stays there,
-/// since it is what the invoice is attested and booked on. It goes back to the
-/// Inkorg only with the whole invoice, when that is sent back: a file is only
-/// ever thrown away from the Inkorg, by somebody who has looked at it.
-///
-/// Only who it was given to is kept here, not a history. The history is the
-/// invoice's, and starts when there is one.
+/// With no invoice it is in the Inkorg, which is triage's alone. Everything
+/// that arrives lands there first (forwarded mail, a hand upload), and triage
+/// gives it to a result unit, which makes it an invoice (ASSIGNED), or deletes
+/// it. Once on an invoice it stays there, since it is what the invoice is
+/// attested and booked on. It goes back to the Inkorg only with the whole
+/// invoice, when that is sent back: a file is only ever thrown away from the
+/// Inkorg, by somebody who has looked at it.
 model SupplierInvoiceDocument {
   id        String           @id @default(cuid())
   invoice   SupplierInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
@@ -290,23 +287,9 @@ model SupplierInvoiceDocument {
   inboundMail   InboundMail? @relation(fields: [inboundMailId], references: [id], onDelete: SetNull)
   inboundMailId String?
 
-  /// The unit whose Inkorg it is in, while it is in one: given by triage, or
-  /// automatically from what the forwarded mail said. Null while it waits for
-  /// triage. Cleared once it is on an invoice, which has a unit of its own.
-  resultUnit   ResultUnit? @relation(fields: [resultUnitId], references: [id], onDelete: SetNull)
-  resultUnitId String?
-  /// Who gave it to the unit. Null when it was given automatically.
-  assignedBy   User?       @relation("SupplierInvoiceDocumentAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
-  assignedById String?
-  assignedAt   DateTime?
-  /// When it is due, as triage read it off the PDF when giving it to the
-  /// unit, so the unit can tell what is urgent before it opens anything. Only
-  /// offered: the unit's fördelning says the due date the invoice is made with.
-  dueDate      DateTime?   @db.Date
-
   /// For a document back with triage: which unit it came back from, and why,
   /// as whoever sent it back wrote it ("Det här är Caféets"). Cleared when it
-  /// is given to a unit again.
+  /// goes on an invoice again.
   returnedFrom String?
   returnNote   String?
 
@@ -332,7 +315,6 @@ model SupplierInvoiceDocument {
 
   @@index([invoiceId, createdAt])
   @@index([inboundMailId])
-  @@index([resultUnitId])
 }
 
 model SupplierInvoiceEvent {

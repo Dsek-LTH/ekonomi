@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   existing: new Set<string>(),
   claimFails: false,
   assignedCreate: vi.fn(),
+  assign: vi.fn(),
   docCreate: vi.fn(),
   mailCreate: vi.fn(),
   mailDelete: vi.fn(),
@@ -128,6 +129,7 @@ vi.mock("@/lib/server/secrets", () => ({
 }));
 
 vi.mock("@/lib/server/notify", () => ({ notify: h.notify, deliverSoon: () => {} }));
+vi.mock("@/lib/server/invoice-assign", () => ({ assignDocument: h.assign }));
 
 const { connectMailbox, renewWatch, syncInbox } = await import("./inbound-mail");
 
@@ -175,6 +177,7 @@ beforeEach(() => {
   h.revoked = false;
   for (const fn of [
     h.assignedCreate,
+    h.assign,
     h.docCreate,
     h.mailCreate,
     h.mailDelete,
@@ -194,8 +197,9 @@ beforeEach(() => {
   );
 });
 
-/** The one document written straight into a unit's Inkorg, if any. */
+/** The one document that was given to a unit as it arrived, which makes its invoice, if any. */
 const assigned = () => h.assignedCreate.mock.calls[0]?.[0].data;
+const assignment = () => h.assign.mock.calls[0]?.[1];
 
 describe("one mail", () => {
   it("refuses mail from outside dsek.se and keeps no document", async () => {
@@ -209,6 +213,8 @@ describe("one mail", () => {
     expect(h.mailCreate.mock.calls[0][0].data).toMatchObject({
       status: "REJECTED",
       rejectReason: "foreignDomain",
+      // Not a member's: nothing of it is kept to read.
+      body: null,
     });
     expect(h.assignedCreate).not.toHaveBeenCalled();
     expect(h.put).not.toHaveBeenCalled();
@@ -277,26 +283,23 @@ describe("one mail", () => {
     expect(h.mailCreate.mock.calls[0][0].data).toMatchObject({
       note: "Till CAFE01 tack",
       originalFrom: "order@grossisten.se",
+      // The whole of it, forwarded part too, to read in the Inkorg.
+      body: "Till CAFE01 tack\n\n---------- Forwarded message ---------\nFrom: Grossisten <order@grossisten.se>",
     });
-    expect(assigned()).toMatchObject({
-      filename: "f.pdf",
-      inboundMailId: "mail1",
-      resultUnitId: "cafe",
-      assignedAt: expect.any(Date),
+    expect(assigned()).toMatchObject({ filename: "f.pdf", inboundMailId: "mail1" });
+    expect(assignment()).toMatchObject({
+      doc: { id: assigned().id, inboundMail: { id: "mail1", senderId: "klara" } },
+      unit: { id: "cafe", name: "Caféutskottet" },
+      actor: { id: null, name: "Klara Ström" },
+      note: { author: "Klara Ström", text: "Till CAFE01 tack" },
+      forwarderId: "klara",
     });
     expect(h.docCreate).not.toHaveBeenCalled();
-    expect(h.notify).toHaveBeenCalledWith(
-      expect.anything(),
-      "SUPPLIER_INVOICE_ASSIGNED",
-      ["chief"],
-      expect.anything(),
-      { exclude: ["klara"] },
-    );
   });
 
   it("falls back to the forwarder's one unit", async () => {
     await syncInbox();
-    expect(assigned()).toMatchObject({ resultUnitId: "sex" });
+    expect(assignment()).toMatchObject({ unit: { id: "sex" } });
   });
 
   it("skips a mail it has already read without asking Gmail for it", async () => {

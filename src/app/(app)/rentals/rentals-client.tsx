@@ -109,7 +109,7 @@ export function RentalsClient({
           tabs={TABS}
           action={
             canManage ? (
-              <ButtonLink href="/contracts/rental/new" variant="accentOutline" size="sm">
+              <ButtonLink href="/contracts/rental/new" variant="soft" size="sm">
                 {t("new")}
               </ButtonLink>
             ) : undefined

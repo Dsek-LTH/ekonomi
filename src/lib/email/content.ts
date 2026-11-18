@@ -230,38 +230,6 @@ export function invoiceNotice(
   };
 }
 
-/** The mail to a unit given a document from the Inkorg. Not an invoice yet, so no number or amount; the button goes to the fördelning. */
-export function documentNotice(
-  doc: { id: string; title: string | null; dueDate?: Date | null },
-  values: Record<string, string | number> = {},
-  comment?: { author: string; text: string | null },
-): Email {
-  const url = appUrl(`/invoices/inbox/${doc.id}`);
-  const label = doc.title || emailT("invoice.untitled");
-  return {
-    subject: emailT("invoice.assigned.subject", { label }),
-    tone: INVOICE_KINDS.assigned.tone,
-    eyebrow: emailT("invoice.assigned.eyebrow"),
-    heading: emailT("invoice.assigned.heading", values),
-    intro: emailT("invoice.assigned.intro", values),
-    blocks: [
-      ...commentBlock(comment),
-      {
-        kind: "expense",
-        reference: null,
-        title: label,
-        amount: "-",
-        facts: doc.dueDate
-          ? [{ label: emailT("invoice.fact.dueDate"), value: isoDay(doc.dueDate) }]
-          : [],
-      },
-    ],
-    action: { label: emailT("invoice.assigned.button"), url },
-    orOpen: emailT("orOpen", { url }),
-    ...frame(emailT(`invoice.reason.${INVOICE_KINDS.assigned.reason}`)),
-  };
-}
-
 function commentBlock(comment?: { author: string; text: string | null }): Block[] {
   if (!comment?.text) return [];
   return [

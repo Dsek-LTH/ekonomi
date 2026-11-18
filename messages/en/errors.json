@@ -427,6 +427,7 @@
     "noSupplier": "Pick the supplier.",
     "noAmount": "Fill in the amount.",
     "noDueDate": "Fill in the due date.",
+    "noDescription": "Say what the invoice is for.",
     "noAllocations": "Allocate the invoice to at least one cost centre.",
     "noLines": "Add at least one booking row.",
     "lineNoAccount": "Every booking row needs an account.",
@@ -444,7 +445,6 @@
     "exportUncertain": "Fortnox did not answer for certain. Check in Fortnox whether the supplier invoice was made before trying again.",
     "nothingToRelease": "There is no uncertain export to settle.",
     "documentOnInvoice": "The document is already on an invoice.",
-    "documentNotAssigned": "The document has not been sent to a result unit yet.",
     "badRounding": "The rounding may be at most 0.99 kr either way."
   },
   "settings": {

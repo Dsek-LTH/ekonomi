@@ -5,13 +5,12 @@
 // Filters (product, kind, dates) are narrowed on the server and live in the URL.
 import type { StockTraits } from "@/lib/stock/stocks";
 import { useStock } from "@/components/stock/stock-context";
-import { IconChart, IconList } from "@/components/ui/icons";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { historyHref, type HistoryView } from "./views";
+import { historyPages } from "./views";
 import { Card } from "@/components/ui/card";
 import { ClientDataTable } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -248,19 +247,21 @@ export default function StockLogClient({
   return (
     // No back link: the log is one of Lager's tabs.
     <PageShell
-      title={t("log.title")}
+      title={t("history.title")}
       width="wide"
-      // The other view of the same history, same period (../history/views.ts).
-      views={{
-        label: t("history.viewLabel"),
-        value: "movements",
-        options: [
-          { value: "movements", label: t("history.movements"), icon: IconList },
-          { value: "stats", label: t("history.stats"), icon: IconChart },
-        ],
-        onChange: (v) =>
-          router.push(historyHref(href("/history"), v as HistoryView, filter.from, filter.to)),
-      }}
+      // The other page over the same history, same period and places (./views.ts).
+      pages={historyPages(
+        href("/history"),
+        "movements",
+        {
+          label: t("history.viewLabel"),
+          movements: t("history.movements"),
+          stats: t("history.stats"),
+        },
+        filter.from,
+        filter.to,
+        filter.placeIds,
+      )}
     >
       <Card>
         {/* No header: the tab above names the log. Filters ride the table's toolbar beside the search. */}

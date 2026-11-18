@@ -30,6 +30,7 @@ import {
   UNIT_OWNERS,
 } from "./seed-data";
 import { seedExpenses, dayBefore } from "./seed-expenses";
+import { seedSupplierInvoices } from "./seed-invoices";
 import { DEFAULT_ROLE_CAPABILITIES as ROLE_CAPS } from "../src/lib/server/authority-defaults";
 import { rateOn } from "../src/lib/mileage/rate";
 import { today as stockholmToday } from "../src/lib/domain/date";
@@ -365,6 +366,19 @@ async function seedStock(actorId: string) {
 async function main() {
   // Clear in FK-safe order (allocations cascade from expenses). The stock
   // first: its movements hold on to the people who wrote them.
+  // Levfakturor first: an invoice points at units and users, and the mail it came in at a user.
+  await prisma.supplierInvoice.deleteMany(); // cascades → allocations, lines, events
+  await prisma.supplierInvoiceDocument.deleteMany();
+  await prisma.inboundMail.deleteMany();
+  // What other features record against users, units and products. Each of these refuses to let its user or unit go
+  // first, so a dev database that has used the board tab, kundfakturor, Intäkter or stock settings could not be reseeded.
+  await prisma.boardWithdrawal.deleteMany();
+  await prisma.boardPrice.deleteMany();
+  await prisma.customerInvoice.deleteMany(); // cascades → lines
+  await prisma.stockVoucher.deleteMany(); // cascades → posting lines, its verifications
+  await prisma.incomeReport.deleteMany(); // cascades → lines, its verifications
+  await prisma.incomeLine.deleteMany();
+  await prisma.stockSettingsChange.deleteMany();
   await prisma.stockChange.deleteMany();
   await prisma.stockEntry.deleteMany();
   await prisma.stockEvent.deleteMany();
@@ -393,11 +407,15 @@ async function main() {
   // The bucket first: a fresh MinIO has none, and the receipts below need it.
   await ensureBucket();
   try {
-    const stored = await listObjects("receipts/");
-    if (stored.length > 0) {
+    // The levfakturor's PDFs went with their rows the same way.
+    for (const prefix of ["receipts/", "supplier-invoices/"]) {
+      const stored = await listObjects(prefix);
+      if (stored.length === 0) continue;
       const failures = await deleteKeys(stored.map((o) => o.key));
       for (const f of failures) console.error(`kunde inte ta bort ${f.key}: ${f.message}`);
-      console.log(`Rensade ${stored.length - failures.length} kvittofiler ur ${bucket()}.`);
+      console.log(
+        `Rensade ${stored.length - failures.length} filer under ${prefix} ur ${bucket()}.`,
+      );
     }
   } catch (err) {
     console.warn(`Kunde inte rensa kvittofiler ur ${bucket()}, kör pnpm receipts:gc senare.`, err);
@@ -658,6 +676,32 @@ async function main() {
     nextVoucherNumber: () => (voucherNumber += 1),
   });
 
+  // ── Levfakturor ─────────────────────────────────────────────────
+  // The Inkorg as triage meets it, and an invoice in every status. See seed-invoices.ts.
+  const firstCodeOf = new Map<string, string>();
+  for (const c of budgetData.costCenters) {
+    const unit = unitOfCode.get(c.code);
+    if (unit && !firstCodeOf.has(unit)) firstCodeOf.set(unit, c.code);
+  }
+  const invoices = await seedSupplierInvoices({
+    prisma,
+    today,
+    userId,
+    resultUnitId: (name) => {
+      const id = resultUnitByName.get(name);
+      if (!id) throw new Error(`No result unit seeded for "${name}"`);
+      return id;
+    },
+    costCenterOf: (unit) => {
+      const code = firstCodeOf.get(unit);
+      const c = code && budgetData.costCenters.find((cc) => cc.code === code);
+      if (!c) throw new Error(`No cost centre seeded for "${unit}"`);
+      // A cost account: 4xxx-7xxx in BAS.
+      const account = c.accounts.find((a) => /^[4-7]/.test(a.code))?.code ?? "5460";
+      return { id: costCenterByCode.get(c.code)!, code: c.code, account };
+    },
+  });
+
   const counts = {
     users: await prisma.user.count(),
     costCenters: await prisma.costCenter.count(),
@@ -672,6 +716,9 @@ async function main() {
     stockEntries: await prisma.stockEntry.count(),
     receipts,
     ledgerRows: ledger.rows,
+    supplierInvoices: invoices.invoices,
+    inboxDocuments: invoices.inboxDocuments,
+    invoicePdfs: invoices.pdfs,
   };
   console.log("Seeded:", counts);
 }

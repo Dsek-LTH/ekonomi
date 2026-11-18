@@ -1,14 +1,18 @@
+// Triage gives a document in the Inkorg to a unit, which makes it a levfaktura (lib/server/invoice-assign.ts).
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
-import { deliverSoon, notify } from "@/lib/server/notify";
-import { documentNotice } from "@/lib/email/content";
-import { cleanSubject } from "@/lib/domain/inbound-mail";
-import { isoToDate } from "@/lib/domain/date";
+import { deliverSoon } from "@/lib/server/notify";
+import { assignDocument } from "@/lib/server/invoice-assign";
+import { withReferenceRetry } from "@/lib/server/expense-reference";
+import { isoToDate, today } from "@/lib/domain/date";
 import { fail, gate } from "@/lib/api/guard";
-import { applied, commit } from "@/lib/api/stale-write";
+import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
+import { commit } from "@/lib/api/stale-write";
 import { parseBody } from "@/lib/api/parse";
 import { AssignInvoiceDocument } from "@/lib/api/schemas/supplier-invoice";
-import { loadInboxDocumentFor, unitOwnersOf } from "@/lib/api/supplier-invoice-access";
+import { loadInboxDocumentFor } from "@/lib/api/supplier-invoice-access";
 
+// POST /api/supplier-invoice-documents/:id/assign: { resultUnitId, dueDate? } -> { id } of the invoice made
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const g = await gate();
@@ -28,55 +32,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
   if (!unit) return fail(422, "supplierInvoice.unknownResultUnit");
 
+  // Made today, with no invoice date until the unit fördelar it, so it lands in this year's Fakturor.
+  const offYear = await denyOutsideFiscalYear(today());
+  if (offYear) return offYear;
+
   const { dueDate } = parsed.data;
-  const due = dueDate === undefined ? {} : { dueDate: dueDate ? isoToDate(dueDate) : null };
-  const where = { id: doc.id, invoiceId: null, resultUnitId: doc.resultUnitId };
-
-  if (unit.id === doc.resultUnitId) {
-    const result = await commit(async () =>
-      applied(
-        await prisma.supplierInvoiceDocument.updateMany({ where, data: due }),
-        "supplierInvoice.changedMeanwhile",
-      ),
-    );
-    if (result instanceof Response) return result;
-    return new Response(null, { status: 204 });
-  }
-
-  const owners = await unitOwnersOf(unit.name);
   const result = await commit(() =>
-    prisma.$transaction(async (tx) => {
-      applied(
-        await tx.supplierInvoiceDocument.updateMany({
-          where,
-          data: {
-            ...due,
-            resultUnitId: unit.id,
-            assignedById: g.actor.id,
-            assignedAt: new Date(),
-            returnedFrom: null,
-            returnNote: null,
-          },
+    withReferenceRetry(() =>
+      prisma.$transaction((tx) =>
+        assignDocument(tx, {
+          doc,
+          unit,
+          actor: { id: g.actor.id, name: g.actor.name },
+          dueDate: dueDate ? isoToDate(dueDate) : null,
         }),
-        "supplierInvoice.changedMeanwhile",
-      );
-      await notify(
-        tx,
-        "SUPPLIER_INVOICE_ASSIGNED",
-        owners,
-        documentNotice(
-          {
-            id: doc.id,
-            title: cleanSubject(doc.inboundMail?.subject) ?? null,
-            dueDate: dueDate === undefined ? doc.dueDate : (due.dueDate ?? null),
-          },
-          { actor: g.actor.name, unit: unit.name },
-        ),
-        { exclude: [g.actor.id] },
-      );
-    }),
+      ),
+    ),
   );
-  if (result instanceof Response) return result;
+  if (result instanceof NextResponse) return result;
   deliverSoon();
-  return new Response(null, { status: 204 });
+  return NextResponse.json(result, { status: 201 });
 }

@@ -45,9 +45,6 @@ describe("attachDocument", () => {
       data: {
         invoiceId: "inv1",
         position: 3,
-        resultUnitId: null,
-        assignedById: null,
-        assignedAt: null,
         returnedFrom: null,
         returnNote: null,
       },

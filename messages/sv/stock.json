@@ -82,7 +82,6 @@
     "packSizeInvalid": "En förpackning rymmer minst två"
   },
   "log": {
-    "title": "Lagerlogg",
     "empty": "Inga rörelser i det här urvalet.",
     "recorded": "infört {date}",
     "expense": "Utlägg",
@@ -414,17 +413,6 @@
     "failed": "Kunde inte räkna om lagervärdet."
   },
   "stats": {
-    "title": "Lagerstatistik",
-    "period": "Period",
-    "range": {
-      "week": "Vecka",
-      "month": "Månad",
-      "halfYear": "6 månader",
-      "year": "År",
-      "all": "Allt"
-    },
-    "from": "Från",
-    "to": "Till",
     "clear": "Rensa",
     "valueTitle": "Lagervärde över tid",
     "valueNow": "Just nu: {value}",
@@ -437,7 +425,10 @@
       "purchased": "Inköpt",
       "consumed": "Förbrukat",
       "wasted": "Spill",
-      "adjusted": "Justeringar"
+      "adjusted": "Justeringar",
+      "taken": "Tagit",
+      "returned": "Tillbaka",
+      "net": "Netto"
     },
     "mixTitle": "Fördelning nu",
     "mixHint": "Liter och värde per dryckesslag, i slutet av perioden.",
@@ -450,7 +441,10 @@
       "VIN": "Vin",
       "SPRITDRYCK": "Spritdryck",
       "ALKOHOLDRYCKSLIKNANDE": "Alkoholdrycksliknande preparat"
-    }
+    },
+    "placeFlowTitle": "Platsernas uttag",
+    "placeMoversTitle": "Vad platserna tagit",
+    "placesTitle": "Per plats"
   },
   "ml": "{ml} ml",
   "expiry": {
@@ -532,6 +526,7 @@
     "failed": "Kunde inte göra om inventeringen till ett inköp"
   },
   "history": {
+    "title": "Historik",
     "viewLabel": "Visa",
     "movements": "Rörelser",
     "stats": "Statistik"
@@ -565,8 +560,6 @@
     "searchPlace": "Sök plats"
   },
   "places": {
-    "title": "Platser i år",
-    "hint": "Det varje plats har tagit, minus det som lämnats tillbaka, under det valda räkenskapsåret. Det är vad platsens kostnadsställe har belastats med.",
     "defaultCostCenter": "Förbrukningens",
     "units": "{units} st"
   },

@@ -16,9 +16,8 @@ export type TodoKind =
   | "attestExpense"
   /** A levfaktura, waiting for the reader's attest. */
   | "attestInvoice"
-  /** A levfaktura, or a document in the unit's Inkorg, waiting for the reader's unit to fördela it. */
+  /** A levfaktura waiting for the reader's unit to fördela it. */
   | "allocateInvoice"
-  | "allocateDocument"
   /** Treasury: a levfaktura to kontera, or konterad and waiting to be sent to Fortnox. */
   | "bookInvoice"
   | "sendInvoice";

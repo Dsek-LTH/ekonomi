@@ -136,7 +136,8 @@ it.
 
 Forward an invoice PDF from your @dsek.se address to the mailbox, with
 "SEX01" (or any cost centre code) in the text. Within a few seconds it should
-be in that unit's Inkorg, and its resultatansvariga get a mail.
+be an invoice under Fakturor › Att attestera for that unit, and its
+resultatansvariga get a mail.
 
 If it is not, look at the **Inkommande post** card in settings. It shows when
 the mailbox was last read and the last error. Mail that was refused, with the

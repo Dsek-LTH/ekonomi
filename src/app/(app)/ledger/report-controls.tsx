@@ -5,12 +5,16 @@
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Combobox, MultiCombobox, type ComboOption } from "@/components/ui/combobox";
-import { DateInput } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
 import { budgetLabel } from "@/lib/budget/compare";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { cn } from "@/lib/ui/utils";
+import {
+  PANEL_PILLS,
+  PanelField,
+  PanelRow,
+  PeriodRow,
+  type PeriodChoice,
+} from "@/components/report-panel";
 import type { BudgetOption, ComparisonMode, QueryState, ResultColumn } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
 
@@ -35,85 +39,6 @@ function costCenterOptions(
   ];
 }
 
-// One decision, labelled. A <span>, not a <label>: every control below carries its own aria-label.
-function Field({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="text-xs font-medium text-muted">{label}</span>
-      {children}
-    </div>
-  );
-}
-
-// Pills are shorter than a Combobox trigger (h-8, components/ui/field.tsx), so every control in the panel is field-height.
-const PILLS = "[&>button]:h-11 sm:[&>button]:h-8";
-
-// One row of the panel, hairline above except the first. From lg the panel is a narrow column left of the report, so fields stack.
-function Row({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:[&>*]:w-full">
-      {children}
-    </div>
-  );
-}
-
-interface PeriodChoice {
-  options: ComboOption[];
-  value: string;
-  onPick: (value: string) => void;
-  /** A date was typed or picked by hand: the range is the reader's own now. */
-  onManual: () => void;
-}
-
-/**
- * One end of the period, as a date typed or picked. Typed text is only handed on once it is a whole, existing date:
- * the report refetches on every query change and is the slowest request. Half-typed reverts to the date shown.
- * The server clamps the period into the financial year and reports back what it used, arriving as a new `value`.
- */
-function PeriodDate({
-  value,
-  onCommit,
-  "aria-label": ariaLabel,
-}: {
-  value: string | null;
-  onCommit: (date: string) => void;
-  "aria-label": string;
-}) {
-  const [draft, setDraft] = useState(value ?? "");
-  // When the report answers with a different date (clamped, or a new year), the field follows; adjusted during render to avoid a stale frame.
-  const [shown, setShown] = useState(value);
-  if (value !== shown) {
-    setShown(value);
-    setDraft(value ?? "");
-  }
-  const isDate = (s: string) =>
-    /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(`${s}T00:00:00Z`).getTime());
-
-  return (
-    <DateInput
-      size="sm"
-      value={draft}
-      aria-label={ariaLabel}
-      onChange={(e) => {
-        const next = e.target.value;
-        setDraft(next);
-        if (isDate(next) && next !== value) onCommit(next);
-      }}
-      onBlur={() => {
-        if (!isDate(draft)) setDraft(value ?? "");
-      }}
-    />
-  );
-}
-
 /** The period within the header's year, and the cost centres: what both panels ask first, as one component so they cannot diverge. */
 function PeriodRows({
   query,
@@ -132,48 +57,10 @@ function PeriodRows({
 
   return (
     <>
-      <Row>
-        {period && (
-          <Field label={t("period")} className="w-full sm:w-56">
-            <Combobox
-              size="sm"
-              options={period.options}
-              value={period.value}
-              onChange={period.onPick}
-              searchPlaceholder={t("periodSearch")}
-              aria-label={t("period")}
-            />
-          </Field>
-        )}
-        <div className="flex min-w-0 items-end gap-2">
-          <Field label={t("from")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-            <PeriodDate
-              value={query.from}
-              onCommit={(v) => {
-                period?.onManual();
-                onQuery({ from: v });
-              }}
-              aria-label={t("from")}
-            />
-          </Field>
-          <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
-            -
-          </span>
-          <Field label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">
-            <PeriodDate
-              value={query.to}
-              onCommit={(v) => {
-                period?.onManual();
-                onQuery({ to: v });
-              }}
-              aria-label={t("to")}
-            />
-          </Field>
-        </div>
-      </Row>
+      <PeriodRow from={query.from} to={query.to} onRange={onQuery} period={period} />
 
-      <Row>
-        <Field label={tAlloc("costCenter")} className="w-full sm:w-72">
+      <PanelRow>
+        <PanelField label={tAlloc("costCenter")} className="w-full sm:w-72">
           <MultiCombobox
             size="sm"
             options={ccOptions}
@@ -184,8 +71,8 @@ function PeriodRows({
             emptyText={t("noCostCenters")}
             aria-label={tAlloc("costCenter")}
           />
-        </Field>
-      </Row>
+        </PanelField>
+      </PanelRow>
     </>
   );
 }
@@ -206,7 +93,7 @@ function BudgetPicker({
   const t = useTranslations("ledger");
   if (budgets.length === 0 || (budgets.length === 1 && query.budget === budgets[0].id)) return null;
   return (
-    <Field label={t("budget")} className="w-full sm:w-64">
+    <PanelField label={t("budget")} className="w-full sm:w-64">
       <Combobox
         size="sm"
         // Date (or year) first, then budgetLabel (shared with the compare pickers), so same-named budgets of
@@ -219,7 +106,7 @@ function BudgetPicker({
         emptyText={t("noBudgets")}
         aria-label={t("budgetAria")}
       />
-    </Field>
+    </PanelField>
   );
 }
 
@@ -260,10 +147,10 @@ export function ReportParameters({
 
   return (
     <Card className="print:hidden">
-      <Row>
-        <Field label={t("report")}>
+      <PanelRow>
+        <PanelField label={t("report")}>
           <SegmentedControl
-            className={PILLS}
+            className={PANEL_PILLS}
             options={[
               { value: "RESULT", label: t("resultReport") },
               { value: "BALANCE", label: t("balanceReport") },
@@ -271,14 +158,14 @@ export function ReportParameters({
             value={query.kind}
             onChange={(v) => onQuery({ kind: v })}
           />
-        </Field>
-      </Row>
+        </PanelField>
+      </PanelRow>
 
       <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
       {query.kind === "RESULT" && (
-        <Row>
-          <Field label={t("columns")}>
+        <PanelRow>
+          <PanelField label={t("columns")}>
             <div role="group" aria-label={t("columns")} className="flex flex-col gap-2 pt-0.5">
               {RESULT_COLUMNS.map((c) => {
                 const label = t(`columnOption.${c}`);
@@ -300,14 +187,14 @@ export function ReportParameters({
                 );
               })}
             </div>
-          </Field>
-        </Row>
+          </PanelField>
+        </PanelRow>
       )}
 
-      <Row>
-        <Field label={t("comparison")}>
+      <PanelRow>
+        <PanelField label={t("comparison")}>
           <SegmentedControl
-            className={PILLS}
+            className={PANEL_PILLS}
             options={[
               { value: "NONE", label: t("none") },
               // The result report takes last year as its own columns (Kolumner), so only the budget is offered here.
@@ -319,7 +206,7 @@ export function ReportParameters({
             value={query.compare}
             onChange={(v) => onQuery({ compare: v as ComparisonMode })}
           />
-        </Field>
+        </PanelField>
         {query.compare !== "NONE" && (
           <Checkbox
             label={t("difference")}
@@ -334,7 +221,7 @@ export function ReportParameters({
         {query.compare === "BUDGET" && (
           <BudgetPicker query={query} onQuery={onQuery} budgets={budgets} />
         )}
-      </Row>
+      </PanelRow>
       <SyncedNote synced={synced} />
     </Card>
   );
@@ -370,10 +257,10 @@ export function ChartParameters({
     <Card className="print:hidden">
       <PeriodRows query={query} onQuery={onQuery} costCenters={costCenters} period={period} />
 
-      <Row>
-        <Field label={t("charts.pacing")}>
+      <PanelRow>
+        <PanelField label={t("charts.pacing")}>
           <SegmentedControl
-            className={PILLS}
+            className={PANEL_PILLS}
             options={[
               { value: "NONE", label: t("none") },
               { value: "BUDGET", label: t("budget") },
@@ -381,10 +268,10 @@ export function ChartParameters({
             value={pacing ? "BUDGET" : "NONE"}
             onChange={(v) => onQuery({ compare: v })}
           />
-        </Field>
+        </PanelField>
 
         {pacing && <BudgetPicker query={query} onQuery={onQuery} budgets={budgets} />}
-      </Row>
+      </PanelRow>
       <SyncedNote synced={synced} />
     </Card>
   );

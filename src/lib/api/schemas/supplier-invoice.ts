@@ -91,31 +91,12 @@ export const TransitionSupplierInvoice = z.object({
 });
 export type TransitionSupplierInvoice = z.infer<typeof TransitionSupplierInvoice>;
 
-/** POST /api/supplier-invoices: a document in a unit's Inkorg, fördelad, which makes it an invoice. */
-export const CreateSupplierInvoice = z.object({
-  documentId: Id,
-  rows: z.array(KonteringRow).min(1).max(20),
-  /** The amount it is split against, öre, as the unit read it off the invoice. */
-  amount: Ore,
-  /** The öresutjämning, which the split adds up to the amount without. */
-  rounding: Rounding,
-  /** The due date, as the unit read it. */
-  dueDate: IsoDate,
-  /** What the invoice is for, in a line. */
-  description: Text(200),
-  comment: Trimmed.max(1000).optional(),
-});
-export type CreateSupplierInvoice = z.infer<typeof CreateSupplierInvoice>;
-
-/** POST /api/supplier-invoice-documents/[id]/assign: to a unit's Inkorg, with
- *  the due date when triage read one. Absent leaves it as it was. */
+/** POST /api/supplier-invoice-documents/[id]/assign: to a unit, which makes
+ *  the invoice, with the due date when triage read one. */
 export const AssignInvoiceDocument = z.object({
   resultUnitId: Id,
   dueDate: Clearable(IsoDate).optional(),
 });
-
-/** POST /api/supplier-invoice-documents/[id]/decline: the unit's "Inte vår". */
-export const DeclineInvoiceDocument = z.object({ reason: Trimmed.min(1).max(500) });
 
 /** POST /api/supplier-invoices/[id]/return: back to the Inkorg, and why. */
 export const ReturnSupplierInvoice = z.object({ reason: Trimmed.min(1).max(500) });

@@ -60,8 +60,7 @@
     "returnedTitle": "{name} vill att något ändras:",
     "missingTitle": "Fakturan finns inte",
     "missingDescription": "Den kan ha tagits bort, eller så har du inte tillgång till den.",
-    "missingAction": "Till fakturor",
-    "note": "Kommentar"
+    "missingAction": "Till fakturor"
   },
   "workspace": {
     "supplier": "Leverantör i Fortnox",
@@ -167,30 +166,24 @@
     "col": {
       "document": "Dokument",
       "from": "Avsändare",
-      "received": "Inkom",
-      "unit": "Enhet",
-      "dueDate": "Förfallodag"
+      "received": "Inkom"
     },
     "searchPlaceholder": "Sök fil, avsändare eller ämne",
     "noMatch": "Inga dokument matchar.",
     "returned": "Tillbaka från {unit}: {reason}",
     "returnedTag": "Tillbaka",
-    "tab": {
-      "sort": "Att sortera",
-      "allocate": "Att fördela",
-      "units": "Hos enheterna"
-    },
     "assign": "Skicka",
-    "move": "Byt enhet",
     "assigned": "Skickat till {unit}",
-    "allocate": "Fördela",
-    "decline": "Inte vår",
-    "declineConfirm": "Dokumentet går tillbaka till inkorgen, med ditt svar som förklaring.",
-    "declined": "Dokumentet är tillbaka i inkorgen",
-    "unitEmptyTitle": "Inget att fördela",
     "dueDate": "Förfallodag",
-    "saveDue": "Spara",
-    "dueSaved": "Förfallodagen är sparad"
+    "viewLabel": "Visa",
+    "viewPdf": "PDF",
+    "viewMail": "Mejl",
+    "mail": {
+      "from": "Från",
+      "subject": "Ämne",
+      "received": "Inkom",
+      "notKept": "Mejlets text sparades inte, eftersom det kom in innan inkorgen började spara den. Här är bara det avsändaren skrev överst."
+    }
   },
   "attest": {
     "signersTitle": "Vem attesterar",
@@ -249,7 +242,6 @@
   "fromForwarder": "Från {name}",
   "allocate": {
     "fromScan": "Läst från fakturan. Kontrollera att det stämmer.",
-    "descriptionHint": "Det fakturan heter i listor och för andra enheter som ska attestera.",
     "descriptionPlaceholder": "Till exempel hyra av släp till nollningen",
     "roundingHint": "Om fakturan rundar av. Raderna ska bli beloppet minus öresutjämningen."
   }

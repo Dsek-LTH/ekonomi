@@ -357,13 +357,10 @@ export interface SupplierInvoiceEventView {
   date: string; // ISO
 }
 
+/** Who forwarded it, for a mailed invoice. The mail itself is read in the Inkorg, not on the invoice. */
 export interface InvoiceMailView {
   fromAddress: string;
   fromName: string | null;
-  subject: string | null;
-  note: string | null;
-  originalFrom: string | null;
-  receivedAt: string; // ISO
 }
 
 export interface SupplierInvoiceView {
@@ -620,10 +617,6 @@ export async function getInvoice(
         ? {
             fromAddress: m.fromAddress,
             fromName: m.fromName,
-            subject: m.subject,
-            note: m.note,
-            originalFrom: m.originalFrom,
-            receivedAt: m.receivedAt.toISOString(),
           }
         : null,
       suggestedCostCenter,

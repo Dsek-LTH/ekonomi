@@ -1,23 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/status-pill";
 import { Combobox } from "@/components/ui/combobox";
+import { ClampedText } from "@/components/ui/clamped-text";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconTrash } from "@/components/ui/icons";
-import {
-  ClientDataTable,
-  visibleRows,
-  type ClientTabFilter,
-} from "@/components/ui/client-data-table";
+import { IconInvoice, IconMail, IconTrash } from "@/components/ui/icons";
+import { ViewToggle } from "@/components/ui/view-toggle";
+import { ClientDataTable, visibleRows } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
 import {
+  ReceiptPanelCover,
   ReceiptPanelFooter,
   ReceiptPanelSource,
   useRevealReceiptPanel,
@@ -31,36 +30,28 @@ import { useFormat } from "@/lib/ui/use-format";
 import { DateInput } from "@/components/ui/field";
 import { isCompleteDate } from "@/lib/domain/date";
 import { LABEL } from "@/components/record-card";
-import { DueLabel } from "../invoice-bits";
 import type { InboxDocument } from "@/lib/data/invoice-inbox";
 import type { InboxHealth } from "@/lib/data/supplier-invoices";
 
 const HOME = "/invoices/inbox";
 
-type InkorgTab = "sort" | "allocate" | "units";
-
-const TAB_HOLDS: Record<InkorgTab, (d: InboxDocument) => boolean> = {
-  sort: (d) => d.resultUnitId === null,
-  allocate: (d) => d.can.canDecline,
-  units: (d) => d.resultUnitId !== null,
-};
-
 export function InkorgClient({
   documents,
   selected,
+  mail,
   resultUnits,
   health,
   triage,
   canConnectMailbox,
-  ownsUnits,
 }: {
   documents: InboxDocument[];
   selected: InboxDocument | null;
+  /** The mail the open document came in, with its text when that was kept. */
+  mail: { body: string | null } | null;
   resultUnits: { id: string; name: string }[];
   health: InboxHealth | null;
   triage: boolean;
   canConnectMailbox: boolean;
-  ownsUnits: boolean;
 }) {
   const t = useTranslations("invoices.inkorg");
   const router = useProgressRouter();
@@ -69,36 +60,23 @@ export function InkorgClient({
   const remover = useMutation();
   const confirm = useConfirm();
   const { dateTime } = useFormat();
-  const tabValues: InkorgTab[] = [
-    ...(triage ? (["sort"] as const) : []),
-    ...(ownsUnits ? (["allocate"] as const) : []),
-    ...(triage || !ownsUnits ? (["units"] as const) : []),
-  ];
-  const controls = useTableControls({ tab: tabValues[0], sortKey: "received", sortDir: "asc" });
-  const tabs: ClientTabFilter<InboxDocument> | undefined = useMemo(
-    () =>
-      tabValues.length > 1
-        ? tabValues.map((value) => ({
-            value,
-            label: t(`tab.${value}`),
-            predicate: TAB_HOLDS[value],
-            // Everything under Att fördela waits on the unit's owner.
-            waitingOn: value === "allocate" ? (true as const) : undefined,
-          }))
-        : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, triage, ownsUnits],
-  );
-  const rows = tabs ? documents : documents.filter(TAB_HOLDS[tabValues[0]]);
+  const controls = useTableControls({ sortKey: "received", sortDir: "asc" });
+  const rows = documents;
 
   const selectedId = selected?.id ?? null;
+  // Which the panel shows, the PDF or the mail. Each document opens on its PDF.
+  const [view, setView] = useState<{ id: string | null; mode: PanelView }>({
+    id: null,
+    mode: "pdf",
+  });
+  const mode: PanelView = selected?.mailed && view.id === selectedId ? view.mode : "pdf";
   useEffect(() => {
     if (selectedId) reveal();
   }, [selectedId, reveal]);
 
   // Next on the open tab once this one is dealt with; none for one opened from outside what the table shows.
   const advance = (id: string) => {
-    const shown = visibleRows({ columns, rows, controls, tabs });
+    const shown = visibleRows({ columns, rows, controls });
     const i = shown.findIndex((d) => d.id === id);
     const next = i === -1 ? undefined : (shown[i + 1] ?? shown[i - 1]);
     router.push(next ? `${HOME}?doc=${next.id}` : HOME, { scroll: false });
@@ -156,27 +134,6 @@ export function InkorgClient({
           )}
         </span>
       ),
-    },
-    ...(triage || !ownsUnits
-      ? [
-          {
-            key: "unit",
-            header: t("col.unit"),
-            mobile: "meta" as const,
-            value: (d: InboxDocument) => d.resultUnitName ?? "",
-            sortable: true,
-            searchable: true,
-            cell: (d: InboxDocument) => d.resultUnitName ?? <span className="text-muted">-</span>,
-          },
-        ]
-      : []),
-    {
-      key: "dueDate",
-      header: t("col.dueDate"),
-      mobile: "meta",
-      value: (d) => d.dueDate || "9999",
-      sortable: true,
-      cell: (d) => <DueLabel dueDate={d.dueDate || null} />,
     },
     {
       key: "received",
@@ -238,10 +195,17 @@ export function InkorgClient({
           <DocumentBar
             key={selected.id}
             document={selected}
+            view={selected.mailed ? mode : null}
+            onView={(next) => setView({ id: selected.id, mode: next })}
             resultUnits={resultUnits}
             onDone={() => advance(selected.id)}
           />
         </ReceiptPanelFooter>
+      )}
+      {selected && mode === "mail" && (
+        <ReceiptPanelCover>
+          <MailView document={selected} body={mail?.body ?? null} />
+        </ReceiptPanelCover>
       )}
 
       {health?.enabled && <MailboxWarning health={health} canConnect={canConnectMailbox} />}
@@ -251,7 +215,6 @@ export function InkorgClient({
           columns={columns}
           rows={rows}
           controls={controls}
-          tabs={tabs}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
           rowHref={(d) => (d.id === selectedId ? HOME : `${HOME}?doc=${d.id}`)}
@@ -261,9 +224,7 @@ export function InkorgClient({
               ? "bg-accent-soft hover:bg-accent-soft [&>td:first-child]:shadow-[inset_2px_0_0_var(--color-accent)]"
               : undefined
           }
-          empty={
-            documents.length === 0 ? (triage ? t("emptyTitle") : t("unitEmptyTitle")) : t("noMatch")
-          }
+          empty={documents.length === 0 ? t("emptyTitle") : t("noMatch")}
         />
       </Card>
 
@@ -303,132 +264,127 @@ function useUpload(selectedId: string | null) {
   return { send, busy: count > 0 };
 }
 
+type PanelView = "pdf" | "mail";
+
 function DocumentBar({
   document: d,
+  view,
+  onView,
   resultUnits,
   onDone,
 }: {
   document: InboxDocument;
+  /** Null for an uploaded document, which has no mail to show. */
+  view: PanelView | null;
+  onView: (view: PanelView) => void;
   resultUnits: { id: string; name: string }[];
   onDone: () => void;
 }) {
   const t = useTranslations("invoices.inkorg");
-  const tAction = useTranslations("invoices.action");
-  const confirm = useConfirm();
   const assigner = useMutation();
-  const decliner = useMutation();
-  const [unit, setUnit] = useState(d.resultUnitId ?? "");
-  const [dueDate, setDueDate] = useState(d.dueDate);
-  // A date half typed is not one to send. Empty is: it clears it.
+  const [unit, setUnit] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  // A date half typed is not one to send. Empty is: the unit reads it at the fördelning.
   const dueReady = dueDate === "" || isCompleteDate(dueDate);
-  const changed = unit !== d.resultUnitId || dueDate !== d.dueDate;
 
   async function assign() {
     const name = resultUnits.find((u) => u.id === unit)?.name ?? "";
-    const ok = await assigner.mutate(`/api/supplier-invoice-documents/${d.id}/assign`, {
-      body: { resultUnitId: unit, dueDate: dueDate || null },
-      success: unit === d.resultUnitId ? t("dueSaved") : t("assigned", { unit: name }),
-      refresh: unit === d.resultUnitId,
-    });
-    if (ok && unit !== d.resultUnitId) onDone();
+    const made = await assigner.mutate<{ id: string }>(
+      `/api/supplier-invoice-documents/${d.id}/assign`,
+      {
+        body: { resultUnitId: unit, dueDate: dueDate || null },
+        success: t("assigned", { unit: name }),
+        refresh: false,
+      },
+    );
+    if (made) onDone();
   }
 
-  async function decline() {
-    const ok = await confirm({
-      title: t("decline"),
-      message: t("declineConfirm"),
-      confirmLabel: t("decline"),
-      comment: { label: tAction("returnLabel"), required: true },
-    });
-    if (!ok) return;
-    const res = await decliner.mutate(`/api/supplier-invoice-documents/${d.id}/decline`, {
-      body: { reason: ok.comment },
-      success: t("declined"),
-      refresh: false,
-    });
-    if (res) onDone();
-  }
-
-  const busy = assigner.busy || decliner.busy;
   return (
     <div className="space-y-2 px-4 py-3">
+      {view && (
+        <ViewToggle
+          labels
+          aria-label={t("viewLabel")}
+          value={view}
+          onChange={onView}
+          options={[
+            { value: "pdf", label: t("viewPdf"), icon: IconInvoice },
+            { value: "mail", label: t("viewMail"), icon: IconMail },
+          ]}
+        />
+      )}
       {d.returned && (
-        <p
-          className="line-clamp-2 whitespace-pre-line text-xs text-danger"
-          title={d.returned.reason}
-        >
+        <ClampedText className="text-xs text-danger">
           {t("returned", { unit: d.returned.from ?? "-", reason: d.returned.reason })}
-        </p>
+        </ClampedText>
       )}
       {d.note && (
-        <p className="line-clamp-2 whitespace-pre-line text-xs text-muted" title={d.note}>
+        <ClampedText className="text-xs text-muted">
           <span className="font-medium text-foreground">{d.fromName ?? d.fromAddress}:</span>{" "}
           {d.note}
-        </p>
+        </ClampedText>
       )}
-      {(d.can.canAssign || d.can.canAllocate || d.can.canDecline) && (
+      {d.can.canAssign && (
         <div className="flex items-end gap-2">
-          {d.can.canAssign && (
-            <>
-              <label className="block basis-36 shrink-[2]">
-                <span className={`${LABEL} mb-1 block truncate`}>{t("dueDate")}</span>
-                <DateInput size="sm" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </label>
-              <div className="min-w-0 flex-1 basis-40">
-                <span className={`${LABEL} mb-1 block truncate`}>{t("createUnit")}</span>
-                <Combobox
-                  size="sm"
-                  options={resultUnits.map((u) => ({
-                    value: u.id,
-                    label: u.name,
-                  }))}
-                  value={unit}
-                  onChange={setUnit}
-                  placeholder={t("createUnitPlaceholder")}
-                  searchPlaceholder={t("searchUnit")}
-                  aria-label={t("createUnit")}
-                />
-              </div>
-              <Button
-                size="md"
-                variant={d.can.canAllocate ? "secondary" : "primary"}
-                disabled={!unit || !changed || !dueReady || busy}
-                loading={assigner.busy}
-                onClick={() => void assign()}
-                className="shrink-0 whitespace-nowrap"
-              >
-                {!d.resultUnitId ? t("assign") : unit === d.resultUnitId ? t("saveDue") : t("move")}
-              </Button>
-            </>
-          )}
-          {(d.can.canAllocate || d.can.canDecline) && (
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {d.can.canDecline && (
-                <Button
-                  size="md"
-                  variant="ghost"
-                  disabled={busy}
-                  loading={decliner.busy}
-                  onClick={() => void decline()}
-                  className="whitespace-nowrap"
-                >
-                  {t("decline")}
-                </Button>
-              )}
-              {d.can.canAllocate && (
-                <ButtonLink
-                  size="md"
-                  href={`/invoices/inbox/${d.id}`}
-                  className="whitespace-nowrap"
-                >
-                  {t("allocate")}
-                </ButtonLink>
-              )}
-            </div>
-          )}
+          <label className="block basis-36 shrink-[2]">
+            <span className={`${LABEL} mb-1 block truncate`}>{t("dueDate")}</span>
+            <DateInput size="sm" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </label>
+          <div className="min-w-0 flex-1 basis-40">
+            <span className={`${LABEL} mb-1 block truncate`}>{t("createUnit")}</span>
+            <Combobox
+              size="sm"
+              options={resultUnits.map((u) => ({ value: u.id, label: u.name }))}
+              value={unit}
+              onChange={setUnit}
+              placeholder={t("createUnitPlaceholder")}
+              searchPlaceholder={t("searchUnit")}
+              aria-label={t("createUnit")}
+            />
+          </div>
+          <Button
+            size="md"
+            disabled={!unit || !dueReady || assigner.busy}
+            loading={assigner.busy}
+            onClick={() => void assign()}
+            className="shrink-0 whitespace-nowrap"
+          >
+            {t("assign")}
+          </Button>
         </div>
       )}
     </div>
+  );
+}
+
+/** The mail a document came in, read in the panel in place of the PDF. Plain text: nothing in it is rendered as HTML. */
+function MailView({ document: d, body }: { document: InboxDocument; body: string | null }) {
+  const t = useTranslations("invoices.inkorg");
+  const { dateTime } = useFormat();
+  const from =
+    d.fromName && d.fromAddress
+      ? `${d.fromName} <${d.fromAddress}>`
+      : (d.fromName ?? d.fromAddress);
+  return (
+    <article className="px-inset pb-6">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 border-b border-border pb-3 text-sm">
+        <dt className="text-muted">{t("mail.from")}</dt>
+        <dd className="min-w-0 break-words">{from ?? "-"}</dd>
+        <dt className="text-muted">{t("mail.subject")}</dt>
+        <dd className="min-w-0 break-words font-medium">{d.subject ?? "-"}</dd>
+        <dt className="text-muted">{t("mail.received")}</dt>
+        <dd className="tabular-nums">{dateTime(d.receivedAt)}</dd>
+      </dl>
+      {body ? (
+        <p className="whitespace-pre-wrap break-words pt-3 text-sm">{body}</p>
+      ) : (
+        <div className="space-y-2 pt-3 text-sm">
+          {d.note && <p className="whitespace-pre-wrap break-words">{d.note}</p>}
+          <p className="text-xs text-muted">{t("mail.notKept")}</p>
+        </div>
+      )}
+    </article>
   );
 }
 

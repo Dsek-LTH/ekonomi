@@ -2,21 +2,21 @@
 // Run by the Pub/Sub push (api/inbound/gmail) and the cron job (api/cron/gmail-sync). Safe to run twice at once: each mail is
 // claimed by writing its InboundMail row first (unique Gmail id).
 // Outside dsek.se or unverified, or no PDF: REJECTED with a reason. One PDF with a note that settles whose
-// it is (autoAssign in lib/domain/inbound-mail.ts): straight into that unit's Inkorg. Otherwise the PDFs
-// go to the Inkorg for triage.
+// it is (autoAssign in lib/domain/inbound-mail.ts): given to that unit, which makes the invoice
+// (lib/server/invoice-assign.ts). Otherwise the PDFs go to the Inkorg for triage.
 import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/server/db";
 import { deleteObjectBestEffort, putObject, supplierInvoiceInboxKey } from "@/lib/server/storage";
 import { getPrefixes, ownedResultUnits, resultUnitForCode } from "@/lib/server/result-units";
-import { deliverSoon, notify } from "@/lib/server/notify";
+import { deliverSoon } from "@/lib/server/notify";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets";
-import { documentNotice } from "@/lib/email/content";
+import { assignDocument } from "@/lib/server/invoice-assign";
+import { withReferenceRetry } from "@/lib/server/expense-reference";
 import { SNIFF_BYTES, sniffReceiptType } from "@/lib/domain/file-type";
 import {
   autoAssign,
-  cleanSubject,
   parseAddress,
   rejectReason,
   splitForward,
@@ -39,6 +39,8 @@ import {
 
 // The same ceiling a hand upload has (lib/server/document-upload.ts).
 const MAX_BYTES = 25 * 1024 * 1024;
+// A forwarded thread can run long. This is far past anything worth reading in the Inkorg.
+const MAX_BODY_CHARS = 100_000;
 
 const headerValues = (part: GmailPart, name: string): string[] =>
   (part.headers ?? [])
@@ -114,7 +116,8 @@ async function processMessage(
   const from = parseAddress(headerValues(top, "From")[0]);
   const reason = rejectReason(from, headerValues(top, "Authentication-Results"), c.allowedDomain);
   const subject = headerValues(top, "Subject")[0] ?? null;
-  const { note, originalFrom } = splitForward(bodyText(top));
+  const text = bodyText(top);
+  const { note, originalFrom } = splitForward(text);
   const receivedAt = msg.internalDate ? new Date(Number(msg.internalDate)) : new Date();
 
   const sender = from
@@ -137,6 +140,8 @@ async function processMessage(
         subject,
         note,
         originalFrom,
+        // Only a member's mail is kept to read: a refused one may be anybody's.
+        body: reason ? null : text.trim().slice(0, MAX_BODY_CHARS) || null,
         status: reason ? "REJECTED" : "ACCEPTED",
         rejectReason: reason,
         receivedAt,
@@ -210,33 +215,24 @@ async function processMessage(
     }
 
     const [only] = docs;
-    const owners = (
-      await prisma.user.findMany({
-        where: {
-          active: true,
-          roles: { has: "RESULTATANSVARIG" },
-          resultUnits: { has: unit.name },
-        },
-        select: { id: true },
-      })
-    ).map((u) => u.id);
-
-    await prisma.$transaction(async (tx) => {
-      await tx.supplierInvoiceDocument.create({
-        data: { ...documentRow(only), resultUnitId: unit.id, assignedAt: new Date() },
-      });
-      await notify(
-        tx,
-        "SUPPLIER_INVOICE_ASSIGNED",
-        owners,
-        documentNotice(
-          { id: only.documentId, title: cleanSubject(subject) },
-          { actor: sender?.name ?? from!.address, unit: unit.name },
-          note ? { author: sender?.name ?? from!.address, text: note } : undefined,
-        ),
-        { exclude: [sender?.id] },
-      );
-    });
+    await withReferenceRetry(() =>
+      prisma.$transaction(async (tx) => {
+        await tx.supplierInvoiceDocument.create({ data: documentRow(only) });
+        await assignDocument(tx, {
+          doc: {
+            id: only.documentId,
+            createdAt: new Date(),
+            uploadedById: sender?.id ?? null,
+            inboundMail: { id: mailId, senderId: sender?.id ?? null, receivedAt, subject },
+          },
+          unit,
+          actor: { id: null, name: sender?.name ?? from!.address },
+          dueDate: null,
+          note: note ? { author: sender?.name ?? from!.address, text: note } : null,
+          forwarderId: sender?.id ?? null,
+        });
+      }),
+    );
     return "accepted";
   } catch (err) {
     // Undo the claim and whatever reached storage, so the next sync retries the mail from the start.

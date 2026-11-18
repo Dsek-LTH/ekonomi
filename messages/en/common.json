@@ -186,5 +186,17 @@
     "reset": "Undo changes",
     "unsaved": "Unsaved changes",
     "saved": "Saved."
+  },
+  "clamped": {
+    "more": "Show more",
+    "less": "Show less"
+  },
+  "period": {
+    "label": "Period",
+    "search": "Search periods…",
+    "from": "From",
+    "to": "To",
+    "wholeYear": "Whole financial year",
+    "custom": "Custom range"
   }
 }

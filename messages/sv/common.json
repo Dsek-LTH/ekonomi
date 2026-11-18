@@ -186,5 +186,17 @@
     "reset": "Ångra ändringar",
     "unsaved": "Osparade ändringar",
     "saved": "Sparat."
+  },
+  "clamped": {
+    "more": "Visa mer",
+    "less": "Visa mindre"
+  },
+  "period": {
+    "label": "Period",
+    "search": "Sök period…",
+    "from": "Från",
+    "to": "Till",
+    "wholeYear": "Hela räkenskapsåret",
+    "custom": "Anpassat intervall"
   }
 }

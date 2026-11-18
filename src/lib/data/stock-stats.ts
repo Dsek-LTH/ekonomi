@@ -7,18 +7,20 @@ import { getStockGroups, getStockLevels, type StockLevelDto } from "./stock";
 import type { DrinkCategory, StockEntryKind } from "@/lib/domain/types";
 import { hasTag } from "@/lib/stock/tags";
 import { stockholmDay, today } from "@/lib/domain/date";
-import type { StockSlug } from "@/lib/stock/stocks";
+import { STOCKS, type StockSlug } from "@/lib/stock/stocks";
 
 /** What the screen narrowed itself to. Nothing set means the whole shelf, all of time. */
 interface StockStatsQuery {
   stock: StockSlug;
   /** Inclusive, `YYYY-MM-DD`. Absent means "since the first movement". */
   from?: string;
-  /** Inclusive. Absent means today. */
+  /** Inclusive. Absent, or later than today, means today. */
   to?: string;
   /** Product types, by group id. */
   groups?: string[];
   tags?: string[];
+  /** Places, by id: narrows what went out to what they took. In a stock without places, ignored. */
+  places?: string[];
 }
 
 export interface ValuePoint {
@@ -68,9 +70,21 @@ interface ProductMover {
   id: string;
   name: string;
   groupId: string;
-  /** Öre that left the shelf through this product in the period and did not come back, positive. */
+  /** Öre that left the shelf through this product in the period and did not come back, positive. Narrowed to places, what they took net. */
   outOre: number;
+  /** Units, the same way. */
+  outUnits: number;
   valueOre: number;
+}
+
+/** What one place took and brought back in the period, over the products the filter keeps. Both positive. */
+export interface PlaceTotals {
+  id: string;
+  name: string;
+  /** The cost centre it is charged to, or null for the stock's own consumption cost centre. */
+  costCenterCode: string | null;
+  taken: { units: number; valueOre: number };
+  returned: { units: number; valueOre: number };
 }
 
 export interface StockStats {
@@ -80,6 +94,10 @@ export interface StockStats {
   holdings: GroupHolding[];
   flow: PeriodFlow;
   movers: ProductMover[];
+  /** Every place of a stock with places, with what it took in the period. Empty in a stock without them. */
+  places: PlaceTotals[];
+  /** The same, summed over the places the page is narrowed to. Null when it is not narrowed to any. */
+  placeFlow: Omit<PlaceTotals, "id" | "name" | "costCenterCode"> | null;
   /** Every tag any product carries, not only those surviving the filter, or narrowing would leave nothing to widen with. */
   tags: string[];
   /** The whole shelf, whatever the filter says. */
@@ -110,11 +128,23 @@ const gone = (kind: StockEntryKind, valueDeltaOre: number, withSpill: boolean): 
 
 /** Everything the statistics page shows, in two queries. The series emits a point on each day something happened. */
 export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
-  const to = q.to || today();
-  const [levels, groupRows] = await Promise.all([
+  // Never past today: a räkenskapsår runs to its last day, and the shelf has no movements yet beyond now.
+  const now = today();
+  const to = q.to && q.to < now ? q.to : now;
+  const usesPlaces = STOCKS[q.stock].usesPlaces;
+  const [levels, groupRows, placeRows] = await Promise.all([
     getStockLevels(q.stock, to),
     getStockGroups(q.stock),
+    usesPlaces
+      ? prisma.stockPlace.findMany({
+          where: { stockId: q.stock },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: { id: true, name: true, archived: true, costCenter: { select: { code: true } } },
+        })
+      : [],
   ]);
+  // Only places that exist in this stock narrow anything, so a stale id in the address cannot empty the page.
+  const narrowedTo = new Set((q.places ?? []).filter((id) => placeRows.some((p) => p.id === id)));
   const groups: StatsGroup[] = groupRows.map((g) => ({
     id: g.id,
     name: g.name,
@@ -135,13 +165,22 @@ export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
     ? await prisma.stockEntry.findMany({
         where: { productId: { in: [...keptIds] }, occurredAt: { lte: new Date(to) } },
         orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
-        select: { productId: true, kind: true, valueDeltaOre: true, occurredAt: true },
+        select: {
+          productId: true,
+          kind: true,
+          units: true,
+          valueDeltaOre: true,
+          occurredAt: true,
+          placeId: true,
+        },
       })
     : [];
 
   const running = zero();
   const flow: PeriodFlow = { purchasedOre: 0, consumedOre: 0, wastedOre: 0, adjustmentOre: 0 };
   const out = new Map<string, number>();
+  const outUnits = new Map<string, number>();
+  const byPlace = new Map<string, Omit<PlaceTotals, "id" | "name" | "costCenterCode">>();
 
   /** End-of-day shelf value on each day something happened, and the value going into the window. */
   const closes = new Map<string, Record<string, number>>();
@@ -165,8 +204,25 @@ export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
     else if (destroyed(e.kind)) flow.wastedOre += -e.valueDeltaOre;
     flow.consumedOre += gone(e.kind, e.valueDeltaOre, false);
 
-    const left = gone(e.kind, e.valueDeltaOre, true);
-    if (left !== 0) out.set(e.productId, (out.get(e.productId) ?? 0) + left);
+    // Only moves carry a place: an ISSUE to it (taken), a RETURN from it (brought back).
+    if (e.placeId && (e.kind === "ISSUE" || e.kind === "RETURN")) {
+      const totals = byPlace.get(e.placeId) ?? {
+        taken: { units: 0, valueOre: 0 },
+        returned: { units: 0, valueOre: 0 },
+      };
+      const side = e.kind === "ISSUE" ? totals.taken : totals.returned;
+      side.units += Math.abs(e.units);
+      side.valueOre += Math.abs(e.valueDeltaOre);
+      byPlace.set(e.placeId, totals);
+    }
+
+    // Narrowed to places, a product's line is what they took net. Otherwise everything that left the shelf.
+    const counts = narrowedTo.size === 0 || (e.placeId !== null && narrowedTo.has(e.placeId));
+    const left = counts ? gone(e.kind, e.valueDeltaOre, true) : 0;
+    if (left !== 0) {
+      out.set(e.productId, (out.get(e.productId) ?? 0) + left);
+      outUnits.set(e.productId, (outUnits.get(e.productId) ?? 0) - e.units);
+    }
   }
 
   /**
@@ -215,12 +271,39 @@ export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
       name: p.name,
       groupId: p.groupId,
       outOre: out.get(p.id) ?? 0,
+      outUnits: outUnits.get(p.id) ?? 0,
       valueOre: p.onHand.valueOre,
     }))
-    // More came home than went out is a mistake elsewhere, not produced stock: it does not rank.
-    .filter((m) => m.outOre > 0 || m.valueOre > 0)
+    // More came home than went out is a mistake elsewhere, not produced stock: it does not rank. Narrowed to
+    // places, what is on the shelf says nothing about them, so only what they took ranks.
+    .filter((m) => m.outOre > 0 || (narrowedTo.size === 0 && m.valueOre > 0))
     .sort((a, b) => b.outOre - a.outOre || b.valueOre - a.valueOre)
     .slice(0, 8);
+
+  const empty = () => ({ units: 0, valueOre: 0 });
+  // An archived place still shows while it has something in the period: the bill is still its.
+  const places: PlaceTotals[] = placeRows
+    .filter((p) => !p.archived || byPlace.has(p.id))
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      costCenterCode: p.costCenter?.code ?? null,
+      taken: byPlace.get(p.id)?.taken ?? empty(),
+      returned: byPlace.get(p.id)?.returned ?? empty(),
+    }));
+  const picked = places.filter((p) => narrowedTo.has(p.id));
+  const placeFlow = picked.length
+    ? {
+        taken: {
+          units: picked.reduce((n, p) => n + p.taken.units, 0),
+          valueOre: picked.reduce((n, p) => n + p.taken.valueOre, 0),
+        },
+        returned: {
+          units: picked.reduce((n, p) => n + p.returned.units, 0),
+          valueOre: picked.reduce((n, p) => n + p.returned.valueOre, 0),
+        },
+      }
+    : null;
 
   return {
     groups,
@@ -228,6 +311,8 @@ export async function getStockStats(q: StockStatsQuery): Promise<StockStats> {
     holdings,
     flow,
     movers,
+    places,
+    placeFlow,
     tags: [...new Set(levels.flatMap((p) => p.tags))].sort((a, b) => a.localeCompare(b, "sv")),
     wholeShelfOre: levels.reduce((sum, p) => sum + p.onHand.valueOre, 0),
   };

@@ -3,25 +3,28 @@ import { cn } from "@/lib/ui/utils";
 import { Spinner } from "./spinner";
 
 type Variant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "quiet"
-  | "accentOutline"
-  | "danger"
-  | "dangerOutline"
-  | "link";
+  "primary" | "secondary" | "soft" | "ghost" | "quiet" | "danger" | "dangerOutline" | "link";
 type Size = "sm" | "md" | "lg";
 
-// See .action-fill in globals.css.
+/**
+ * The pink hue: the third of the three colours a button may have (full pink, white, this). The sidebar's current
+ * page wears it too. Also for anything chosen that is drawn by hand (a segment, a choice card), so a selected thing
+ * is never black.
+ */
+export const SOFT_FILL = "bg-action-from/15 text-foreground";
+export const SOFT_HOVER = "hover:bg-action-from/25";
+/** A text-only button's hover: a faint pink hue, so not even a hover turns a button grey. */
+export const TEXT_HOVER = "hover:bg-action-from/10";
+
+// A button is full pink (primary, .action-fill in globals.css), white (secondary) or the pink hue (soft). Ghost and
+// quiet are text, with the faint hue on hover. Danger is red, which is a warning and not a fourth colour.
 const VARIANTS: Record<Variant, string> = {
   primary: "action-fill text-white border active:scale-[0.98]",
   secondary:
     "bg-background text-foreground border border-border-control hover:bg-hover active:scale-[0.98]",
-  ghost: "text-accent hover:bg-accent-soft",
-  quiet: "text-foreground hover:bg-hover",
-  accentOutline:
-    "bg-background text-accent border border-accent hover:bg-accent-soft active:scale-[0.98]",
+  soft: `${SOFT_FILL} ${SOFT_HOVER} active:scale-[0.98]`,
+  ghost: `text-foreground ${TEXT_HOVER}`,
+  quiet: `text-foreground ${TEXT_HOVER}`,
   danger: "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
   dangerOutline:
     "bg-background text-danger border border-border-control hover:bg-danger-soft hover:border-danger",
