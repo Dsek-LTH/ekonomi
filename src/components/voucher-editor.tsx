@@ -2,6 +2,9 @@
 
 // The voucher table, shared by utlägg, daily takings and levfaktura booking. The rows are the
 // caller's state. With `accountsOnly` only the account on each row is editable.
+// On a phone it stays a spreadsheet, so every row is in view while one is edited. Below md it shows only what a row is
+// (Konto, Kostnadsställe, Debet, Kredit) and fits the screen. Benämning, Projekt and Beskrivning are a tap away
+// ("Visa alla kolumner"), and the table then scrolls sideways.
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -11,6 +14,7 @@ import { DragHandle } from "@/components/ui/drag";
 import { IconButton } from "@/components/ui/icon-button";
 import { Notice } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { withBlankRows } from "@/lib/ui/blank-rows";
 import { isAmountInput, isSum, isSumInput, settleAmount } from "@/lib/domain/money";
@@ -175,10 +179,15 @@ export function VoucherEditor({
   const headerCell = "px-2 py-2.5 text-center font-medium";
   const amountHeader = "px-2 py-2.5 text-right font-medium";
   const cellInput =
-    "block h-8 w-full bg-transparent px-2 text-center text-sm placeholder:text-muted focus-inset";
+    "block h-9 w-full bg-transparent px-2 text-center md:h-8 text-sm placeholder:text-muted focus-inset";
   const amountInput =
-    "block h-8 w-full bg-transparent px-2 text-right text-sm tabular-nums placeholder:text-muted focus-inset not-focus:aria-invalid:text-danger";
-  const cellCombo = "h-8 gap-1 bg-transparent px-1.5 focus-inset";
+    "block h-9 w-full bg-transparent px-2 text-right md:h-8 text-sm tabular-nums placeholder:text-muted focus-inset not-focus:aria-invalid:text-danger";
+  const cellCombo = "h-9 gap-1 bg-transparent px-1.5 focus-inset md:h-8";
+
+  // Every column on a phone too, scrolling sideways. Off, a phone shows the four that say what a row is.
+  const [allColumns, setAllColumns] = useState(false);
+  /** On a column a phone leaves out until asked for. */
+  const extra = allColumns ? "" : "max-md:hidden";
 
   const drag = useRef<Drag | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -343,7 +352,7 @@ export function VoucherEditor({
   );
   const given = (value: string) => (
     <div
-      className="flex h-8 items-center justify-center truncate px-2 text-sm"
+      className="flex h-9 items-center justify-center truncate px-2 text-sm md:h-8"
       title={value || undefined}
     >
       {value}
@@ -351,7 +360,7 @@ export function VoucherEditor({
   );
   const givenAmount = (value: string) => (
     <div
-      className="flex h-8 items-center justify-end truncate px-2 text-sm"
+      className="flex h-9 items-center justify-end truncate px-2 text-sm md:h-8"
       title={value || undefined}
     >
       {value}
@@ -401,147 +410,137 @@ export function VoucherEditor({
         </div>
       )}
 
-      <TableScroll minWidth={showProjects ? "min-w-[720px]" : "min-w-[600px]"}>
-        <table className="w-full table-fixed border-collapse text-sm">
-          <thead>
-            <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
-              <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
-              <th className={cn(headerCell, showProjects ? "w-[15%]" : "w-[18%]")}>
-                {t("colAccountName")}
-              </th>
-              <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>
-                {t("colCostCenter")}
-              </th>
-              {showProjects && <th className={cn(headerCell, "w-[13%]")}>{t("colProject")}</th>}
-              <th className={cn(headerCell, showProjects ? "w-[16%]" : "w-[15%]")}>
-                {t("colDescription")}
-              </th>
-              <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
-                {t("colDebit")}
-              </th>
-              <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
-                {t("colCredit")}
-              </th>
-              <th className="w-[9%]" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {(locked ? [locked].flat() : []).map((locked) => (
-              <tr key={locked.account} className="divide-x divide-border bg-surface">
-                <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
-                  {locked.account}
-                </td>
-                <td className="px-2 align-middle">{cell(locked.accountName, false)}</td>
-                <td className="px-2 text-center align-middle text-sm text-muted" />
+      <div className="flex justify-end px-inset py-1.5 md:hidden">
+        <Button variant="ghost" size="sm" onClick={() => setAllColumns((on) => !on)}>
+          {allColumns ? t("fewerColumns") : t("allColumns")}
+        </Button>
+      </div>
+
+      <div>
+        {/* Full width wherever it fits. On a phone with every column, wide enough to read and scrolled sideways. */}
+        <TableScroll
+          minWidth={cn(
+            showProjects ? "md:min-w-[720px]" : "md:min-w-[600px]",
+            allColumns && (showProjects ? "min-w-[720px]" : "min-w-[600px]"),
+          )}
+        >
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead>
+              <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+                <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
+                <th className={cn(headerCell, extra, showProjects ? "w-[15%]" : "w-[18%]")}>
+                  {t("colAccountName")}
+                </th>
+                <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>
+                  {t("colCostCenter")}
+                </th>
                 {showProjects && (
-                  <td className="px-2 text-center align-middle text-sm text-muted" />
+                  <th className={cn(headerCell, extra, "w-[13%]")}>{t("colProject")}</th>
                 )}
-                <td className="px-2 align-middle">{cell(locked.description ?? "", false)}</td>
-                <td className="px-2 text-right align-middle text-sm tabular-nums">
-                  {locked.debit ? locked.debit.toFixed(2).replace(".", ",") : ""}
-                </td>
-                <td className="px-2 text-right align-middle text-sm font-medium tabular-nums">
-                  {locked.credit ? locked.credit.toFixed(2).replace(".", ",") : ""}
-                </td>
-                <td className="text-center align-middle">
-                  <span
-                    className="flex items-center justify-center px-2 text-muted"
-                    title={locked.hint}
-                    aria-label={locked.label}
-                  >
-                    <IconLock className="size-4" />
-                  </span>
-                </td>
+                <th className={cn(headerCell, extra, showProjects ? "w-[16%]" : "w-[15%]")}>
+                  {t("colDescription")}
+                </th>
+                <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
+                  {t("colDebit")}
+                </th>
+                <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
+                  {t("colCredit")}
+                </th>
+                <th className="w-[9%]" />
               </tr>
-            ))}
-            {rows.map((r) => {
-              const blank = isBlankVoucherRow(r);
-              const movable = !fixed;
-              const removable = !fixed && !blank;
-              return (
-                <tr
-                  key={r.id}
-                  className={cn(
-                    "group divide-x divide-border",
-                    // Outline, not shadow: box-shadow is not painted on rows of a border-collapse table.
-                    draggingId === r.id &&
-                      "relative z-10 bg-background outline outline-1 outline-border",
-                    draggingId && draggingId !== r.id && "pointer-events-none",
-                  )}
-                  style={
-                    draggingId === r.id ? { transform: `translateY(${draggedBy}px)` } : undefined
-                  }
-                  onBlur={(e) => {
-                    const to = e.relatedTarget as HTMLElement | null;
-                    // Dead space or window blur: not a move to another row.
-                    if (!to) return;
-                    if (e.currentTarget.contains(to)) return;
-                    // A picker's menu hangs off <body>, so opening one is not leaving the row.
-                    if (to.closest("[data-combobox-panel]")) return;
-                    balanceOnLeave(r);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!e.altKey || fixed) return;
-                    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-                    e.preventDefault();
-                    nudgeRow(r.id, e.key === "ArrowDown" ? 1 : -1);
-                  }}
-                >
-                  <td
-                    className={
-                      readOnly
-                        ? "px-2 py-1.5 text-center align-middle tabular-nums"
-                        : "p-0 align-middle"
-                    }
-                  >
-                    {readOnly ? (
-                      r.account || "-"
-                    ) : (
-                      <Combobox
-                        options={accountOptions}
-                        value={r.account}
-                        onChange={(v) => patchAccount(r, v)}
-                        // Empty, not absent: left off, the picker shows its own placeholder.
-                        placeholder=""
-                        searchPlaceholder={t("accountSearch")}
-                        align="center"
-                        buttonClassName={cellCombo}
-                        aria-label={t("colAccount")}
-                      />
-                    )}
+            </thead>
+            <tbody className="divide-y divide-border">
+              {(locked ? [locked].flat() : []).map((locked) => (
+                <tr key={locked.account} className="divide-x divide-border bg-surface">
+                  <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
+                    {locked.account}
                   </td>
-                  <td className="px-2 align-middle">{cell(accountName(r.account), readOnly)}</td>
-                  <td
-                    className={
-                      fixed && !accountsOnly
-                        ? "px-2 text-center align-middle text-muted"
-                        : "p-0 align-middle"
-                    }
-                  >
-                    {accountsOnly ? (
-                      given(r.costCenterCode)
-                    ) : fixed ? (
-                      r.costCenterCode || "-"
-                    ) : (
-                      <Combobox
-                        options={ccOptions}
-                        value={r.costCenterCode}
-                        onChange={(v) =>
-                          patch(r.id, {
-                            costCenterCode: v,
-                            description: retagRowText(r.description, r.costCenterCode, v, isLocal),
-                          })
-                        }
-                        placeholder=""
-                        searchPlaceholder={tAlloc("search")}
-                        allowClear
-                        align="center"
-                        buttonClassName={cellCombo}
-                        aria-label={t("colCostCenter")}
-                      />
-                    )}
+                  <td className={cn("px-2 align-middle", extra)}>
+                    {cell(locked.accountName, false)}
                   </td>
+                  <td className="px-2 text-center align-middle text-sm text-muted" />
                   {showProjects && (
+                    <td className={cn("px-2 text-center align-middle text-sm text-muted", extra)} />
+                  )}
+                  <td className={cn("px-2 align-middle", extra)}>
+                    {cell(locked.description ?? "", false)}
+                  </td>
+                  <td className="px-2 text-right align-middle text-sm tabular-nums">
+                    {locked.debit ? locked.debit.toFixed(2).replace(".", ",") : ""}
+                  </td>
+                  <td className="px-2 text-right align-middle text-sm font-medium tabular-nums">
+                    {locked.credit ? locked.credit.toFixed(2).replace(".", ",") : ""}
+                  </td>
+                  <td className="text-center align-middle">
+                    <span
+                      className="flex items-center justify-center px-2 text-muted"
+                      title={locked.hint}
+                      aria-label={locked.label}
+                    >
+                      <IconLock className="size-4" />
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {rows.map((r) => {
+                const blank = isBlankVoucherRow(r);
+                const movable = !fixed;
+                const removable = !fixed && !blank;
+                return (
+                  <tr
+                    key={r.id}
+                    className={cn(
+                      "group divide-x divide-border",
+                      // Outline, not shadow: box-shadow is not painted on rows of a border-collapse table.
+                      draggingId === r.id &&
+                        "relative z-10 bg-background outline outline-1 outline-border",
+                      draggingId && draggingId !== r.id && "pointer-events-none",
+                    )}
+                    style={
+                      draggingId === r.id ? { transform: `translateY(${draggedBy}px)` } : undefined
+                    }
+                    onBlur={(e) => {
+                      const to = e.relatedTarget as HTMLElement | null;
+                      // Dead space or window blur: not a move to another row.
+                      if (!to) return;
+                      if (e.currentTarget.contains(to)) return;
+                      // A picker's menu hangs off <body>, so opening one is not leaving the row.
+                      if (to.closest("[data-combobox-panel]")) return;
+                      balanceOnLeave(r);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!e.altKey || fixed) return;
+                      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+                      e.preventDefault();
+                      nudgeRow(r.id, e.key === "ArrowDown" ? 1 : -1);
+                    }}
+                  >
+                    <td
+                      className={
+                        readOnly
+                          ? "px-2 py-1.5 text-center align-middle tabular-nums"
+                          : "p-0 align-middle"
+                      }
+                    >
+                      {readOnly ? (
+                        r.account || "-"
+                      ) : (
+                        <Combobox
+                          options={accountOptions}
+                          value={r.account}
+                          onChange={(v) => patchAccount(r, v)}
+                          // Empty, not absent: left off, the picker shows its own placeholder.
+                          placeholder=""
+                          searchPlaceholder={t("accountSearch")}
+                          align="center"
+                          buttonClassName={cellCombo}
+                          aria-label={t("colAccount")}
+                        />
+                      )}
+                    </td>
+                    <td className={cn("px-2 align-middle", extra)}>
+                      {cell(accountName(r.account), readOnly)}
+                    </td>
                     <td
                       className={
                         fixed && !accountsOnly
@@ -550,146 +549,223 @@ export function VoucherEditor({
                       }
                     >
                       {accountsOnly ? (
-                        given(r.project ?? "")
+                        given(r.costCenterCode)
                       ) : fixed ? (
-                        r.project || "-"
+                        r.costCenterCode || "-"
                       ) : (
                         <Combobox
-                          options={projectOptions}
-                          value={r.project ?? ""}
-                          onChange={(v) => patch(r.id, { project: v })}
+                          options={ccOptions}
+                          value={r.costCenterCode}
+                          onChange={(v) =>
+                            patch(r.id, {
+                              costCenterCode: v,
+                              description: retagRowText(
+                                r.description,
+                                r.costCenterCode,
+                                v,
+                                isLocal,
+                              ),
+                            })
+                          }
                           placeholder=""
-                          searchPlaceholder={t("projectSearch")}
+                          searchPlaceholder={tAlloc("search")}
                           allowClear
                           align="center"
                           buttonClassName={cellCombo}
-                          aria-label={t("colProject")}
+                          aria-label={t("colCostCenter")}
                         />
                       )}
                     </td>
-                  )}
-                  <td className={fixed && !accountsOnly ? "px-2 align-middle" : "p-0 align-middle"}>
-                    {accountsOnly ? (
-                      given(r.description)
-                    ) : fixed ? (
-                      cell(r.description)
-                    ) : (
-                      // size=1 drops the default input width. Out of the tab order so Tab goes account, cost centre, amount.
-                      <input
-                        size={1}
-                        tabIndex={-1}
-                        value={r.description}
-                        onChange={(e) => patch(r.id, { description: e.target.value })}
-                        className={cellInput}
-                      />
-                    )}
-                  </td>
-                  <td
-                    className={
-                      fixed && !accountsOnly
-                        ? "px-2 text-right align-middle tabular-nums"
-                        : "p-0 align-middle"
-                    }
-                  >
-                    {accountsOnly ? (
-                      <div className="tabular-nums">{givenAmount(r.debit)}</div>
-                    ) : fixed ? (
-                      r.debit || "-"
-                    ) : (
-                      <input
-                        size={1}
-                        {...amountProps(r, "debit")}
-                        className={amountInput}
-                        aria-label={`${tVoucher("debit")} ${r.account || ""}`.trim()}
-                      />
-                    )}
-                  </td>
-                  <td
-                    className={
-                      fixed && !accountsOnly
-                        ? "px-2 text-right align-middle tabular-nums"
-                        : "p-0 align-middle"
-                    }
-                  >
-                    {accountsOnly ? (
-                      <div className="tabular-nums">{givenAmount(r.credit)}</div>
-                    ) : fixed ? (
-                      r.credit || "-"
-                    ) : (
-                      <input
-                        size={1}
-                        {...amountProps(r, "credit")}
-                        aria-label={`${tVoucher("credit")} ${r.account || ""}`.trim()}
-                        className={amountInput}
-                      />
-                    )}
-                  </td>
-                  <td className="relative text-center align-middle">
-                    {removable && (
-                      <IconButton
-                        tone="danger"
-                        size="sm"
-                        tabIndex={-1}
-                        label={tAlloc("removeRow")}
-                        onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                    {showProjects && (
+                      <td
+                        className={cn(
+                          fixed && !accountsOnly
+                            ? "px-2 text-center align-middle text-muted"
+                            : "p-0 align-middle",
+                          extra,
+                        )}
                       >
-                        <IconX className="size-4" />
-                      </IconButton>
+                        {accountsOnly ? (
+                          given(r.project ?? "")
+                        ) : fixed ? (
+                          r.project || "-"
+                        ) : (
+                          <Combobox
+                            options={projectOptions}
+                            value={r.project ?? ""}
+                            onChange={(v) => patch(r.id, { project: v })}
+                            placeholder=""
+                            searchPlaceholder={t("projectSearch")}
+                            allowClear
+                            align="center"
+                            buttonClassName={cellCombo}
+                            aria-label={t("colProject")}
+                          />
+                        )}
+                      </td>
                     )}
-                    {movable && (
-                      <DragHandle
-                        onPointerDown={(e) => startDrag(e, r)}
-                        title={t("dragRow")}
-                        className={cn(dragHandle, draggingId === r.id && "opacity-100")}
-                      />
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot className="text-sm">
-            <tr className="border-t border-border font-medium">
-              <td colSpan={showProjects ? 5 : 4} className="px-3 py-1.5 text-right">
-                {t("sum")}
-              </td>
-              <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalDebit)}</td>
-              <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalCredit)}</td>
-              <td />
-            </tr>
-            <tr className="border-t border-border font-medium">
-              <td colSpan={showProjects ? 5 : 4} className="px-3 py-1.5 text-right">
-                {t("differenceLabel")}
-              </td>
-              <td />
-              <td
-                className={cn(
-                  "px-2 py-1.5 text-right tabular-nums",
-                  Math.abs(outstanding) >= 0.005 && "text-danger",
-                )}
-              >
-                {figure(Math.abs(outstanding) < 0.005 ? 0 : Math.abs(outstanding))}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </TableScroll>
+                    <td
+                      className={cn(
+                        fixed && !accountsOnly ? "px-2 align-middle" : "p-0 align-middle",
+                        extra,
+                      )}
+                    >
+                      {accountsOnly ? (
+                        given(r.description)
+                      ) : fixed ? (
+                        cell(r.description)
+                      ) : (
+                        // size=1 drops the default input width. Out of the tab order so Tab goes account, cost centre, amount.
+                        <input
+                          size={1}
+                          tabIndex={-1}
+                          value={r.description}
+                          onChange={(e) => patch(r.id, { description: e.target.value })}
+                          className={cellInput}
+                        />
+                      )}
+                    </td>
+                    <td
+                      className={
+                        fixed && !accountsOnly
+                          ? "px-2 text-right align-middle tabular-nums"
+                          : "p-0 align-middle"
+                      }
+                    >
+                      {accountsOnly ? (
+                        <div className="tabular-nums">{givenAmount(r.debit)}</div>
+                      ) : fixed ? (
+                        r.debit || "-"
+                      ) : (
+                        <input
+                          size={1}
+                          {...amountProps(r, "debit")}
+                          className={amountInput}
+                          aria-label={`${tVoucher("debit")} ${r.account || ""}`.trim()}
+                        />
+                      )}
+                    </td>
+                    <td
+                      className={
+                        fixed && !accountsOnly
+                          ? "px-2 text-right align-middle tabular-nums"
+                          : "p-0 align-middle"
+                      }
+                    >
+                      {accountsOnly ? (
+                        <div className="tabular-nums">{givenAmount(r.credit)}</div>
+                      ) : fixed ? (
+                        r.credit || "-"
+                      ) : (
+                        <input
+                          size={1}
+                          {...amountProps(r, "credit")}
+                          aria-label={`${tVoucher("credit")} ${r.account || ""}`.trim()}
+                          className={amountInput}
+                        />
+                      )}
+                    </td>
+                    <td className="relative text-center align-middle">
+                      {removable && (
+                        <IconButton
+                          tone="danger"
+                          size="sm"
+                          tabIndex={-1}
+                          label={tAlloc("removeRow")}
+                          onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                        >
+                          <IconX className="size-4" />
+                        </IconButton>
+                      )}
+                      {movable && (
+                        <DragHandle
+                          onPointerDown={(e) => startDrag(e, r)}
+                          title={t("dragRow")}
+                          className={cn(dragHandle, draggingId === r.id && "opacity-100")}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="text-sm">
+              <tr className="border-t border-border font-medium">
+                <SpanLabel full={showProjects ? 5 : 4} compact={!allColumns}>
+                  {t("sum")}
+                </SpanLabel>
+                <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalDebit)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalCredit)}</td>
+                <td />
+              </tr>
+              <tr className="border-t border-border font-medium">
+                <SpanLabel full={showProjects ? 5 : 4} compact={!allColumns}>
+                  {t("differenceLabel")}
+                </SpanLabel>
+                <td />
+                <td
+                  className={cn(
+                    "px-2 py-1.5 text-right tabular-nums",
+                    Math.abs(outstanding) >= 0.005 && "text-danger",
+                  )}
+                >
+                  {figure(Math.abs(outstanding) < 0.005 ? 0 : Math.abs(outstanding))}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </TableScroll>
+      </div>
+    </>
+  );
+}
+
+/**
+ * A footer label spanning the columns before the amounts. Their number differs with the phone's compact layout (Konto
+ * and Kostnadsställe only), so both cells are drawn and CSS shows the one that fits: a hidden cell takes no part in
+ * the table, and picking the span in script would disagree with the server's render on a phone.
+ */
+function SpanLabel({
+  full,
+  compact,
+  children,
+}: {
+  full: number;
+  compact: boolean;
+  children: React.ReactNode;
+}) {
+  const label = "px-3 py-1.5 text-right";
+  if (!compact)
+    return (
+      <td colSpan={full} className={label}>
+        {children}
+      </td>
+    );
+  return (
+    <>
+      <td colSpan={full} className={cn(label, "max-md:hidden")}>
+        {children}
+      </td>
+      <td colSpan={2} className={cn(label, "md:hidden")}>
+        {children}
+      </td>
     </>
   );
 }
 
 const chip = "inline-flex items-center gap-1.5 rounded-control px-3 py-1 text-sm font-medium";
 
-/** Green chip when debit meets credit, the difference in red when not. */
-export function BalanceChip({ balanced, difference }: { balanced: boolean; difference: string }) {
+/**
+ * Green chip when debit meets credit. Nothing when they do not: the table's Differens row already says by how much,
+ * in red. The empty span keeps its place, so the buttons beside it (justify-between) do not jump across.
+ */
+export function BalanceChip({ balanced }: { balanced: boolean }) {
   const t = useTranslations("book");
   return balanced ? (
     <span className={cn(chip, "bg-success-soft text-success")}>{t("balanced")}</span>
   ) : (
-    <span className={cn(chip, "bg-danger-soft text-danger")}>
-      {t("difference", { amount: difference })}
-    </span>
+    <span aria-hidden />
   );
 }
 

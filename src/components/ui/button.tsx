@@ -31,11 +31,11 @@ const VARIANTS: Record<Variant, string> = {
   link: "font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40",
 };
 
-// md is 44px on a phone and 32px from sm up (CONTROL_SIZES in ui/field.tsx). sm sits in table rows.
+// md is 40px on a phone and 32px from sm up (CONTROL_SIZES in ui/field.tsx). sm sits in table rows.
 const SIZES: Record<Size, string> = {
   sm: "h-7 px-2.5 text-xs",
-  md: "h-11 px-3 text-sm sm:h-8",
-  lg: "h-11 px-4 text-sm sm:h-9",
+  md: "h-10 px-3 text-sm sm:h-8",
+  lg: "h-10 px-4 text-sm sm:h-9",
 };
 
 // Dimming is applied per render: a busy button is disabled but must not fade. cn() only concatenates, so never both.

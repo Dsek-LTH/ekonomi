@@ -47,8 +47,8 @@ type Size = ControlSize;
 // Each is two heights: 44 below sm (touch target), 32 from sm up. Both registers share a height from sm up; padding tells them apart.
 export const CONTROL_SIZES: Record<ControlSize, string> = {
   // `field-ring` puts the focus ring on the field's own border (see globals.css).
-  sm: "field-ring h-11 rounded-control px-2.5 sm:h-8",
-  md: "field-ring h-11 rounded-control px-2.5 sm:h-8",
+  sm: "field-ring h-10 rounded-control px-2.5 sm:h-8",
+  md: "field-ring h-10 rounded-control px-2.5 sm:h-8",
 };
 
 /** A cell of a table from its container's 2xl up: no box, the grid lines are the boxes. Overrides CONTROL_SIZES.sm only inside the container query. */

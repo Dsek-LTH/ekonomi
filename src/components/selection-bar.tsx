@@ -49,8 +49,8 @@ export function SelectionBar({
       role="region"
       aria-label={label(shown)}
       className={cn(
-        // Above the phone's tab bar (about 4rem plus the safe area), clear of the edge from md.
-        "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-30 flex justify-center px-4 md:bottom-6 print:hidden",
+        // Clear of the phone's home indicator, and of the edge from md.
+        "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-30 flex justify-center px-4 md:bottom-6 print:hidden",
         "pointer-events-none transition-[translate,opacity] duration-200 ease-[var(--ease-out-quint)]",
         up ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
       )}

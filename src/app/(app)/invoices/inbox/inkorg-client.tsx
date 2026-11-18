@@ -19,7 +19,8 @@ import {
   ReceiptPanelCover,
   ReceiptPanelFooter,
   ReceiptPanelSource,
-  useRevealReceiptPanel,
+  useOpenReceiptPanel,
+  useReceiptTabShowing,
 } from "@/components/receipt/receipt-panel";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -55,7 +56,9 @@ export function InkorgClient({
 }) {
   const t = useTranslations("invoices.inkorg");
   const router = useProgressRouter();
-  const reveal = useRevealReceiptPanel();
+  const openReceipt = useOpenReceiptPanel();
+  // The open document's panel is folded away (on a phone, closed to get back to the list).
+  const folded = useReceiptTabShowing();
   const upload = useUpload(selected?.id ?? null);
   const remover = useMutation();
   const confirm = useConfirm();
@@ -70,9 +73,6 @@ export function InkorgClient({
     mode: "pdf",
   });
   const mode: PanelView = selected?.mailed && view.id === selectedId ? view.mode : "pdf";
-  useEffect(() => {
-    if (selectedId) reveal();
-  }, [selectedId, reveal]);
 
   // Next on the open tab once this one is dealt with; none for one opened from outside what the table shows.
   const advance = (id: string) => {
@@ -168,6 +168,8 @@ export function InkorgClient({
   return (
     <PageShell title={t("title")}>
       <ReceiptPanelSource
+        // Picking a document is asking to read it: the panel opens, on a phone too.
+        openOnChange
         documents={
           selected
             ? [
@@ -218,6 +220,13 @@ export function InkorgClient({
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
           rowHref={(d) => (d.id === selectedId ? HOME : `${HOME}?doc=${d.id}`)}
+          // The open document again while its panel is folded away: open it, rather than close it as a second tap
+          // on it otherwise does.
+          onRowClick={(d, e) => {
+            if (d.id !== selectedId || !folded) return;
+            e.preventDefault();
+            openReceipt();
+          }}
           rowScroll={false}
           rowClassName={(d) =>
             d.id === selectedId

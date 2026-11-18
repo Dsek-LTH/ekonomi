@@ -273,7 +273,7 @@ export default function StockLogClient({
           searchPlaceholder={t("log.searchPlaceholder")}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <span className="flex h-11 items-center gap-2 text-sm text-muted sm:h-8">
+              <span className="flex h-10 items-center gap-2 text-sm text-muted sm:h-8">
                 <Checkbox
                   checked={showRevisions}
                   onChange={() => setShowRevisions((on) => !on)}

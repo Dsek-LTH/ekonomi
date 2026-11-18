@@ -158,6 +158,7 @@ export function DataTable<T>({
   rowClassName,
   rowHref,
   rowScroll = true,
+  onRowClick,
   expansion,
   expandAll,
   empty,
@@ -181,6 +182,9 @@ export function DataTable<T>({
   rowHref?: (row: T) => string;
   /** Whether following a row's link scrolls to the top. Off for rows that open a panel beside the list. */
   rowScroll?: boolean;
+  /** Before a row's link is followed. `preventDefault()` on the event keeps the page where it is (the Inkorg reopens
+   *  a folded receipt this way instead of navigating). */
+  onRowClick?: (row: T, e: React.MouseEvent) => void;
   /** What sits under a row when opened. A row returning nothing gets no chevron. */
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
@@ -298,7 +302,7 @@ export function DataTable<T>({
                 aria-label={t("filters")}
                 title={t("filters")}
                 className={cn(
-                  "flex h-11 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors sm:hidden",
+                  "flex h-10 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors sm:hidden",
                   activeFilters > 0
                     ? cn("border-transparent", SOFT_FILL)
                     : "border-border bg-background text-muted",
@@ -442,6 +446,7 @@ export function DataTable<T>({
                     className={rowClassName?.(row)}
                     href={rowHref?.(row)}
                     scroll={rowScroll}
+                    onClick={onRowClick && ((e) => onRowClick(row, e))}
                   />
                   {under && (
                     <button
@@ -502,6 +507,7 @@ export function DataTable<T>({
                               <Link
                                 href={href}
                                 scroll={rowScroll}
+                                onClick={onRowClick && ((e) => onRowClick(row, e))}
                                 className="before:absolute before:inset-0 hover:underline focus-visible:underline"
                               >
                                 {c.cell(row)}
@@ -566,12 +572,14 @@ function MobileRow<T>({
   className,
   href,
   scroll = true,
+  onClick,
 }: {
   row: T;
   slots: MobileGroups<T>;
   className?: string;
   href?: string;
   scroll?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   const cell = (c: Column<T>) => (c.mobileCell ?? c.cell)(row);
   const filled = (cols: Column<T>[]) =>
@@ -596,7 +604,12 @@ function MobileRow<T>({
           {/* The headline is the link and covers the row; actions sit above it (later stacking). */}
           <div className="min-w-0 flex-1 truncate text-sm font-medium *:truncate">
             {href ? (
-              <Link href={href} scroll={scroll} className="before:absolute before:inset-0">
+              <Link
+                href={href}
+                scroll={scroll}
+                onClick={onClick}
+                className="before:absolute before:inset-0"
+              >
                 {title}
               </Link>
             ) : (

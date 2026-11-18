@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt-viewer";
 import { DocumentStrip } from "@/components/receipt/document-strip";
+import { NO_PANEL, arrivalAction, type PanelState } from "@/lib/ui/receipt-arrival";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -56,6 +57,9 @@ type Source = {
   };
   empty?: { title: string; description?: string };
   arrange?: Arrange;
+  /** Open whenever the documents change to others, on a phone too. For a page where picking one is asking to read it
+   *  (the Inkorg), rather than the phone's rule that a receipt arrives folded away. */
+  openOnChange?: boolean;
 };
 
 export interface Arrange {
@@ -79,6 +83,9 @@ type Ctx = {
   /** How many ReceiptPanelCovers are mounted. While any is, the documents are hidden under it. */
   covers: number;
   setCovers: React.Dispatch<React.SetStateAction<number>>;
+  /** Bumped to ask the column to open, with its slide-in: the phone's receipt row lives in the page. */
+  openRequests: number;
+  requestOpen: () => void;
 };
 
 const PanelCtx = createContext<Ctx | null>(null);
@@ -94,13 +101,14 @@ export function useReceiptTabShowing(): boolean {
   return Boolean(source) && collapsed && !isAwaitingUpload(source);
 }
 
-export function useRevealReceiptPanel(): () => void {
-  const { setCollapsed } = usePanel();
-  return useCallback(() => setCollapsed(false, false), [setCollapsed]);
+/** The page's documents, for showing them outside the panel (the phone's receipt row). Null while it has none. */
+export function useReceiptDocuments(): ViewerDocument[] | null {
+  return usePanel().source?.docs ?? null;
 }
 
-export function useReceiptPanelActive(): boolean {
-  return Boolean(usePanel().source);
+/** Open the panel the way its own tab does, sliding in. For a control outside it (the phone's receipt row). */
+export function useOpenReceiptPanel(): () => void {
+  return usePanel().requestOpen;
 }
 
 const isAwaitingUpload = (source: Source | null) =>
@@ -125,6 +133,8 @@ export function ReceiptPanelProvider({
   const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null);
   const [coverSlot, setCoverSlot] = useState<HTMLElement | null>(null);
   const [covers, setCovers] = useState(0);
+  const [openRequests, setOpenRequests] = useState(0);
+  const requestOpen = useCallback(() => setOpenRequests((n) => n + 1), []);
 
   const setCollapsed = useCallback((next: boolean, persist = true) => {
     setCollapsedState(next);
@@ -147,8 +157,21 @@ export function ReceiptPanelProvider({
       setCoverSlot,
       covers,
       setCovers,
+      openRequests,
+      requestOpen,
     }),
-    [source, collapsed, setCollapsed, width, setWidth, footerSlot, coverSlot, covers],
+    [
+      source,
+      collapsed,
+      setCollapsed,
+      width,
+      setWidth,
+      footerSlot,
+      coverSlot,
+      covers,
+      openRequests,
+      requestOpen,
+    ],
   );
 
   return <PanelCtx.Provider value={value}>{children}</PanelCtx.Provider>;
@@ -168,6 +191,7 @@ export function ReceiptPanelSource({
   emptyTitle,
   emptyDescription,
   arrange,
+  openOnChange = false,
 }: {
   documents?: ViewerDocument[];
   receiptId?: string | null;
@@ -182,6 +206,8 @@ export function ReceiptPanelSource({
   emptyTitle?: string;
   emptyDescription?: string;
   arrange?: Arrange;
+  /** See Source.openOnChange. */
+  openOnChange?: boolean;
 }) {
   const { setSource } = usePanel();
 
@@ -237,6 +263,7 @@ export function ReceiptPanelSource({
         : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
       arrange: stableArrange,
+      openOnChange,
     });
     return () => setSource(null);
   }, [
@@ -249,6 +276,7 @@ export function ReceiptPanelSource({
     emptyTitle,
     emptyDescription,
     stableArrange,
+    openOnChange,
     setSource,
   ]);
 
@@ -274,8 +302,18 @@ export function ReceiptPanelCover({ children }: { children: React.ReactNode }) {
 }
 
 export function ReceiptPanelColumn() {
-  const { source, collapsed, setCollapsed, width, setWidth, setFooterSlot, setCoverSlot, covers } =
-    usePanel();
+  const {
+    source,
+    collapsed,
+    setCollapsed,
+    width,
+    setWidth,
+    setFooterSlot,
+    setCoverSlot,
+    covers,
+    openRequests,
+    requestOpen,
+  } = usePanel();
   const covered = covers > 0;
   const t = useTranslations("receipt");
   const widthRef = useRef(width);
@@ -296,24 +334,36 @@ export function ReceiptPanelColumn() {
   const awaitingUpload = isAwaitingUpload(source);
   const open = !collapsed || (awaitingUpload && !narrow);
 
-  const was = useRef({ source: false, receipt: false, awaiting: false });
+  const was = useRef<PanelState>(NO_PANEL);
   useEffect(() => {
-    const now = {
+    const now: PanelState = {
       source: Boolean(source),
       receipt: Boolean(source && source.docs.length > 0),
       awaiting: awaitingUpload,
+      docs: source?.docs.map((d) => d.src).join("|") ?? "",
     };
-    const appeared = now.source && !was.current.source;
-    const receiptArrived = now.receipt && !was.current.receipt;
-
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      if ((appeared && !now.awaiting) || receiptArrived) setCollapsed(true, false);
-      else if (now.awaiting && !was.current.awaiting) setCollapsed(false, false);
-    } else if (receiptArrived && was.current.awaiting) {
-      setCollapsed(false, false);
-    }
+    // Decided in the one place that sees the documents change, so no other rule runs after it (lib/ui/receipt-arrival).
+    const action = arrivalAction(was.current, now, {
+      phone: window.matchMedia("(max-width: 767px)").matches,
+      openOnChange: Boolean(source?.openOnChange),
+    });
     was.current = now;
-  }, [source, awaitingUpload, setCollapsed]);
+    if (action === "open") requestOpen();
+    else if (action === "fold") setCollapsed(true, false);
+    else if (action === "unfold") setCollapsed(false, false);
+  }, [source, awaitingUpload, setCollapsed, requestOpen]);
+
+  // A request to open (the phone's receipt row, or the arrival rule for a page that asked) slides it in. In an effect,
+  // not during render: opening sets the provider's state, which no component may do while another renders.
+  const seenRequests = useRef(openRequests);
+  useEffect(() => {
+    if (seenRequests.current === openRequests) return;
+    seenRequests.current = openRequests;
+    setLeaving(false);
+    // Already open (another document picked in the Inkorg): nothing to slide in.
+    setEntering(collapsed);
+    setCollapsed(false);
+  }, [openRequests, collapsed, setCollapsed]);
 
   // Two frames, not one: a single rAF can still be coalesced into the commit that
   // mounted the panel, and a browser that has never painted the starting value has
@@ -596,27 +646,6 @@ export function ReceiptPanelColumn() {
     </>
   );
 
-  const fab = (
-    <button
-      type="button"
-      onClick={unfold}
-      aria-label={t("expand")}
-      title={t("expand")}
-      aria-expanded={false}
-      // The corner inline rather than as utilities: a stylesheet that had not caught
-      // up with them (the dev server has served stale CSS before, see next.config.ts)
-      // left the button at a fixed element's static position, the top left of the
-      // frame.
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)", right: "1rem" }}
-      className={cn(
-        "fixed z-30 flex size-12 typing:hidden items-center justify-center rounded-full border border-accent bg-background text-accent shadow-[var(--shadow-pop)] transition-colors hover:bg-accent-soft md:hidden print:hidden",
-        arriving && "receipt-tab-arriving",
-      )}
-    >
-      <IconReceipt className="size-5" />
-    </button>
-  );
-
   const tab = (
     <button
       ref={tabRef}
@@ -629,8 +658,9 @@ export function ReceiptPanelColumn() {
         "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4",
         "md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2",
         "md:flex-col md:gap-1.5 md:rounded-l-panel md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
-        "border-b-0 border-l-0 border-r-0 border-t border-accent md:border-b md:border-l",
-        "bg-background text-accent shadow-[var(--shadow-card)] transition-colors hover:bg-accent-soft",
+        // White with a pink edge and icon: a button is pink, white or the pink hue, never ink (components/ui/button.tsx).
+        "border-b-0 border-l-0 border-r-0 border-t border-link md:border-b md:border-l",
+        "bg-background text-link shadow-[var(--shadow-card)] transition-colors hover:bg-action-from/10",
         arriving && "receipt-tab-arriving",
       )}
     >
@@ -688,7 +718,6 @@ export function ReceiptPanelColumn() {
         </aside>
       )}
       {!open && tab}
-      {!open && fab}
     </>
   );
 }

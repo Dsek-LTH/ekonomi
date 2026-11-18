@@ -41,5 +41,7 @@
   "showDocument": "Show document {n}: {name}",
   "documentTileHint": "Click to show, drag to move",
   "removeDocumentN": "Remove document {n}",
-  "stripHint": "Drag to reorder. This is the order sent to Fortnox."
+  "stripHint": "Drag to reorder. This is the order sent to Fortnox.",
+  "show": "Show",
+  "count": "{count} documents"
 }

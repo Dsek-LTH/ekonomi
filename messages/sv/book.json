@@ -30,7 +30,6 @@
   "dragRow": "Dra för att flytta raden (eller Alt + piltangent)",
   "unknownPaymentAccount": "Betalningskontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Utlägg innan du konterar.",
   "balanced": "Balanserar",
-  "difference": "Differens {amount}",
   "sum": "Summa",
   "differenceLabel": "Differens",
   "saveChanges": "Spara ändringar",
@@ -58,5 +57,7 @@
   "correction": {
     "reason": "Varför är datumet fel?",
     "placeholder": "Till exempel: kvittot visar 14 oktober"
-  }
+  },
+  "allColumns": "Visa alla kolumner",
+  "fewerColumns": "Färre kolumner"
 }

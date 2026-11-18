@@ -6,12 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRole } from "./role-context";
-import {
-  ReceiptPanelColumn,
-  useReceiptPanelActive,
-  useReceiptTabShowing,
-} from "../receipt/receipt-panel";
-import { TabBar } from "./tab-bar";
+import { ReceiptPanelColumn, useReceiptTabShowing } from "../receipt/receipt-panel";
 import { MobileNav } from "./mobile-nav";
 import { NavCount } from "./nav-count";
 import { SectionBand, SectionNavProvider, type SectionNav } from "./section-nav";
@@ -61,8 +56,7 @@ import {
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { SETTINGS_ROOT, SETTINGS_SECTIONS } from "./settings-sections";
 
-import { carriedSection, owningRoute, routePath } from "@/lib/ui/routes";
-import { useTypingFlag } from "@/lib/ui/typing";
+import { carriedSection, owningRoute } from "@/lib/ui/routes";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { cn } from "@/lib/ui/utils";
 import { useLiveNavCounts } from "./nav-counts";
@@ -468,11 +462,7 @@ export function AppShell({
   const sectionKey = activeSection === null ? null : SECTION_LABELS[activeSection];
   const section = sectionKey ? t(sectionKey) : null;
 
-  useTypingFlag(pathname);
   const receiptTab = useReceiptTabShowing();
-  const receiptPanel = useReceiptPanelActive();
-  const topLevel = Object.hasOwn(SECTION_LABELS, routePath(pathname));
-  const tabBar = topLevel && !receiptPanel;
 
   return (
     <div className="flex min-h-dvh flex-col md:h-screen md:overflow-hidden print:block print:h-auto print:overflow-visible">
@@ -482,10 +472,6 @@ export function AppShell({
       >
         {t("skipToContent")}
       </a>
-
-      {tabBar && (
-        <TabBar user={user} isActive={isActive} counts={counts} onMore={() => setMenuOpen(true)} />
-      )}
 
       <MobileNav
         open={menuShown}
@@ -553,13 +539,12 @@ export function AppShell({
             data-guide-edge="top"
             className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden"
           >
-            {!tabBar && (
-              <MenuButton
-                open={menuShown}
-                onClick={() => setMenuOpen(true)}
-                waiting={Object.values(counts).some((n) => n > 0)}
-              />
-            )}
+            {/* The one way to move between sections on a phone, on every page: no bottom bar that comes and goes. */}
+            <MenuButton
+              open={menuShown}
+              onClick={() => setMenuOpen(true)}
+              waiting={Object.values(counts).some((n) => n > 0)}
+            />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/symbol_rosa.svg" alt="D-sektionen" className="h-6" />
             <p className="min-w-0 flex-1 truncate text-sm font-semibold">
@@ -573,11 +558,8 @@ export function AppShell({
             tabIndex={-1}
             className={cn(
               "receipt-main w-full flex-1 pl-4 pt-6 md:pl-6",
-              receiptTab
-                ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
-                : tabBar
-                  ? "pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-20"
-                  : "pb-16 md:pb-20",
+              // Nothing floats over the foot of a phone's page any more: room for the home indicator and a breath.
+              "pb-[calc(env(safe-area-inset-bottom)+2rem)] md:pb-20",
               receiptTab ? "[--main-pr:1.5rem] md:[--main-pr:3rem]" : "[--main-pr:1.5rem]",
               "pr-(--main-pr)",
             )}

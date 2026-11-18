@@ -16,17 +16,6 @@
   }
 }
 
-/* While somebody is typing: a field that brings up a phone's keyboard has the
- * focus. The receipt button in a form's corner steps aside then: iOS lifts what
- * is fixed to the foot onto the keyboard, where it covers the field. (The tab
- * bar does not need this. It is not on the pages where people type, see
- * shell/app-shell.tsx.)
- *
- * The attribute is set from the focus events by lib/ui/typing.ts. A
- * `body:has(input:focus)` selector said the same thing without any script, and
- * never matched on an iPhone. */
-@custom-variant typing (:root[data-typing] &);
-
 /* The phone's app bar (app-shell.tsx): the desktop header's 48px row and its
  * 1px border, so the bar keeps one height across the md breakpoint, plus the
  * status bar's strip above that when the app is installed to a home screen and
@@ -587,7 +576,7 @@
    so it reads as a flat colour that shifts rather than a raised surface. The
    hover darkens through an inset tint, because a gradient cannot be eased
    between and the button would snap. In the components layer so a utility on
-   the element (the tab bar's card shadow) still wins. */
+   the element (a shadow added where it is used) still wins. */
 @layer components {
   .action-fill {
     background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to));
@@ -1037,7 +1026,8 @@ summary {
 
 @keyframes receipt-tab-ring {
   from {
-    box-shadow: 0 0 0 0 var(--color-accent);
+    /* The button's own pink, so the pulse is the button calling and not a black ring. */
+    box-shadow: 0 0 0 0 var(--color-link);
     opacity: 0.45;
   }
   to {

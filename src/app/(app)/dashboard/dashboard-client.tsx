@@ -119,11 +119,7 @@ export function DashboardClient({
     <PageShell
       title={t("greeting", { name: firstName })}
       width="content"
-      aside={
-        <div className="max-md:hidden">
-          <NewExpenseMenu size="sm" />
-        </div>
-      }
+      aside={<NewExpenseMenu size="sm" />}
     >
       <div className="flex flex-col gap-6">
         <InstallHint />
@@ -132,15 +128,17 @@ export function DashboardClient({
             <Notice>{t("payoutMissing")}</Notice>
           </Link>
         )}
-        <div className="grid items-start gap-6 lg:grid-cols-3">
-          <div className="grid items-start gap-6 lg:col-span-2">
+        {/* `minmax(0,1fr)` below lg, not the implicit `auto` track: that is never narrower than a card's min-content,
+            and a truncated title's min-content is the whole title, so one long to-do pushed the page off a phone. */}
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:col-span-2">
             {fresh && empty ? (
               <FirstRun />
             ) : (
               <TodoCard bands={bands} groups={groups} score={score} />
             )}
           </div>
-          <div className="grid items-start gap-6">
+          <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6">
             {budget && <BudgetCard budget={budget} />}
             {waiting.length > 0 && <WaitingCard rows={waiting} />}
             {calendar.length > 0 && <CalendarCard items={calendar} />}

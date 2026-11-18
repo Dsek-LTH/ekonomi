@@ -13,7 +13,7 @@ export default function Loading() {
             {Array.from({ length: fields }, (_, i) => (
               <div key={i}>
                 <Skeleton className="h-3 w-16" />
-                <Skeleton className="mt-1.5 h-11 w-32 rounded-control sm:h-8" />
+                <Skeleton className="mt-1.5 h-10 w-32 rounded-control sm:h-8" />
               </div>
             ))}
           </div>

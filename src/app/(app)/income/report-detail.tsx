@@ -16,7 +16,7 @@ import {
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import { clearingRow, manualVoucherBlocker } from "@/lib/income/manual-voucher";
-import { formatNumber, formatSEK } from "@/lib/ui/format";
+import { formatNumber } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import type { IncomeReportRow } from "@/lib/data/income";
 import type { DayVoucher, LineFindings } from "./voucher-draft";
@@ -181,10 +181,7 @@ export function VoucherCard({
           totalCredit={oreToSEK(editCredit)}
         />
         <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-          <BalanceChip
-            balanced={editDebit === editCredit}
-            difference={formatSEK(oreToSEK(editDebit - editCredit))}
-          />
+          <BalanceChip balanced={editDebit === editCredit} />
           <div className="flex flex-wrap items-center gap-2.5">
             {editBlocker && (
               <span className="text-xs text-warning">{t(`manual.blocker.${editBlocker}`)}</span>

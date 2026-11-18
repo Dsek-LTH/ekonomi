@@ -30,7 +30,6 @@
   "dragRow": "Drag to move the row (or Alt + arrow key)",
   "unknownPaymentAccount": "The payment account {account} is not in the chart of accounts. Fix it under Settings → Expenses before booking.",
   "balanced": "Balanced",
-  "difference": "Difference {amount}",
   "sum": "Total",
   "differenceLabel": "Difference",
   "saveChanges": "Save changes",
@@ -58,5 +57,7 @@
   "correction": {
     "reason": "Why is the date wrong?",
     "placeholder": "For example: the receipt says 14 October"
-  }
+  },
+  "allColumns": "Show all columns",
+  "fewerColumns": "Fewer columns"
 }

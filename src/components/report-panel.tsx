@@ -28,7 +28,7 @@ export function PanelField({
 }
 
 /** Pills are shorter than a Combobox trigger (h-8, components/ui/field.tsx), so every control in the panel is field-height. */
-export const PANEL_PILLS = "[&>button]:h-11 sm:[&>button]:h-8";
+export const PANEL_PILLS = "[&>button]:h-10 sm:[&>button]:h-8";
 
 /** One row of the panel, hairline above except the first. From lg the panel is a narrow column, so fields stack. */
 export function PanelRow({ children }: { children: React.ReactNode }) {
@@ -128,7 +128,7 @@ export function PeriodRow({
             aria-label={t("from")}
           />
         </PanelField>
-        <span aria-hidden className="flex h-11 items-center text-muted sm:h-8">
+        <span aria-hidden className="flex h-10 items-center text-muted sm:h-8">
           -
         </span>
         <PanelField label={t("to")} className="min-w-0 flex-1 sm:w-40 sm:flex-none lg:flex-1">

@@ -1,6 +1,7 @@
 import { CollectionSwitch, type Collections } from "@/components/ui/collection-switch";
 import type { PageTabsProps } from "@/components/ui/page-tabs";
 import { BandPageTabs, PageHeader } from "@/components/shell/section-nav";
+import { ReceiptRow } from "@/components/receipt/receipt-row";
 import { cn } from "@/lib/ui/utils";
 
 // Standard page wrapper. Widths: form (narrow), content (medium lists), wide (tables, dashboards).
@@ -74,6 +75,9 @@ export function PageShell({
 
       {/* A view toggle is not placed here: it sits in the page's own toolbar (docs/navigation.md). */}
       {pages && <BandPageTabs back={back} pages={pages} />}
+
+      {/* The page's receipt on a phone, under its title. Renders nothing without one, or from md. */}
+      <ReceiptRow />
 
       <div className="space-y-4">{children}</div>
     </div>

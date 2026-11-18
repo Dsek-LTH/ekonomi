@@ -36,7 +36,6 @@ import {
 } from "@/lib/domain/supplier-invoice";
 import { giroMismatch, matchSupplier } from "@/lib/domain/payment-ref";
 import type { FortnoxSupplier } from "@/lib/fortnox";
-import { formatSEK } from "@/lib/ui/format";
 import { buildInvoiceCoverData, liveCoverFacts, type CoverFacts } from "@/lib/ui/invoice-cover";
 import { cn } from "@/lib/ui/utils";
 import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
@@ -514,7 +513,7 @@ export function BookPanel({
         )}
 
         <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-          <BalanceChip balanced={difference === 0} difference={formatSEK(Math.abs(difference))} />
+          <BalanceChip balanced={difference === 0} />
 
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Only the unit can change its split, which asks every signer again. */}

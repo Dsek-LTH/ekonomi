@@ -27,7 +27,6 @@ import {
 import type { AccountRecord, BookkeepingSettings, ProjectRecord } from "@/lib/domain/types";
 // The out-of-balance difference is set inside a sentence, so that one stays a
 // string. Everything else on this page is an Amount.
-import { formatSEK } from "@/lib/ui/format";
 import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
 import { isRevenueAccount, voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { voucherTextPrefix } from "@/lib/domain/review";
@@ -261,7 +260,6 @@ export default function BookExpenseClient({
   const balance = voucherBalance(voucherLines);
   const totalDebit = oreToSEK(balance.debit);
   const totalCredit = oreToSEK(balance.credit);
-  const diff = oreToSEK(balance.difference);
   // The chip answers whether the voucher adds up, the blocker whether it may be written (the stricter of the two).
   // Reading the chip off the blocker showed "differs by 0,00 kr" for an unpicked account.
   const blocker = voucherBlocker(voucherLines);
@@ -391,7 +389,7 @@ export default function BookExpenseClient({
               </Field>
               <Field label={t("voucherText")} requirement="optional">
                 {/* Prefix and input are one field, so the ring goes round the pair (focus-ring-within, globals.css). */}
-                <div className="focus-ring-within flex h-11 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
+                <div className="focus-ring-within flex h-10 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
                   {/* The prefix width is out of our hands: it truncates instead of widening the box. */}
                   <span
                     className="min-w-0 truncate font-medium text-muted"
@@ -467,7 +465,7 @@ export default function BookExpenseClient({
             )}
 
             <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-              <BalanceChip balanced={balanced} difference={formatSEK(diff)} />
+              <BalanceChip balanced={balanced} />
 
               <div className="flex items-center gap-2.5">
                 {/* Why the button is dead, so a green chip is not left over a button that quietly refuses. */}

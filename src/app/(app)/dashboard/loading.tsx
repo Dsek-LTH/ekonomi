@@ -4,11 +4,11 @@ import { Skeleton, SkeletonPage } from "@/components/ui/skeleton";
 export default function Loading() {
   return (
     <SkeletonPage width="content" action titleWidth="w-40">
-      <div className="grid items-start gap-6 lg:grid-cols-3">
-        <div className="grid items-start gap-6 lg:col-span-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:col-span-2">
           <ListCard rows={8} />
         </div>
-        <div className="grid items-start gap-6">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6">
           {[4, 3, 3].map((rows, i) => (
             <ListCard key={i} rows={rows} />
           ))}

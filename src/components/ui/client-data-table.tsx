@@ -115,6 +115,7 @@ export function ClientDataTable<T>({
   rowKey,
   rowClassName,
   rowHref,
+  onRowClick,
   rowScroll,
   expansion,
   expandAll,
@@ -133,6 +134,7 @@ export function ClientDataTable<T>({
   rowClassName?: (row: T) => string | undefined;
   rowHref?: (row: T) => string;
   rowScroll?: boolean;
+  onRowClick?: (row: T, e: React.MouseEvent) => void;
   expansion?: (row: T) => React.ReactNode;
   expandAll?: boolean;
   empty?: string;
@@ -184,6 +186,7 @@ export function ClientDataTable<T>({
       rowClassName={rowClassName}
       rowHref={rowHref}
       rowScroll={rowScroll}
+      onRowClick={onRowClick}
       expansion={expansion}
       expandAll={expandAll}
       empty={empty}

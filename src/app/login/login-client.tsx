@@ -51,7 +51,7 @@ export function LoginClient({
                 <button
                   key={u.studentId}
                   onClick={() => signIn("dev", { studentId: u.studentId, callbackUrl })}
-                  className="flex h-11 w-full items-center rounded-control border border-border-control bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-8"
+                  className="flex h-10 w-full items-center rounded-control border border-border-control bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-8"
                 >
                   {u.name} - {u.roles.map((r) => tRole(r)).join(", ")}
                 </button>
