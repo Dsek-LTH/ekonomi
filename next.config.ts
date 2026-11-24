@@ -62,6 +62,14 @@ const nextConfig: NextConfig = {
     "heic-decode",
   ],
   experimental: {
+    // Cap the page-data worker pool. Next defaults it to
+    // `os.cpus().length - 1`, which is 63 on the cluster's 64-vCPU build
+    // nodes. Each worker starts a native (Tokio) thread pool sized from the
+    // same CPU count, so the build reached roughly 4,000 threads and hit
+    // OKD's 4096-PID limit at "Collecting page data": "OS can't spawn worker
+    // thread: Resource temporarily unavailable". Eight workers stay well
+    // inside the limit and cost little wall time.
+    cpus: 8,
     // Turbopack's on-disk dev cache, on by default in Next 16. Off here because
     // it has handed us a stale stylesheet: a new route's utilities never made it
     // into the compiled CSS, the chunk kept its old bytes across every restart,
