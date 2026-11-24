@@ -82,16 +82,3 @@ export async function countInboxDocuments(viewer: Viewer): Promise<number> {
   if (!canTriageInvoices(viewer.capabilities)) return 0;
   return prisma.supplierInvoiceDocument.count({ where: { invoiceId: null } });
 }
-
-/** The mail one document in the Inkorg came in, to read in full. Null for an upload, or for somebody who may not see it. */
-export async function getInboxMail(
-  documentId: string,
-  viewer: Viewer,
-): Promise<{ body: string | null } | null> {
-  if (!documentCapabilities(viewer).canSee) return null;
-  const doc = await prisma.supplierInvoiceDocument.findFirst({
-    where: { id: documentId, invoiceId: null },
-    select: { inboundMail: { select: { body: true } } },
-  });
-  return doc?.inboundMail ?? null;
-}

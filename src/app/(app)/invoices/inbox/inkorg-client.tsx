@@ -11,7 +11,8 @@ import { Tag } from "@/components/ui/status-pill";
 import { Combobox } from "@/components/ui/combobox";
 import { ClampedText } from "@/components/ui/clamped-text";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconInvoice, IconMail, IconTrash } from "@/components/ui/icons";
+import { IconInvoice, IconMail, IconTrash, IconUpload } from "@/components/ui/icons";
+import { Spinner } from "@/components/ui/spinner";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { ClientDataTable, visibleRows } from "@/components/ui/client-data-table";
 import type { Column } from "@/components/ui/data-table";
@@ -19,9 +20,8 @@ import {
   ReceiptPanelCover,
   ReceiptPanelFooter,
   ReceiptPanelSource,
-  useOpenReceiptPanel,
-  useReceiptTabShowing,
 } from "@/components/receipt/receipt-panel";
+import { useQuery } from "@/components/shell/use-query";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
@@ -38,35 +38,27 @@ const HOME = "/invoices/inbox";
 
 export function InkorgClient({
   documents,
-  selected,
-  mail,
   resultUnits,
   health,
   triage,
   canConnectMailbox,
 }: {
   documents: InboxDocument[];
-  selected: InboxDocument | null;
-  /** The mail the open document came in, with its text when that was kept. */
-  mail: { body: string | null } | null;
   resultUnits: { id: string; name: string }[];
   health: InboxHealth | null;
   triage: boolean;
   canConnectMailbox: boolean;
 }) {
   const t = useTranslations("invoices.inkorg");
-  const router = useProgressRouter();
-  const openReceipt = useOpenReceiptPanel();
-  // The open document's panel is folded away (on a phone, closed to get back to the list).
-  const folded = useReceiptTabShowing();
-  const upload = useUpload(selected?.id ?? null);
+  // The document open in the panel. Page state, not the URL: on a phone the viewer is open exactly while one is picked.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = documents.find((d) => d.id === selectedId) ?? null;
+  const upload = useUpload(selectedId, setSelectedId);
   const remover = useMutation();
   const confirm = useConfirm();
   const { dateTime } = useFormat();
   const controls = useTableControls({ sortKey: "received", sortDir: "asc" });
   const rows = documents;
-
-  const selectedId = selected?.id ?? null;
   // Which the panel shows, the PDF or the mail. Each document opens on its PDF.
   const [view, setView] = useState<{ id: string | null; mode: PanelView }>({
     id: null,
@@ -74,12 +66,12 @@ export function InkorgClient({
   });
   const mode: PanelView = selected?.mailed && view.id === selectedId ? view.mode : "pdf";
 
-  // Next on the open tab once this one is dealt with; none for one opened from outside what the table shows.
+  // Next in the table once this one is dealt with. The caller refreshes the list.
   const advance = (id: string) => {
     const shown = visibleRows({ columns, rows, controls });
     const i = shown.findIndex((d) => d.id === id);
     const next = i === -1 ? undefined : (shown[i + 1] ?? shown[i - 1]);
-    router.push(next ? `${HOME}?doc=${next.id}` : HOME, { scroll: false });
+    setSelectedId(next?.id ?? null);
   };
 
   async function remove(d: InboxDocument) {
@@ -94,7 +86,6 @@ export function InkorgClient({
       key: d.id,
       method: "DELETE",
       success: t("deleted"),
-      refresh: d.id !== selectedId,
     });
     if (res && d.id === selectedId) advance(d.id);
   }
@@ -166,10 +157,13 @@ export function InkorgClient({
   ];
 
   return (
-    <PageShell title={t("title")}>
+    <PageShell
+      title={t("title")}
+      // On a phone the panel shows only a picked document, so the dropzone's upload is here instead.
+      aside={triage && <PhoneUpload onFile={(f) => void upload.send(f)} busy={upload.busy} />}
+    >
       <ReceiptPanelSource
-        // Picking a document is asking to read it: the panel opens, on a phone too.
-        openOnChange
+        onClose={() => setSelectedId(null)}
         documents={
           selected
             ? [
@@ -206,7 +200,7 @@ export function InkorgClient({
       )}
       {selected && mode === "mail" && (
         <ReceiptPanelCover>
-          <MailView document={selected} body={mail?.body ?? null} />
+          <MailView key={selected.id} document={selected} />
         </ReceiptPanelCover>
       )}
 
@@ -219,13 +213,11 @@ export function InkorgClient({
           controls={controls}
           searchPlaceholder={t("searchPlaceholder")}
           rowKey={(d) => d.id}
-          rowHref={(d) => (d.id === selectedId ? HOME : `${HOME}?doc=${d.id}`)}
-          // The open document again while its panel is folded away: open it, rather than close it as a second tap
-          // on it otherwise does.
+          // A link to this page so the row is a link to tap and tab to. The click picks the document instead.
+          rowHref={() => HOME}
           onRowClick={(d, e) => {
-            if (d.id !== selectedId || !folded) return;
             e.preventDefault();
-            openReceipt();
+            setSelectedId(d.id === selectedId ? null : d.id);
           }}
           rowScroll={false}
           rowClassName={(d) =>
@@ -242,7 +234,7 @@ export function InkorgClient({
   );
 }
 
-function useUpload(selectedId: string | null) {
+function useUpload(selectedId: string | null, select: (id: string) => void) {
   const t = useTranslations("invoices.inkorg");
   const notify = useNotify();
   const router = useProgressRouter();
@@ -267,8 +259,9 @@ function useUpload(selectedId: string | null) {
     notify.success(t("uploaded", { name: file.name }));
     if (open.current === null) {
       open.current = created.id;
-      router.push(`${HOME}?doc=${created.id}`, { scroll: false });
-    } else router.refresh();
+      select(created.id);
+    }
+    router.refresh();
   }
   return { send, busy: count > 0 };
 }
@@ -303,7 +296,6 @@ function DocumentBar({
       {
         body: { resultUnitId: unit, dueDate: dueDate || null },
         success: t("assigned", { unit: name }),
-        refresh: false,
       },
     );
     if (made) onDone();
@@ -367,10 +359,37 @@ function DocumentBar({
   );
 }
 
+/** On a phone, where the panel has no dropzone: pick files to add to the Inkorg. */
+function PhoneUpload({ onFile, busy }: { onFile: (file: File) => void; busy: boolean }) {
+  const t = useTranslations("invoices.inkorg");
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="md:hidden">
+      <Button size="sm" loading={busy} onClick={() => input.current?.click()}>
+        <IconUpload className="size-4" />
+        {t("pick")}
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          for (const file of Array.from(e.target.files ?? [])) onFile(file);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 /** The mail a document came in, read in the panel in place of the PDF. Plain text: nothing in it is rendered as HTML. */
-function MailView({ document: d, body }: { document: InboxDocument; body: string | null }) {
+function MailView({ document: d }: { document: InboxDocument }) {
   const t = useTranslations("invoices.inkorg");
   const { dateTime } = useFormat();
+  const mail = useQuery<{ body: string | null }>(`/api/supplier-invoice-documents/${d.id}/mail`);
+  const body = mail.data?.body ?? null;
   const from =
     d.fromName && d.fromAddress
       ? `${d.fromName} <${d.fromAddress}>`
@@ -385,7 +404,13 @@ function MailView({ document: d, body }: { document: InboxDocument; body: string
         <dt className="text-muted">{t("mail.received")}</dt>
         <dd className="tabular-nums">{dateTime(d.receivedAt)}</dd>
       </dl>
-      {body ? (
+      {mail.loading && !mail.data ? (
+        <div className="flex justify-center pt-6">
+          <Spinner />
+        </div>
+      ) : mail.error ? (
+        <p className="pt-3 text-xs text-danger">{mail.error}</p>
+      ) : body ? (
         <p className="whitespace-pre-wrap break-words pt-3 text-sm">{body}</p>
       ) : (
         <div className="space-y-2 pt-3 text-sm">

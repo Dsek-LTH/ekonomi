@@ -57,9 +57,10 @@ type Source = {
   };
   empty?: { title: string; description?: string };
   arrange?: Arrange;
-  /** Open whenever the documents change to others, on a phone too. For a page where picking one is asking to read it
-   *  (the Inkorg), rather than the phone's rule that a receipt arrives folded away. */
-  openOnChange?: boolean;
+  /** The page decides when the panel shows, by which documents it gives it (the Inkorg: the one picked). On a phone the
+   *  panel is open exactly while it has documents, and its close button calls this to clear them. On a wide screen it
+   *  opens when the documents change and folds as any other. */
+  onClose?: () => void;
 };
 
 export interface Arrange {
@@ -191,7 +192,7 @@ export function ReceiptPanelSource({
   emptyTitle,
   emptyDescription,
   arrange,
-  openOnChange = false,
+  onClose,
 }: {
   documents?: ViewerDocument[];
   receiptId?: string | null;
@@ -206,8 +207,8 @@ export function ReceiptPanelSource({
   emptyTitle?: string;
   emptyDescription?: string;
   arrange?: Arrange;
-  /** See Source.openOnChange. */
-  openOnChange?: boolean;
+  /** See Source.onClose. */
+  onClose?: () => void;
 }) {
   const { setSource } = usePanel();
 
@@ -233,6 +234,13 @@ export function ReceiptPanelSource({
   });
   const accepts = Boolean(onFile);
   const stableOnFile = useCallback((file: File) => handler.current?.(file), []);
+
+  const closer = useRef(onClose);
+  useEffect(() => {
+    closer.current = onClose;
+  });
+  const closable = Boolean(onClose);
+  const stableOnClose = useCallback(() => closer.current?.(), []);
 
   const copyKey = JSON.stringify(uploadCopy ?? null);
   const copyRef = useRef(uploadCopy);
@@ -263,7 +271,7 @@ export function ReceiptPanelSource({
         : undefined,
       empty: emptyTitle ? { title: emptyTitle, description: emptyDescription } : undefined,
       arrange: stableArrange,
-      openOnChange,
+      onClose: closable ? stableOnClose : undefined,
     });
     return () => setSource(null);
   }, [
@@ -276,7 +284,8 @@ export function ReceiptPanelSource({
     emptyTitle,
     emptyDescription,
     stableArrange,
-    openOnChange,
+    closable,
+    stableOnClose,
     setSource,
   ]);
 
@@ -332,7 +341,11 @@ export function ReceiptPanelColumn() {
 
   const narrow = usePhone();
   const awaitingUpload = isAwaitingUpload(source);
-  const open = !collapsed || (awaitingUpload && !narrow);
+  // On a phone a page with onClose decides: open while it gives documents, closed otherwise (no dropzone).
+  const owned = narrow && Boolean(source?.onClose);
+  const open = owned
+    ? Boolean(source && source.docs.length > 0)
+    : !collapsed || (awaitingUpload && !narrow);
 
   const was = useRef<PanelState>(NO_PANEL);
   useEffect(() => {
@@ -342,12 +355,13 @@ export function ReceiptPanelColumn() {
       awaiting: awaitingUpload,
       docs: source?.docs.map((d) => d.src).join("|") ?? "",
     };
-    // Decided in the one place that sees the documents change, so no other rule runs after it (lib/ui/receipt-arrival).
-    const action = arrivalAction(was.current, now, {
-      phone: window.matchMedia("(max-width: 767px)").matches,
-      openOnChange: Boolean(source?.openOnChange),
-    });
+    const phone = window.matchMedia("(max-width: 767px)").matches;
+    const before = was.current;
     was.current = now;
+    // The page owns open and closed on a phone (Source.onClose): no rule of the panel's own applies.
+    if (phone && source?.onClose) return;
+    // Decided in the one place that sees the documents change, so no other rule runs after it (lib/ui/receipt-arrival).
+    const action = arrivalAction(before, now, { phone, openOnChange: Boolean(source?.onClose) });
     if (action === "open") requestOpen();
     else if (action === "fold") setCollapsed(true, false);
     else if (action === "unfold") setCollapsed(false, false);
@@ -364,6 +378,14 @@ export function ReceiptPanelColumn() {
     setEntering(collapsed);
     setCollapsed(false);
   }, [openRequests, collapsed, setCollapsed]);
+
+  // Opened by the page on a phone (Source.onClose): slide in, as the panel's own opening does. A layout effect, so the
+  // starting position is set before the browser paints the panel at its end.
+  const wasOpen = useRef(open);
+  useLayoutEffect(() => {
+    if (owned && open && !wasOpen.current) setEntering(true);
+    wasOpen.current = open;
+  }, [owned, open]);
 
   // Two frames, not one: a single rAF can still be coalesced into the commit that
   // mounted the panel, and a browser that has never painted the starting value has
@@ -449,6 +471,11 @@ export function ReceiptPanelColumn() {
   const pick = () => fileInput.current?.click();
 
   const foldAway = () => {
+    // The page's to close: it clears the documents, and the panel goes with them.
+    if (owned) {
+      source.onClose?.();
+      return;
+    }
     handBackFocus.current = panelRef.current?.contains(document.activeElement) ?? false;
     setEntering(false);
     setLeaving(true);

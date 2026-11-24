@@ -10,26 +10,25 @@ const doc = (src: string): PanelState => ({
 });
 const phone = { phone: true, openOnChange: false };
 const desk = { phone: false, openOnChange: false };
-const inkorgPhone = { phone: true, openOnChange: true };
 const inkorgDesk = { phone: false, openOnChange: true };
 
-describe("the Inkorg, where picking a document is asking to read it", () => {
-  it("opens the first document picked on a phone, from the dropzone or from nothing", () => {
-    expect(arrivalAction(dropzone, doc("a"), inkorgPhone)).toBe("open");
-    expect(arrivalAction(NO_PANEL, doc("a"), inkorgPhone)).toBe("open");
+// On a phone the Inkorg opens and closes the panel itself (Source.onClose), so only the wide screen asks this.
+describe("the Inkorg on a wide screen, where picking a document is asking to read it", () => {
+  it("opens the first document picked, from the dropzone or from nothing", () => {
+    expect(arrivalAction(dropzone, doc("a"), inkorgDesk)).toBe("open");
+    expect(arrivalAction(NO_PANEL, doc("a"), inkorgDesk)).toBe("open");
   });
 
   it("opens every other document picked after it, the same way", () => {
-    expect(arrivalAction(doc("a"), doc("b"), inkorgPhone)).toBe("open");
     expect(arrivalAction(doc("a"), doc("b"), inkorgDesk)).toBe("open");
   });
 
   it("leaves it be when the documents did not change (a re-render, an upload finishing elsewhere)", () => {
-    expect(arrivalAction(doc("a"), doc("a"), inkorgPhone)).toBeNull();
+    expect(arrivalAction(doc("a"), doc("a"), inkorgDesk)).toBeNull();
   });
 
   it("does not open on going back to the empty Inkorg", () => {
-    expect(arrivalAction(doc("a"), NO_PANEL, inkorgPhone)).toBeNull();
+    expect(arrivalAction(doc("a"), NO_PANEL, inkorgDesk)).toBeNull();
   });
 });
 

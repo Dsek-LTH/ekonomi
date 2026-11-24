@@ -15,7 +15,7 @@ export interface PanelState {
 export const NO_PANEL: PanelState = { source: false, receipt: false, awaiting: false, docs: "" };
 
 /**
- * `open`: slide it in (the page asked, see Source.openOnChange). `fold` and `unfold`: set it closed or open without
+ * `open`: slide it in (a page that picks its documents, see Source.onClose; on a phone the panel does not ask). `fold` and `unfold`: set it closed or open without
  * ceremony. `null`: leave it as it is. A phone folds a receipt that arrives, so the page is read first and the receipt
  * is a row under its title; a wide screen has room for both.
  */
