@@ -8,7 +8,8 @@ import type { ColumnDef } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
 import { Combobox } from "@/components/ui/combobox";
 import { DragHandle } from "@/components/ui/drag";
-import { IconComment, IconElbow } from "@/components/ui/icons";
+import { SOFT_FILL, TEXT_HOVER } from "@/components/ui/button";
+import { IconComment } from "@/components/ui/icons";
 import { fmt, fmtSigned } from "./budget-helpers";
 import {
   withAccount,
@@ -20,6 +21,10 @@ import {
 import { CompareCells } from "./sheet-cells";
 import { useSheet, type SheetValue } from "./sheet-context";
 import type { Account, Comment, LineItem } from "./budget-types";
+
+// Every budget column is ruled off on its right except Belopp, the last: the actions beside it
+// are not a column of their own.
+const rule = (col: ColumnDef) => (col.key === "expression" ? "" : "border-r border-border/60");
 
 function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Account) {
   const {
@@ -38,10 +43,10 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
   const k = col.key;
   if (k === "konto")
     return (
-      // The number column on a row with no number holds the elbow, pointing at the row it
-      // belongs to (like the income screen's variants). `ml-auto` keeps it against the row.
+      // Empty on a row with no number of its own, but for the drag grip on hover. The indent in
+      // Beskrivning already says which account the row belongs to.
       <td key={k} className="border-r border-border/60 p-0">
-        <span className="flex items-center py-1.5 pl-1.5 pr-2">
+        <span className="flex items-center py-1 pl-1.5 pr-2">
           {isAdmin && (
             <DragHandle
               onPointerDown={(e) => startLineDrag(e, account, li)}
@@ -52,7 +57,6 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
               title={t("dragToReorder")}
             />
           )}
-          <IconElbow className="ml-auto size-3.5 shrink-0 text-faint" />
         </span>
       </td>
     );
@@ -63,7 +67,7 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
           id: li.id,
           field: "description",
           actual: li.description,
-          className: "pl-5 text-muted",
+          className: "pl-5",
           placeholder: tCol("beskrivning"),
           url: liUrl(li.id),
           payload: (v) => ({ description: v }),
@@ -73,7 +77,7 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
     );
   const val = ev.lineItems[li.id];
   return (
-    <td key={k} className="border-r border-border/60 p-0 text-right">
+    <td key={k} className="p-0 text-right">
       {renderFormula({
         id: li.id,
         field: "expression",
@@ -98,6 +102,7 @@ export function AccountBlock({ account }: { account: Account }) {
     actualPad,
     adjustments,
     api,
+    record,
     badAccount,
     canComment,
     ccCode,
@@ -117,7 +122,6 @@ export function AccountBlock({ account }: { account: Account }) {
     liUrl,
     liftRef,
     linesOf,
-    narrow,
     openComments,
     setCommentDraft,
     setDraft,
@@ -157,21 +161,21 @@ export function AccountBlock({ account }: { account: Account }) {
   // Writing comes back with the comparison off.
   if (showCompare) {
     return (
-      <tbody className="border-b border-border">
+      <tbody className="[&>tr:last-child>*]:border-b">
         <tr className="bg-background">
           {gut(grid.accountRow.get(`${ccCode}|${account.id}`))}
-          <td className="border-r border-border/60 px-2 py-2 text-center font-mono text-sm font-semibold">
+          <td className="border-r border-border/60 px-2 py-1 text-center text-sm font-semibold tabular-nums">
             {account.accountCode}
           </td>
           <td
-            className="border-r border-border/60 px-3 py-2 text-sm font-medium"
+            className="border-r border-border/60 px-3 py-1 text-sm font-medium"
             colSpan={columns.length - 2}
           >
             {account.accountName}
           </td>
           <td
             className={cn(
-              "px-2 py-2 text-right font-semibold tabular-nums",
+              "px-2 py-1 text-right font-semibold tabular-nums",
               totalIncomplete && "text-warning",
             )}
           >
@@ -185,15 +189,23 @@ export function AccountBlock({ account }: { account: Account }) {
   }
 
   return (
-    <tbody className="border-b border-border">
-      <tr data-account-row={account.id} className="group bg-background">
+    // `data-drop-account`: the whole account is a drop zone for a dragged row (cost-center-sheet.tsx).
+    <tbody
+      data-drop-account={account.id}
+      // Cells own their rules (separate borders, sheet-section.tsx), so the account's closing
+      // rule is on its last row.
+      className="[&>tr:last-child>*]:border-b"
+    >
+      {/* Tinted: each account opens with a band holding its name and total, which sets the
+          accounts apart as the Summa row under each one used to. */}
+      <tr data-account-row={account.id} className="group bg-surface">
         {gut(
           grid.accountRow.get(`${ccCode}|${account.id}`),
           isAdmin &&
             tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
         )}
 
-        <td className="group relative border-r border-border/60 bg-surface p-0 align-middle">
+        <td className="group relative border-r border-border/60 p-0 align-middle">
           {isAdmin ? (
             <Combobox
               // Its own side only: swapping 3010 for 5010 under Intäkter would move it mid-edit.
@@ -214,27 +226,77 @@ export function AccountBlock({ account }: { account: Account }) {
               placeholder={tBook("accountPlaceholder")}
               searchPlaceholder={tBook("accountSearch")}
               emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-
               align="center"
-              buttonClassName="px-2 py-1.5 font-mono text-sm font-medium text-foreground"
-              chevronClassName="text-faint"
+              // Plain text until pointed at: a number to read, not a form field.
+              buttonClassName="px-2 py-1 text-sm font-semibold tabular-nums text-foreground"
+              chevronClassName="text-faint opacity-0 transition-opacity group-hover:opacity-100"
               aria-label={t("accountNumber")}
             />
           ) : (
-            <div className="px-2 py-1.5 text-center font-mono text-sm font-medium text-foreground">
+            <div className="px-2 py-1 text-center text-sm font-semibold tabular-nums text-foreground">
               {account.accountCode}
             </div>
           )}
         </td>
-        <td
-          className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold"
-          colSpan={columns.length - 1}
-        >
-          {account.accountName}
+        <td className="border-r border-border/60 px-3 py-1 text-sm" colSpan={columns.length - 2}>
+          <span className="flex items-baseline gap-2">
+            <span className="min-w-0 truncate font-semibold">{account.accountName}</span>
+            {adjTotal !== 0 && total !== undefined && (
+              <span className="ml-auto shrink-0 text-xs text-muted">
+                {t("originally", { amount: fmt(total - adjTotal) })}
+              </span>
+            )}
+            {totalIncomplete && (
+              <span className={cn("shrink-0 text-xs text-warning", adjTotal === 0 && "ml-auto")}>
+                {t("incompleteSum")}
+              </span>
+            )}
+          </span>
         </td>
-        {actualPad}
+        {/* The account's total on its own row, as a subtotal reads in a spreadsheet. */}
+        <td
+          className={cn(
+            "px-2 py-1 text-right font-semibold tabular-nums",
+            totalIncomplete && "text-warning",
+            total !== undefined && total < 0 && !totalIncomplete && "text-danger",
+          )}
+        >
+          {fmt(total)}
+        </td>
+        {showCompare && (
+          <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />
+        )}
         <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
           <span className="flex items-center">
+            {canComment && (
+              <button
+                onClick={() =>
+                  setOpenComments((s) => {
+                    const n = new Set(s);
+                    if (n.has(account.id)) n.delete(account.id);
+                    else n.add(account.id);
+                    return n;
+                  })
+                }
+                title={t("comments")}
+                aria-label={t("commentsCount", { count: account.comments.length })}
+                aria-expanded={open}
+                className={cn(
+                  "flex items-center gap-1 rounded-control px-1 py-0.5 tabular-nums transition hover:text-foreground",
+                  // Open is a chosen state: the pink hue. Otherwise a text button's faint pink hover.
+                  open
+                    ? SOFT_FILL
+                    : cn(TEXT_HOVER, account.comments.length > 0 && "text-foreground"),
+                  // An account with nothing said about it shows the button only when pointed at.
+                  !open &&
+                    account.comments.length === 0 &&
+                    "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+                )}
+              >
+                <IconComment className="size-4" />
+                {account.comments.length > 0 && account.comments.length}
+              </button>
+            )}
             {isAdmin &&
               del(
                 () =>
@@ -259,13 +321,14 @@ export function AccountBlock({ account }: { account: Account }) {
             if (el && draggingLineId === li.id) liftRef.current = el;
           }}
           className={cn(
-            "group border-t border-border/40 transition-colors hover:bg-hover",
-            // Lifted: opaque so rows do not read through it, outlined (box-shadow is not painted
-            // on rows of a border-collapse table). `pointer-events-none` lets the drag see the
-            // sheet underneath.
+            "group *:border-t transition-colors hover:bg-hover",
+            // Lifted: opaque so rows do not read through it, and outlined. `pointer-events-none`
+            // lets the drag see the sheet underneath. `transition-none`: transition-colors
+            // animates outline-color too, from currentColor (near white in dark), which flashed.
             draggingLineId === li.id &&
-              "pointer-events-none relative z-10 bg-background outline outline-1 outline-border",
-            isTicked("rows", li.id) && "bg-accent-soft/40",
+              "pointer-events-none relative z-10 bg-background outline outline-1 outline-border transition-none",
+            // Ticked for copying: chosen, so the pink hue rather than grey.
+            isTicked("rows", li.id) && SOFT_FILL,
           )}
         >
           {gut(
@@ -282,21 +345,35 @@ export function AccountBlock({ account }: { account: Account }) {
           )}
           <td className="px-1 text-left text-muted">
             {isAdmin &&
-              del(
-                () => api(liUrl(li.id), "DELETE", undefined, (b) => withoutLine(b, li.id)),
-                tAlloc("removeRow"),
-              )}
+              del(() => {
+                // The line as it stood, so ⌘Z can make it again in its place (use-undo.ts).
+                const step = {
+                  kind: "line" as const,
+                  created: false,
+                  accountId: account.id,
+                  lineId: li.id,
+                  body: { description: li.description, expression: li.expression },
+                  order: lines.map((l) => l.id),
+                };
+                return api(
+                  liUrl(li.id),
+                  "DELETE",
+                  undefined,
+                  (b) => withoutLine(b, li.id),
+                  () => record(step),
+                );
+              }, tAlloc("removeRow"))}
           </td>
         </tr>
       ))}
 
       {adjRows.map((row) => (
-        <tr key={row.change.id} className="border-t border-border/40 bg-warning-soft/40">
+        <tr key={row.change.id} className="*:border-t bg-warning-soft/40">
           {gut(undefined)}
           {columns.map((col) => {
             if (col.key === "beskrivning")
               return (
-                <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
+                <td key={col.key} className="border-r border-border/60 px-2 py-1 text-sm">
                   <span className="flex items-center gap-1.5 pl-3">
                     <span className="shrink-0 font-medium text-warning">
                       {tChanges("label", {
@@ -315,14 +392,11 @@ export function AccountBlock({ account }: { account: Account }) {
               );
             if (col.key === "expression")
               return (
-                <td
-                  key={col.key}
-                  className="border-r border-border/60 px-2 py-1.5 text-right font-medium tabular-nums"
-                >
+                <td key={col.key} className="px-2 py-1 text-right font-medium tabular-nums">
                   {fmtSigned(row.amount)}
                 </td>
               );
-            return <td key={col.key} className="border-r border-border/60" />;
+            return <td key={col.key} className={rule(col)} />;
           })}
           {actualPad}
           <td />
@@ -330,10 +404,10 @@ export function AccountBlock({ account }: { account: Account }) {
       ))}
 
       {ghostLines.map((l) => (
-        <tr key={`ghost-${l.key}`} className="border-t border-border/40 text-muted">
+        <tr key={`ghost-${l.key}`} className="*:border-t text-muted">
           {gut(undefined)}
           {columns.map((col) => (
-            <td key={col.key} className="border-r border-border/60 px-2 py-1.5 text-sm">
+            <td key={col.key} className={cn(rule(col), "px-2 py-1 text-sm")}>
               {col.key === "beskrivning" && <span className="pl-3">{l.description || "-"}</span>}
             </td>
           ))}
@@ -343,107 +417,62 @@ export function AccountBlock({ account }: { account: Account }) {
       ))}
 
       {isAdmin && (
-        // Also where a dragged row lands in an account with no rows of its own.
-        <tr data-line-end={account.id} className="border-t border-border/40 bg-background">
-          <td className={narrow ? "p-0" : "w-9 border-r border-border/60"} />
+        // The blank row: an empty line like any other, which becomes one once something is
+        // written in it and the row is left, and a fresh blank one takes its place. No row
+        // number until then, so a row reference never points at it. Also where a dragged row
+        // lands in an account with no rows of its own.
+        <tr className="group bg-background *:border-t transition-colors hover:bg-hover">
+          {gut(undefined)}
           {columns.map((col) => {
             const base =
-              "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted focus:bg-accent-soft/40";
-            const onEnter = (e: React.KeyboardEvent) => {
+              "w-full bg-transparent px-2 py-1 text-sm outline-none placeholder:text-faint";
+            // Created on leaving the row, not the field, so Beskrivning and Belopp can both be
+            // filled first. Enter creates at once and keeps the caret here, in the new blank row.
+            const leave = (e: React.FocusEvent<HTMLInputElement>) => {
+              const to = e.relatedTarget as Node | null;
+              if (to && e.currentTarget.closest("tr")?.contains(to)) return;
+              createLine(account.id);
+            };
+            const keys = (e: React.KeyboardEvent) => {
               if (e.key === "Enter") createLine(account.id);
+              if (e.key === "Escape") setDraft(account.id, { description: "", expression: "" });
             };
             if (col.key === "beskrivning")
               return (
                 <td key={col.key} className="border-r border-border/60 p-0">
                   <input
+                    data-blank-cell
                     aria-label={t("newLine")}
+                    // Faint, so the row still reads as an empty line, but says what it is for.
+                    placeholder={t("newLine")}
                     value={d.description}
                     onChange={(e) => setDraft(account.id, { description: e.target.value })}
-                    onKeyDown={onEnter}
-                    placeholder={t("newLine")}
-                    className={cn(base, "pl-5 text-sm text-muted")}
+                    onKeyDown={keys}
+                    onBlur={leave}
+                    className={cn(base, "pl-5")}
                   />
                 </td>
               );
             if (col.key === "expression")
               return (
-                <td key={col.key} className="border-r border-border/60 p-0">
+                <td key={col.key} className="p-0">
                   <input
+                    data-blank-cell
                     aria-label={tCol("expression")}
                     value={d.expression}
                     onChange={(e) => setDraft(account.id, { expression: e.target.value })}
-                    onKeyDown={onEnter}
-                    onBlur={() => createLine(account.id)}
-                    placeholder={tCol("expression").toLowerCase()}
-                    className={cn(base, "text-right font-mono text-xs")}
+                    onKeyDown={keys}
+                    onBlur={leave}
+                    className={cn(base, "text-right tabular-nums")}
                   />
                 </td>
               );
-            return <td key={col.key} className="border-r border-border/60" />;
+            return <td key={col.key} className={rule(col)} />;
           })}
           {actualPad}
           <td />
         </tr>
       )}
-
-      <tr className="border-t border-border/60 bg-surface">
-        {gut(undefined)}
-        <td
-          colSpan={columns.length - 1}
-          className="px-2 py-1.5 text-right text-xs font-medium text-muted"
-        >
-          {t("sum")}
-
-          {adjTotal !== 0 && total !== undefined && (
-            <span className="ml-2 font-normal normal-case tracking-normal text-muted">
-              {t("originally", { amount: fmt(total - adjTotal) })}
-            </span>
-          )}
-
-          {totalIncomplete && (
-            <span className="ml-2 font-normal normal-case tracking-normal text-warning">
-              {t("incompleteSum")}
-            </span>
-          )}
-        </td>
-        <td
-          className={cn(
-            "px-2 py-1.5 text-right font-semibold tabular-nums",
-            totalIncomplete && "text-warning",
-            total !== undefined && total < 0 && !totalIncomplete && "text-danger",
-          )}
-        >
-          {fmt(total)}
-        </td>
-        {showCompare && (
-          <CompareCells other={cmp?.totals[1]} own={total} incomeLike={incomeLike} strong />
-        )}
-        <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
-          {canComment && (
-            <button
-              onClick={() =>
-                setOpenComments((s) => {
-                  const n = new Set(s);
-                  if (n.has(account.id)) n.delete(account.id);
-                  else n.add(account.id);
-                  return n;
-                })
-              }
-              title={t("comments")}
-              aria-label={t("commentsCount", { count: account.comments.length })}
-              aria-expanded={open}
-              className={cn(
-                "flex items-center gap-1 rounded-control px-1.5 py-1 tabular-nums transition hover:bg-hover hover:text-foreground",
-
-                open ? "text-accent" : account.comments.length > 0 && "text-foreground",
-              )}
-            >
-              <IconComment className="size-4" />
-              {account.comments.length > 0 && account.comments.length}
-            </button>
-          )}
-        </td>
-      </tr>
 
       {open && (
         <tr className="bg-surface">
@@ -507,15 +536,15 @@ export function GhostAccountBlock({ account }: { account: JoinedAccount }) {
   const { columns, gut, tRam } = useSheet();
   const incomeLike = account.kind === "INCOME";
   return (
-    <tbody className="border-b border-border">
+    <tbody className="[&>tr:last-child>*]:border-b">
       <tr className="bg-background text-muted">
         {gut(undefined)}
 
-        <td className="border-r border-border/60 px-2 py-1.5 font-mono text-sm font-medium">
+        <td className="border-r border-border/60 px-2 py-1 text-center text-sm font-medium tabular-nums">
           {account.code}
         </td>
         <td
-          className="border-r border-border/60 px-3 py-1.5 text-sm font-semibold"
+          className="border-r border-border/60 px-3 py-1 text-sm font-semibold"
           colSpan={columns.length - 1}
         >
           {account.name}
@@ -544,7 +573,7 @@ export function AddAccountRow({ kind }: { kind: AccountKind }) {
             placeholder={t(kind === "INCOME" ? "newIncomeAccount" : "newCostAccount")}
             searchPlaceholder={tBook("accountSearch")}
             emptyText={accounts.length ? t("noMoreAccounts") : t("emptyChart")}
-            buttonClassName="w-full bg-transparent px-2 py-1.5 text-sm text-muted hover:bg-accent-soft/40"
+            buttonClassName={cn("w-full bg-transparent px-2 py-1 text-sm text-muted", TEXT_HOVER)}
             aria-label={t("addAccount")}
           />
         </td>

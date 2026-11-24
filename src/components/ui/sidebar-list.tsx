@@ -4,6 +4,7 @@ import { createContext, useContext, useState } from "react";
 
 import { cn } from "@/lib/ui/utils";
 import { useMediaQuery } from "@/lib/ui/media";
+import { SOFT_FILL } from "./button";
 import { Card } from "./card";
 import { IconChevronDown, IconList } from "./icons";
 import { Modal, ModalHeader } from "./modal";
@@ -82,7 +83,8 @@ export function SidebarPanel({
   );
 }
 
-// One selectable row. The rest of the button's props pass through (a row can be a drop target).
+// One selectable row, 32px (the app's control height). The rest of the button's props pass
+// through (a row can be a drop target).
 export function SidebarItem({
   active,
   onClick,
@@ -103,9 +105,10 @@ export function SidebarItem({
       }}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "w-full px-4 py-2.5 text-left text-sm",
+        "w-full px-4 py-1.5 text-left text-sm",
         active
-          ? "bg-accent-soft text-accent shadow-[inset_2px_0_0_var(--color-accent)]"
+          ? // The pink hue, as the app's navigation marks its current page: chosen is never black.
+            cn(SOFT_FILL, "font-medium shadow-[inset_2px_0_0_var(--color-action-from)]")
           : "hover:bg-hover",
         className,
       )}
@@ -124,7 +127,7 @@ export function SidebarGroupLabel({
   action?: React.ReactNode;
 }) {
   return (
-    <p className="flex items-center justify-between gap-2 bg-surface px-4 py-1.5 text-xs font-medium text-muted">
+    <p className="flex items-center justify-between gap-2 bg-surface px-4 py-1 text-xs font-medium text-muted">
       {/* Only clipped when sharing the row: a heading on its own wraps. */}
       <span className={cn(Boolean(action) && "min-w-0 truncate")}>{children}</span>
       {action}

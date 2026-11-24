@@ -2,7 +2,8 @@
 
 // Ticking rows on a budget sheet and copying them elsewhere (ticks, ⌘C/⌘V, and the clipboard
 // the page holds between sheets). Rows go to the server by id: the paste route also re-points
-// equations inside a copied block at the copies.
+// equations inside a copied block at the copies. Rows are copied only when ticked; ⌘C on a
+// selected cell copies the cell's text, as in a spreadsheet.
 import { useEffect, useRef, useState } from "react";
 
 import type { Account, BudgetClip, LineItem } from "./budget-types";
@@ -96,20 +97,19 @@ export function useSheetClipboard({
     return false;
   }
 
-  /** ⌘C with nothing ticked copies the row being stood in; an account's own line takes the account, rows and all. */
+  /**
+   * ⌘C: the ticked rows or accounts, else the selected cell's text (what it shows: a Belopp
+   * cell being stood in shows its formula). A selected cell has no visible text selection, so
+   * the browser's own copy would take nothing. Copying a cell lets go of copied rows, so the
+   * next ⌘V pastes the text (use-cell-edit.ts) and not the rows.
+   */
   function copyHere(): boolean {
     if (copySelection()) return true;
-    const at = focusedRow();
-    if (!at) return false;
-    if (!at.lineId) {
-      const account = accounts.find((a) => a.id === at.accountId);
-      if (!account) return false;
-      onCopy({ kind: "accounts", ids: [account.id], label: account.accountCode });
-      notify.success(t("copiedAccounts", { count: 1 }));
-      return true;
-    }
-    onCopy({ kind: "rows", ids: [at.lineId], label: "1" });
-    notify.success(t("copiedRows", { count: 1 }));
+    const el = document.activeElement;
+    if (!(el instanceof HTMLInputElement) || el.dataset.cell === undefined) return false;
+    if (!sheetRef.current?.contains(el)) return false;
+    void navigator.clipboard.writeText(el.value).catch(() => {});
+    if (clip) onCopy(null);
     return true;
   }
 

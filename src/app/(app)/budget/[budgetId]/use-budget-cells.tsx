@@ -5,7 +5,14 @@ import { usePhone } from "@/lib/ui/media";
 import { toStored, toDisplay, type BudgetGrid } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
 import { recomputeBudget } from "./recompute";
-import { fmt, fmtScalar, formulaIdleText, prettyFormula, normalizeFormula } from "./budget-helpers";
+import {
+  editFormula,
+  fmt,
+  fmtScalar,
+  formulaIdleText,
+  prettyFormula,
+  normalizeFormula,
+} from "./budget-helpers";
 import type {
   Budget,
   ApiFn,
@@ -15,6 +22,7 @@ import type {
   CellFn,
   FormulaFn,
 } from "./budget-types";
+import type { UndoStep } from "./use-undo";
 
 interface Opts {
   grid: BudgetGrid;
@@ -25,9 +33,23 @@ interface Opts {
   mutate: MutateFn;
   load: () => Promise<void>;
   api: ApiFn;
+  /** Marks an own write for the page's live poll, so its answer cannot undo this edit. */
+  tracked: <T>(write: () => Promise<T>) => Promise<T>;
+  /** Puts an edit on the page's ⌘Z history (use-undo.ts). */
+  record: (step: UndoStep) => void;
 }
 
-export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load, api }: Opts) {
+export function useBudgetCells({
+  grid,
+  isAdmin,
+  budget,
+  setBudget,
+  mutate,
+  load,
+  api,
+  tracked,
+  record,
+}: Opts) {
   // On a phone a Belopp cell is ~110px: show the answer and keep the working for the tap, since
   // the equation would push out the number being scanned for (see cost-center-sheet.tsx).
   const compact = usePhone();
@@ -133,9 +155,30 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   async function commitField(url: string, payload: Record<string, unknown>) {
     const next = applyLocal(budget, url, payload);
     if (!next) return void api(url, "PATCH", payload); // unknown shape → reload path
-    setBudget(recomputeBudget(next));
-    const ok = await mutate(url, { method: "PATCH", body: payload, refresh: false });
-    if (!ok) await load(); // rejected: the screen is ahead of the server, resync
+    await tracked(async () => {
+      setBudget(recomputeBudget(next));
+      const ok = await mutate(url, { method: "PATCH", body: payload, refresh: false });
+      if (!ok) await load(); // rejected: the screen is ahead of the server, resync
+    });
+  }
+
+  /** An edit of the cell `id:field` from `before` to `after`: saved, and put on the ⌘Z history. */
+  async function save(
+    id: string,
+    field: string,
+    url: string,
+    payload: (v: string) => Record<string, unknown>,
+    before: string,
+    after: string,
+  ) {
+    record({
+      kind: "field",
+      url,
+      before: payload(before),
+      after: payload(after),
+      cell: `${id}:${field}`,
+    });
+    await commitField(url, payload(after));
   }
 
   async function commit(
@@ -152,7 +195,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
       return;
     }
     clearP(id, field);
-    await commitField(url, payload(v.trim()));
+    await save(id, field, url, payload, actual, v.trim());
   }
 
   async function commitFormula(
@@ -167,11 +210,23 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     setFocusKey((k) => (k === key ? null : k));
     const typed = pending[key];
     if (typed === undefined) return;
-    // Forgiving entry ("2x3x12", "8 × TACK_POLICY") becomes a formula before A1 references are bound.
+    // Forgiving entry ("2x3x12", "8 × TACK_POLICY") becomes a formula before row references are bound.
     const stored = toStored(normalizeFormula(typed), sheet, grid);
     clearP(id, field);
     if (stored.trim() === raw.trim()) return;
-    await commitField(url, payload(stored));
+    await save(id, field, url, payload, raw, stored);
+  }
+
+  /**
+   * ⌘V on a selected cell: the clipboard's text, replacing the cell and saved where it stands,
+   * as in a spreadsheet. Null leaves the paste to the browser: a cell being edited takes it at
+   * the caret. Saved without leaving the cell, which would flash its idle look in between.
+   * The first line only, since a cell holds one.
+   */
+  function pastedText(e: React.ClipboardEvent<HTMLInputElement>, gated?: boolean): string | null {
+    if (!gated || e.currentTarget.closest(".is-editing")) return null;
+    e.preventDefault();
+    return e.clipboardData.getData("text/plain").split(/\r?\n/)[0].trim();
   }
 
   // Enter finishes the edit (blur commits it), Escape restores. Escape keeps focus, so
@@ -195,7 +250,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
   }: CellArgs) => {
     if (!isAdmin) {
       return (
-        <div className={cn("px-2 py-1.5 min-h-8", mono && "font-mono text-xs", className)}>
+        <div className={cn("px-2 py-1 min-h-7", mono && "font-mono text-xs", className)}>
           {actual || <span className="text-muted">{placeholder}</span>}
         </div>
       );
@@ -206,10 +261,16 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
         value={pVal(id, field, actual)}
         onChange={(e) => setP(id, field, e.target.value)}
         onBlur={() => commit(id, field, actual, url, payload)}
+        onPaste={(e) => {
+          const text = pastedText(e, gated);
+          if (text === null) return;
+          clearP(id, field);
+          if (text !== actual.trim()) void save(id, field, url, payload, actual, text);
+        }}
         onKeyDown={editKeys(id, field)}
         placeholder={placeholder}
         className={cn(
-          "w-full bg-transparent px-2 py-1.5 outline-none",
+          "w-full bg-transparent px-2 py-1 outline-none",
           mono && "font-mono text-xs",
           className,
         )}
@@ -217,7 +278,7 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     );
   };
 
-  // Shows the evaluated value when idle, the formula (A1 form, leading "=") while focused.
+  // Shows the evaluated value when idle, the formula (row references as #5, leading "=") while focused.
   const renderFormula: FormulaFn = ({
     id,
     field,
@@ -242,6 +303,8 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
     const formulaText = toDisplay(raw, sheet, grid);
 
     const pretty = isFormula ? prettyFormula(formulaText) : formulaText;
+    // Selected or being edited, the formula reads as it is typed (editFormula), not spaced out.
+    const editText = isFormula ? editFormula(formulaText) : formulaText;
     const asFormula = display === "formula" || focused;
     const idle = formulaIdleText({
       raw,
@@ -252,52 +315,82 @@ export function useBudgetCells({ grid, isAdmin, budget, setBudget, mutate, load,
       bad,
       compact,
     });
+    // On a wide screen an idle formula reads as its working, muted, then its answer, so the
+    // column still reads as a column of figures ("30 × 375" then "11 250").
+    const split = !focused && display === "value" && isFormula && !bad && !compact && !empty;
+    const working = split && (
+      <>
+        <span className="min-w-0 truncate text-muted">{pretty}</span>
+        <span className="ml-2 shrink-0">{show(computed)}</span>
+      </>
+    );
     if (!isAdmin) {
       return (
         <div
           className={cn(
-            "px-2 py-1.5 min-h-8",
+            "px-2 py-1 min-h-7",
             display === "formula" ? "font-mono text-xs" : "text-right tabular-nums",
+            split && "flex items-center justify-end",
             empty && "text-muted",
             bad && !empty && "text-danger",
             className,
           )}
           title={isFormula ? formulaText : undefined}
         >
-          {idle}
+          {working || idle}
         </div>
       );
     }
     return (
-      <input
-        data-cell={gated ? key : undefined}
-        value={focused ? (pending[key] ?? pretty) : empty ? "" : idle}
-        placeholder={placeholder}
-        title={isFormula && !focused ? formulaText : undefined}
-        // Focusing swaps the display to the formula, so the caret is placed after that
-        // re-render. A gated cell is only selected on focus: leave a collapsed caret.
-        onFocus={(e) => {
-          setFocusKey(key);
-          if (pending[key] === undefined) setP(id, field, pretty);
-          const el = e.currentTarget;
-          requestAnimationFrame(() => {
-            if (gated) el.setSelectionRange(el.value.length, el.value.length);
-            else el.select();
-          });
-        }}
-        onChange={(e) => setP(id, field, e.target.value)}
-        onBlur={() => commitFormula(id, field, raw, sheet, url, payload)}
-        onKeyDown={editKeys(id, field)}
-        className={cn(
-          "w-full bg-transparent px-2 py-1.5 outline-none placeholder:text-muted",
-          asFormula ? "font-mono text-xs" : "text-right tabular-nums",
-          !asFormula && isFormula && "bg-accent-soft/30",
-          bad && !empty && "text-danger",
-          className,
+      <div className="relative">
+        <input
+          data-cell={gated ? key : undefined}
+          value={focused ? (pending[key] ?? editText) : empty ? "" : idle}
+          placeholder={placeholder}
+          title={isFormula && !focused ? formulaText : undefined}
+          // Focusing swaps the display to the formula, so the caret is placed after that
+          // re-render. A gated cell is only selected on focus: leave a collapsed caret.
+          onFocus={(e) => {
+            setFocusKey(key);
+            if (pending[key] === undefined) setP(id, field, editText);
+            const el = e.currentTarget;
+            requestAnimationFrame(() => {
+              if (gated) el.setSelectionRange(el.value.length, el.value.length);
+              else el.select();
+            });
+          }}
+          onChange={(e) => setP(id, field, e.target.value)}
+          onBlur={() => commitFormula(id, field, raw, sheet, url, payload)}
+          onPaste={(e) => {
+            const text = pastedText(e, gated);
+            if (text === null) return;
+            const stored = toStored(normalizeFormula(text), sheet, grid);
+            // The cell keeps focus, so it goes on showing the formula, now the pasted one.
+            clearP(id, field);
+            if (stored.trim() !== raw.trim()) void save(id, field, url, payload, raw, stored);
+          }}
+          onKeyDown={editKeys(id, field)}
+          className={cn(
+            "w-full bg-transparent px-2 py-1 outline-none placeholder:text-muted",
+            asFormula ? "font-mono text-xs" : "text-right tabular-nums",
+            !asFormula && isFormula && "bg-accent-soft/30",
+            bad && !empty && "text-danger",
+            // The overlay below draws the text; the input keeps it for copying and screen readers.
+            split && "text-transparent",
+            className,
+          )}
+        />
+        {split && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center justify-end px-2 tabular-nums"
+          >
+            {working}
+          </div>
         )}
-      />
+      </div>
     );
   };
 
-  return { renderCell, renderFormula };
+  return { renderCell, renderFormula, commitField };
 }

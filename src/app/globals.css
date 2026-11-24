@@ -1115,10 +1115,11 @@ summary {
       inset 0 -2px 0 var(--color-border);
   }
 }
-/* Roomier rows for breathing space (overrides the cells' tight py-1.5). */
-.budget-grid :is(input, .min-h-8) {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+/* The hover fill is a step under the gridline here, not the app's own: in the
+   dark theme that one is within a shade of the gridline (#38383a on #39393b),
+   so a hovered row lost its column rules. Light is unchanged (#eaeaec). */
+.budget-grid {
+  --color-hover: color-mix(in srgb, var(--color-grid-line) 50%, var(--color-background));
 }
 /* A single selection box on the focused cell. It sits on the gridline and encloses
    the whole cell (drag grip included). The input's own ring is removed so this is
@@ -1140,8 +1141,9 @@ summary {
 .budget-grid :is(td, th):focus-within {
   position: relative;
   z-index: 10;
-  outline: 1.5px solid var(--color-faint);
-  outline-offset: -1.5px;
+  /* 1px, the gridline's own weight, so the box reads as part of the grid. */
+  outline: 1px solid var(--color-faint);
+  outline-offset: -1px;
 }
 /* The cell box is the only selection indicator anywhere in the sheet, so nothing
    inside a cell draws one of its own: not the inputs, not the account picker,
@@ -1177,19 +1179,20 @@ summary {
 .budget-grid input[data-cell]::selection {
   background-color: transparent;
 }
-/* Edit mode: the graphite box turns the section's pink with a soft halo, the
-   blinking caret returns and the text selection is visible again. The colour
-   change is what separates the two states: the accent's ink with a halo in a
-   sheet means "you are typing here". */
+/* Edit mode: the graphite box turns pink (the action colour) with a soft halo,
+   the blinking caret returns and the text selection is visible again. The colour
+   change is what separates the two states: pink with a halo in a sheet means
+   "you are typing here". */
 .is-editing input[data-cell]:focus {
   caret-color: auto;
 }
 .is-editing input[data-cell]:focus::selection {
-  background-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  background-color: color-mix(in srgb, var(--color-action-from) 28%, transparent);
 }
 .is-editing :is(td, th):has(input[data-cell]:focus) {
-  outline-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft); /* halo, outside the box */
+  outline-color: var(--color-action-from);
+  /* halo, outside the box */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-action-from) 20%, transparent);
 }
 
 /* ── Print ───────────────────────────────────────────────────────

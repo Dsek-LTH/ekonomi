@@ -250,7 +250,8 @@ function ComboboxBase({
   // Dismiss and placement live in lib/ui/dismiss.ts and lib/ui/anchored-panel.ts. The panel is portalled and the inline search lies over the trigger, so neither counts as "inside" the trigger.
   useDismissOnOutside(open, [triggerRef, searchRef, panelRef], close);
 
-  const row = phone ? "py-3 text-base" : "py-1.5 text-sm";
+  // 28px rows on a wide screen; a phone keeps touch-sized ones.
+  const row = phone ? "py-3 text-base" : "py-1 text-sm";
 
   function onSearchKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {

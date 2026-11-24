@@ -52,7 +52,7 @@ export function CostCenterHeader({
     // Two rows below sm, one from sm up: identity and the menu share the top line, the picker
     // sits under them, and everything acting on the whole sheet is in the menu so "Ta bort" is
     // not one of a row of equals.
-    <div className="mb-4 flex flex-col gap-3 rounded-panel border border-border bg-background px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {linked ? (
           <>

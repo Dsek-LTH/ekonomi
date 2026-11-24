@@ -28,7 +28,11 @@ export interface SheetCompare {
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
+import type { UndoStep } from "./use-undo";
+
 export interface SheetValue {
+  /** Puts a line made or deleted on the page's ⌘Z history (use-undo.ts). */
+  record: (step: UndoStep) => void;
   // ── What the sheet is ────────────────────────────────────────────
   cc: BudgetCC;
   ccCode: string;
@@ -91,9 +95,10 @@ export interface SheetValue {
 
   // ── Dragging a row to a new place ────────────────────────────────
   draggingLineId: string | null;
-  liftRef: React.RefObject<HTMLTableRowElement | null>;
   linesOf: (account: Account) => LineItem[];
   startLineDrag: (e: React.PointerEvent, account: Account, li: LineItem) => void;
+  /** The lifted row's node, moved under the pointer without a re-render. */
+  liftRef: React.RefObject<HTMLTableRowElement | null>;
 
   // ── The half-typed rows at the bottom of each block ──────────────
   draft: (id: string) => Draft;

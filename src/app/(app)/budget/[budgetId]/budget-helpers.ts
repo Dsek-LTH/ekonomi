@@ -7,6 +7,27 @@ import type { Budget, BudgetCC, BudgetChange, Evaluated } from "./budget-types";
 export const RAMBUDGET = "__rambudget__";
 export const VARS = "__vars__";
 export const CHANGES = "__changes__";
+// The open sheet in the address: `?view=frame` for the Rambudget, `?sheet=` for the detail
+// view's sheet (a cost-centre sheet by id, or one of these words). Kept while the Rambudget is
+// open, so the toggle returns to the same sheet after a refresh too.
+const SHEET_WORDS: Record<string, string> = { [VARS]: "variables", [CHANGES]: "changes" };
+
+export function sheetFromUrl(sheet: string | undefined): string | null {
+  if (!sheet) return null;
+  return Object.entries(SHEET_WORDS).find(([, w]) => w === sheet)?.[0] ?? sheet;
+}
+
+/** The search string for `selected`, keeping whatever else the address carries. */
+export function sheetSearch(current: string, selected: string): string {
+  const q = new URLSearchParams(current);
+  if (selected === RAMBUDGET) q.set("view", "frame");
+  else {
+    q.delete("view");
+    q.set("sheet", SHEET_WORDS[selected] ?? selected);
+  }
+  return q.toString();
+}
+
 // Sentinels, not words: they share a namespace with result unit names and the screen
 // resolves them through `budget.group.<key>`.
 const OTHER = "__other__";
@@ -29,19 +50,39 @@ export const resultUnitOfSheet = (s: { key: string; resultUnit: string | null })
 // Belopp cells hold the equation ("=2*TROJA_POLICY"), shown with typographic operators plus
 // its result on the Belopp column. Entry is forgiving ("2x3x12" becomes a formula).
 
-// A formula string (leading "=", A1 display form) as a readable equation without the "=". A
+// A formula string (leading "=", row references as #5) as a readable equation without the "=". A
 // plain literal is returned unchanged.
 export function prettyFormula(formulaText: string): string {
   const s = formulaText.trim();
   if (!s.startsWith("=")) return s;
-  return s
-    .slice(1)
+  return outsideAccountCalls(s.slice(1), (part) => part.replace(/(\d)\.(\d)/g, "$1,$2"))
     .replace(/\*/g, " × ")
     .replace(/\//g, " ÷ ")
     .replace(/\+/g, " + ")
     .replace(/([\w)%.])-([\w(])/g, "$1 − $2") // binary minus only (keep unary/negatives)
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// `account(CC, KONTO)` is the one place a comma separates arguments, so a decimal comma is
+// told apart from it by running `fn` only on the text between those calls.
+function outsideAccountCalls(text: string, fn: (part: string) => string): string {
+  return text
+    .split(/(account\s*\([^)]*\))/i)
+    .map((part, i) => (i % 2 ? part : fn(part)))
+    .join("");
+}
+
+/**
+ * A formula as it is edited: what would be typed, not prettyFormula's spaced ×/÷/−, so the
+ * caret moves through no extra spaces ("2*4", "#6-#7", "2,5*3"). Without the "=" when the
+ * entry rules put it back (normalizeFormula), with it when they would not ("=5").
+ */
+export function editFormula(formulaText: string): string {
+  const s = formulaText.trim();
+  if (!s.startsWith("=")) return s;
+  const body = outsideAccountCalls(s.slice(1), (part) => part.replace(/(\d)\.(\d)/g, "$1,$2"));
+  return normalizeFormula(body) === s ? body : "=" + body;
 }
 
 // Turn 'x' / 'X' / '·' used as multiplication (flanked by a number or paren)
@@ -54,7 +95,7 @@ function normalizeMul(s: string): string {
       const prev = out.replace(/\s+$/, "").slice(-1);
       const next = s.slice(i + 1).match(/^\s*(\S)/)?.[1] ?? "";
       // Never convert after a letter, so identifiers like MAXx stay intact.
-      if (/[\d)]/.test(prev) && /[\d(A-Za-z_]/.test(next)) {
+      if (/[\d)]/.test(prev) && /[\d(A-Za-z_#]/.test(next)) {
         out += "*";
         continue;
       }
@@ -65,28 +106,40 @@ function normalizeMul(s: string): string {
 }
 
 // What the user typed to what we store. A leading "=" is honoured; a bare entry with an
-// operator or identifier becomes a formula; a plain number or percentage stays literal.
+// operator, identifier or row reference (#5) becomes a formula; a plain number or percentage
+// stays literal.
 export function normalizeFormula(raw: string): string {
   const s = raw.trim();
   if (s === "") return s;
   const lead = s.startsWith("=");
-  // Canonical stored form: * and / for ×/÷ and a numeric 'x', no spaces around operators (keep
-  // commas in account(CC, ACCT)). A focus then blur with no edit stays a no-op.
+  // Canonical stored form: * and / for ×/÷ and a numeric 'x', - for the typographic minus
+  // prettyFormula shows, a decimal point for a decimal comma ("12,5"), no spaces around
+  // operators (keep commas in account(CC, ACCT)). A focus then blur with no edit stays a no-op:
+  // what prettyFormula shows comes back as what was stored.
   const body = normalizeMul(lead ? s.slice(1) : s)
     .replace(/×/g, "*")
     .replace(/÷/g, "/")
+    .replace(/−/g, "-")
     .replace(/\s*([*/+\-()])\s*/g, "$1")
     .trim();
-  if (lead) return "=" + body;
+  const decimal = (t: string) =>
+    outsideAccountCalls(t, (part) => part.replace(/(\d),(\d)/g, "$1.$2"));
+  if (lead) return "=" + decimal(body);
   const numeric = /^-?[\d\s._]+%?$/.test(body.replace(",", "."));
   if (numeric) return body;
-  if (/[+\-*/()]/.test(body) || /[A-Za-z_]/.test(body)) return "=" + body;
+  if (/[+\-*/()#]/.test(body) || /[A-Za-z_]/.test(body)) return "=" + decimal(body);
   return body;
 }
 
-const numFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
+// Whole kronor bare, anything with öre to two decimals ("700", "12,50"), as money is written.
+const wholeFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 0 });
+const oreFmt = new Intl.NumberFormat("sv-SE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const kronor = (ore: number) => (ore % 100 === 0 ? wholeFmt : oreFmt).format(ore / 100);
 
-/** A money amount for the sheet: öre in, whole kronor out. Non-money numbers (headcount, share) use `fmtScalar`. */
+/** A money amount for the sheet: öre in, kronor out (to the öre). Non-money numbers (headcount, share) use `fmtScalar`. */
 /**
  * What a formula cell shows when nobody is editing it: the placeholder for an empty cell, the
  * formula on a cell drawn as one, "fel" for a failed formula, on a wide screen the working and
@@ -109,9 +162,9 @@ export function formulaIdleText(cell: {
 }
 
 export const fmt = (ore: number | undefined) =>
-  ore === undefined || Number.isNaN(ore) ? "" : numFmt.format(ore / 100);
+  ore === undefined || Number.isNaN(ore) ? "" : kronor(ore);
 export const fmtSigned = (ore: number | undefined) =>
-  ore === undefined || Number.isNaN(ore) ? "" : (ore > 0 ? "+" : "") + numFmt.format(ore / 100);
+  ore === undefined || Number.isNaN(ore) ? "" : (ore > 0 ? "+" : "") + kronor(ore);
 
 /** A dimensionless value printed as it stands (headcount, ratio): no unit conversion, decimals kept. */
 const scalarFmt = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 4 });

@@ -1,11 +1,12 @@
 // The per-cost-centre sheet: income and costs as two cards of account, line-item and Summa
 // rows. Owns the drag handlers and per-sheet drafts; select/edit comes from useCellEdit.
 import { Button } from "@/components/ui/button";
+import { SelectionBar } from "@/components/selection-bar";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
-import { type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
+import { toStored, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
 import { autoScrollStep, verticalScroller } from "@/lib/ui/auto-scroll";
 import { useFormat } from "@/lib/ui/use-format";
 import { usePhone } from "@/lib/ui/media";
@@ -15,9 +16,17 @@ import { IconButton } from "@/components/ui/icon-button";
 import { IconTrash } from "@/components/ui/icons";
 import { resultImpact } from "@/lib/budget/changes";
 
-import { ccTotals, diffClass, fmt, fmtSigned, type AdjustmentRow } from "./budget-helpers";
+import {
+  ccTotals,
+  diffClass,
+  fmt,
+  fmtSigned,
+  normalizeFormula,
+  type AdjustmentRow,
+} from "./budget-helpers";
 import { withLine, withLineOrder, withNewAccount, withSheet } from "./patch-budget";
 import { useCellEdit } from "./use-cell-edit";
+import type { UndoStep } from "./use-undo";
 import { useSheetClipboard } from "./use-sheet-clipboard";
 import { SheetProvider, type SheetValue } from "./sheet-context";
 import { SectionCard } from "./sheet-section";
@@ -40,6 +49,9 @@ export interface SheetCompare {
   sheet: JoinedSheet;
 }
 
+// How far the pointer moves on the grip before a row lifts. Below it the press is a click.
+const DRAG_THRESHOLD_PX = 4;
+
 export function CostCenterSheet(props: {
   cc: BudgetCC;
   ccCode: string;
@@ -58,6 +70,8 @@ export function CostCenterSheet(props: {
   adjustments: Map<string, AdjustmentRow[]>;
   clip: BudgetClip | null;
   onCopy: (clip: BudgetClip | null) => void;
+  /** Puts a line made or deleted on the page's ⌘Z history (use-undo.ts). */
+  record: (step: UndoStep) => void;
 }) {
   const {
     cc,
@@ -77,6 +91,7 @@ export function CostCenterSheet(props: {
     adjustments,
     clip,
     onCopy,
+    record,
   } = props;
   const t = useTranslations("budget.sheet");
   const tCol = useTranslations("budget.col");
@@ -99,25 +114,43 @@ export function CostCenterSheet(props: {
   const badLine = new Set(ev.badLineItems);
   const badAccount = new Set(ev.badAccounts);
   // Accounts whose total is short a row that did not resolve (the figure is the sum of the rest).
-  // Left margin: the row number and the copy tick box share one cell. The box is centred and
-  // the number overlaid out of flow so the boxes line up. `table-fixed` sizes from the
+  // Left margin: the row number, which gives way to the copy tick box when the row is pointed
+  // at or the box has focus, and to every box while anything is ticked (as in a mail list).
+  // Faded, not hidden, so the box stays in the tab order. `table-fixed` sizes from the
   // colgroup, so a 0px column with padded cells overflows into its neighbour; on a phone the
-  // cell is emptied instead.
-  const gut = (n: number | undefined, box?: React.ReactNode) =>
-    narrow ? (
-      <td className="p-0" />
-    ) : (
-      <td className="relative select-none border-r border-border/60 px-1 align-middle">
-        <span className="absolute inset-y-0 left-1 flex items-center font-mono text-[10px] leading-8 text-muted">
+  // cell is emptied instead. Reads `marked` at render, after the clipboard hook below.
+  const gut = (n: number | undefined, box?: React.ReactNode) => {
+    if (narrow) return <td className="p-0" />;
+    const anyTicked = marked.rows.length > 0 || marked.accounts.length > 0;
+    const hasBox = Boolean(box);
+    return (
+      <td className="group/gut relative select-none border-r border-border/60 px-1 align-middle">
+        <span
+          className={cn(
+            "absolute inset-0 flex items-center justify-center text-[11px] tabular-nums text-faint",
+            hasBox &&
+              (anyTicked ? "invisible" : "group-hover:invisible group-focus-within/gut:invisible"),
+          )}
+        >
           {n ?? ""}
         </span>
-        <span className="flex h-8 items-center justify-center">{box}</span>
+        <span
+          className={cn(
+            "relative flex h-7 items-center justify-center",
+            hasBox &&
+              !anyTicked &&
+              "opacity-0 group-hover:opacity-100 group-focus-within/gut:opacity-100",
+          )}
+        >
+          {box}
+        </span>
       </td>
     );
+  };
 
   // Row delete, revealed on hover or keyboard focus.
   const del = (onClick: () => void, label: string) => (
-    <IconButton tone="danger" reveal onClick={onClick} label={label}>
+    <IconButton size="sm" tone="danger" reveal onClick={onClick} label={label}>
       <IconTrash className="size-4" />
     </IconButton>
   );
@@ -161,8 +194,9 @@ export function CostCenterSheet(props: {
   // Beskrivning nothing, so chrome shrinks: gutter 58 to 0 (drag is not usable on touch),
   // konto 110 to 26 (just the elbow), belopp 260 to 110 (equation is shown on tap, see
   // `compact` in use-budget-cells.tsx), action 78 to 40 (one icon).
-  const GUT_W = narrow ? 0 : 58,
-    ACT_W = narrow ? 40 : 78;
+  // The margin holds one thing at a time (number or tick box); the actions a comment and a delete.
+  const GUT_W = narrow ? 0 : 36,
+    ACT_W = narrow ? 40 : 60;
   const staticWidth = (c: ColumnDef): number | undefined =>
     c.key === "beskrivning"
       ? undefined
@@ -178,22 +212,50 @@ export function CostCenterSheet(props: {
   const setDraft = (id: string, patch: Partial<Draft>) =>
     setNewRow((m) => ({ ...m, [id]: { ...draft(id), ...patch } }));
 
+  // Accounts whose blank row is being saved. Enter and then leaving the row both ask, from the
+  // same render's draft, and would otherwise make the line twice.
+  const creating = useRef(new Set<string>());
+
   async function createLine(accountId: string) {
     const d = newRow[accountId];
     if (!d || (!d.description.trim() && !d.expression.trim())) return;
-    // The route returns the row it made, so no re-read of the budget is needed.
-    const ok = await api(
-      `/api/budget-accounts/${accountId}/line-items`,
-      "POST",
-      { description: d.description.trim(), expression: d.expression.trim() || "0" },
-      (b, data) => withLine(b, accountId, data as LineItem),
-    );
-    if (ok)
-      setNewRow((m) => {
-        const n = { ...m };
-        delete n[accountId];
-        return n;
-      });
+    if (creating.current.has(accountId)) return;
+    creating.current.add(accountId);
+    // Bound like an edit of an existing cell (commitFormula in use-budget-cells.tsx), or a typed
+    // "=#3" is stored as written and never resolves.
+    const expression = toStored(normalizeFormula(d.expression), ccCode, grid) || "0";
+    const body = { description: d.description.trim(), expression };
+    // Emptied at once, so the blank row is ready for the next line while this one saves.
+    setNewRow((m) => {
+      const n = { ...m };
+      delete n[accountId];
+      return n;
+    });
+    try {
+      // The route returns the row it made, so no re-read of the budget is needed.
+      const order = cc.accounts.find((a) => a.id === accountId)?.lineItems.map((l) => l.id) ?? [];
+      const ok = await api(
+        `/api/budget-accounts/${accountId}/line-items`,
+        "POST",
+        body,
+        (b, data) => withLine(b, accountId, data as LineItem),
+        (data) => {
+          const lineId = (data as LineItem).id;
+          record({
+            kind: "line",
+            created: true,
+            accountId,
+            lineId,
+            body,
+            order: [...order, lineId],
+          });
+        },
+      );
+      // Refused: the text comes back, unless something new has been written there since.
+      if (!ok) setNewRow((m) => (m[accountId] ? m : { ...m, [accountId]: d }));
+    } finally {
+      creating.current.delete(accountId);
+    }
   }
 
   // Accounts come from the synced chart; those already on the sheet are filtered out except
@@ -227,10 +289,10 @@ export function CostCenterSheet(props: {
 
   /**
    * Reordering a line by hand, within its account or onto another one. A pointer drag (not
-   * HTML5, which can only snap) like components/voucher-editor.tsx: the row follows the
-   * pointer and others snap into its gap. Geometry is measured, not counted in row heights,
-   * since headings, Summa and new-row lines sit between accounts. Reclassifying a whole
-   * account by dropping it on the other section is still HTML5.
+   * HTML5, which can only snap) like components/voucher-editor.tsx: the row glides under the
+   * pointer and others snap into its gap. The sheet's table keeps separate borders
+   * (sheet-section.tsx) so a carried row takes its column rules with it.
+   * Reclassifying a whole account by dropping it on the other section is still HTML5.
    */
   interface LineDrag {
     id: string;
@@ -270,11 +332,12 @@ export function CostCenterSheet(props: {
     el.style.transform = "";
     const box = el.getBoundingClientRect();
     let y = d.pointerY - d.grab - box.top;
-    // Held inside the sheet's rows.
-    const rows = sheetRef.current?.querySelectorAll<HTMLElement>("tr[data-line]");
-    if (rows && rows.length > 0) {
-      const top = rows[0].getBoundingClientRect().top;
-      const bottom = rows[rows.length - 1].getBoundingClientRect().bottom;
+    // Held inside the accounts, headings and Summa included. Not inside the line rows: with
+    // every account above it empty, the dragged row is the first line row and could not rise.
+    const zones = sheetRef.current?.querySelectorAll<HTMLElement>("tbody[data-drop-account]");
+    if (zones && zones.length > 0) {
+      const top = zones[0].getBoundingClientRect().top;
+      const bottom = zones[zones.length - 1].getBoundingClientRect().bottom;
       y = Math.min(Math.max(y, top - box.top), bottom - box.height - box.top);
     }
     el.style.transform = `translateY(${y}px)`;
@@ -335,21 +398,38 @@ export function CostCenterSheet(props: {
     const tr = (e.target as HTMLElement).closest("tr");
     if (!tr) return;
     e.preventDefault();
-    const ids: Record<string, string[]> = {};
-    for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
-    lineDrag.current = {
-      id: li.id,
-      fromAccountId: account.id,
-      accountId: account.id,
-      ids,
-      before: ids,
-      pointerX: e.clientX,
-      pointerY: e.clientY,
-      grab: e.clientY - tr.getBoundingClientRect().top,
-      scroller: verticalScroller(tr),
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const grab = startY - tr.getBoundingClientRect().top;
+    // Lifted only once the pointer has moved, so a click on the grip does not flash the
+    // lifted row (outline and fill) on and off.
+    const move = (ev: PointerEvent) => {
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD_PX) return;
+      done();
+      const ids: Record<string, string[]> = {};
+      for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
+      lineDrag.current = {
+        id: li.id,
+        fromAccountId: account.id,
+        accountId: account.id,
+        ids,
+        before: ids,
+        pointerX: ev.clientX,
+        pointerY: ev.clientY,
+        grab,
+        scroller: verticalScroller(tr),
+      };
+      setPlacement(ids);
+      setDraggingLineId(li.id);
     };
-    setPlacement(ids);
-    setDraggingLineId(li.id);
+    const done = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", done);
+      window.removeEventListener("pointercancel", done);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", done);
+    window.addEventListener("pointercancel", done);
   }
 
   // Put the row back under the pointer after the rows redraw, before paint.
@@ -368,17 +448,22 @@ export function CostCenterSheet(props: {
     };
     /** Where the row would land. Shared with the frame loop, since scrolling brings new rows under a stationary pointer. */
     const resolve = (d: LineDrag) => {
-      // Asked of the page: the lifted row is `pointer-events-none`. A heading or Summa is
-      // nothing to land on, so the placement stands.
+      // Asked of the page: the lifted row is `pointer-events-none`.
       const under = document.elementFromPoint(d.pointerX, d.pointerY) as HTMLElement | null;
       const over = under?.closest<HTMLElement>("tr[data-line]");
-      const end = under?.closest<HTMLElement>("tr[data-line-end]");
-      if (over?.dataset.line && over.dataset.account && over.dataset.line !== d.id) {
-        const box = over.getBoundingClientRect();
-        place(d, over.dataset.account, over.dataset.line, d.pointerY > box.top + box.height / 2);
-      } else if (end?.dataset.lineEnd) {
-        // The new-row line is the only target in an account with no rows.
-        place(d, end.dataset.lineEnd, null, false);
+      const zone = under?.closest<HTMLElement>("tbody[data-drop-account]")?.dataset.dropAccount;
+      if (over) {
+        if (over.dataset.line !== d.id && over.dataset.account) {
+          const box = over.getBoundingClientRect();
+          place(d, over.dataset.account, over.dataset.line!, d.pointerY > box.top + box.height / 2);
+        }
+      } else if (zone) {
+        // The rest of an account is split at its rows: the heading takes the row first, and
+        // anything under the rows (Summa, the new-row line) takes it last. The boundary
+        // between two accounts is then the same going up as going down.
+        const head = under?.closest("tr[data-account-row]");
+        const first = (d.ids[zone] ?? []).find((x) => x !== d.id) ?? null;
+        place(d, zone, head ? first : null, false);
       }
       lift();
     };
@@ -473,6 +558,7 @@ export function CostCenterSheet(props: {
   // Gathered once for the four nested table levels (see ./sheet-context).
   const sheet: SheetValue = {
     cc,
+    record,
     ccCode,
     budgetId,
     columns,
@@ -518,9 +604,9 @@ export function CostCenterSheet(props: {
     marked,
     tickBox,
     draggingLineId,
-    liftRef,
     linesOf,
     startLineDrag,
+    liftRef,
     draft,
     setDraft,
     createLine,
@@ -668,25 +754,29 @@ export function CostCenterSheet(props: {
           ))}
         </div>
 
-        {isAdmin && (marked.rows.length > 0 || marked.accounts.length > 0) && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-border bg-surface px-4 py-2 text-sm">
-            <span className="font-medium">
-              {marked.accounts.length > 0
-                ? t("markedAccounts", { count: marked.accounts.length })
-                : t("markedRows", { count: marked.rows.length })}
-            </span>
-            <Button variant="link" type="button" onClick={copySelection} className="text-sm">
-              {t("copyMarked")}
-            </Button>
-            <span className="text-xs text-muted">⌘/Ctrl+C</span>
-            <Button variant="link" type="button" onClick={clearTicks} className="ml-auto text-xs">
+        {/* What can be done with the ticked rows, floating at the foot of the screen as on the
+            other lists (SelectionBar). Accounts win, as a copy takes them over their rows. */}
+        {isAdmin && (
+          <SelectionBar
+            count={marked.accounts.length || marked.rows.length}
+            label={(count) =>
+              marked.accounts.length > 0
+                ? t("markedAccounts", { count })
+                : t("markedRows", { count })
+            }
+          >
+            <Button variant="quiet" onClick={clearTicks}>
               {t("clearMarked")}
             </Button>
-          </div>
+            <Button onClick={copySelection} title="⌘/Ctrl+C">
+              {t("copyMarked")}
+            </Button>
+          </SelectionBar>
         )}
 
+        {/* What the page's clipboard holds: a status, not a choice, so neutral. */}
         {isAdmin && clip && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-accent/40 bg-accent-soft/40 px-4 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-border bg-surface px-4 py-2 text-sm">
             <span className="font-medium">
               {clip.kind === "rows"
                 ? t("copiedRows", { count: clip.ids.length })
@@ -711,14 +801,12 @@ export function CostCenterSheet(props: {
           label={tRam("income")}
           accts={income}
           ghosts={ghostAccounts.filter((a) => a.kind === "INCOME")}
-          total={totals.income}
         />
         <SectionCard
           kind="COST"
           label={tRam("costs")}
           accts={cost}
           ghosts={ghostAccounts.filter((a) => a.kind === "COST")}
-          total={totals.cost}
         />
       </div>
     </SheetProvider>

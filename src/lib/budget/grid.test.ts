@@ -3,9 +3,6 @@ import { buildGrid, orderedColumns, toDisplay, toStored, type GridSheet } from "
 
 const columns = orderedColumns();
 
-const BELOPP = columns.find((c) => c.key === "expression")!.letter;
-const KONTO = columns.find((c) => c.key === "konto")!.letter;
-
 // SEX02: an income account (1 section, 2 account 3010, 3 line li1), then a cost account (4 section, 5 account 4010, 6-7 lines).
 // KM01 has no income, but both section rows are still emitted: 1 section (income), 2 section (cost), 3 account 4010, 4 line li9.
 const sheets: GridSheet[] = [
@@ -29,9 +26,6 @@ describe("orderedColumns", () => {
     expect(columns.map((c) => c.key)).toEqual(["konto", "beskrivning", "expression"]);
   });
 
-  it("assigns letters by position", () => {
-    expect(columns.map((c) => c.letter)).toEqual(["A", "B", "C"]);
-  });
 });
 
 describe("buildGrid", () => {
@@ -65,19 +59,19 @@ describe("toStored: what was typed → what is kept", () => {
   });
 
   it("binds a reference to a row's own id, not to where it sits", () => {
-    expect(toStored(`=${BELOPP}6`, "SEX02", grid)).toBe("=@Lli2:expression");
+    expect(toStored("=#6", "SEX02", grid)).toBe("=@Lli2:expression");
   });
 
   it("binds a reference to an account as the account itself", () => {
-    expect(toStored(`=${BELOPP}5`, "SEX02", grid)).toBe("=account(SEX02, 4010)");
+    expect(toStored("=#5", "SEX02", grid)).toBe("=account(SEX02, 4010)");
   });
 
   it("carries the sheet across when one is named", () => {
-    expect(toStored(`=KM01!${BELOPP}4`, "SEX02", grid)).toBe("=@Lli9:expression");
+    expect(toStored("=KM01#4", "SEX02", grid)).toBe("=@Lli9:expression");
   });
 
   it("rewrites every reference in an expression", () => {
-    expect(toStored(`=${BELOPP}6+${BELOPP}7`, "SEX02", grid)).toBe(
+    expect(toStored("=#6+#7", "SEX02", grid)).toBe(
       "=@Lli2:expression+@Lli3:expression",
     );
   });
@@ -86,19 +80,25 @@ describe("toStored: what was typed → what is kept", () => {
     expect(toStored("=2*TROJA_POLICY", "SEX02", grid)).toBe("=2*TROJA_POLICY");
   });
 
-  // An A1 word naming no real cell is left as typed.
-  it("leaves an A1 word that resolves to nothing alone", () => {
-    expect(toStored(`=${BELOPP}99`, "SEX02", grid)).toBe(`=${BELOPP}99`);
-    expect(toStored("=Z1", "SEX02", grid)).toBe("=Z1");
+  // A reference naming no real row is left as typed.
+  it("leaves a reference that resolves to nothing alone", () => {
+    expect(toStored("=#99", "SEX02", grid)).toBe("=#99");
+    expect(toStored("=NOPE#3", "SEX02", grid)).toBe("=NOPE#3");
   });
 
-  // Only the Belopp column holds a figure; a text column is not referenceable.
-  it("refuses to bind a reference to a text column", () => {
-    expect(toStored(`=${KONTO}6`, "SEX02", grid)).toBe(`=${KONTO}6`);
+  // A section row has a number but no figure.
+  it("refuses to bind a reference to a section row", () => {
+    expect(toStored("=#1", "SEX02", grid)).toBe("=#1");
   });
 
-  it("is case-insensitive about the column letter", () => {
-    expect(toStored(`=${BELOPP.toLowerCase()}6`, "SEX02", grid)).toBe("=@Lli2:expression");
+  // The A1 form from before row references is not read: C6 is a variable name like any other.
+  it("does not read the old A1 form", () => {
+    expect(toStored("=C6", "SEX02", grid)).toBe("=C6");
+    expect(toStored("=KM01!C4", "SEX02", grid)).toBe("=KM01!C4");
+  });
+
+  it("reads a reference next to an operator", () => {
+    expect(toStored("=2*#6-#7", "SEX02", grid)).toBe("=2*@Lli2:expression-@Lli3:expression");
   });
 });
 
@@ -108,16 +108,16 @@ describe("toDisplay: what is kept → what is shown while editing", () => {
   });
 
   it("shows a row reference at the row's current coordinates", () => {
-    expect(toDisplay("=@Lli2:expression", "SEX02", grid)).toBe(`=${BELOPP}6`);
+    expect(toDisplay("=@Lli2:expression", "SEX02", grid)).toBe("=#6");
   });
 
   it("shows an account reference at the account's row", () => {
-    expect(toDisplay("=account(SEX02, 4010)", "SEX02", grid)).toBe(`=${BELOPP}5`);
+    expect(toDisplay("=account(SEX02, 4010)", "SEX02", grid)).toBe("=#5");
   });
 
   it("names the sheet only when it is a different one", () => {
-    expect(toDisplay("=@Lli9:expression", "SEX02", grid)).toBe(`=KM01!${BELOPP}4`);
-    expect(toDisplay("=@Lli9:expression", "KM01", grid)).toBe(`=${BELOPP}4`);
+    expect(toDisplay("=@Lli9:expression", "SEX02", grid)).toBe("=KM01#4");
+    expect(toDisplay("=@Lli9:expression", "KM01", grid)).toBe("=#4");
   });
 
   it("leaves a token pointing at a row that no longer exists alone", () => {
@@ -126,27 +126,27 @@ describe("toDisplay: what is kept → what is shown while editing", () => {
   });
 
   it("still reads the legacy single-letter field suffix", () => {
-    expect(toDisplay("=@Lli2:E", "SEX02", grid)).toBe(`=${BELOPP}6`);
+    expect(toDisplay("=@Lli2:E", "SEX02", grid)).toBe("=#6");
   });
 });
 
 describe("round trip", () => {
   // Opening a formula for editing and closing it unchanged must not change what is stored.
   it.each([
-    `=${BELOPP}6`,
-    `=${BELOPP}6+${BELOPP}7`,
-    `=${BELOPP}5*2`,
-    `=KM01!${BELOPP}4`,
+    "=#6",
+    "=#6+#7",
+    "=#5*2",
+    "=KM01#4",
     "=2*TROJA_POLICY",
     "1200",
-  ])("%s survives A1 → token → A1", (typed) => {
+  ])("%s survives reference → token → reference", (typed) => {
     const stored = toStored(typed, "SEX02", grid);
     expect(toDisplay(stored, "SEX02", grid)).toBe(typed);
   });
 
   // A row that moves keeps its meaning: the formula follows it to its new coordinates.
   it("follows a row that has moved", () => {
-    const stored = toStored(`=${BELOPP}6`, "SEX02", grid); // li2, currently row 6
+    const stored = toStored("=#6", "SEX02", grid); // li2, currently row 6
     // A row is inserted above li2, pushing it down one.
     const moved = buildGrid(
       [
@@ -164,6 +164,6 @@ describe("round trip", () => {
       ],
       columns,
     );
-    expect(toDisplay(stored, "SEX02", moved)).toBe(`=${BELOPP}7`);
+    expect(toDisplay(stored, "SEX02", moved)).toBe("=#7");
   });
 });

@@ -1,10 +1,8 @@
-// Spreadsheet grid index for the budget sheets: fixed layout Konto, Beskrivning, Belopp, letters assigned left to right.
+// Spreadsheet grid index for the budget sheets: fixed layout Konto, Beskrivning, Belopp, rows numbered from the top.
 // References are stored bound to row identity and field key (`@L<lineItemId>:<fieldKey>`, `account(<CC>, <ACCT>)`), so they survive
-// reordering. This grid converts them to and from A1.
+// reordering. This grid converts them to and from row references (`#5`, `SEX01#5`).
 
 import { effectiveKind } from "@/lib/budget";
-
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 type ColKind = "konto" | "text" | "number";
 
@@ -16,19 +14,17 @@ export interface ColumnDef {
   kind: ColKind; // konto = account-only; text = free string; number = formula cell (referenceable)
   custom: boolean;
   sortOrder: number;
-  letter: string;
 }
 
 // The fixed layout: Konto, Beskrivning, Belopp (the equation). A built-in's `name` is a key under `budget.col`.
-const BUILTINS: Omit<ColumnDef, "letter">[] = [
+const BUILTINS: ColumnDef[] = [
   { key: "konto", name: "konto", kind: "konto", custom: false, sortOrder: 0 },
   { key: "beskrivning", name: "beskrivning", kind: "text", custom: false, sortOrder: 100 },
   { key: "expression", name: "expression", kind: "number", custom: false, sortOrder: 1_000_000 },
 ];
 
 export function orderedColumns(): ColumnDef[] {
-  const merged = [...BUILTINS].sort((a, b) => a.sortOrder - b.sortOrder);
-  return merged.map((c, i) => ({ ...c, letter: LETTERS[i] ?? "?" }));
+  return [...BUILTINS].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 // The legacy single-letter suffix (.C/.D/.E from before custom columns) maps here.
@@ -61,13 +57,10 @@ interface RowEntity {
 export interface BudgetGrid {
   accountRow: Map<string, number>; // `${sheet}|${accountId}` → row (gutter)
   lineRow: Map<string, number>; // `${sheet}|${lineId}` → row (gutter)
-  rowAt: Map<string, RowEntity>; // `${sheet}|${row}` → entity (A1 → token)
-  lineLoc: Map<string, { sheet: string; row: number }>; // lineId → location (token → A1)
-  acctCodeRow: Map<string, number>; // `${sheet}|${accountCode}` → row (token → A1)
+  rowAt: Map<string, RowEntity>; // `${sheet}|${row}` → entity (reference → token)
+  lineLoc: Map<string, { sheet: string; row: number }>; // lineId → location (token → reference)
+  acctCodeRow: Map<string, number>; // `${sheet}|${accountCode}` → row (token → reference)
   columns: ColumnDef[];
-  letterToCol: Map<string, ColumnDef>;
-  fieldToLetter: Map<string, string>;
-  beloppLetter: string;
 }
 
 export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid {
@@ -113,13 +106,6 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
     emit(cost);
   }
 
-  const letterToCol = new Map<string, ColumnDef>();
-  const fieldToLetter = new Map<string, string>();
-  for (const c of columns) {
-    letterToCol.set(c.letter, c);
-    fieldToLetter.set(c.key, c.letter);
-  }
-
   return {
     accountRow,
     lineRow,
@@ -127,58 +113,52 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
     lineLoc,
     acctCodeRow,
     columns,
-    letterToCol,
-    fieldToLetter,
-    beloppLetter: fieldToLetter.get("expression") ?? "E",
   };
 }
 
 // What a cost-centre code may hold, in step with POST /api/cost-centers: letters (Å/Ä/Ö included), digits, underscore, hyphen.
-// The hyphen is unambiguous only inside `account(…)`: in bare A1, `=SEX01-NARU!C4` is a subtraction, so hyphenated sheets are reachable only through `account(…)`.
+// The hyphen is unambiguous only inside `account(…)`: in a bare reference, `=SEX01-NARU#4` is a subtraction, so hyphenated sheets are reachable only through `account(…)`.
 const CODE = String.raw`[\p{L}\p{N}_-]+`;
-const A1_CODE = String.raw`[\p{L}\p{N}_]+`;
+const REF_CODE = String.raw`[\p{L}\p{N}_]+`;
 
-const A1 = new RegExp(String.raw`^(?:(${A1_CODE})!)?([A-Za-z])(\d+)$`, "u");
+// A reference names a row: `#5`, or `SEX01#5` on another sheet. Belopp is the only column that holds a figure,
+// so a row is enough.
+const ROW_REF = new RegExp(String.raw`^(?:(${REF_CODE}))?#(\d+)$`, "u");
 
-function a1ToToken(a1: string, currentSheet: string, grid: BudgetGrid): string | null {
-  const m = A1.exec(a1.trim());
+function refToToken(ref: string, currentSheet: string, grid: BudgetGrid): string | null {
+  const m = ROW_REF.exec(ref.trim());
   if (!m) return null;
   const sheet = m[1] ?? currentSheet;
-  const col = grid.letterToCol.get(m[2].toUpperCase());
-  const row = parseInt(m[3], 10);
-  const e = grid.rowAt.get(`${sheet}|${row}`);
-  if (!col || !e) return null;
-  if (col.kind === "number" && e.kind === "line") return `@L${e.lineId}:${col.key}`;
-  if (col.key === "expression" && e.kind === "account")
-    return `account(${sheet}, ${e.accountCode})`;
+  const e = grid.rowAt.get(`${sheet}|${parseInt(m[2], 10)}`);
+  if (e?.kind === "line") return `@L${e.lineId}:expression`;
+  if (e?.kind === "account") return `account(${sheet}, ${e.accountCode})`;
   return null;
 }
 
 const TOKEN_LINE = /^@L([a-z0-9]+):([A-Za-z0-9]+)$/i;
 const TOKEN_ACCT = new RegExp(String.raw`^account\(\s*(${CODE})\s*,\s*(${CODE})\s*\)$`, "iu");
 
-function tokenToA1(token: string, currentSheet: string, grid: BudgetGrid): string | null {
+function tokenToRef(token: string, currentSheet: string, grid: BudgetGrid): string | null {
   let m = TOKEN_LINE.exec(token);
   if (m) {
     const loc = grid.lineLoc.get(m[1]);
-    if (!loc) return null;
-    const letter = grid.fieldToLetter.get(m[2]) ?? grid.fieldToLetter.get(legacyField(m[2]));
-    if (!letter) return null;
-    return (loc.sheet === currentSheet ? "" : `${loc.sheet}!`) + letter + loc.row;
+    // A token on another field (a retired column) has no row reference to show.
+    if (!loc || (m[2] !== "expression" && legacyField(m[2]) !== "expression")) return null;
+    return (loc.sheet === currentSheet ? "" : loc.sheet) + "#" + loc.row;
   }
   m = TOKEN_ACCT.exec(token);
   if (m) {
     const sheet = m[1];
     const row = grid.acctCodeRow.get(`${sheet}|${m[2]}`);
     if (row === undefined) return null;
-    return (sheet === currentSheet ? "" : `${sheet}!`) + grid.beloppLetter + row;
+    return (sheet === currentSheet ? "" : sheet) + "#" + row;
   }
   return null;
 }
 
-// The hyphen stays out of the lookbehind: in `=5-SEX01!C4` the "-" is the operator.
-const A1_WORD = new RegExp(
-  String.raw`(?<![\p{L}\p{N}_!])((?:${A1_CODE}!)?[A-Za-z]\d+)(?![\p{L}\p{N}_])`,
+// The hyphen stays out of the lookbehind: in `=5-SEX01#4` the "-" is the operator.
+const REF_WORD = new RegExp(
+  String.raw`(?<![\p{L}\p{N}_#])((?:${REF_CODE})?#\d+)(?![\p{L}\p{N}_])`,
   "gu",
 );
 const TOKEN_WORD = new RegExp(
@@ -186,17 +166,17 @@ const TOKEN_WORD = new RegExp(
   "giu",
 );
 
-// An A1 word that doesn't resolve to a real cell is left as-is.
+// A reference that doesn't resolve to a real row is left as typed.
 export function toStored(raw: string, currentSheet: string, grid: BudgetGrid): string {
   const s = raw.trim();
   if (!s.startsWith("=")) return s;
   return (
-    "=" + s.slice(1).replace(A1_WORD, (whole) => a1ToToken(whole, currentSheet, grid) ?? whole)
+    "=" + s.slice(1).replace(REF_WORD, (whole) => refToToken(whole, currentSheet, grid) ?? whole)
   );
 }
 
 export function toDisplay(stored: string, currentSheet: string, grid: BudgetGrid): string {
   const s = stored.trim();
   if (!s.startsWith("=")) return s;
-  return "=" + s.slice(1).replace(TOKEN_WORD, (tok) => tokenToA1(tok, currentSheet, grid) ?? tok);
+  return "=" + s.slice(1).replace(TOKEN_WORD, (tok) => tokenToRef(tok, currentSheet, grid) ?? tok);
 }

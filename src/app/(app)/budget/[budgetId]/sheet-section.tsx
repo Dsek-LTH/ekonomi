@@ -1,10 +1,10 @@
 "use client";
 
 // One half of a budget sheet, Intäkter or Kostnader, as a card. Draws the head and foot and
-// delegates the rows.
+// delegates the rows. There is no heading row: the section's name stands in the column header
+// in place of "Beskrivning", and its total is in the summary above the sheet.
 import type { AccountKind } from "@/lib/budget";
 import type { JoinedAccount } from "@/lib/budget/compare";
-import { fmt } from "./budget-helpers";
 import { AccountBlock, AddAccountRow, GhostAccountBlock } from "./sheet-account";
 import { COMPARE_GROUP, Hc } from "./sheet-cells";
 import { useSheet } from "./sheet-context";
@@ -17,13 +17,11 @@ export function SectionCard({
   label,
   accts,
   ghosts,
-  total,
 }: {
   kind: AccountKind;
   label: string;
   accts: Account[];
   ghosts: JoinedAccount[];
-  total: number;
 }) {
   const { columns, compare, gutWidth, actionsWidth, narrow, showCompare, staticWidth, tCol } =
     useSheet();
@@ -31,11 +29,13 @@ export function SectionCard({
 
   return (
     <div className="budget-grid overflow-x-auto rounded-panel border border-border bg-background">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold">{label}</h3>
-        <span className="text-sm tabular-nums text-muted">{fmt(total)}</span>
-      </div>
-      <table className="w-full border-collapse text-sm table-fixed">
+      {/* Separate borders, not collapsed: each cell owns its rules, so a row carried by the
+          drag (cost-center-sheet.tsx) takes its column rules along. Row rules are therefore on
+          the cells (`*:border-t`), since a <tr> or <tbody> border is not drawn in this model. */}
+      <table
+        aria-label={label}
+        className="w-full border-separate border-spacing-0 text-sm table-fixed"
+      >
         <colgroup>
           <col style={{ width: gutWidth }} />
           {columns.map((col) => {
@@ -49,41 +49,47 @@ export function SectionCard({
         </colgroup>
         <thead>
           {showCompare && compare && (
-            <tr className="border-b border-border/60 text-xs font-medium text-muted">
-              <th colSpan={columns.length + 1} className="px-2 py-1.5 text-left">
+            <tr className="text-xs font-medium text-muted *:border-b">
+              <th colSpan={columns.length + 1} className="px-2 py-1 text-left">
                 {tGroup("budget")}
               </th>
-              <th className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1.5 text-right")}>
+              <th className={cn(COMPARE_GROUP.other, "whitespace-nowrap px-2 py-1 text-right")}>
                 {tGroup("other")}
               </th>
-              <th className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1.5 text-right")}>
+              <th className={cn(COMPARE_GROUP.diff, "whitespace-nowrap px-2 py-1 text-right")}>
                 {tGroup("diff")}
               </th>
               <th />
             </tr>
           )}
-          <tr className="border-b border-border text-left text-xs font-medium text-muted">
+          <tr className="text-left text-xs font-medium text-muted *:border-b">
             {narrow ? (
               <th className="p-0" />
             ) : (
-              <th className="select-none border-r border-border/60 px-1 py-2 text-center font-mono text-[10px] text-muted">
+              <th className="select-none border-r border-border/60 px-1 py-1 text-center text-[11px] text-muted">
                 #
               </th>
             )}
             {columns.map((col) => (
               <Hc
                 key={col.key}
-                letter={col.letter}
                 align={col.kind === "number" ? "right" : undefined}
+                ruled={col.key !== "expression"}
               >
-                {col.custom ? col.name : tCol(col.name)}
+                {col.key === "beskrivning" ? (
+                  <span className="text-sm font-semibold text-foreground">{label}</span>
+                ) : col.custom ? (
+                  col.name
+                ) : (
+                  tCol(col.name)
+                )}
               </Hc>
             ))}
             {showCompare && compare && (
               <th
                 className={cn(
                   COMPARE_GROUP.other,
-                  "truncate whitespace-nowrap px-2 py-2 text-right font-medium",
+                  "truncate whitespace-nowrap px-2 py-1 text-right font-medium",
                 )}
                 title={compare.label}
               >
@@ -95,13 +101,13 @@ export function SectionCard({
                 title={tGroup("diffHint")}
                 className={cn(
                   COMPARE_GROUP.diff,
-                  "whitespace-nowrap px-2 py-2 text-right font-medium",
+                  "whitespace-nowrap px-2 py-1 text-right font-medium",
                 )}
               >
                 {tGroup("diffColumn")}
               </th>
             )}
-            <th className="border-l border-border/60" />
+            <th />
           </tr>
         </thead>
         {accts.map((a) => (

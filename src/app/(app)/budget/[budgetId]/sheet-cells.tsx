@@ -22,7 +22,7 @@ export function CompareCells({
       <td
         className={cn(
           COMPARE_GROUP.other,
-          "whitespace-nowrap px-2 py-1.5 text-right tabular-nums",
+          "whitespace-nowrap px-2 py-1 text-right tabular-nums",
           strong && "font-semibold",
         )}
       >
@@ -31,7 +31,7 @@ export function CompareCells({
       <td
         className={cn(
           COMPARE_GROUP.diff,
-          "whitespace-nowrap px-2 py-1.5 text-right tabular-nums",
+          "whitespace-nowrap px-2 py-1 text-right tabular-nums",
           strong && "font-semibold",
           diff !== undefined && diffClass(diff, incomeLike),
         )}
@@ -48,27 +48,28 @@ export const COMPARE_GROUP = {
   diff: "border-l border-border/60 bg-surface/35",
 };
 
-// Column header with its A1 letter before the name (the six general columns show just the letter).
+// Column header. Columns have no letters: a reference names a row (`#5`, lib/budget/grid.ts).
 export function Hc({
-  letter,
   align,
   title,
+  ruled = true,
   children,
 }: {
-  letter: string;
   align?: "right";
   title?: string;
+  /** A rule on the right. Off for the sheet's last column, which the actions sit beside. */
+  ruled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <th
       title={title}
       className={cn(
-        "border-r border-border/60 px-2 py-2",
+        "px-2 py-1",
+        ruled && "border-r border-border/60",
         align === "right" ? "text-right" : "text-left",
       )}
     >
-      <span className="mr-1 font-mono text-[10px] font-normal text-muted">{letter}</span>
       {children}
     </th>
   );

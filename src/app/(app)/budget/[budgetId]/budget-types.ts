@@ -36,6 +36,8 @@ export type ApiFn = (
   method: string,
   body?: unknown,
   apply?: (budget: Budget, data: unknown) => Budget,
+  /** Called with the server's answer once the write has succeeded (a created row's id, say). */
+  onDone?: (data: unknown) => void,
 ) => Promise<boolean>;
 
 // The page's `useMutation().mutate` as the sheets need it.

@@ -203,7 +203,7 @@ export async function copyBudgetContents(
 
   for (const cc of src.costCenters) await repointCopies(tx, cc.accounts, idMap);
 
-  // Variables last and repointed too: an expression can hold a cell reference (`=SEX01!C4`).
+  // Variables last and repointed too: an expression can hold a cell reference (`=SEX01#4`).
   if (src.variables.length) {
     await tx.budgetVariable.createMany({
       data: src.variables.map((v) => ({

@@ -8,8 +8,15 @@ import { titled } from "@/lib/server/page-title";
 
 export const generateMetadata = titled("budgetSheet");
 
-export default async function BudgetPage({ params }: { params: Promise<{ budgetId: string }> }) {
+export default async function BudgetPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ budgetId: string }>;
+  searchParams: Promise<{ view?: string; sheet?: string }>;
+}) {
   const { budgetId } = await params;
+  const { view, sheet } = await searchParams;
   await requireUser();
 
   const [budget, costCenters, accounts] = await Promise.all([
@@ -26,6 +33,10 @@ export default async function BudgetPage({ params }: { params: Promise<{ budgetI
       initialBudget={budget}
       costCenters={costCenters}
       accounts={accounts}
+      // Which sheet is open lives in the address (docs/navigation.md), so a refresh or a link
+      // lands on the same one.
+      initialView={view}
+      initialSheet={sheet}
     />
   );
 }

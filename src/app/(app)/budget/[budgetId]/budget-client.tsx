@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -39,27 +39,40 @@ import {
   resultUnitLabel,
   resultUnitOf,
   groupByResultUnit,
+  sheetFromUrl,
+  sheetSearch,
 } from "./budget-helpers";
 import { recomputeBudget } from "./recompute";
 import { useBudgetCells } from "./use-budget-cells";
+import { useUndo, type UndoStep } from "./use-undo";
 import { useComparison } from "./use-comparison";
 import { Rambudget } from "./rambudget";
 import { VariablesSheet } from "./variables-sheet";
 import { ChangesSheet } from "./changes-sheet";
 import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
-import type { Budget, BudgetClip } from "./budget-types";
+import type { Budget, BudgetClip, LineItem } from "./budget-types";
+import { withLine, withLineOrder, withoutLine } from "./patch-budget";
 import { SearchInput } from "@/components/ui/search-input";
 import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
 import { ViewToggle } from "@/components/ui/view-toggle";
 
+// Other people's edits arrive pushed (the live stream below). This poll is only the safety net
+// for a stream that is down; a quiet budget answers it 304 with no body.
+const BUDGET_POLL_MS = 30_000;
+
 export default function BudgetClient({
   initialBudget,
+  initialView,
+  initialSheet,
   costCenters: allCostCenters,
   accounts,
 }: {
   /** Server-rendered first copy; the client owns the budget from here on. */
   initialBudget: Budget;
+  /** `?view=` and `?sheet=` as the page was loaded (sheetSearch in budget-helpers.ts). */
+  initialView?: string;
+  initialSheet?: string;
   costCenters: CostCenter[];
   accounts: AccountRecord[];
 }) {
@@ -80,7 +93,18 @@ export default function BudgetClient({
   // Client state: committing a cell re-evaluates every formula in the browser (use-budget-cells).
   const [budget, setBudget] = useState<Budget>(initialBudget);
   // What is open: rambudget, variables, changes, or a sheet by id. Null opens the first cost centre.
-  const [picked, setSelected] = useState<string | null>(null);
+  const urlSheet = sheetFromUrl(initialSheet);
+  const [picked, setPicked] = useState<string | null>(
+    initialView === "frame" ? RAMBUDGET : urlSheet,
+  );
+  // Written to the address with the native history API, which Next syncs with its router. A
+  // router.replace would re-render the page on the server, fetching the whole budget again
+  // only for the client to ignore it (it owns the budget after the first copy).
+  const setSelected = (next: string) => {
+    setPicked(next);
+    const search = sheetSearch(window.location.search, next);
+    window.history.replaceState(null, "", search ? `?${search}` : window.location.pathname);
+  };
   const [search, setSearch] = useState("");
   const [addCcId, setAddCcId] = useState("");
 
@@ -107,26 +131,105 @@ export default function BudgetClient({
   // Not a `useQuery`, but borrows its staleness guard: a slower earlier reload landing last
   // would undo the later edit.
   const reload = useRef(0);
-  const load = useCallback(async () => {
-    const id = ++reload.current;
-    const res = await fetch(`/api/budgets/${budgetId}?actuals=0&evaluated=0`);
-    if (!res.ok || id !== reload.current) return;
-    const fresh = (await res.json()) as Budget;
-    // Unless the budget moved to another year: then the outcome is a different year's.
-    if (fresh.year !== outcome.current.actualsYear) {
-      const full = await fetch(`/api/budgets/${budgetId}?evaluated=0`);
-      if (full.ok) {
-        const withOutcome = (await full.json()) as Budget;
-        outcome.current = {
-          actuals: withOutcome.actuals,
-          actualsSynced: withOutcome.actualsSynced,
-          actualsYear: withOutcome.actualsYear,
-        };
+  // The version on screen as the server tagged it, so a poll that finds nothing new costs no
+  // body (304). Dropped after each own write, whose result is patched in without a read.
+  const etag = useRef<string | null>(null);
+  // Own writes in flight, and a counter moved by each start and end. A poll answer that left
+  // before a write and lands after it describes the budget without it, so it is dropped.
+  const writes = useRef({ inFlight: 0, gen: 0 });
+  // A live re-read was skipped or dropped for an own write, so it is owed once that ends.
+  const owed = useRef(false);
+  const loadRef = useRef<(opts?: { poll?: boolean }) => Promise<void>>(async () => {});
+  /** Runs an own write so the poll knows of it: started before anything is shown, ended after. */
+  const tracked = useCallback(async <T,>(write: () => Promise<T>): Promise<T> => {
+    writes.current.inFlight++;
+    writes.current.gen++;
+    try {
+      return await write();
+    } finally {
+      writes.current.inFlight--;
+      writes.current.gen++;
+      etag.current = null;
+      if (owed.current && writes.current.inFlight === 0) {
+        owed.current = false;
+        void loadRef.current({ poll: true });
       }
     }
-    if (id !== reload.current) return;
-    setBudget(recomputeBudget({ ...fresh, ...outcome.current }));
-  }, [budgetId]);
+  }, []);
+  const load = useCallback(
+    async (opts?: { poll?: boolean }) => {
+      const id = ++reload.current;
+      const gen = writes.current.gen;
+      const res = await fetch(`/api/budgets/${budgetId}?actuals=0&evaluated=0`, {
+        cache: "no-store",
+        headers: etag.current ? { "If-None-Match": etag.current } : undefined,
+      });
+      if (res.status === 304 || !res.ok || id !== reload.current) return;
+      if (opts?.poll && (writes.current.inFlight > 0 || writes.current.gen !== gen)) {
+        owed.current = true;
+        return;
+      }
+      const tag = res.headers.get("ETag");
+      const fresh = (await res.json()) as Budget;
+      // Unless the budget moved to another year: then the outcome is a different year's.
+      if (fresh.year !== outcome.current.actualsYear) {
+        const full = await fetch(`/api/budgets/${budgetId}?evaluated=0`);
+        if (full.ok) {
+          const withOutcome = (await full.json()) as Budget;
+          outcome.current = {
+            actuals: withOutcome.actuals,
+            actualsSynced: withOutcome.actualsSynced,
+            actualsYear: withOutcome.actualsYear,
+          };
+        }
+      }
+      if (id !== reload.current) return;
+      if (opts?.poll && (writes.current.inFlight > 0 || writes.current.gen !== gen)) {
+        owed.current = true;
+        return;
+      }
+      etag.current = tag;
+      setBudget(recomputeBudget({ ...fresh, ...outcome.current }));
+    },
+    [budgetId],
+  );
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  // Live: each write to this budget, anybody's, is pushed down a server-sent event stream
+  // (lib/server/budget-live.ts), and the page re-reads the budget when it hears one. Typing is
+  // not disturbed: a cell's text being edited is held apart from the budget
+  // (use-budget-cells.tsx), so only the figures around it move.
+  useEffect(() => {
+    const live = () => {
+      if (writes.current.inFlight > 0) owed.current = true;
+      else void load({ poll: true });
+    };
+    const stream = new EventSource(`/api/budgets/${budgetId}/live`);
+    stream.onmessage = live;
+    // After a reconnect, whatever was sent while it was down is caught up. The first open
+    // costs one re-read too, covering edits since the page was rendered.
+    stream.onopen = live;
+    return () => stream.close();
+  }, [budgetId, load]);
+
+  useEffect(() => {
+    const tick = () => {
+      if (document.hidden || writes.current.inFlight > 0) return;
+      void load({ poll: true });
+    };
+    const timer = window.setInterval(tick, BUDGET_POLL_MS);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
   // Every sheet write goes through here: shared mutation path, then a reload. `refresh: false`
   // because the server component only hands over the first copy, so refreshing it re-ran the
@@ -138,26 +241,30 @@ export default function BudgetClient({
       method: string,
       body?: unknown,
       apply?: (budget: Budget, data: unknown) => Budget,
+      onDone?: (data: unknown) => void,
     ) => {
       const settled = startRouteProgress();
       try {
-        const data = await mutate(url, {
-          method,
-          body,
-          error: tCommon("error.action"),
-          refresh: false,
+        return await tracked(async () => {
+          const data = await mutate(url, {
+            method,
+            body,
+            error: tCommon("error.action"),
+            refresh: false,
+          });
+          if (!data) return false;
+          onDone?.(data);
+          // The write describes itself (created row or removed id), so patch the budget with that
+          // and re-derive the figures. Only an undescribed write reloads the whole budget.
+          if (apply) setBudget((prev) => recomputeBudget(apply(prev, data)));
+          else await load();
+          return true;
         });
-        if (!data) return false;
-        // The write describes itself (created row or removed id), so patch the budget with that
-        // and re-derive the figures. Only an undescribed write reloads the whole budget.
-        if (apply) setBudget((prev) => recomputeBudget(apply(prev, data)));
-        else await load();
-        return true;
       } finally {
         settled();
       }
     },
-    [load, mutate, tCommon],
+    [load, mutate, tCommon, tracked],
   );
 
   const columns = useMemo<ColumnDef[]>(() => orderedColumns(), []);
@@ -186,7 +293,16 @@ export default function BudgetClient({
   // A locked budget changes only by a deviation or transfer, the treasurer's alone (canChangeLockedBudget).
   const canChange = canChangeLockedBudget(user.capabilities) && locked;
 
-  const { renderCell, renderFormula } = useBudgetCells({
+  // ⌘Z history (use-undo.ts). The cells record into it before the history exists in this
+  // render order, so they are handed a stable function that forwards to it.
+  const recordRef = useRef<(step: UndoStep) => void>(() => {});
+  const budgetRef = useRef(budget);
+  useEffect(() => {
+    budgetRef.current = budget;
+  }, [budget]);
+  const record = useCallback((step: UndoStep) => recordRef.current(step), []);
+
+  const { renderCell, renderFormula, commitField } = useBudgetCells({
     grid,
     isAdmin: canEdit,
     budget,
@@ -194,7 +310,48 @@ export default function BudgetClient({
     mutate,
     load,
     api,
+    tracked,
+    record,
   });
+
+  const undo = useUndo({
+    applyField: commitField,
+    createLine: async (accountId, body) => {
+      let id: string | null = null;
+      const ok = await api(
+        `/api/budget-accounts/${accountId}/line-items`,
+        "POST",
+        body,
+        (b, data) => withLine(b, accountId, data as LineItem),
+        (data) => {
+          id = (data as LineItem).id;
+        },
+      );
+      return ok ? id : null;
+    },
+    deleteLine: (lineId) =>
+      api(`/api/budget-line-items/${lineId}`, "DELETE", undefined, (b) => withoutLine(b, lineId)),
+    reorder: (accountId, ids, made) => {
+      // Only lines still in this account: the route moves a line from another account onto
+      // this one, so a line dragged away since would be pulled back. Read from the latest
+      // budget, which the line just made may not have reached yet, hence `made`.
+      const now = new Set(
+        budgetRef.current.costCenters.flatMap((c) =>
+          c.accounts.filter((a) => a.id === accountId).flatMap((a) => a.lineItems.map((l) => l.id)),
+        ),
+      );
+      const orderedIds = ids.filter((x) => x === made || now.has(x));
+      return api(
+        `/api/budget-accounts/${accountId}/line-items/reorder`,
+        "POST",
+        { orderedIds },
+        (b) => withLineOrder(b, accountId, orderedIds),
+      );
+    },
+  });
+  useEffect(() => {
+    recordRef.current = undo.record;
+  }, [undo.record]);
 
   const {
     target: compareTarget,
@@ -270,8 +427,16 @@ export default function BudgetClient({
   const groups = groupByResultUnit(filteredCc, resultUnitOf);
   // Opens on the first cost centre as listed unfiltered (so searching does not move it), or on
   // the variables if there are none.
+  // A sheet named by an old link may be gone, so an unknown id opens the default too.
+  const known =
+    picked === RAMBUDGET ||
+    picked === VARS ||
+    picked === CHANGES ||
+    budget.costCenters.some((c) => c.id === picked);
   const selected =
-    picked ?? groupByResultUnit(budget.costCenters, resultUnitOf)[0]?.items[0]?.id ?? VARS;
+    (known ? picked : null) ??
+    groupByResultUnit(budget.costCenters, resultUnitOf)[0]?.items[0]?.id ??
+    VARS;
 
   const cc =
     selected !== RAMBUDGET && selected !== VARS && selected !== CHANGES
@@ -281,7 +446,7 @@ export default function BudgetClient({
 
   // Which view is open; the detail view returns to the sheet last open there.
   const view = selected === RAMBUDGET ? "FRAME" : "DETAIL";
-  const [lastDetail, setLastDetail] = useState<string | null>(null);
+  const [lastDetail, setLastDetail] = useState<string | null>(urlSheet);
   if (selected !== RAMBUDGET && selected !== lastDetail) setLastDetail(selected);
   const detailTarget =
     (lastDetail &&
@@ -350,52 +515,54 @@ export default function BudgetClient({
         </span>
       }
       back="/budget"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <ViewToggle
-          labels
-          aria-label={t("view")}
-          value={view}
-          options={[
-            { value: "DETAIL", label: t("detailBudget"), icon: IconList },
-            { value: "FRAME", label: t("frameBudget"), icon: IconGrid },
-          ]}
-          onChange={(v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget)}
-          className="shrink-0"
-        />
-
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <Combobox
-            size="sm"
+      // View, comparison and lock on the title line, so the sheet starts right under it.
+      aside={
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto">
+          <ViewToggle
+            labels
+            aria-label={t("view")}
+            value={view}
             options={[
-              { value: "", label: t("noComparison") },
-              ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+              { value: "DETAIL", label: t("detailBudget"), icon: IconList },
+              { value: "FRAME", label: t("frameBudget"), icon: IconGrid },
             ]}
-            value={compareTarget}
-            onChange={setCompareTarget}
-            placeholder={t("compareWith")}
-            searchPlaceholder={tList("searchPlaceholder")}
-            emptyText={t("nothingToCompare")}
-            aria-label={t("compareWith")}
-            className="min-w-0 flex-1 md:w-64 md:flex-none"
+            onChange={(v) => setSelected(v === "FRAME" ? RAMBUDGET : detailTarget)}
+            className="shrink-0"
           />
-          {canLock && (
-            <Button
-              variant="secondary"
+
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <Combobox
               size="sm"
-              loading={locking}
-              onClick={() => setLocked(!locked)}
+              options={[
+                { value: "", label: t("noComparison") },
+                ...compareOptions.map((o) => ({ value: o.value, label: o.label })),
+              ]}
+              value={compareTarget}
+              onChange={setCompareTarget}
+              placeholder={t("compareWith")}
+              searchPlaceholder={tList("searchPlaceholder")}
+              emptyText={t("nothingToCompare")}
+              aria-label={t("compareWith")}
+              className="min-w-0 flex-1 md:w-64 md:flex-none"
+            />
+            {canLock && (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={locking}
+                onClick={() => setLocked(!locked)}
 
-              aria-label={locked ? t("unlock") : t("lock")}
-              title={locked ? t("unlock") : t("lock")}
-            >
-              {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
-              <span className="hidden md:inline">{locked ? t("unlock") : t("lock")}</span>
-            </Button>
-          )}
+                aria-label={locked ? t("unlock") : t("lock")}
+                title={locked ? t("unlock") : t("lock")}
+              >
+                {locked ? <IconLockOpen className="size-4" /> : <IconLock className="size-4" />}
+                <span className="hidden md:inline">{locked ? t("unlock") : t("lock")}</span>
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-
+      }
+    >
       {ev.errors.length > 0 && <p className="text-sm text-warning">{tEval(ev.errors[0])}</p>}
       {/* One element for both views, so the window-sized box is not swapped out from under its sizing hook. */}
       <div ref={fillRef} className="lg:-mb-14 print:h-auto!">
@@ -601,6 +768,7 @@ export default function BudgetClient({
                     adjustments={adjustments}
                     clip={clip}
                     onCopy={setClip}
+                    record={record}
                   />
                 </>
               ) : (
