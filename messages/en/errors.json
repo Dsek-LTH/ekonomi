@@ -213,7 +213,9 @@
     "syncRunning": "A sync from Fortnox is already running. Try again in a moment.",
     "missingSupplierInvoiceScope": "The Fortnox connection lacks access to supplier invoices. Disconnect and connect again to grant the app the 'supplierinvoice' scope.",
     "missingCustomerScope": "The Fortnox connection lacks access to the customer register. Disconnect and connect again to give the app the 'customer' scope.",
-    "missingSupplierScope": "The Fortnox connection lacks access to the supplier register. Disconnect and connect again to grant the app the 'supplier' scope."
+    "missingSupplierScope": "The Fortnox connection lacks access to the supplier register. Disconnect and connect again to grant the app the 'supplier' scope.",
+    "userInboxForbidden": "Fortnox refused to upload the invoice PDF to the supplier invoice inbox. Sign out of Fortnox here and sign in again. If that does not help, your Fortnox user lacks access to supplier invoices (Settings → Users in Fortnox).",
+    "userSupplierInvoiceForbidden": "Fortnox refused to create the supplier invoice with your login. Sign out of Fortnox here and sign in again. If that does not help, your Fortnox user lacks access to supplier invoices (Settings → Users in Fortnox)."
   },
   "database": "Database error",
   "budgetAccount": {

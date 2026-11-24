@@ -233,6 +233,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     fileId = await uploadPdf();
   } catch (e) {
     await release();
+    if (e instanceof FortnoxError && e.status === 403) {
+      console.error(`[supplier-invoices] ${invoice.id}: inbox upload refused`, e.message);
+      return fail(403, "fortnox.userInboxForbidden");
+    }
     if (e instanceof FortnoxError)
       return fail(e.status && e.status < 500 ? e.status : 502, e.message);
     throw e;
@@ -272,6 +276,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch (e) {
     if (certainlyNotCreated(e)) {
       await release();
+      if ((e as FortnoxError).status === 403) {
+        console.error(`[supplier-invoices] ${invoice.id}: create refused`, (e as Error).message);
+        return fail(403, "fortnox.userSupplierInvoiceForbidden");
+      }
       return fail((e as FortnoxError).status!, (e as Error).message);
     }
     await prisma.supplierInvoice.updateMany({

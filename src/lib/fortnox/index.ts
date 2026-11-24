@@ -25,10 +25,12 @@ export type FortnoxAuthMode = "service" | "user";
 // connection reads the customer register and a customer's invoices, the personal login makes the invoices.
 // Customers, like suppliers, are only added in Fortnox. Both need Fortnox's Kundfaktura or
 // Order licence, and a connection or login made before they were added must reconnect.
+// The personal login also asks for `costcenter` and `project`: a supplier invoice row naming
+// either can be refused ("Har inte behörighet för scope") without them.
 const SERVICE_SCOPES =
   "bookkeeping costcenter project companyinformation supplier supplierinvoice customer invoice";
 const USER_SCOPES =
-  "bookkeeping inbox connectfile companyinformation supplierinvoice supplier customer invoice";
+  "bookkeeping costcenter project inbox connectfile companyinformation supplierinvoice supplier customer invoice";
 
 const scopesFor = (mode: FortnoxAuthMode) => (mode === "service" ? SERVICE_SCOPES : USER_SCOPES);
 

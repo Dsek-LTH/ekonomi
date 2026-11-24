@@ -213,7 +213,9 @@
     "syncRunning": "En synk från Fortnox pågår redan. Försök igen om en stund.",
     "missingSupplierInvoiceScope": "Fortnox-anslutningen saknar behörighet för leverantörsfakturor. Koppla från och anslut igen för att ge appen 'supplierinvoice'-behörighet.",
     "missingCustomerScope": "Fortnox-anslutningen saknar behörighet för kundregistret. Koppla från och anslut igen för att ge appen 'customer'-behörighet.",
-    "missingSupplierScope": "Fortnox-anslutningen saknar behörighet för leverantörsregistret. Koppla från och anslut igen för att ge appen 'supplier'-behörighet."
+    "missingSupplierScope": "Fortnox-anslutningen saknar behörighet för leverantörsregistret. Koppla från och anslut igen för att ge appen 'supplier'-behörighet.",
+    "userInboxForbidden": "Fortnox nekade uppladdningen av fakturans PDF till inkorgen för leverantörsfakturor. Logga ut från Fortnox här och logga in igen. Hjälper det inte saknar din Fortnox-användare behörighet till leverantörsfakturor (Inställningar → Användare i Fortnox).",
+    "userSupplierInvoiceForbidden": "Fortnox nekade att skapa leverantörsfakturan med din inloggning. Logga ut från Fortnox här och logga in igen. Hjälper det inte saknar din Fortnox-användare behörighet till leverantörsfakturor (Inställningar → Användare i Fortnox)."
   },
   "database": "Databasfel",
   "budgetAccount": {
