@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canChangeLockedBudget, isAdmin } from "@/lib/domain/permissions";
 import { fail, gate, type Gate } from "@/lib/api/guard";
+import { announceBudgetChange } from "@/lib/server/budget-live";
 
 type BudgetTarget =
   | { budget: string }
@@ -11,10 +12,12 @@ type BudgetTarget =
   | { lineItem: string }
   | { variable: string };
 
-const budgetLock = { select: { lockedAt: true } } as const;
+const budgetLock = { select: { id: true, lockedAt: true } } as const;
 
 // Lock state of the budget `target` belongs to, or null if it no longer exists.
-async function findLock(target: BudgetTarget): Promise<{ lockedAt: Date | null } | null> {
+async function findLock(
+  target: BudgetTarget,
+): Promise<{ id: string; lockedAt: Date | null } | null> {
   if ("budget" in target) {
     return prisma.budget.findUnique({ where: { id: target.budget }, ...budgetLock });
   }
@@ -57,6 +60,8 @@ export async function allowBudgetWrite(target: BudgetTarget): Promise<Gate> {
   const lock = await findLock(target);
   if (!lock) return { ok: false, res: fail(404, "notFound") };
   if (lock.lockedAt) return { ok: false, res: fail(409, "budget.locked") };
+  // Every write that passes is announced to whoever has the budget open (lib/server/budget-live.ts).
+  announceBudgetChange(lock.id);
   return g;
 }
 
@@ -110,5 +115,6 @@ export async function gateEditorialChange(
   if (!budget.lockedAt) {
     return deny("budget.notLocked", 409);
   }
+  announceBudgetChange(budget.id);
   return { ok: true, actorId, budgetId: budget.id };
 }

@@ -4,6 +4,7 @@ import { parseBody } from "@/lib/api/parse";
 import { BudgetCommentBody } from "@/lib/api/schemas/budget";
 import { canCommentBudget } from "@/lib/domain/permissions";
 import { fail, gate } from "@/lib/api/guard";
+import { announceBudgetChange } from "@/lib/server/budget-live";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: accountId } = await ctx.params;
@@ -18,9 +19,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // Comments stay open on a locked budget, so they skip `allowBudgetWrite`; this check keeps a missing account a 404, not a foreign-key 500.
   const account = await prisma.budgetAccount.findUnique({
     where: { id: accountId },
-    select: { id: true },
+    select: { id: true, budgetCostCenter: { select: { budgetId: true } } },
   });
   if (!account) return fail(404, "budgetAccount.notFound");
+  // Skips allowBudgetWrite, which announces the other writes (lib/server/budget-live.ts).
+  announceBudgetChange(account.budgetCostCenter.budgetId);
 
   const comment = await prisma.budgetComment.create({
     data: { accountId, authorId: g.actor.id, body: body_ },

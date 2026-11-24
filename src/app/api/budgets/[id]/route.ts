@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/db";
 import { canAccessBudget, canLockBudget } from "@/lib/domain/permissions";
@@ -6,6 +7,7 @@ import { parseBody } from "@/lib/api/parse";
 import { PatchBudget } from "@/lib/api/schemas/budget";
 import { allowBudgetWrite } from "@/lib/budget/access";
 import { getEvaluatedBudget } from "@/lib/data/budget";
+import { announceBudgetChange } from "@/lib/server/budget-live";
 
 // ?actuals=0 skips the year's outcome (a costly group-by) and ?evaluated=0 skips formula results (the client computes them). Both default to on.
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -19,7 +21,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     evaluated: q.get("evaluated") !== "0",
   });
   if (!budget) return fail(404, "budget.notFound");
-  return NextResponse.json(budget);
+  // Tagged so the open sheet's poll (budget-client.tsx) costs no body while nobody else edits.
+  const body = JSON.stringify(budget);
+  const etag = `"${createHash("sha1").update(body).digest("base64url")}"`;
+  const headers = { ETag: etag, "Cache-Control": "no-cache" };
+  if (req.headers.get("if-none-match") === etag)
+    return new Response(null, { status: 304, headers });
+  return new Response(body, { headers: { ...headers, "Content-Type": "application/json" } });
 }
 
 // Rename or move year is admin-only on an unlocked budget, lock and unlock is skattmästare: different gates.
@@ -46,6 +54,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       "budget.notFound",
     );
     if (budget instanceof NextResponse) return budget;
+    // Skips allowBudgetWrite, which announces the others (lib/server/budget-live.ts).
+    announceBudgetChange(id);
     return NextResponse.json(budget);
   }
 
