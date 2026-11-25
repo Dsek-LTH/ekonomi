@@ -32,3 +32,17 @@ model ExpensePresence {
   @@id([expenseId, userId, screen])
   @@index([lastSeenAt])
 }
+
+/// One bookkeeper on one levfaktura's kontering, /invoices/[id]/book. The same rules as ExpensePresence: advisory,
+/// refreshed by a heartbeat, present while lastSeenAt is within the TTL. Writes are guarded by the invoice's updatedAt.
+model SupplierInvoicePresence {
+  invoice    SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId  String
+  user       User            @relation("SupplierInvoicePresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  /// Set from Postgres now(), never from the app server's clock.
+  lastSeenAt DateTime
+
+  @@id([invoiceId, userId])
+  @@index([lastSeenAt])
+}

@@ -10,7 +10,7 @@ import { IconAlert } from "@/components/ui/icons";
 import { PageShell } from "@/components/page-shell";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { SettingsForm, useDraftPart } from "@/components/settings/settings-draft";
-import { useGoBack } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { useMutation } from "@/components/shell/use-mutation";
 import { SHORT_NAME_MAX } from "@/lib/domain/cost-center-short-name";
 import type { CostCenter } from "@/lib/domain/types";
@@ -35,7 +35,7 @@ export function ShortNamesClient({ suggestions }: { suggestions: Suggestion[] })
 function ShortNames({ suggestions }: { suggestions: Suggestion[] }) {
   const t = useTranslations("admin.costCenters");
   const { mutate } = useMutation();
-  const back = useGoBack("/admin/cost-centers");
+  const goUp = useGoUp();
   const [rows, setRows] = useState(() =>
     Object.fromEntries(suggestions.map((s) => [s.cc.id, { on: true, name: s.shortName }])),
   );
@@ -65,7 +65,7 @@ function ShortNames({ suggestions }: { suggestions: Suggestion[] }) {
       return data !== null;
     },
     // Saved: these have short names now, so the list is done with.
-    commit: () => back.goBack(),
+    commit: () => goUp("/admin/cost-centers"),
     reset: () =>
       setRows(
         Object.fromEntries(suggestions.map((s) => [s.cc.id, { on: false, name: s.shortName }])),

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { useHistoryGo, useProgressRouter } from "./route-progress";
@@ -31,17 +30,13 @@ function canGoBackInApp(): boolean {
   return movedSinceLoad;
 }
 
-function stepsBackTo(path: string, limit: number): number | null {
+/** Whether the history entry right behind this one is `path`. False without the Navigation API. */
+function parentIsBehind(path: string): boolean {
   const nav = navigationApi();
   const current = nav?.currentEntry;
-  if (!nav || !current) return null;
-  const entries = nav.entries();
-  for (let d = 1; d <= limit; d++) {
-    const url = entries[current.index - d]?.url;
-    if (!url) return null;
-    if (routePath(new URL(url).pathname) === path) return d;
-  }
-  return null;
+  if (!nav || !current) return false;
+  const url = nav.entries()[current.index - 1]?.url;
+  return Boolean(url) && routePath(new URL(url!).pathname) === path;
 }
 
 let refreshOnArrival = false;
@@ -63,51 +58,40 @@ export function RouteHistoryRecorder() {
   return null;
 }
 
-export function useGoBack(fallback: string): {
-  href: string;
-  onClick: (e: ReactMouseEvent<HTMLAnchorElement>) => void;
-  goBack: () => void;
-} {
-  const router = useProgressRouter();
-
-  const goBack = useCallback(() => {
-    if (canGoBackInApp()) router.back();
-    else router.push(fallback);
-  }, [router, fallback]);
-
-  return {
-    href: fallback,
-    onClick: (e) => {
-      if (
-        e.defaultPrevented ||
-        e.button !== 0 ||
-        e.metaKey ||
-        e.ctrlKey ||
-        e.shiftKey ||
-        e.altKey
-      ) {
-        return;
-      }
-      e.preventDefault();
-      goBack();
-    },
-    goBack,
-  };
-}
-
-const RETURN_SCAN_LIMIT = 3;
-
-export function useReturnTo(): (href: string) => void {
+/**
+ * Go up to `parent`: the one way back in the app, for the back arrow and for every finished step (a saved kontering,
+ * a deleted utlägg). Back in history when the parent is the entry right behind, which keeps its tab and scroll,
+ * otherwise in place of this page. Either way nothing spent is left in the history for Back to land in, and the
+ * parent is fetched again on arrival, since this page may have changed what it shows.
+ *
+ * "Up" is the page's parent, never wherever you came from: a record opened from Översikt goes up to its list (the
+ * browser's own Back still returns to Översikt). Without the Navigation API (no history to read) it always replaces.
+ */
+export function useGoUp(): (parent: string) => void {
   const router = useProgressRouter();
   const go = useHistoryGo();
-
   return useCallback(
-    (href: string) => {
-      refreshOnArrival = true;
-      const steps = stepsBackTo(routePath(href), RETURN_SCAN_LIMIT);
-      if (steps) go(steps);
-      else router.replace(href);
+    (parent: string) => {
+      if (parentIsBehind(routePath(parent))) {
+        refreshOnArrival = true;
+        go(1);
+      } else {
+        router.replace(parent);
+      }
     },
     [router, go],
   );
+}
+
+/**
+ * Closing an overlay (the settings), which is not going up: back to the page it opened over, or `fallback` when it
+ * was opened directly.
+ */
+export function useCloseOverlay(fallback: string): { href: string; close: () => void } {
+  const router = useProgressRouter();
+  const close = useCallback(() => {
+    if (canGoBackInApp()) router.back();
+    else router.push(fallback);
+  }, [router, fallback]);
+  return { href: fallback, close };
 }

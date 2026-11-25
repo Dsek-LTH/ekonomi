@@ -244,5 +244,17 @@
     "fromScan": "Läst från fakturan. Kontrollera att det stämmer.",
     "descriptionPlaceholder": "Till exempel hyra av släp till nollningen",
     "roundingHint": "Om fakturan rundar av. Raderna ska bli beloppet minus öresutjämningen."
+  },
+  "presence": {
+    "banner": "{names} har också fakturan öppen för kontering.",
+    "confirmTitle": "Någon annan konterar samma faktura",
+    "confirmMessage": "{names} har också fakturan öppen. Sparar du nu måste {count, plural, one {hen} other {de}} ladda om sidan innan {count, plural, one {hen} other {de}} kan spara.",
+    "updatedTitle": "Fakturan har uppdaterats",
+    "updatedMessage": "{name} har ändrat fakturan medan du hade den öppen. Ladda om för att se den senaste versionen.",
+    "updatedMessageSelf": "Fakturan har ändrats i en annan flik. Ladda om för att se den senaste versionen.",
+    "updatedMessageUnknown": "Fakturan har ändrats medan du hade den öppen. Ladda om för att se den senaste versionen.",
+    "staleBanner": "Fakturan har ändrats sedan du öppnade den. Ladda om innan du sparar.",
+    "reload": "Ladda om",
+    "close": "Stäng"
   }
 }

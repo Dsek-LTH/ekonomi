@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { useTranslations } from "next-intl";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { usePhone } from "@/lib/ui/media";
@@ -101,7 +101,7 @@ export default function NewExpenseClient({
   ownExpenses: ExpenseFingerprint[];
   existing?: Expense;
 }) {
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
   const t = useTranslations("expenses.wizard");
   const phone = usePhone();
   const tReceipt = useTranslations("receipt");
@@ -525,8 +525,8 @@ export default function NewExpenseClient({
     forgetDraft();
     // The receipt half of the same copy, for exits with nothing to upload.
     void dropKeptFiles(draftKey);
-    // Replaces the wizard's history entry so Back does not lead into a spent form (useReturnTo).
-    returnTo(`/expenses/${id}`);
+    // Replaces the wizard's history entry so Back does not lead into a spent form (useGoUp).
+    goUp(`/expenses/${id}`);
   }
 
   async function saveDraft() {

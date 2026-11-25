@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 
 type TransitionAction =
   | "submit"
@@ -30,7 +30,7 @@ export function useExpenseMutations(expenseId: string) {
   const tDetail = useTranslations("expenses.detail");
   const tBookkeeping = useTranslations("bookkeeping");
   const notify = useNotify();
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
   const confirm = useConfirm();
   const action = useMutation();
   const matcher = useMutation();
@@ -115,7 +115,7 @@ export function useExpenseMutations(expenseId: string) {
     if (!data) return;
     setDeleted(true);
     // Not a push: the utlägg is gone, and pushing left it behind its own list on Back.
-    returnTo("/expenses");
+    goUp("/expenses");
   }
 
   /** Bokföring: the voucher sent to Fortnox from the utlägg's own page. The confirmation is built from the answer

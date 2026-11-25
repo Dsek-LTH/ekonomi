@@ -10,19 +10,36 @@ import { useProgressRouter } from "@/components/shell/route-progress";
 import { useFormat } from "@/lib/ui/use-format";
 import type { PresentUser } from "@/lib/domain/presence";
 
-export function OthersBookingNotice({ others }: { others: PresentUser[] }) {
-  const t = useTranslations("book.presence");
+/** Which record the copy names: an utlägg (book.presence) or a levfaktura (invoices.presence). */
+type Copy = "book.presence" | "invoices.presence";
+
+export function OthersBookingNotice({
+  others,
+  copy = "book.presence",
+}: {
+  others: PresentUser[];
+  copy?: Copy;
+}) {
+  const t = useTranslations(copy);
   const { list } = useFormat();
   if (others.length === 0) return null;
   return (
-    <Notice>{t("banner", { names: list(others.map((o) => o.name)), count: others.length })}</Notice>
+    <Notice tone="info">
+      {t("banner", { names: list(others.map((o) => o.name)), count: others.length })}
+    </Notice>
   );
 }
 
 /** Saved by somebody else while this screen was open. The save button stays dead until reload,
  * since the server would refuse it. */
-export function UpdatedElsewhere({ by }: { by?: PresentUser }) {
-  const t = useTranslations("book.presence");
+export function UpdatedElsewhere({
+  by,
+  copy = "book.presence",
+}: {
+  by?: PresentUser;
+  copy?: Copy;
+}) {
+  const t = useTranslations(copy);
   const { user } = useRole();
   const router = useProgressRouter();
   const [open, setOpen] = useState(true);

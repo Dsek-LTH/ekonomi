@@ -269,6 +269,7 @@ model User {
   sentTestEmails        OutboundEmail[]          @relation("EmailSender")
   notificationPrefs     NotificationPreference[]
   expensePresence       ExpensePresence[]        @relation("ExpensePresenceUser")
+  invoicePresence       SupplierInvoicePresence[] @relation("SupplierInvoicePresenceUser")
   voucherReviews        VoucherReview[]          @relation("VoucherReviewer")
   voucherComments       VoucherComment[]         @relation("VoucherCommentAuthor")
   checklistItemsDone    ChecklistItem[]          @relation("ChecklistItemDoneBy")

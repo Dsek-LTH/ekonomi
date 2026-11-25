@@ -16,7 +16,12 @@ import {
   SettingsStack,
 } from "@/components/settings/settings-card";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { SettingsForm, useDraft, useDraftPart } from "@/components/settings/settings-draft";
+import {
+  SettingsForm,
+  SettingsLink,
+  useDraft,
+  useDraftPart,
+} from "@/components/settings/settings-draft";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Button, SOFT_FILL, SOFT_HOVER } from "@/components/ui/button";
 import { cn } from "@/lib/ui/utils";
@@ -264,7 +269,7 @@ function Unit({ unit, knownGroups }: { unit: ResultUnit; knownGroups: string[] }
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {unit.owners.map((u) => (
-                    <Link
+                    <SettingsLink
                       key={u.id}
                       href={`/admin/users/${u.id}`}
                       className={cn(
@@ -274,7 +279,7 @@ function Unit({ unit, knownGroups }: { unit: ResultUnit; knownGroups: string[] }
                       )}
                     >
                       {u.name}
-                    </Link>
+                    </SettingsLink>
                   ))}
                 </div>
               )}
@@ -292,9 +297,9 @@ function Unit({ unit, knownGroups }: { unit: ResultUnit; knownGroups: string[] }
               }
             >
               <div className="sm:text-right">
-                <Link href="/admin/income#units" className={`text-sm ${LINK}`}>
+                <SettingsLink href="/admin/income#units" className={`text-sm ${LINK}`}>
                   {t("editInSales")}
-                </Link>
+                </SettingsLink>
               </div>
             </SettingRow>
           </SettingsRows>

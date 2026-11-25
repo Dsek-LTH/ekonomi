@@ -80,3 +80,38 @@ export async function activePresence(
   }
   return out;
 }
+
+// ── Levfaktura kontering ─────────────────────────────────────────
+// The same as the utlägg's booking screen, with one screen only (SupplierInvoicePresence).
+
+/** Record that `userId` is on the kontering of `invoiceId`, or that they have gone idle. The invoice must exist. */
+export async function invoiceHeartbeat(invoiceId: string, userId: string, active: boolean) {
+  if (active) {
+    await prisma.$executeRaw`
+      INSERT INTO "SupplierInvoicePresence" ("invoiceId", "userId", "lastSeenAt")
+      VALUES (${invoiceId}, ${userId}, ${NOW})
+      ON CONFLICT ("invoiceId", "userId")
+      DO UPDATE SET "lastSeenAt" = EXCLUDED."lastSeenAt"`;
+  } else {
+    await leaveInvoice(invoiceId, userId);
+  }
+  await prisma.$executeRaw`
+    DELETE FROM "SupplierInvoicePresence" WHERE "lastSeenAt" < ${NOW} - ${PRUNE_AFTER}`;
+}
+
+/** Leave the kontering of `invoiceId`. Nothing to do when not on it. */
+export async function leaveInvoice(invoiceId: string, userId: string) {
+  await prisma.$executeRaw`
+    DELETE FROM "SupplierInvoicePresence" WHERE "invoiceId" = ${invoiceId} AND "userId" = ${userId}`;
+}
+
+/** Everybody but `selfId` on the kontering of `invoiceId`. */
+export function othersOnInvoice(invoiceId: string, selfId: string): Promise<PresentUser[]> {
+  return prisma.$queryRaw<PresentUser[]>`
+    SELECT u."id", u."name"
+    FROM "SupplierInvoicePresence" p JOIN "User" u ON u."id" = p."userId"
+    WHERE p."invoiceId" = ${invoiceId}
+      AND p."userId" <> ${selfId}
+      AND p."lastSeenAt" > ${NOW} - ${TTL}
+    ORDER BY u."name"`;
+}

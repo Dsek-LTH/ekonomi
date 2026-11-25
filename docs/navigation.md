@@ -37,6 +37,19 @@ Rules:
   `/invoices/[id]`, a day of income from `/income/zettle/[id]` or
   `/income/swish/[id]`. What is the same for many items at once (konterar
   every day that needs nobody) is a button on the list's toolbar.
+- The back arrow means up. Every nested page names its parent
+  (`PageShell back`): kontering and fördelning go up to the levfaktura, the
+  levfaktura to its list. A finished step goes up the same way. Both use
+  `useGoUp` (`components/shell/route-history.tsx`): back in history when the
+  parent is the entry right behind, otherwise in place of the page, so nothing
+  spent is left for the browser's Back to land in. Up is never "where you came
+  from": a record opened from Översikt goes up to its list, and the browser's
+  own Back still returns to Översikt. Closing the settings overlay is not going
+  up and returns to the page it opened over (`useCloseOverlay`).
+- Leaving never loses work, so a working page does not ask before you go. A
+  booking screen (utlägg booking, levfaktura kontering) keeps what is typed as
+  a draft on the computer (`useLocalDraft`) and brings it back with a
+  "Börja om" button. Only settings ask, from the overlay (docs/settings.md).
 - A route that moves is not kept as a redirect. The old path simply goes.
 
 ## The tree

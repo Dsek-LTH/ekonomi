@@ -198,5 +198,9 @@
     "to": "Till",
     "wholeYear": "Hela räkenskapsåret",
     "custom": "Anpassat intervall"
+  },
+  "draft": {
+    "restored": "Dina osparade ändringar har tagits tillbaka.",
+    "discard": "Börja om"
   }
 }

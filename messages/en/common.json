@@ -198,5 +198,9 @@
     "to": "To",
     "wholeYear": "Whole financial year",
     "custom": "Custom range"
+  },
+  "draft": {
+    "restored": "Your unsaved changes have been brought back.",
+    "discard": "Start over"
   }
 }

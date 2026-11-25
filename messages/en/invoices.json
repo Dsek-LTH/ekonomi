@@ -244,5 +244,17 @@
     "fromScan": "Read from the invoice. Check that it is right.",
     "descriptionPlaceholder": "For example trailer hire for the introduction week",
     "roundingHint": "If the invoice rounds off. The rows add up to the amount less the rounding."
+  },
+  "presence": {
+    "banner": "{names} {count, plural, one {also has} other {also have}} this invoice open for kontering.",
+    "confirmTitle": "Someone else is booking this invoice",
+    "confirmMessage": "{names} {count, plural, one {also has} other {also have}} it open. If you save now, they will have to reload the page before they can save.",
+    "updatedTitle": "This invoice has been updated",
+    "updatedMessage": "{name} changed this invoice while you had it open. Reload to see the latest version.",
+    "updatedMessageSelf": "This invoice was changed in another tab. Reload to see the latest version.",
+    "updatedMessageUnknown": "This invoice was changed while you had it open. Reload to see the latest version.",
+    "staleBanner": "This invoice has changed since you opened it. Reload before saving.",
+    "reload": "Reload",
+    "close": "Close"
   }
 }

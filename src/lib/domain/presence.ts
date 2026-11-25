@@ -2,7 +2,7 @@
 // block a write. Overwrites are stopped by the utlägg's updatedAt (app/api/expenses/[id]/book/route.ts).
 // Plain constants because the server and the client both need them.
 
-import type { ExpenseStatus } from "./types";
+import type { ExpenseStatus, SupplierInvoiceStatus } from "./types";
 import type { ExportLockView } from "./export-claim";
 
 /** How often an open booking screen says it is still there. */
@@ -36,7 +36,7 @@ export interface LiveBookkeeping {
 export interface PresenceAnswer {
   others: PresentUser[];
   updatedAt: string;
-  status: ExpenseStatus;
+  status: ExpenseStatus | SupplierInvoiceStatus;
   updatedBy?: PresentUser;
 }
 

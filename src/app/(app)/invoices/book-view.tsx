@@ -16,12 +16,15 @@ import {
   filledVoucherRows,
   type VoucherEditorRow,
 } from "@/components/voucher-editor";
-import { Notice } from "@/components/ui/notice";
+import { Issue, Notice } from "@/components/ui/notice";
 import { useConfirm } from "@/components/confirm-dialog";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useTypstSvg } from "@/components/typst/use-typst-svg";
 import { useMutation } from "@/components/shell/use-mutation";
-import { useLeaveGuard } from "@/components/shell/use-leave-guard";
+import { useLocalDraft } from "@/components/shell/use-local-draft";
+import { useBookingPresence } from "@/components/shell/use-booking-presence";
+import { OthersBookingNotice, UpdatedElsewhere } from "@/components/presence-notices";
+import { useFormat } from "@/lib/ui/use-format";
 import { useNotify } from "@/components/shell/notifications";
 import { useQuery } from "@/components/shell/use-query";
 import { isCompleteDate } from "@/lib/domain/date";
@@ -38,14 +41,18 @@ import { giroMismatch, matchSupplier } from "@/lib/domain/payment-ref";
 import type { FortnoxSupplier } from "@/lib/fortnox";
 import { buildInvoiceCoverData, liveCoverFacts, type CoverFacts } from "@/lib/ui/invoice-cover";
 import { cn } from "@/lib/ui/utils";
+import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
 import { useInvoicePanelDocuments, useTransition, type WorkspaceProps } from "./invoice-shared";
 
 const toOre = (sek: number | null) => (sek == null ? null : sekToOre(sek));
 
-/** Opening lines: the saved kontering, else a line per attested share. Shares exclude öresutjämning, so the voucher balances. */
-function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
+/** Opening lines: the saved kontering, else a line per attested share. Shares exclude öresutjämning, so the voucher balances. `isLocal` tags a local cost centre's code onto a row's text, as the expense kontering does (lib/domain/cost-center-tag), so the row reads as Fortnox will get it. */
+function initialRows(
+  invoice: SupplierInvoiceView,
+  isLocal: (code: string) => boolean,
+): VoucherEditorRow[] {
   if (invoice.lines.length > 0) {
     return invoice.lines.map((l) => ({
       id: l.id,
@@ -69,7 +76,9 @@ function initialRows(invoice: SupplierInvoiceView): VoucherEditorRow[] {
   return invoice.allocations.map((a, i) => ({
     id: a.id,
     account: invoice.suggestedAccounts[a.id] ?? "",
-    description: a.comment ?? "",
+    description: isLocal(a.costCenterCode)
+      ? withCostCenterTag(a.comment ?? "", a.costCenterCode)
+      : (a.comment ?? ""),
     costCenterCode: a.costCenterCode,
     project: "",
     debit: booked[i] ? sekToInput(oreToSEK(booked[i])) : "",
@@ -212,6 +221,9 @@ export function BookPanel({
   const tBook = useTranslations("invoices.book");
   const tVoucher = useTranslations("book");
   const tErr = useTranslations("errors");
+  const tPresence = useTranslations("invoices.presence");
+  const tDraft = useTranslations("common.draft");
+  const { list: listNames } = useFormat();
   const notify = useNotify();
   const save = useMutation();
   const suppliers = useQuery<FortnoxSupplier[]>("/api/fortnox/suppliers");
@@ -236,19 +248,31 @@ export function BookPanel({
   const [touched, setTouched] = useState<ReadonlySet<HeadKey>>(new Set());
   const [picked, setPicked] = useState<{ supplier?: string }>({});
   const [seen, setSeen] = useState(invoice.updatedAt);
+  // Ytterligare uppgifter opens by itself only when the invoice already uses one of them.
+  const [moreOpen] = useState(() => Boolean(invoice.ourReference || invoice.yourReference));
+  const isLocal = (code: string) =>
+    costCenters.some((c) => c.code === code && c.source === "LOCAL");
+  const [rows, setRows] = useState<VoucherEditorRow[]>(() => initialRows(invoice, isLocal));
+  // What the rows say when the page opens. Compared as lines, so the editor's own spare rows (added on mount) and an
+  // edit typed back to what it was do not count as unsaved work.
+  const [baseline, setBaseline] = useState(() =>
+    JSON.stringify(linesOf(initialRows(invoice, isLocal))),
+  );
+  // The version this kontering is typed on. A save moves it, so a Bokför whose transition failed can save again.
+  const [version, setVersion] = useState(invoice.updatedAt);
   if (seen !== invoice.updatedAt) {
     setSeen(invoice.updatedAt);
     setPicked({});
     setDraft(headOf(invoice));
     setSaved(headOf(invoice));
+    setRows(initialRows(invoice, isLocal));
+    setBaseline(JSON.stringify(linesOf(initialRows(invoice, isLocal))));
+    setVersion(invoice.updatedAt);
   }
-  const [rows, setRowsRaw] = useState<VoucherEditorRow[]>(() => initialRows(invoice));
-  const [rowsChanged, setRowsChanged] = useState(false);
-  const setRows = (next: VoucherEditorRow[]) => {
-    setRowsRaw(next);
-    setRowsChanged(true);
-  };
   const lines = linesOf(rows);
+  const rowsChanged = JSON.stringify(lines) !== baseline;
+  // Who else has the kontering open, and whether somebody saved it meanwhile (as on the utlägg's booking screen).
+  const presence = useBookingPresence(`/api/supplier-invoices/${invoice.id}/presence`, version);
 
   const list = useMemo(() => suppliers.data ?? [], [suppliers.data]);
   const supplierNo =
@@ -327,9 +351,40 @@ export function BookPanel({
     rowsChanged ||
     (picked.supplier !== undefined && supplierChanged) ||
     (Object.keys(draft) as HeadKey[]).some((key) => draft[key] !== saved[key]);
-  useLeaveGuard(dirty && !tr.busy);
+
+  // Kept as it is typed (use-local-draft.ts), so leaving by any route comes back to the same kontering. Never asks.
+  const draftStore = useLocalDraft({
+    name: `invoice-book:${invoice.id}`,
+    version: invoice.updatedAt,
+    value: { head: draft, rows, supplier: picked.supplier },
+    dirty,
+    restore: (kept) => {
+      setDraft(kept.head);
+      setRows(kept.rows);
+      setPicked({ supplier: kept.supplier });
+    },
+  });
+  function startOver() {
+    setDraft(saved);
+    setRows(initialRows(invoice, isLocal));
+    setPicked({});
+    draftStore.dismiss();
+  }
 
   async function book() {
+    // Somebody else has it open. Not a lock, but whoever saves second starts over.
+    const { others } = presence;
+    if (others.length > 0) {
+      const ok = await confirm({
+        title: tPresence("confirmTitle"),
+        message: tPresence("confirmMessage", {
+          names: listNames(others.map((o) => o.name)),
+          count: others.length,
+        }),
+        confirmLabel: tBook("save"),
+      });
+      if (!ok) return;
+    }
     // The head goes with the kontering in one PATCH. The route leaves out what already matches.
     const typed: PatchSupplierInvoice = {};
     for (const key of Object.keys(draft) as HeadKey[]) {
@@ -342,12 +397,25 @@ export function BookPanel({
       ...typed,
       ...(supplierChanged && supplierBody(supplierNo)),
       lines,
+      expectedUpdatedAt: version,
     };
-    const ok = await save.mutate(url, { method: "PATCH", body: unsaved, refresh: false });
-    if (ok === null) return;
+    // Our own save moves the version: heartbeats wait, or they would report it as somebody else's.
+    presence.pause();
+    const ok = await save.mutate<{ updatedAt?: string }>(url, {
+      method: "PATCH",
+      body: unsaved,
+      refresh: false,
+    });
+    if (ok === null) {
+      // Possibly a 409 because somebody got there first: asking at once turns it into the reload dialog.
+      presence.resume();
+      return;
+    }
+    // Nothing changed is a 204 with no body: the version stands.
+    setVersion(ok.updatedAt ?? version);
     setSaved(draft);
-    setRowsChanged(false);
-    await tr.run({ action: "book" });
+    draftStore.clear();
+    if (!(await tr.run({ action: "book" }))) presence.resume();
   }
 
   const accountName = (number: string) => accounts.find((a) => a.number === number)?.name ?? "";
@@ -386,10 +454,26 @@ export function BookPanel({
   return (
     <>
       <ReceiptPanelSource documents={documents} />
+      {presence.stale ? (
+        <UpdatedElsewhere by={presence.stale.by} copy="invoices.presence" />
+      ) : (
+        <OthersBookingNotice others={presence.others} copy="invoices.presence" />
+      )}
+      {draftStore.restored && (
+        <Notice tone="info">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {tDraft("restored")}
+            <Button size="sm" variant="secondary" onClick={startOver}>
+              {tDraft("discard")}
+            </Button>
+          </span>
+        </Notice>
+      )}
       <Card>
         {header}
-        <div className="@container space-y-5 px-inset py-5">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 @2xl:grid-cols-4">
+        {/* Three rows from 36rem, two columns under it: the head is checked against the PDF beside it, not read. */}
+        <div className="@container space-y-3 px-inset py-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3 @xl:grid-cols-4">
             <FieldGroup label={t("supplier")} className="col-span-2" requirement="required">
               <Combobox
                 size="sm"
@@ -402,30 +486,43 @@ export function BookPanel({
               />
               {/* Suppliers are added in Fortnox, not here. */}
               {!supplier && !suppliers.loading && invoice.supplierName && (
-                <p className="mt-1.5 text-xs text-muted">
+                <p className="mt-1 truncate text-xs text-muted" title={invoice.supplierName}>
                   {t("supplierNotInRegister", { name: invoice.supplierName })}
                 </p>
               )}
+              {/* Money to an account the register does not know: said on the supplier it is about, and again at send. */}
+              {mismatch && (
+                <Issue tone="danger" className="mt-1">
+                  {t("giroWarning", {
+                    field: tFields(mismatch.field).toLowerCase(),
+                    invoice: mismatch.invoice,
+                    register: mismatch.register ?? t("giroNone"),
+                  })}{" "}
+                  {tBook("giroAtSend")}
+                </Issue>
+              )}
             </FieldGroup>
+            <Field label={tBook("total")} requirement="required">
+              <HeadInput amount {...field("amount")} />
+            </Field>
+            <Field label={tBook("rounding")} requirement="optional">
+              <HeadInput {...field("rounding")} align="right" />
+            </Field>
             <Field label={tFields("invoiceDate")} requirement="required">
               <HeadInput type="date" {...field("invoiceDate")} />
             </Field>
             <Field label={tFields("dueDate")} requirement="required">
               <HeadInput type="date" {...field("dueDate")} />
             </Field>
+            <Field label={tFields("invoiceNumber")} requirement="required">
+              {text("invoiceNumber")}
+            </Field>
             <Field
               label={tFields("ocr")}
-              className="col-span-2"
               requirement="optional"
               error={badOcr ? tErr("supplierInvoice.badOcr") : undefined}
             >
               {text("ocr")}
-            </Field>
-            <Field label={tFields("invoiceNumber")} requirement="required">
-              {text("invoiceNumber")}
-            </Field>
-            <Field label={tBook("total")} requirement="required">
-              <HeadInput amount {...field("amount")} />
             </Field>
             <FieldGroup
               label={tVoucher("allCostCenter")}
@@ -436,20 +533,19 @@ export function BookPanel({
             </FieldGroup>
           </div>
 
-          <details open className="group border-t border-border pt-3">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold">
+          {/* Rarely needed, so folded unless the invoice already uses one of them. */}
+          <details open={moreOpen} className="group border-t border-border pt-2.5">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground">
               <IconChevronRight className="size-4 transition-transform group-open:rotate-90" />
               {tBook("more")}
             </summary>
-            <div className="mt-3 grid grid-cols-2 items-start gap-x-4 gap-y-3 @2xl:grid-cols-4">
-              <div className="col-span-2 space-y-3 @2xl:col-span-2">
-                <Field label={tBook("ourRef")} requirement="optional">
-                  {text("ourReference")}
-                </Field>
-                <Field label={tBook("supplierRef")} requirement="optional">
-                  {text("yourReference")}
-                </Field>
-              </div>
+            <div className="mt-2.5 grid grid-cols-2 items-start gap-x-3 gap-y-3 @xl:grid-cols-4">
+              <Field label={tBook("ourRef")} requirement="optional">
+                {text("ourReference")}
+              </Field>
+              <Field label={tBook("supplierRef")} requirement="optional">
+                {text("yourReference")}
+              </Field>
               <Field label={tFields("bankgiro")}>{ofSupplier("bankgiro")}</Field>
               <Field label={tFields("plusgiro")}>{ofSupplier("plusgiro")}</Field>
             </div>
@@ -490,28 +586,6 @@ export function BookPanel({
           totalCredit={credit}
         />
 
-        <div className="flex justify-end border-t border-border px-inset py-4">
-          <Field label={tBook("rounding")} className="w-40" requirement="optional">
-            <HeadInput {...field("rounding")} align="right" />
-          </Field>
-        </div>
-
-        {mismatch && (
-          <div className="px-inset pb-4">
-            <Notice tone="warning">
-              <p className="font-medium">{t("giroWarningTitle")}</p>
-              <p>
-                {t("giroWarning", {
-                  field: tFields(mismatch.field).toLowerCase(),
-                  invoice: mismatch.invoice,
-                  register: mismatch.register ?? t("giroNone"),
-                })}
-              </p>
-              <p className="mt-1">{tBook("giroAtSend")}</p>
-            </Notice>
-          </div>
-        )}
-
         <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
           <BalanceChip balanced={difference === 0} />
 
@@ -525,7 +599,7 @@ export function BookPanel({
               blocker && <WarningChip>{tErr(blocker)}</WarningChip>
             )}
             <Button
-              disabled={Boolean(blocker) || tr.busy || save.busy}
+              disabled={Boolean(blocker) || tr.busy || save.busy || Boolean(presence.stale)}
               loading={tr.pending === "book"}
               onClick={() => void book()}
             >

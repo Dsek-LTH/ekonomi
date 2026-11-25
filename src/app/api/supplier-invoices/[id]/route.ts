@@ -1,8 +1,8 @@
 // One levfaktura: the treasurer's kontering, once every row is attested and until it is in Fortnox (canBook).
-// Head fields are saved as each is left, the lines together on Spara kontering. Marking it done is ./transition's `book`.
+// The head fields and the lines are saved together on Spara kontering. Marking it done is ./transition's `book`.
 import { prisma } from "@/lib/server/db";
 import { isoToDate } from "@/lib/domain/date";
-import { gate } from "@/lib/api/guard";
+import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
 import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
@@ -101,6 +101,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     (lines.length !== saved.length || lines.some((l, i) => JSON.stringify(l) !== saved[i]));
   if (linesChanged) changed.push("lines");
 
+  // Opened on a version that is no longer the invoice's: somebody else konterade meanwhile.
+  if (body.expectedUpdatedAt && body.expectedUpdatedAt !== invoice.updatedAt.toISOString()) {
+    return fail(409, "supplierInvoice.changedMeanwhile");
+  }
+
   if (changed.length === 0) return new Response(null, { status: 204 });
 
   // A field typed over is the treasurer's now, not the PDF's.
@@ -113,8 +118,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       // Still in the state it was judged editable in; exported in another tab, it is not this request's to change.
       applied(
         await tx.supplierInvoice.updateMany({
-          where: { id: invoice.id, status: invoice.status },
-          data,
+          where: {
+            id: invoice.id,
+            status: invoice.status,
+            ...(body.expectedUpdatedAt && { updatedAt: new Date(body.expectedUpdatedAt) }),
+          },
+          // Stamped even when only the lines changed, so the version moves with every save.
+          data: { ...data, updatedAt: new Date() },
         }),
         "supplierInvoice.changedMeanwhile",
       );
@@ -151,8 +161,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           },
         });
       }
+      return tx.supplierInvoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+        select: { updatedAt: true },
+      });
     }),
   );
   if (result instanceof Response) return result;
-  return new Response(null, { status: 204 });
+  // The new version, for a page that saves again before it reloads (a Bokför whose transition failed).
+  return Response.json({ updatedAt: result.updatedAt.toISOString() });
 }

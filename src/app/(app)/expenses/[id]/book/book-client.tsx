@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Notice } from "@/components/ui/notice";
+import { Issue, Notice } from "@/components/ui/notice";
 import { IconCheck } from "@/components/ui/icons";
 import { useRole } from "@/components/shell/role-context";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -27,7 +27,7 @@ import {
 import type { AccountRecord, BookkeepingSettings, ProjectRecord } from "@/lib/domain/types";
 // The out-of-balance difference is set inside a sentence, so that one stays a
 // string. Everything else on this page is an Amount.
-import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
+import { oreToSEK, parseOre, sekToInput, sekToOre } from "@/lib/domain/money";
 import { isRevenueAccount, voucherBalance, voucherBlocker } from "@/lib/domain/voucher";
 import { voucherTextPrefix } from "@/lib/domain/review";
 import { expenseLabel } from "@/lib/domain/reference";
@@ -35,13 +35,14 @@ import { DateInput, Field, Input } from "@/components/ui/field";
 import { uid } from "@/lib/ui/utils";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
 import type { CostCenter, Expense } from "@/lib/domain/types";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import { useFiscalYear } from "@/components/shell/fiscal-year-context";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
-import { useBookingPresence } from "./use-booking-presence";
-import { OthersBookingNotice, UpdatedElsewhere } from "./presence-notices";
+import { useBookingPresence } from "@/components/shell/use-booking-presence";
+import { OthersBookingNotice, UpdatedElsewhere } from "@/components/presence-notices";
 import { isoDay } from "@/lib/domain/date";
+import { useLocalDraft } from "@/components/shell/use-local-draft";
 
 type Row = VoucherEditorRow;
 
@@ -67,7 +68,7 @@ function defaultDebitRows(expense: Expense | undefined, costCenters: CostCenter[
   // A return has its payment row on the debit side, so the suggestion goes on
   // the credit side, as the magnitude.
   const isReturn = gross < 0;
-  const amount = gross ? Math.abs(gross).toFixed(2) : "";
+  const amount = gross ? sekToInput(Math.abs(gross)) : "";
   if (expense.allocations.length > 0) {
     const isLocal = (code: string) =>
       costCenters.some((c) => c.code === code && c.source === "LOCAL");
@@ -105,8 +106,8 @@ function debitRowsFromVerification(expense: Expense, paymentAccount: string): Ro
       description: l.description ?? "",
       costCenterCode: l.costCenterCode ?? "",
       project: l.project ?? "",
-      debit: l.debit ? l.debit.toFixed(2) : "",
-      credit: l.credit ? l.credit.toFixed(2) : "",
+      debit: l.debit ? sekToInput(l.debit) : "",
+      credit: l.credit ? sekToInput(l.credit) : "",
     }));
 }
 
@@ -126,11 +127,12 @@ export default function BookExpenseClient({
   returnHref: string;
   settings: BookkeepingSettings;
 }) {
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
   const t = useTranslations("book");
   const tDetail = useTranslations("expenses.detail");
   const tReceipt = useTranslations("receipt");
   const tCommon = useTranslations("common");
+  const tDraft = useTranslations("common.draft");
   const fiscalYear = useFiscalYear();
   const { user } = useRole();
   const { busy: submitting, mutate } = useMutation();
@@ -153,7 +155,9 @@ export default function BookExpenseClient({
 
   // Who else has this utlägg open, and whether somebody saved it meanwhile. Only for a screen that can book (use-booking-presence.ts).
   const presence = useBookingPresence(
-    expense && mode && canBookkeep(user.capabilities) ? expense.id : null,
+    expense && mode && canBookkeep(user.capabilities)
+      ? `/api/expenses/${expense.id}/presence`
+      : null,
     expense?.updatedAt ?? null,
   );
 
@@ -194,6 +198,32 @@ export default function BookExpenseClient({
       ? debitRowsFromVerification(expense, paymentAccount)
       : defaultDebitRows(expense ?? undefined, costCenters),
   );
+
+  // Unsaved work is kept as it is typed (use-local-draft.ts), as on the levfaktura's kontering, so leaving never asks.
+  // The rows are compared without the editor's spare ones, which it adds on mount.
+  const typed = () => JSON.stringify([date, textSuffix, correctionReason, filledVoucherRows(rows)]);
+  const [opened] = useState(typed);
+  const bookDirty = Boolean(mode) && typed() !== opened;
+  const draftStore = useLocalDraft({
+    name: expense && mode ? `expense-book:${expense.id}` : null,
+    version: expense?.updatedAt ?? "",
+    value: { date, textSuffix, correctionReason, rows },
+    dirty: bookDirty,
+    restore: (kept) => {
+      setDate(kept.date);
+      setTextSuffix(kept.textSuffix);
+      setCorrectionReason(kept.correctionReason);
+      setRows(kept.rows);
+    },
+  });
+  function startOver() {
+    const [d, text, reason, kept] = JSON.parse(opened) as [string, string, string, Row[]];
+    setDate(d);
+    setTextSuffix(text);
+    setCorrectionReason(reason);
+    setRows(kept);
+    draftStore.dismiss();
+  }
 
   if (!expense) {
     return (
@@ -331,8 +361,9 @@ export default function BookExpenseClient({
       presence.resume();
       return;
     }
-    // Back out rather than pushing the utlägg in front, or the first Back lands in the booking form for a booked utlägg. `returnTo` refreshes the utlägg.
-    returnTo(returnHref);
+    draftStore.clear();
+    // Back out rather than pushing the utlägg in front, or the first Back lands in the booking form for a booked utlägg. `goUp` refreshes the utlägg.
+    goUp(returnHref);
   }
 
   // Anything bookable has a reference; the fallback only avoids a blank name.
@@ -358,57 +389,74 @@ export default function BookExpenseClient({
 
       <div className="grid gap-6">
         <div className="min-w-0 space-y-4">
+          {draftStore.restored && (
+            <Notice tone="info">
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                {tDraft("restored")}
+                <Button size="sm" variant="secondary" onClick={startOver}>
+                  {tDraft("discard")}
+                </Button>
+              </span>
+            </Notice>
+          )}
           {presence.stale ? (
             <UpdatedElsewhere by={presence.stale.by} />
           ) : (
             <OthersBookingNotice others={presence.others} />
           )}
           <Card>
-            <CardBody className="grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)] lg:grid-cols-[180px_minmax(0,1fr)_240px]">
-              <Field
-                label={t("voucherDate")}
-                requirement="required"
-                error={
-                  dateOutsideYear
-                    ? tCommon("dateOutsideFiscalYear", {
-                        year: fiscalYearLabel(fiscalYear!),
-                      })
-                    : undefined
-                }
-              >
-                {/* Selected as well as focused: the mask takes eight digits, so typing into a full date would do nothing. Once, on arrival. */}
-                <DateInput
-                  min={fiscalYear?.fromDate}
-                  max={fiscalYear?.toDate}
-                  autoFocus
-                  onFocus={selectOnce}
-                  size="sm"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </Field>
-              <Field label={t("voucherText")} requirement="optional">
-                {/* Prefix and input are one field, so the ring goes round the pair (focus-ring-within, globals.css). */}
-                <div className="focus-ring-within flex h-10 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
-                  {/* The prefix width is out of our hands: it truncates instead of widening the box. */}
-                  <span
-                    className="min-w-0 truncate font-medium text-muted"
-                    title={t("prefixLocked")}
-                  >
-                    {textPrefix}
-                  </span>
-                  <input
-                    value={textSuffix}
-                    onChange={(e) => setTextSuffix(e.target.value)}
-                    placeholder={t("voucherTextPlaceholder")}
-                    aria-label={t("voucherTextAria")}
-                    className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted"
+            <CardBody className="@container">
+              {/* The card's own width, not the screen's: beside the document panel it is half the page. */}
+              <div className="grid gap-3 @md:grid-cols-[180px_minmax(0,1fr)] @2xl:grid-cols-[180px_minmax(0,1fr)_240px]">
+                <Field
+                  label={t("voucherDate")}
+                  requirement="required"
+                  error={
+                    dateOutsideYear
+                      ? tCommon("dateOutsideFiscalYear", {
+                          year: fiscalYearLabel(fiscalYear!),
+                        })
+                      : undefined
+                  }
+                >
+                  {/* Selected as well as focused: the mask takes eight digits, so typing into a full date would do nothing. Once, on arrival. */}
+                  <DateInput
+                    min={fiscalYear?.fromDate}
+                    max={fiscalYear?.toDate}
+                    autoFocus
+                    onFocus={selectOnce}
+                    size="sm"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
                   />
-                </div>
-              </Field>
-              <Field label={t("allCostCenter")} requirement="optional">
-                <VoucherCostCenterPicker rows={rows} onChange={setRows} costCenters={costCenters} />
-              </Field>
+                </Field>
+                <Field label={t("voucherText")} requirement="optional">
+                  {/* Prefix and input are one field, so the ring goes round the pair (focus-ring-within, globals.css). */}
+                  <div className="focus-ring-within flex h-10 w-full items-center rounded-control border border-border-control bg-background px-2.5 text-sm sm:h-8">
+                    {/* The prefix width is out of our hands: it truncates instead of widening the box. */}
+                    <span
+                      className="min-w-0 truncate font-medium text-muted"
+                      title={t("prefixLocked")}
+                    >
+                      {textPrefix}
+                    </span>
+                    <input
+                      value={textSuffix}
+                      onChange={(e) => setTextSuffix(e.target.value)}
+                      placeholder={t("voucherTextPlaceholder")}
+                      aria-label={t("voucherTextAria")}
+                      className="ml-1.5 w-0 min-w-[8ch] flex-1 bg-transparent placeholder:text-muted"
+                    />
+                  </div>
+                </Field>
+                <Field label={t("allCostCenter")} requirement="optional">
+                  <VoucherCostCenterPicker
+                    rows={rows}
+                    onChange={setRows}
+                    costCenters={costCenters}
+                  />
+                </Field>
+              </div>
             </CardBody>
             {correcting && (
               <CardBody className="border-t border-border">
@@ -445,14 +493,16 @@ export default function BookExpenseClient({
             />
 
             {revenueAccounts.length > 0 && (
-              <div className="px-inset pb-4">
-                <Notice>{t("revenueAccounts", { list: revenueAccounts.join(", ") })}</Notice>
+              <div className="px-inset pb-3">
+                <Issue tone="danger">
+                  {t("revenueAccounts", { list: revenueAccounts.join(", ") })}
+                </Issue>
               </div>
             )}
 
             {!paymentAccountKnown && (
-              <div className="px-inset pb-4">
-                <Notice>
+              <div className="px-inset pb-3">
+                <Issue tone="danger">
                   {paymentAccountSetting === null
                     ? t(
                         expense.paymentType === "CARD"
@@ -460,7 +510,7 @@ export default function BookExpenseClient({
                           : "memberDebtAccountUnset",
                       )
                     : t("unknownPaymentAccount", { account: paymentAccount })}
-                </Notice>
+                </Issue>
               </div>
             )}
 

@@ -2,8 +2,9 @@
 
 // Settings save with one Spara at the bottom of the page (docs/settings.md). Every value a page edits is held as a
 // draft until then: `useDraft` for one record's fields, `useDraftRows` for a field in each row of a list. A part of
-// the page that holds a draft registers it with `useDraftPart`, and `SettingsForm` gathers the parts: one bar, one
-// Spara for all of them, and a warning before leaving with anything unsaved.
+// the page that holds a draft registers it with `useDraftPart`, and `SettingsForm` gathers the parts: one bar and one
+// Spara for all of them. It tells the overlay when anything is unsaved, and the overlay asks before its own ways out
+// (a section, the back arrow, closing, a link made with `SettingsLink`) leave it behind.
 //
 // Adding or deleting a row, connecting and syncing are not values, and still happen at once.
 import {
@@ -17,12 +18,12 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { useConfirm } from "@/components/confirm-dialog";
 import { useNotify } from "@/components/shell/notifications";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { useLeaveGuard } from "@/components/shell/use-leave-guard";
 import { Button } from "@/components/ui/button";
 
 // ── Drafts ────────────────────────────────────────────────────────
@@ -148,6 +149,36 @@ export const SettingsFooterSlot = createContext<HTMLElement | null>(null);
 /** Whether the open settings page has unsaved changes, for the overlay's own close (Escape, the backdrop). */
 export const SettingsDirtyCtx = createContext<((dirty: boolean) => void) | null>(null);
 
+/**
+ * The overlay's "leave this page": runs `go` at once, or after asking when the page has unsaved changes. Every way
+ * out of a settings page goes through it, so nothing has to watch for links. Outside the overlay it simply goes.
+ */
+export const SettingsLeaveCtx = createContext<(go: () => void) => void>((go) => go());
+
+export function useSettingsLeave() {
+  return useContext(SettingsLeaveCtx);
+}
+
+/** The click of a link on a settings page to somewhere else: asks first while the page has unsaved changes. */
+export function useSettingsLinkClick(href: string): React.MouseEventHandler<HTMLAnchorElement> {
+  const leave = useSettingsLeave();
+  const router = useProgressRouter();
+  return (e) => {
+    // A modified click opens a new tab and leaves nothing behind.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    leave(() => router.push(href));
+  };
+}
+
+/** A link on a settings page to somewhere else (useSettingsLinkClick). */
+export function SettingsLink({
+  href,
+  ...rest
+}: { href: string } & Omit<React.ComponentProps<typeof Link>, "href" | "onClick">) {
+  return <Link href={href} {...rest} onClick={useSettingsLinkClick(href)} />;
+}
+
 /** The page's draft parts, and the bar with Spara under them. */
 export function SettingsForm({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common.settingsForm");
@@ -177,7 +208,13 @@ export function SettingsForm({ children }: { children: React.ReactNode }) {
   }));
 
   const dirty = dirtyIds.size > 0;
-  useLeaveGuard(dirty);
+  // Closing or reloading the tab: the browser's own question. Every way out inside the app asks through the overlay.
+  useEffect(() => {
+    if (!dirty) return;
+    const unload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", unload);
+    return () => window.removeEventListener("beforeunload", unload);
+  }, [dirty]);
   useEffect(() => {
     reportDirty?.(dirty);
     return () => reportDirty?.(false);
@@ -227,7 +264,7 @@ export function SettingsForm({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** For the overlay: ask before closing it with changes unsaved. */
+/** For the overlay: ask before leaving a page with changes unsaved. */
 export function useConfirmLeave() {
   const t = useTranslations("common.leaveGuard");
   const confirm = useConfirm();

@@ -2,7 +2,7 @@
 
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
-import { useProgressRouter } from "@/components/shell/route-progress";
+import { useGoUp } from "@/components/shell/route-history";
 import { BookPanel } from "../../book-view";
 import { useInvoiceTitle } from "../../invoice-bits";
 import { Timeline } from "../../invoice-shared";
@@ -17,7 +17,7 @@ export function InvoiceBookClient({
   cover: CoverFacts | null;
 }) {
   const { invoice } = data;
-  const router = useProgressRouter();
+  const goUp = useGoUp();
   const title = useInvoiceTitle();
   const record = `/invoices/${invoice.id}`;
   return (
@@ -31,7 +31,7 @@ export function InvoiceBookClient({
       }
       back={record}
     >
-      <BookPanel {...data} cover={cover} onDone={() => router.push(record)} />
+      <BookPanel {...data} cover={cover} onDone={() => goUp(record)} />
       <Card>
         <Timeline invoice={invoice} />
       </Card>

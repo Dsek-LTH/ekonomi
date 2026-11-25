@@ -58,6 +58,8 @@ export const PatchSupplierInvoice = z.object({
   /** The supplier in Fortnox's register, as picked at the export step. */
   fortnoxSupplierNumber: Text(20),
   lines: z.array(InvoiceLine).max(50).optional(),
+  /** The version the kontering was opened on. Saved over by somebody else since, the save is a 409, not an overwrite. */
+  expectedUpdatedAt: z.iso.datetime().optional(),
 });
 export type PatchSupplierInvoice = z.infer<typeof PatchSupplierInvoice>;
 

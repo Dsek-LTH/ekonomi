@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -15,11 +15,12 @@ import {
 } from "@/components/shell/settings-sections";
 import { useRole } from "@/components/shell/role-context";
 import { canAccessSettings } from "@/lib/domain/permissions";
-import { useGoBack } from "@/components/shell/route-history";
+import { useCloseOverlay } from "@/components/shell/route-history";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { SettingsTitleSlot } from "@/components/shell/settings-title";
 import {
   SettingsDirtyCtx,
+  SettingsLeaveCtx,
   SettingsFooterSlot,
   useConfirmLeave,
 } from "@/components/settings/settings-draft";
@@ -31,18 +32,24 @@ export default function SettingsOverlayLayout({ children }: { children: React.Re
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const router = useProgressRouter();
-  const backToApp = useGoBack("/dashboard");
+  const backToApp = useCloseOverlay("/dashboard");
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null);
   const { user } = useRole();
-  // A settings page with unsaved changes says so here (SettingsForm), so closing the overlay can ask first. Links
-  // are asked about by the page's own leave guard.
+  // A settings page with unsaved changes says so here (SettingsForm). Every way out of the page asks through `leave`:
+  // a section, closing, the record's back arrow and SettingsLink. Nothing watches for clicks.
   const [dirty, setDirty] = useState(false);
   const confirmLeave = useConfirmLeave();
-  const close = async () => {
-    if (dirty && !(await confirmLeave())) return;
-    backToApp.goBack();
-  };
+  const leave = useCallback(
+    (go: () => void) => {
+      if (!dirty) return go();
+      void confirmLeave().then((ok) => {
+        if (ok) go();
+      });
+    },
+    [dirty, confirmLeave],
+  );
+  const close = () => leave(backToApp.close);
 
   // Somebody who may give access but not run the settings sees only Användare (docs/settings.md).
   const groups: SettingsSectionGroup[] = canAccessSettings(user.capabilities)
@@ -70,11 +77,11 @@ export default function SettingsOverlayLayout({ children }: { children: React.Re
       return;
     }
     e.preventDefault();
-    router.replace(href);
+    if (href !== pathname) leave(() => router.replace(href));
   };
 
   return (
-    <Modal variant="large" label={tAdmin("title")} onClose={() => void close()}>
+    <Modal variant="large" label={tAdmin("title")} onClose={close}>
       <div className="flex h-full min-h-0">
         <nav
           aria-label={t("settings")}
@@ -128,7 +135,11 @@ export default function SettingsOverlayLayout({ children }: { children: React.Re
             <div ref={setTitleSlot} className="min-w-0 flex-1" />
             <Link
               href={backToApp.href}
-              onClick={backToApp.onClick}
+              onClick={(e) => {
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                close();
+              }}
               aria-label={tCommon("close")}
               className="flex size-9 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground"
             >
@@ -139,11 +150,13 @@ export default function SettingsOverlayLayout({ children }: { children: React.Re
           <div className="mx-auto w-full flex-1 px-4 py-6 sm:px-8">
             <div className={cn(atRoot && "sm:hidden")}>
               <SettingsDirtyCtx.Provider value={setDirty}>
-                <SettingsTitleSlot.Provider value={titleSlot}>
-                  <SettingsFooterSlot.Provider value={footerSlot}>
-                    {children}
-                  </SettingsFooterSlot.Provider>
-                </SettingsTitleSlot.Provider>
+                <SettingsLeaveCtx.Provider value={leave}>
+                  <SettingsTitleSlot.Provider value={titleSlot}>
+                    <SettingsFooterSlot.Provider value={footerSlot}>
+                      {children}
+                    </SettingsFooterSlot.Provider>
+                  </SettingsTitleSlot.Provider>
+                </SettingsLeaveCtx.Provider>
               </SettingsDirtyCtx.Provider>
             </div>
           </div>

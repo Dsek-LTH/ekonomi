@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { useConfirm } from "@/components/confirm-dialog";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export default function StockProductClient({
   const [fixing, setFixing] = useState<CellarRowDto | null>(null);
   const confirm = useConfirm();
   const notify = useNotify();
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
   const { mutate } = useMutation();
 
   // A stocktake that turned out to be a delivery becomes one (api/stock/entries/[id]/to-purchase).
@@ -141,7 +141,7 @@ export default function StockProductClient({
         : t("products.removed"),
     );
     // Not a push. The product is gone, and Back must not lead to its page.
-    returnTo(href());
+    goUp(href());
   }
 
   const isVolume = product.kind === "VOLUME";

@@ -31,9 +31,9 @@ The overlay is already a modal, so nothing in it opens another one.
 
 - A record opens as its own page in the overlay, with its own URL:
   `/admin/users/[id]`, `/admin/result-units/[id]`, `/admin/email/[id]`. The
-  overlay's bar shows a back arrow and the record's name. The back arrow, and
-  the browser's Back, return to where the reader came from (the list, or the
-  person whose mail it was).
+  overlay's bar shows a back arrow and the record's name. The back arrow goes
+  up to the section's list (docs/navigation.md). The browser's Back returns to
+  where the reader came from (the list, or the person whose mail it was).
 - Deleting the record, and any other action on the whole record, is in a ⋯
   menu right after its name in the overlay's bar (`PageShell menu`). Radera is
   red there and still asks first. A row in a list keeps its own button at the
@@ -83,8 +83,10 @@ happen at once (`components/settings/settings-draft.tsx`).
   place, a product type, a personal grant), archiving, connecting Fortnox or
   Gmail, syncing and sending a test mail happen at once, with a confirm where
   they can do damage. They do not touch the draft: what was typed stays.
-- Leaving with unsaved changes asks first: a link inside the app, closing the
-  overlay (its X, Escape or the backdrop), and closing or reloading the tab.
+- Leaving with unsaved changes asks first. The overlay asks from its own ways
+  out (a section in the sidebar, a record's back arrow, its X, Escape or the
+  backdrop), a link on the page to elsewhere is a `SettingsLink`, and the
+  browser asks when the tab is closed or reloaded. Nothing watches for clicks.
   The browser's Back button is not caught.
 - A page that only lists and acts (Användare, a member's page, E-post,
   Milersättning, the Resultatenheter list) has no values and so no bar.

@@ -186,6 +186,7 @@ model SupplierInvoice {
   lines       SupplierInvoiceLine[]
   documents   SupplierInvoiceDocument[]
   events      SupplierInvoiceEvent[]
+  presence    SupplierInvoicePresence[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

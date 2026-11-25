@@ -13,13 +13,14 @@ import {
 // phase, so a control that stops propagation still counts.
 const ACTIVITY = ["pointerdown", "keydown", "input", "wheel", "focus"] as const;
 
-/** The booking screen's side of presence: say we are here, learn who else is, notice when somebody saved underneath us.
- * `screen` "review" is the same for the utlägg's own page while granskat; the two screens are counted apart.
- * `expenseId` null means nothing to announce. `loadedUpdatedAt` is the version the screen was rendered from.
+/** A booking screen's side of presence: say we are here, learn who else is, notice when somebody saved underneath us.
+ * `url` is the record's presence route: an utlägg's (/api/expenses/[id]/presence) or a levfaktura's kontering
+ * (/api/supplier-invoices/[id]/presence). `screen` "review" is the same for the utlägg's own page while granskat; the
+ * two screens are counted apart. `url` null means nothing to announce. `loadedUpdatedAt` is the version the screen was rendered from.
  * Ways out: leaving sends a DELETE (`keepalive`), idle or hidden makes the heartbeat say so, and a crash stops heartbeats until the TTL expires the row.
  * A heartbeat in flight can land after the DELETE and put the row back; the TTL takes it off. */
 export function useBookingPresence(
-  expenseId: string | null,
+  url: string | null,
   loadedUpdatedAt: string | null,
   screen: PresenceScreen = "book",
 ) {
@@ -38,8 +39,6 @@ export function useBookingPresence(
   const hiddenSince = useRef<number | null>(null);
   const wasIdle = useRef(false);
   const inFlight = useRef<AbortController | null>(null);
-
-  const url = expenseId ? `/api/expenses/${expenseId}/presence` : null;
 
   const beat = useCallback(async () => {
     if (!url || stopped.current || paused.current) return;

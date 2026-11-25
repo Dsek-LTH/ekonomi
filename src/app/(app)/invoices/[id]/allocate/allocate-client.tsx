@@ -12,7 +12,7 @@ import { IconCheck } from "@/components/ui/icons";
 import { AllocationEditor, makeRow, type AllocationRow } from "@/components/allocation-editor";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useMutation } from "@/components/shell/use-mutation";
-import { useProgressRouter } from "@/components/shell/route-progress";
+import { useGoUp } from "@/components/shell/route-history";
 import { parseOre, parseSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import type { KonteringRow } from "@/lib/api/schemas/supplier-invoice";
 import { attestBlocker, costTotal, isValidRounding } from "@/lib/domain/supplier-invoice";
@@ -42,11 +42,13 @@ export function InvoiceAllocateClient({
   const tAction = useTranslations("invoices.action");
   const tDetail = useTranslations("invoices.detail");
   const title = useInvoiceTitle();
-  const router = useProgressRouter();
+  // Back out of the spent step rather than pushing the record in front of it: Back would land on a fördelning
+  // that only redirects to the record again.
+  const goUp = useGoUp();
   const docs = useMutation();
   const record = `/invoices/${invoice.id}`;
-  const tr = useTransition(invoice.id, () => router.push(record));
-  const back = useReturnToInbox(invoice.id, () => router.push("/invoices"));
+  const tr = useTransition(invoice.id, () => goUp(record));
+  const back = useReturnToInbox(invoice.id, () => goUp("/invoices"));
 
   const backLabel = can.canMove ? tAction("return") : tAction("decline");
 

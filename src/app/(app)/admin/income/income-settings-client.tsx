@@ -8,7 +8,12 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { AmountInput } from "@/components/ui/amount-input";
 import { Button } from "@/components/ui/button";
 import { SettingRow, SettingsCard, SetupStatus } from "@/components/settings/settings-card";
-import { SettingsForm, useDraft, useDraftPart } from "@/components/settings/settings-draft";
+import {
+  SettingsForm,
+  SettingsLink,
+  useDraft,
+  useDraftPart,
+} from "@/components/settings/settings-draft";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
@@ -145,9 +150,9 @@ function IncomeSettings({
           {resultUnits.length === 0 ? (
             <p className="px-inset py-3 text-sm text-muted">
               {t("units.empty")}{" "}
-              <Link href="/admin/result-units" className="font-medium underline">
+              <SettingsLink href="/admin/result-units" className="font-medium underline">
                 {t("units.manageUnits")}
-              </Link>
+              </SettingsLink>
             </p>
           ) : (
             <>

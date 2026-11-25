@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SettingsCard } from "@/components/settings/settings-card";
-import { SettingsForm, useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
+import {
+  SettingsForm,
+  useDraftPart,
+  useDraftRows,
+  useSettingsLinkClick,
+} from "@/components/settings/settings-draft";
 import { type Column } from "@/components/ui/data-table";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { FieldGroup, Input } from "@/components/ui/field";
@@ -36,6 +41,7 @@ function CostCentersTable({ costCenters }: { costCenters: CostCenter[] }) {
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
   const controls = useTableControls();
+  const toShortNames = useSettingsLinkClick("/admin/cost-centers/short-names");
 
   const tabs: ClientTabFilter<CostCenter> = [
     { value: "active", label: t("tab.active"), predicate: (c) => c.active },

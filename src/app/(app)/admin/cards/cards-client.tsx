@@ -1,10 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { SettingsCard } from "@/components/settings/settings-card";
-import { SettingsForm, useDraftPart, useDraftRows } from "@/components/settings/settings-draft";
+import {
+  SettingsForm,
+  SettingsLink,
+  useDraftPart,
+  useDraftRows,
+} from "@/components/settings/settings-draft";
 import { Button } from "@/components/ui/button";
 import { ClientDataTable, type ClientTabFilter } from "@/components/ui/client-data-table";
 import { Combobox } from "@/components/ui/combobox";
@@ -183,12 +187,12 @@ function CardsTable({ cards, users, resultUnits }: CardsProps) {
       align: "right",
       cell: (c) =>
         c.txCount > 0 ? (
-          <Link
+          <SettingsLink
             href={`/bank?scope=all&q=${c.last4}`}
             className="tabular-nums text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
           >
             {c.txCount}
-          </Link>
+          </SettingsLink>
         ) : (
           <span className="tabular-nums text-muted">0</span>
         ),

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { clearLocalDrafts } from "@/components/shell/use-local-draft";
 import { useTranslations } from "next-intl";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import { UserAvatar } from "@/components/ui/avatar";
@@ -224,7 +225,15 @@ function AccountMenu({ user }: { user: CurrentUser }) {
         <span className="flex-1">{tNav("toDsek")}</span>
         <IconExternal aria-hidden className="size-3.5 text-muted" />
       </MenuItem>
-      <MenuItem onClick={() => signOut({ callbackUrl: "/login" })}>{t("signOut")}</MenuItem>
+      <MenuItem
+        onClick={() => {
+          // Unsaved kontering stays on this computer otherwise, and it may be shared.
+          clearLocalDrafts();
+          void signOut({ callbackUrl: "/login" });
+        }}
+      >
+        {t("signOut")}
+      </MenuItem>
     </Menu>
   );
 }

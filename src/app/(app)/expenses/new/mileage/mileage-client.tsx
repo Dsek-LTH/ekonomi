@@ -6,7 +6,7 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { useNotify } from "@/components/shell/notifications";
 import { useMutation } from "@/components/shell/use-mutation";
@@ -71,7 +71,7 @@ export default function MileageClient({
   /** The claim being edited, when opened from one (the edit page picks the form on `paymentType`). */
   existing?: Expense;
 }) {
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
   const t = useTranslations("mileage");
   const tWizard = useTranslations("expenses.wizard");
   const tCommon = useTranslations("common");
@@ -198,7 +198,7 @@ export default function MileageClient({
 
   function done(id: string) {
     // Replaces the wizard's entry rather than pushing past it, as the claim wizard's `done`.
-    returnTo(`/expenses/${id}`);
+    goUp(`/expenses/${id}`);
   }
 
   async function saveDraft() {

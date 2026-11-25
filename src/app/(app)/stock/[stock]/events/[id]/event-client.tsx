@@ -34,7 +34,7 @@ import { ViewToggle } from "@/components/ui/view-toggle";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
-import { useReturnTo } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useLocalDraft } from "@/lib/ui/use-local-draft";
 import { useProductScan } from "@/components/stock/use-product-scan";
@@ -83,7 +83,7 @@ export default function EventClient({
   const { pending, mutate } = useMutation();
   const confirm = useConfirm();
   const notify = useNotify();
-  const returnTo = useReturnTo();
+  const goUp = useGoUp();
 
   // Only the cells somebody is typing in; everything else reads from the event. Kept in localStorage per event until saved, since it exists nowhere else.
   const [typed, setTyped, clearDraft] = useLocalDraft<Record<string, string>>(
@@ -377,7 +377,7 @@ export default function EventClient({
       gone.entries > 0 ? t("event.removedWithLog", { count: gone.entries }) : t("event.removed"),
     );
     // Not a push. The event is gone, and Back must not lead to its page.
-    returnTo(href("/events"));
+    goUp(href("/events"));
   }
 
   /** Take a product off the event: typed into the draft as zeros, so a booked product keeps its line until the next save. One only added here simply goes. */

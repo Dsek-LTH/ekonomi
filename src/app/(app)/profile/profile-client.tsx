@@ -5,6 +5,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react";
+import { clearLocalDrafts } from "@/components/shell/use-local-draft";
 import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -306,7 +307,11 @@ function ProfileHero({
           <Button
             variant="dangerOutline"
             size="sm"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => {
+              // Unsaved kontering stays on this computer otherwise, and it may be shared.
+              clearLocalDrafts();
+              void signOut({ callbackUrl: "/login" });
+            }}
           >
             {t("signOut")}
           </Button>
