@@ -109,10 +109,10 @@ interface EvalCtx {
   known: KnownAccounts;
   /** Income and cost per sheet code, in öre. */
   sheets: Map<string, Record<AccountKind, number>>;
-  /** "CODE:INCOME" / "CODE:COST" for a side with a row that did not resolve. */
+  /** "CODE:INCOME|<lineItemId>" for each row that did not resolve, so a side is known to be short a row. */
   badSides: Set<string>;
-  /** The row being evaluated, so it cannot read a total it is part of. Unset for variables. */
-  self?: { sheet: string; kind: AccountKind };
+  /** The row being evaluated, so a total it is part of is read without it. Unset for variables. */
+  self?: { sheet: string; kind: AccountKind; id: string };
 }
 
 function evalExpr(src: string, ctx: EvalCtx): number {
@@ -192,12 +192,21 @@ function evalExpr(src: string, ctx: EvalCtx): number {
       const [fn, code] = t.val.split("|", 2) as [TotalFn, string];
       const sides: AccountKind[] =
         fn === "income" ? ["INCOME"] : fn === "cost" ? ["COST"] : ["INCOME", "COST"];
-      // A row cannot read the total it is counted in. Said at once rather than left to the pass limit.
-      if (self && self.sheet === code && sides.includes(self.kind)) return NaN;
       const totals = sheets.get(code);
-      if (!totals || sides.some((k) => badSides.has(`${code}:${k}`))) return NaN;
-      const ore =
+      // A row counted in the total it reads gets the total without itself: `=#resultat` on a
+      // cost row is what the sheet makes before that row, so the row balances the sheet.
+      const own = self && self.sheet === code && sides.includes(self.kind) ? self : undefined;
+      const ownBad = own && `${code}:${own.kind}|${own.id}`;
+      const short = (k: AccountKind) =>
+        [...badSides].some((e) => e.startsWith(`${code}:${k}|`) && e !== ownBad);
+      if (!totals || sides.some(short)) return NaN;
+      let ore =
         fn === "income" ? totals.INCOME : fn === "cost" ? totals.COST : totals.INCOME - totals.COST;
+      // The row's own last figure, in the öre the totals were summed from.
+      if (own) {
+        const mine = Math.round((cells.get(`${own.id}:expression`) ?? 0) * 100);
+        ore -= fn === "result" && own.kind === "COST" ? -mine : mine;
+      }
       return ore / 100;
     }
     if (t.kind === "id") {
@@ -309,7 +318,7 @@ export function evaluate(
     // Step 1: evaluate line items + their cells using current var/account/cell values
     badCells.clear();
     for (const li of lineItems) {
-      ctx.self = splitKey(li.accountKey);
+      ctx.self = { ...splitKey(li.accountKey), id: li.id };
       const kr = evalCell(li.expression, ctx);
       // The rounding boundary: a row's Belopp becomes integer öre here, once.
       const ore = Number.isFinite(kr) ? sekToOre(kr) : 0;
@@ -352,7 +361,7 @@ export function evaluate(
     for (const li of lineItems) {
       if (!badCells.has(`${li.id}:expression`)) continue;
       const { sheet, kind } = splitKey(li.accountKey);
-      badSides.add(`${sheet}:${kind}`);
+      badSides.add(`${sheet}:${kind}|${li.id}`);
     }
 
     // Step 3: evaluate variables in declaration order (later vars can ref earlier)
@@ -377,7 +386,7 @@ export function evaluate(
   // Final pass to flag cells/variables that don't resolve (after convergence).
   const badLineItems: string[] = [];
   for (const li of lineItems) {
-    ctx.self = splitKey(li.accountKey);
+    ctx.self = { ...splitKey(li.accountKey), id: li.id };
     const value = evalCell(li.expression, ctx);
     if (!Number.isFinite(value)) badLineItems.push(li.id);
   }

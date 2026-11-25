@@ -391,16 +391,32 @@ describe("sheet totals", () => {
     expect(r.badLineItems).toEqual([]);
   });
 
-  it("refuses a row reading a total it is part of", () => {
+  it("reads a total a row is part of without that row", () => {
+    // Income 1200, cost 300: the result before the row is 900, so the row balances the sheet.
+    const r = evaluate([], [...rows, line("=result(SEX01)", "self", "SEX01:6990")]);
+    expect(r.lineItems.get("self")).toBe(kr(900));
+    expect(r.badLineItems).toEqual([]);
+    expect(r.errors).toEqual([]);
+  });
+
+  it("lets a cost row take a share of its own sheet's costs", () => {
+    const r = evaluate([], [...rows, line("=cost(SEX01)*0.1", "buffer", "SEX01:6990")]);
+    expect(r.lineItems.get("buffer")).toBe(kr(30));
+    expect(r.badLineItems).toEqual([]);
+  });
+
+  it("reads an income row's own result without it", () => {
+    const r = evaluate([], [...rows, line("=-result(SEX01)", "fill", "SEX01:3980")]);
+    // 1200 - 300 = 900 without the row, so it is -900 and the result lands on zero.
+    expect(r.lineItems.get("fill")).toBe(kr(-900));
+  });
+
+  it("is still an error while another row on that side does not resolve", () => {
     const r = evaluate(
       [],
-      [
-        ...rows,
-        line("=result(SEX01)", "self", "SEX01:6990"),
-        line("=cost(SEX01)", "c", "SEX01:4010"),
-      ],
+      [...rows, line("=OKÄND", "x", "SEX01:4010"), line("=result(SEX01)", "self", "SEX01:6990")],
     );
-    expect(r.badLineItems).toEqual(["self", "c"]);
+    expect(r.badLineItems).toEqual(["x", "self"]);
   });
 
   it("is zero for a sheet with nothing on it and an error for one the budget does not hold", () => {
