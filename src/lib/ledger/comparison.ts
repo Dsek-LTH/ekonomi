@@ -1,7 +1,7 @@
 // Comparison columns for the Utfall reports (same period a year earlier, or an adopted budget).
 // Both return raw öre net (debit - credit) keyed `${account}|${costCenterCode}`, as lib/ledger/report expects.
 import { prisma } from "@/lib/server/db";
-import { effectiveKind } from "@/lib/budget";
+import { budgetInForce, effectiveKind } from "@/lib/budget";
 import { evaluate } from "@/lib/budget/eval";
 import { evaluatorInputs } from "@/lib/budget/inputs";
 import { isoDay } from "@/lib/domain/date";
@@ -93,8 +93,8 @@ export async function resolveBudget(
   if (requested && budgets.some((b) => b.id === requested)) return requested;
   const own = budgets.filter((b) => b.year === calendarYear);
   if (own.length === 0) return null;
-  // Failing a locked one, the last adopted (budgetOptions orders by `adoptedAt` first).
-  return own.find((b) => b.locked)?.id ?? own[own.length - 1].id;
+  // budgetOptions orders by `adoptedAt` first, as budgetInForce expects.
+  return budgetInForce(own, (b) => b.locked)?.id ?? null;
 }
 
 // One budget per account and cost centre. Amounts are expression strings stored as positive

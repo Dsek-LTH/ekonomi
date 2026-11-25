@@ -234,6 +234,21 @@ export function changeImpactBySheet(budget: Budget): Map<string, number> {
   return out;
 }
 
+/**
+ * The order sheets are listed in, the sidebar and the Rambudget alike: by cost-centre code,
+ * `numeric` so AKTU2 sorts before AKTU10, then sheets with no cost centre, by name ("sv"
+ * collation). Not the order they were added in, so a new SEX06 lands after SEX05.
+ */
+export function compareSheets(
+  a: { code: string | null; name: string },
+  b: { code: string | null; name: string },
+): number {
+  if (a.code && b.code) return a.code.localeCompare(b.code, "sv", { numeric: true });
+  if (a.code) return -1;
+  if (b.code) return 1;
+  return a.name.localeCompare(b.name, "sv");
+}
+
 // Bucket by result unit, keeping incoming order. Shared by the sidebar and the Rambudget
 // table, hence the accessor.
 export function groupByResultUnit<T>(

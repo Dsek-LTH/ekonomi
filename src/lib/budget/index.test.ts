@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { effectiveKind, isResultAccount } from ".";
+import { budgetInForce, effectiveKind, isResultAccount } from ".";
 
 describe("isResultAccount", () => {
   it("takes the resultaträkning, 3xxx through 8xxx", () => {
@@ -48,5 +48,22 @@ describe("effectiveKind", () => {
 
   it("is the code's answer and nothing else's", () => {
     expect(effectiveKind.length).toBe(1);
+  });
+});
+
+describe("budgetInForce", () => {
+  const b = (id: string, locked = false) => ({ id, locked });
+  const isLocked = (x: { locked: boolean }) => x.locked;
+
+  it("takes the locked budget wherever it is in the year", () => {
+    expect(budgetInForce([b("a", true), b("b")], isLocked)?.id).toBe("a");
+  });
+
+  it("falls back to the last in the section's order", () => {
+    expect(budgetInForce([b("a"), b("b")], isLocked)?.id).toBe("b");
+  });
+
+  it("has nothing for a year with no budgets", () => {
+    expect(budgetInForce([], isLocked)).toBeUndefined();
   });
 });

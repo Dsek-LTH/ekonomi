@@ -30,3 +30,12 @@ export function sheetName(
 ): string {
   return cc.costCenter?.name ?? (cc.label?.trim() || unnamed);
 }
+
+/**
+ * The budget in force for a year, the one a comparison with the ledger uses by default: the
+ * locked one, failing that the last in the section's order (adopted date, then created, drafts
+ * last). `budgets` is one year's, already in that order (lib/data/budget.ts).
+ */
+export function budgetInForce<T>(budgets: readonly T[], locked: (b: T) => boolean): T | undefined {
+  return budgets.find(locked) ?? budgets[budgets.length - 1];
+}

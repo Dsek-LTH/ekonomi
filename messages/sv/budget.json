@@ -34,7 +34,12 @@
     "emptyNone": "Ingen budget har skapats ännu.",
     "emptyYear": "Ingen budget för {year} än.",
     "emptyNoMatch": "Ingen budget matchar sökningen.",
-    "compareHint": "Kryssa i minst två budgetar för att jämföra dem"
+    "compareHint": "Kryssa i minst två budgetar för att jämföra dem",
+    "changeAdoptedAt": "Ändra antagningsdatum för {year} - {name}",
+    "adoptedPlaceholder": "Inte antagen",
+    "adoptedSaveFailed": "Kunde inte spara antagningsdatumet",
+    "active": "Aktiv",
+    "activeHint": "Den budget som gäller för {year}: den låsta, annars den senast antagna. Bokföringen jämförs mot den."
   },
   "compare": {
     "included": "Budgetar i jämförelsen",
@@ -58,8 +63,6 @@
     "lock": "Lås budgeten",
     "unlock": "Lås upp budgeten",
     "nameRequired": "Budgeten behöver ett namn.",
-    "adoptedOn": "Antagen",
-    "notAdopted": "Inte antagen",
     "namePlaceholder": "Budgetens namn",
     "noComparison": "Ingen jämförelse",
     "compareWith": "Jämför med…",
@@ -124,7 +127,6 @@
     "view": "Vy",
     "detailBudget": "Detaljbudget",
     "changeName": "Byt namn på budgeten",
-    "changeAdoptedAt": "Ändra antagningsdatum",
     "formulaBar": "Formel",
     "formulaBarHint": "Markera en cell. Referera med #5, SEX01#5, #intäkter, #kostnader och #resultat"
   },

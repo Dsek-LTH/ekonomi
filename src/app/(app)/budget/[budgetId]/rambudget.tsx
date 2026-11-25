@@ -12,6 +12,7 @@ import {
   fmt,
   fmtSigned,
   groupByResultUnit,
+  compareSheets,
 } from "./budget-helpers";
 import type { Comparison } from "./use-comparison";
 import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
@@ -56,12 +57,22 @@ export function Rambudget({
   const tAlloc = useTranslations("allocation");
   const showCompare = comparison.otherLabel !== null;
 
-  const rows: Row[] = comparison.joined.sheets.map((sheet) => ({
-    sheet,
-    own: sheetTotals(sheet, 0),
-    other: showCompare ? sheetTotals(sheet, 1) : ZERO_TOTALS,
-    impact: impactOf(sheet.key) ?? 0,
-  }));
+  // In sheet order (compareSheets), as in the sidebar. A detached sheet's key is "@"/"#"
+  // (compareKey), a linked one's its code.
+  const sheetCode = (key: string) => (/^[@#]/.test(key) ? null : key);
+  const rows: Row[] = [...comparison.joined.sheets]
+    .sort((a, b) =>
+      compareSheets(
+        { code: sheetCode(a.key), name: a.name },
+        { code: sheetCode(b.key), name: b.name },
+      ),
+    )
+    .map((sheet) => ({
+      sheet,
+      own: sheetTotals(sheet, 0),
+      other: showCompare ? sheetTotals(sheet, 1) : ZERO_TOTALS,
+      impact: impactOf(sheet.key) ?? 0,
+    }));
   const groups = groupByResultUnit(rows, (r) => resultUnitOfSheet(r.sheet));
 
   return (

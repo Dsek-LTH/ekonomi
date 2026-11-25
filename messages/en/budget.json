@@ -34,7 +34,12 @@
     "emptyNone": "No budget has been created yet.",
     "emptyYear": "No budget for {year} yet.",
     "emptyNoMatch": "No budget matches the search.",
-    "compareHint": "Tick at least two budgets to compare them"
+    "compareHint": "Tick at least two budgets to compare them",
+    "changeAdoptedAt": "Change the adoption date of {year} - {name}",
+    "adoptedPlaceholder": "Not adopted",
+    "adoptedSaveFailed": "Could not save the adoption date",
+    "active": "Active",
+    "activeHint": "The budget in force for {year}: the locked one, else the last adopted. The ledger is compared against it."
   },
   "compare": {
     "included": "Budgets compared",
@@ -58,8 +63,6 @@
     "lock": "Lock the budget",
     "unlock": "Unlock the budget",
     "nameRequired": "The budget needs a name.",
-    "adoptedOn": "Adopted",
-    "notAdopted": "Not adopted",
     "namePlaceholder": "The budget's name",
     "noComparison": "No comparison",
     "compareWith": "Compare with…",
@@ -124,7 +127,6 @@
     "view": "View",
     "detailBudget": "Detail budget",
     "changeName": "Rename the budget",
-    "changeAdoptedAt": "Change the adoption date",
     "formulaBar": "Formula",
     "formulaBarHint": "Select a cell. Refer with #5, SEX01#5, #intäkter, #kostnader and #resultat"
   },

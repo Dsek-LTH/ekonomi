@@ -28,7 +28,6 @@ import { buildGrid, orderedColumns, type BudgetGrid, type ColumnDef } from "@/li
 import { sheetKey, sheetName } from "@/lib/budget";
 import { compareKey } from "@/lib/budget/compare";
 import { useFillViewport } from "@/lib/ui/use-fill-viewport";
-import { useFormat } from "@/lib/ui/use-format";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import {
   CHANGES,
@@ -41,6 +40,7 @@ import {
   groupByResultUnit,
   sheetFromUrl,
   sheetSearch,
+  compareSheets,
 } from "./budget-helpers";
 import { recomputeBudget } from "./recompute";
 import { useBudgetCells } from "./use-budget-cells";
@@ -380,8 +380,6 @@ export default function BudgetClient({
 
   const ev = budget.evaluated;
 
-  const { date } = useFormat();
-
   async function saveName(raw: string) {
     const name = raw.trim();
     if (!name) {
@@ -391,22 +389,12 @@ export default function BudgetClient({
     return api(`/api/budgets/${budgetId}`, "PATCH", { name });
   }
 
-  // The day the möte adopted it. Emptying it means "never adopted". The year follows the date.
-  async function saveAdoptedAt(value: string) {
-    return api(
-      `/api/budgets/${budgetId}`,
-      "PATCH",
-      value ? { adoptedAt: value, year: Number(value.slice(0, 4)) } : { adoptedAt: null },
-    );
-  }
-
   const usedCc = new Set(
     budget.costCenters.flatMap((c) => (c.costCenter ? [c.costCenter.id] : [])),
   );
   const availableCc = allCostCenters.filter((c) => c.active && !usedCc.has(c.id));
   const q = search.trim().toLowerCase();
-  // By code, `numeric` so AKTU2 sorts before AKTU10. Sheets without a cost centre go last, by
-  // name ("sv" collation). filter() already copied, so sorting in place is safe.
+  // In sheet order (compareSheets). filter() already copied, so sorting in place is safe.
   const filteredCc = budget.costCenters
     .filter(
       (c) =>
@@ -415,14 +403,12 @@ export default function BudgetClient({
         (c.costCenter?.shortName?.toLowerCase().includes(q) ?? false) ||
         (c.costCenter?.code.toLowerCase().includes(q) ?? false),
     )
-    .sort((a, b) => {
-      const ca = a.costCenter?.code,
-        cb = b.costCenter?.code;
-      if (ca && cb) return ca.localeCompare(cb, "sv", { numeric: true });
-      if (ca) return -1;
-      if (cb) return 1;
-      return sheetName(a, t("unnamed")).localeCompare(sheetName(b, t("unnamed")), "sv");
-    });
+    .sort((a, b) =>
+      compareSheets(
+        { code: a.costCenter?.code ?? null, name: sheetName(a, t("unnamed")) },
+        { code: b.costCenter?.code ?? null, name: sheetName(b, t("unnamed")) },
+      ),
+    );
 
   const groups = groupByResultUnit(filteredCc, resultUnitOf);
   // Opens on the first cost centre as listed unfiltered (so searching does not move it), or on
@@ -485,8 +471,7 @@ export default function BudgetClient({
 
   return (
     <PageShell
-      // Name, lock and antagen date on one line, edited in place (EditableText). The year
-      // follows the antagen date. "Inte antagen" is shown for an unset date, on purpose.
+      // The name and the lock. The antagen date is edited in the budget list (budget-list-client.tsx).
       title={
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <EditableText
@@ -497,21 +482,6 @@ export default function BudgetClient({
             onSave={saveName}
           />
           {locked && <Tag tone="purple">{tList("locked")}</Tag>}
-          <span className="text-sm font-medium tracking-normal text-muted">
-            {budget.adoptedAt && <>{t("adoptedOn")} </>}
-            {canEdit ? (
-              <EditableText
-                value={budget.adoptedAt ?? ""}
-                type="date"
-                label={t("changeAdoptedAt")}
-                onSave={saveAdoptedAt}
-              />
-            ) : budget.adoptedAt ? (
-              date(budget.adoptedAt)
-            ) : (
-              t("notAdopted")
-            )}
-          </span>
         </span>
       }
       back="/budget"

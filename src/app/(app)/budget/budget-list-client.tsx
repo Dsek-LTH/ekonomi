@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { isAdmin } from "@/lib/domain/permissions";
 import { useProgressRouter } from "@/components/shell/route-progress";
 import type { BudgetSummary } from "@/lib/data/budget";
+import { budgetInForce } from "@/lib/budget";
+import { EditableText } from "@/components/ui/editable-text";
 
 // Budgets are siblings (several may share a year), so the list is flat. Rows arrive from the
 // page's Server Component and writes refresh through `useMutation`.
@@ -49,6 +51,31 @@ export function BudgetListClient({
   // A new budget is for the year being looked at.
   const thisYear = year ?? new Date().getFullYear();
   const shown = year == null ? budgets : budgets.filter((b) => b.year === year);
+
+  // Each year's budget in force (budgetInForce, the ledger comparison's default), tagged Aktiv.
+  // `budgets` arrives in the section's order, which the rule reads.
+  const active = new Set(
+    [...new Set(budgets.map((b) => b.year))].flatMap((y) => {
+      const inForce = budgetInForce(
+        budgets.filter((b) => b.year === y),
+        (b) => b.lockedAt !== null,
+      );
+      return inForce ? [inForce.id] : [];
+    }),
+  );
+
+  // The day the möte adopted it, edited here rather than on the budget's page. Emptying it means
+  // "never adopted". The year follows the date. Admin only, on an unlocked budget (the PATCH's
+  // own gate).
+  async function saveAdoptedAt(b: BudgetSummary, value: string) {
+    const data = await mutate(`/api/budgets/${b.id}`, {
+      method: "PATCH",
+      body: value ? { adoptedAt: value, year: Number(value.slice(0, 4)) } : { adoptedAt: null },
+      error: t("adoptedSaveFailed"),
+      key: `adopted-${b.id}`,
+    });
+    return data !== null;
+  }
 
   // Creating asks nothing: name and year are editable on the budget's own page. `key` names
   // the control that asked, so only that one spins (they share one busy scope).
@@ -179,9 +206,19 @@ export function BudgetListClient({
       value: (b) => b.adoptedAt ?? "",
       sortable: true,
       searchable: true,
-      className: "w-32 whitespace-nowrap",
+      className: "w-36 whitespace-nowrap",
       cell: (b) =>
-        b.adoptedAt ? (
+        admin && !b.lockedAt ? (
+          // `relative z-10`: above the row link's `before:` overlay, as the checkbox is.
+          <EditableText
+            className="relative z-10 text-sm text-muted"
+            value={b.adoptedAt ?? ""}
+            type="date"
+            label={t("changeAdoptedAt", { year: b.year, name: b.name })}
+            placeholder={t("adoptedPlaceholder")}
+            onSave={(value) => saveAdoptedAt(b, value)}
+          />
+        ) : b.adoptedAt ? (
           <span className="text-sm tabular-nums text-muted">{b.adoptedAt}</span>
         ) : (
           <span className="text-sm text-muted">{t("notAdopted")}</span>
@@ -197,6 +234,11 @@ export function BudgetListClient({
       cell: (b) => (
         <p className="flex items-center gap-2 truncate text-sm font-medium">
           {b.name}
+          {active.has(b.id) && (
+            <Tag tone="success" size="sm" title={t("activeHint", { year: b.year })}>
+              {t("active")}
+            </Tag>
+          )}
           {b.lockedAt && (
             <Tag tone="purple" size="sm">
               {t("locked")}
