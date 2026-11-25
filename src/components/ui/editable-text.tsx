@@ -80,6 +80,8 @@ export function EditableText({
         value={draft}
         aria-label={label}
         placeholder={placeholder}
+        // Empty, the box is as wide as the placeholder ("Inte antagen" is past the date's 10ch).
+        style={!draft && placeholder ? { minWidth: `${placeholder.length + 1}ch` } : undefined}
         onChange={(e) => {
           const next = e.target.value;
           setDraft(next);
@@ -108,6 +110,8 @@ export function EditableText({
         // Important because cn joins rather than merges: the box's own border and background would win or lose by CSS order.
         className={cn(
           "inline-flex! w-auto! border-transparent! bg-transparent! text-inherit! text-[length:inherit]!",
+          // As tall as the text around it, as a text EditableText is (METRICS), not a 32px form field.
+          "h-auto! gap-0.5! py-0.5! pl-1.5! pr-0.5! sm:h-auto!",
           "hover:border-border-control! hover:bg-hover! focus-within:border-border-control! focus-within:bg-background!",
           saving && "opacity-60",
           className,

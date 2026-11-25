@@ -1,12 +1,18 @@
 "use client";
 
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useGoBack } from "@/components/shell/route-history";
+import { useGoUp } from "@/components/shell/route-history";
+import { useSettingsLeave } from "@/components/settings/settings-draft";
 import { IconChevronLeft } from "@/components/ui/icons";
-import { PageTitle, SettingsTitleSlot, TitleOrBar } from "@/components/shell/settings-title";
+import {
+  CLIP_LINE,
+  PageTitle,
+  SettingsTitleSlot,
+  TitleOrBar,
+} from "@/components/shell/settings-title";
 import { usePhone } from "@/lib/ui/media";
 import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
@@ -46,7 +52,8 @@ export function SectionBand({
   own: boolean;
   slotRef: (el: HTMLElement | null) => void;
 }) {
-  const scrolled = usePageScrolled();
+  // No shadow under it when the page scrolls: its own bottom rule is the divider, and it is
+  // pinned with the band, so the line stays put at any scroll.
   return (
     <div
       data-guide-edge="top"
@@ -64,19 +71,13 @@ export function SectionBand({
         <SectionTabs label={section.tabsLabel} tabs={section.tabs} />
         <div ref={slotRef} className="flex shrink-0 items-center empty:hidden" />
       </div>
-      <div
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute inset-x-0 top-full h-6 bg-gradient-to-b from-canvas to-transparent transition-opacity duration-200",
-          scrolled ? "opacity-100" : "opacity-0",
-        )}
-      />
     </div>
   );
 }
 
 export function PageHeader({
   title,
+  eyebrow,
   subtitle,
   back,
   right,
@@ -84,6 +85,8 @@ export function PageHeader({
   menu,
 }: {
   title: React.ReactNode;
+  /** A small line above the title (a record's reference and who it belongs to). */
+  eyebrow?: React.ReactNode;
   subtitle?: React.ReactNode;
   back?: string;
   right?: React.ReactNode;
@@ -140,8 +143,8 @@ export function PageHeader({
 
   const inBand = Boolean(nav) && !phone && slot;
   const end = (!nav || phone) && right;
-  return (
-    <div className="mb-6 flex items-start gap-1.5">
+  const row = (
+    <div className={cn("flex items-start gap-1.5", !eyebrow && "mb-6")}>
       {inBand && right && createPortal(right, slot)}
       {back && <BackLink href={back} />}
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
@@ -161,6 +164,14 @@ export function PageHeader({
           </div>
         )}
       </div>
+    </div>
+  );
+  if (!eyebrow) return row;
+  // Over the title, past the back arrow (its 32px less its -6px margin, plus the 6px gap), so the two start together.
+  return (
+    <div className="mb-6">
+      <p className={cn("mb-0.5 text-sm text-muted", CLIP_LINE, back && "pl-8")}>{eyebrow}</p>
+      {row}
     </div>
   );
 }
@@ -301,30 +312,20 @@ function SectionTabs({ label, tabs }: { label: string; tabs: SectionNav["tabs"] 
   );
 }
 
-function usePageScrolled(): boolean {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const column = document.querySelector<HTMLElement>("[data-main-scroll]");
-    const read = () => setScrolled((column?.scrollTop ?? 0) > 0 || window.scrollY > 0);
-    read();
-    column?.addEventListener("scroll", read, { passive: true });
-    window.addEventListener("scroll", read, { passive: true });
-    return () => {
-      column?.removeEventListener("scroll", read);
-      window.removeEventListener("scroll", read);
-    };
-  }, []);
-  return scrolled;
-}
-
+/** Up to the page's parent (useGoUp), never to wherever you came from. In settings it asks first with unsaved changes. */
 function BackLink({ href }: { href: string }) {
   const t = useTranslations("common");
-  const back = useGoBack(href);
+  const goUp = useGoUp();
+  const leave = useSettingsLeave();
 
   return (
     <Link
-      href={back.href}
-      onClick={back.onClick}
+      href={href}
+      onClick={(e) => {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        leave(() => goUp(href));
+      }}
       aria-label={t("back")}
       title={t("back")}
       className="-ml-1.5 flex size-8 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground"

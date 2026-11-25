@@ -76,11 +76,12 @@ export function DateInput({
     <input
       ref={ref}
       inputMode="numeric"
-      placeholder={t("datePlaceholder")}
       className={className}
       value={value}
       onChange={handleChange}
       {...props}
+      // After the spread: a caller passing `placeholder={undefined}` still gets the format.
+      placeholder={props.placeholder ?? t("datePlaceholder")}
     />
   );
 }
