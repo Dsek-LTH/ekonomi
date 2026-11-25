@@ -15,14 +15,24 @@ export function sekToOre(sek: number | null | undefined): number {
 /** What may stand in an amount field while typed: digits, spaces as thousand separators (any space, incl. non-breaking, as `groupForm` writes), one comma or dot, at most two decimals. A magnitude only: the sign is a separate control (no minus key on phone keyboards). Partial input ("12,") must pass. */
 const AMOUNT_INPUT = /^[\d\s]*(?:[.,]\d{0,2})?$/;
 
-/** The same amount, written the Swedish way. A phone's decimal pad may offer a full stop, so it is accepted on input and shown back as a comma. */
-export const commaForm = (input: string): string => input.replace(/\./g, ",");
+/** Whole digits in threes with a plain space, "1234567" → "1 234 567". The grouping every number field writes. */
+export const groupDigits = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
-/** An amount in kronor as an amount field writes one, "1250,00". Empty for no amount. */
-export const sekToInput = (sek: number | null): string =>
-  sek == null ? "" : commaForm(oreToSEK(sekToOre(sek)).toFixed(2));
+/**
+ * An amount in kronor as every amount field holds one: grouped, a comma, always two decimals,
+ * "1 250,00". Empty for no amount. The one form a field shows, idle or focused, so it never
+ * changes under the caret: what is left after typing 1000 is what is there on coming back.
+ * A plain space groups, not Intl's non-breaking one, so a copied figure pastes anywhere.
+ */
+export function sekToInput(sek: number | null): string {
+  if (sek == null) return "";
+  const ore = sekToOre(sek);
+  const abs = Math.abs(ore);
+  const kronor = groupDigits(String(Math.floor(abs / 100)));
+  return `${ore < 0 ? "-" : ""}${kronor},${String(abs % 100).padStart(2, "0")}`;
+}
 
-/** An amount field as it is left: always two decimals with a comma, "700" → "700,00", "1234.5" → "1234,50". Blank stays blank. */
+/** An amount field as it is left: "700" → "700,00", "1234.5" → "1 234,50". Blank stays blank. */
 export const fullAmountForm = (input: string): string =>
   /\d/.test(input) ? sekToInput(parseSEK(input)) : input;
 
@@ -40,9 +50,9 @@ export const isSum = (input: string): boolean => /^=|[+\-*/()]/.test(input.trim(
 
 const sumOf = (input: string): number | null => evaluate(input.trim().replace(/^=/, ""));
 
-/** A cell as it is left: a sum becomes its answer in öre, written like an amount field ("312,50"). Null for a sum that does not add up or is negative. */
+/** A cell as it is left, written like an amount field ("1 312,50"): a plain amount in full, a sum as its answer. Null for a sum that does not add up or is negative. */
 export function settleAmount(input: string): string | null {
-  if (!isSum(input)) return input;
+  if (!isSum(input)) return fullAmountForm(input);
   const sek = sumOf(input);
   if (sek === null || sek < 0) return null;
   return sekToInput(sek);
@@ -55,17 +65,6 @@ export function parseSEK(input: string): number {
   const normalised = input.replace(/\s/g, "").replace(",", ".");
   const n = Number(normalised);
   return Number.isFinite(n) ? n : 0;
-}
-
-/** The same figure grouped the Swedish way: "1234.5" → "1 234,50". Display only: the field keeps what was typed. */
-export function groupForm(input: string): string {
-  if (!/\d/.test(input)) return input;
-  const n = parseSEK(input);
-  // Always öre, ",00" included, so the idle field matches the focused one.
-  return new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
 }
 
 /** Parse a user-entered amount string straight into öre (integer). */

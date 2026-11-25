@@ -21,6 +21,7 @@ import { MAX_TAG, MAX_TAGS, cleanTags, hasTag } from "@/lib/stock/tags";
 import { isInternalCode, validGtin } from "@/lib/stock/barcode";
 import type { DrinkCategory, StockKind } from "@/lib/domain/types";
 import { CATEGORIES } from "@/lib/domain/categories";
+import { oreToSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStock, type StockGroupChoice } from "@/components/stock/stock-context";
 
@@ -76,7 +77,7 @@ const draftOf = (p: StockProductDto): Draft => ({
   abv: p.abv?.toString() ?? "",
   unitMl: p.unitMl?.toString() ?? "",
   nominalMl: p.nominalMl?.toString() ?? "",
-  costPrice: p.costPriceOre != null ? (p.costPriceOre / 100).toString() : "",
+  costPrice: p.costPriceOre != null ? sekToInput(oreToSEK(p.costPriceOre)) : "",
   shelfLifeMonths: p.shelfLifeMonths?.toString() ?? "",
   ean: p.ean ?? "",
   noBarcode: isInternalCode(p.ean),
@@ -88,7 +89,8 @@ const draftOf = (p: StockProductDto): Draft => ({
 const num = (s: string): number | undefined => {
   const trimmed = s.trim();
   if (trimmed === "") return undefined;
-  const n = Number(trimmed.replace(",", "."));
+  // Spaces out first: an amount field holds "1 000,00" (sekToInput).
+  const n = Number(trimmed.replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(n) ? n : undefined;
 };
 const int = (s: string): number | undefined => {
@@ -202,7 +204,7 @@ export function ProductDialog({
       abv: reported ? (num(d.abv) ?? 0) : undefined,
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
       nominalMl: isVolume ? (int(d.nominalMl) ?? null) : null,
-      costPriceOre: Math.round((num(d.costPrice) ?? 0) * 100),
+      costPriceOre: sekToOre(num(d.costPrice) ?? 0),
       // Null, not undefined, when cleared: undefined in a PATCH means "leave it alone".
       shelfLifeMonths: int(d.shelfLifeMonths) || null,
       // Said to have none: the route gives it the section's own (or keeps the one it has), so nothing is sent for the field.

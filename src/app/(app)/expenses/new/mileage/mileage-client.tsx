@@ -30,7 +30,7 @@ import {
 import { isCompleteDate, isFutureDate } from "@/lib/domain/date";
 import { useFiscalYear } from "@/components/shell/fiscal-year-context";
 import { fiscalYearLabel, outsideFiscalYear } from "@/lib/ui/fiscal-year";
-import { commaForm, oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
+import { groupDigits, oreToSEK, parseOre, parseSEK } from "@/lib/domain/money";
 import { claimBlocker, valueJourney } from "@/lib/mileage/claim";
 import type { MileageRateLike } from "@/lib/mileage/rate";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
@@ -46,13 +46,17 @@ const readOdometer = (text: string): number | null => {
   return Number.isFinite(n) && n >= 0 ? n : null;
 };
 
-/** Whether a string is on its way to being a reading. Anything else is not taken (as `isAmountInput` for money). */
-const isOdometerInput = (text: string): boolean => /^\d{0,7}([.,]\d?)?$/.test(text);
+/** Whether a string is on its way to being a reading: up to seven digits, grouped or not, and one decimal. Anything else is not taken (as `isAmountInput` for money). */
+const isOdometerInput = (text: string): boolean =>
+  /^[\d\s]*([.,]\d?)?$/.test(text) && text.split(/[.,]/)[0].replace(/\s/g, "").length <= 7;
 
-/** A stored reading back into the text the field holds, with the comma a
- *  Swedish reader would have typed it with. */
-const showOdometer = (km: number | null | undefined): string =>
-  km == null ? "" : String(km).replace(".", ",");
+/** A reading as the field holds it, grouped like an amount with the comma a Swedish reader writes:
+ *  "12 300", "12 300,5". What is left after typing is what is there on coming back to it. */
+const showOdometer = (km: number | null | undefined): string => {
+  if (km == null) return "";
+  const [whole, tenths] = String(km).split(".");
+  return tenths ? `${groupDigits(whole)},${tenths}` : groupDigits(whole);
+};
 
 /** As many stops as the API takes (PatchExpense.journeyStops). */
 const MAX_STOPS = 20;
@@ -242,9 +246,10 @@ export default function MileageClient({
           if (!isOdometerInput(e.target.value)) return;
           onChange(e.target.value);
         }}
-        // Shown with the comma a Swedish reader writes, on blur rather than per keystroke.
+        // Written in full on blur rather than per keystroke, which would move the caret.
         onBlur={() => {
-          const shown = commaForm(value);
+          const km = readOdometer(value);
+          const shown = km == null ? value : showOdometer(km);
           if (shown !== value) onChange(shown);
         }}
       />

@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  commaForm,
   fullAmountForm,
-  groupForm,
   isAmountInput,
   isSumInput,
   settleAmount,
   oreToSEK,
   parseOre,
   parseSEK,
+  sekToInput,
   sekToOre,
 } from "./money";
 
@@ -124,27 +123,45 @@ describe("round trip", () => {
   });
 });
 
-describe("groupForm", () => {
-  it("groups a figure the way it is read", () => {
-    // A non-breaking space is what Swedish uses and must be taken back when pasted.
-    expect(groupForm("1234.5")).toBe("1\u00a0234,50");
-    expect(groupForm("700")).toBe("700,00");
-    expect(isAmountInput(groupForm("1234.5"))).toBe(true);
+describe("sekToInput", () => {
+  it("writes an amount grouped, with a comma and two decimals", () => {
+    expect(sekToInput(1000)).toBe("1 000,00");
+    expect(sekToInput(1234.5)).toBe("1 234,50");
+    expect(sekToInput(1234567.89)).toBe("1 234 567,89");
+    expect(sekToInput(700)).toBe("700,00");
+    expect(sekToInput(0.05)).toBe("0,05");
+    expect(sekToInput(0)).toBe("0,00");
   });
 
-  it("leaves a field with nothing in it alone", () => {
-    // Including between the separator and the öre, where formatting would rewrite what is being typed.
-    expect(groupForm("")).toBe("");
-    expect(groupForm(" ")).toBe(" ");
+  it("keeps the sign of a stored return, with a plain minus", () => {
+    expect(sekToInput(-1234.5)).toBe("-1 234,50");
+  });
+
+  it("is empty for no amount", () => {
+    expect(sekToInput(null)).toBe("");
+  });
+
+  it("is something an amount field takes back as typed", () => {
+    expect(isAmountInput(sekToInput(1234567.89))).toBe(true);
+    expect(parseSEK(sekToInput(1234567.89))).toBe(1234567.89);
   });
 });
 
 describe("fullAmountForm", () => {
   it("writes the amount out with two decimals and a comma", () => {
     expect(fullAmountForm("700")).toBe("700,00");
-    expect(fullAmountForm("1234.5")).toBe("1234,50");
-    expect(fullAmountForm("1 234,5")).toBe("1234,50");
+    expect(fullAmountForm("1000")).toBe("1 000,00");
+    expect(fullAmountForm("1234.5")).toBe("1 234,50");
+    expect(fullAmountForm("1 234,5")).toBe("1 234,50");
     expect(fullAmountForm("12,")).toBe("12,00");
+  });
+
+  it("gives back what it was handed once a field holds its own form", () => {
+    // Leave the field, enter it again, leave again: the text does not move.
+    const left = fullAmountForm("1000");
+    expect(fullAmountForm(left)).toBe(left);
+    // A non-breaking space pasted from elsewhere is read too.
+    expect(fullAmountForm("1\u00a0000,5")).toBe("1 000,50");
   });
 
   it("leaves a blank field blank", () => {
@@ -153,34 +170,19 @@ describe("fullAmountForm", () => {
   });
 });
 
-describe("commaForm", () => {
-  it("shows back a comma whatever separator was typed", () => {
-    // A phone's decimal pad may offer only ".", so it is accepted and shown as a comma.
-    expect(commaForm("12.50")).toBe("12,50");
-    expect(commaForm("12,50")).toBe("12,50");
-  });
-
-  it("leaves an amount with no decimals alone", () => {
-    expect(commaForm("1 234")).toBe("1 234");
-    expect(commaForm("")).toBe("");
-  });
-
-  it("leaves a lone minus alone", () => {
-    expect(commaForm("-")).toBe("-");
-  });
-});
-
 describe("settleAmount", () => {
-  it("works a sum out to the öre, in comma form", () => {
+  it("works a sum out to the öre, as an amount field writes it", () => {
     expect(settleAmount("1250*0,25+40")).toBe("352,50");
+    expect(settleAmount("1000*2")).toBe("2 000,00");
     expect(settleAmount("100/3")).toBe("33,33");
     expect(settleAmount("(10+5)*2")).toBe("30,00");
     expect(settleAmount("=12*3")).toBe("36,00");
     expect(settleAmount("=150")).toBe("150,00");
   });
 
-  it("leaves a plain amount as typed", () => {
-    expect(settleAmount("1 234,5")).toBe("1 234,5");
+  it("writes a plain amount in full, as an amount field does", () => {
+    expect(settleAmount("1234,5")).toBe("1 234,50");
+    expect(settleAmount("1 234,50")).toBe("1 234,50");
     expect(settleAmount("")).toBe("");
   });
 

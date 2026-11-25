@@ -233,7 +233,7 @@ export function VoucherEditor({
     if (Math.abs(outstanding) < 0.005) return;
     patch(
       r.id,
-      outstanding > 0 ? { debit: outstanding.toFixed(2) } : { credit: (-outstanding).toFixed(2) },
+      outstanding > 0 ? { debit: sekToInput(outstanding) } : { credit: sekToInput(-outstanding) },
     );
   }
 
@@ -327,8 +327,9 @@ export function VoucherEditor({
         if (isAmountInput(v) || (isSum(v) && isSumInput(v))) patch(r.id, { [field]: v });
       },
       onBlur: () => {
-        const settled = settleAmount(value);
-        const shown = settled === null ? value : settled.replace(/\./g, ",");
+        // A plain amount in full and a sum as its answer, both as an amount field writes them
+        // (sekToInput), so the cell holds the same text when it is entered again.
+        const shown = settleAmount(value) ?? value;
         if (shown !== value) patch(r.id, { [field]: shown });
       },
       onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -482,10 +483,10 @@ export function VoucherEditor({
                     {cell(locked.description ?? "", false)}
                   </td>
                   <td className="px-2 text-right align-middle text-sm tabular-nums">
-                    {locked.debit ? locked.debit.toFixed(2).replace(".", ",") : ""}
+                    {locked.debit ? sekToInput(locked.debit) : ""}
                   </td>
                   <td className="px-2 text-right align-middle text-sm font-medium tabular-nums">
-                    {locked.credit ? locked.credit.toFixed(2).replace(".", ",") : ""}
+                    {locked.credit ? sekToInput(locked.credit) : ""}
                   </td>
                   <td className="text-center align-middle">
                     <span

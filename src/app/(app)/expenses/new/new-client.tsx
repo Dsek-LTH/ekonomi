@@ -25,7 +25,7 @@ import { Amount } from "@/components/ui/amount";
 // Still needed for the amounts that sit inside a translated sentence, where a
 // React node cannot go.
 import { formatSEK } from "@/lib/ui/format";
-import { parseSEK, sekToOre } from "@/lib/domain/money";
+import { parseSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import type { CreateExpense, PatchExpense } from "@/lib/api/schemas/expense";
 import { cancelsOut, isMatchable, matchCandidates } from "@/lib/domain/matching";
 import type {
@@ -386,7 +386,7 @@ export default function NewExpenseClient({
 
   // The fix for an amount typed wrong: take the bank's, and pick the row.
   function takeBankAmount(txn: BankTransaction) {
-    const gross = Math.abs(txn.amount).toFixed(2).replace(".", ",");
+    const gross = sekToInput(Math.abs(txn.amount));
     setDraft((d) => ({
       ...d,
       form: { ...d.form, gross },

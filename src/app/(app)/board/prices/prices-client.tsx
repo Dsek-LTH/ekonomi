@@ -18,7 +18,7 @@ import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Tag } from "@/components/ui/status-pill";
 import type { SetBoardPrice } from "@/lib/api/schemas/board";
 import type { BoardPriceDto } from "@/lib/data/board";
-import { sekToOre } from "@/lib/domain/money";
+import { oreToSEK, parseSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import { useTableControls } from "@/lib/data/use-list-query";
 import { useFormat } from "@/lib/ui/use-format";
 
@@ -148,11 +148,14 @@ function PriceDialog({
 }) {
   const t = useTranslations("board.prices");
   const { pending, mutate } = useMutation();
-  const [amount, setAmount] = useState(price.priceOre == null ? "" : String(price.priceOre / 100));
+  const [amount, setAmount] = useState(
+    price.priceOre == null ? "" : sekToInput(oreToSEK(price.priceOre)),
+  );
   const [from, setFrom] = useState(today);
 
-  const typed = Number(amount.replace(",", "."));
-  const valid = amount.trim() !== "" && Number.isFinite(typed) && typed >= 0;
+  // parseSEK, as every amount field: the field holds "1 000,00" (sekToInput).
+  const typed = parseSEK(amount);
+  const valid = amount.trim() !== "" && typed >= 0;
   const ore = valid ? sekToOre(typed) : 0;
   const under = valid && price.costPriceOre != null && ore < price.costPriceOre;
   const blocker = !valid ? t("dialog.priceRequired") : !from ? t("dialog.dateRequired") : null;

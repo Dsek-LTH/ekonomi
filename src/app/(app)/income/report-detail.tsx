@@ -13,7 +13,7 @@ import {
   type VoucherEditorRow,
   type VoucherLockedRow,
 } from "@/components/voucher-editor";
-import { oreToSEK, parseOre, sekToOre } from "@/lib/domain/money";
+import { oreToSEK, parseOre, sekToInput, sekToOre } from "@/lib/domain/money";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import { clearingRow, manualVoucherBlocker } from "@/lib/income/manual-voucher";
 import { formatNumber } from "@/lib/ui/format";
@@ -134,8 +134,8 @@ export function VoucherCard({
           costCenterCode: r.costCenterCode ?? "",
           project: r.project ?? "",
           description: r.description ?? "",
-          debit: r.debit ? r.debit.toFixed(2) : "",
-          credit: r.credit ? r.credit.toFixed(2) : "",
+          debit: r.debit ? sekToInput(r.debit) : "",
+          credit: r.credit ? sekToInput(r.credit) : "",
         }),
       ),
     );

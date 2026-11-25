@@ -1,10 +1,10 @@
 "use client";
 
-// Accepts a full stop (a device-locale decimal pad). On blur the value is written out in full, "700" → "700,00". No sign key: a phone's number pad has no minus.
+// Accepts a full stop (a device-locale decimal pad). On blur the value is written out in full,
+// "1000" → "1 000,00" (sekToInput), and that text is what the field holds from then on, so it reads
+// the same idle and focused. No sign key: a phone's number pad has no minus.
 // Not type="number": it drops a lone "-", refuses "1 234,50" and blanks half-typed input.
-import { useState } from "react";
-
-import { fullAmountForm, groupForm, isAmountInput } from "@/lib/domain/money";
+import { fullAmountForm, isAmountInput } from "@/lib/domain/money";
 import { Input, SuffixedInput, type ControlSize } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
 
@@ -30,7 +30,7 @@ export function amountFieldProps({
   };
 }
 
-/** Grouped (1 234,50) when idle, exactly as typed when focused. Can carry its unit inside the box. */
+/** Holds "1 234,50" once left, the same text idle or focused. Can carry its unit inside the box. */
 export function AmountInput({
   value,
   onChange,
@@ -49,19 +49,13 @@ export function AmountInput({
   className?: string;
   inputClassName?: string;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size">) {
-  const [focused, setFocused] = useState(false);
   const field = amountFieldProps({ value, onChange });
 
   const shared = {
     ...props,
     ...field,
-    value: focused ? value : groupForm(value),
-    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
-      setFocused(true);
-      onFocus?.(e);
-    },
+    onFocus,
     onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
-      setFocused(false);
       field.onBlur();
       onBlur?.(e);
     },

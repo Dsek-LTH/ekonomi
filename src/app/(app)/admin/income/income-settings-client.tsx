@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -23,7 +22,7 @@ import type { AccountRecord, CostCenter, ResultUnit } from "@/lib/domain/types";
 import type { IncomeSetupSection, IncomeSetupStep } from "@/lib/income/setup";
 
 import { UnitSales } from "./unit-sales";
-import { sekToOre } from "@/lib/domain/money";
+import { parseSEK, sekToOre } from "@/lib/domain/money";
 
 type AccountKey =
   "zettleClearingAccount" | "swishClearingAccount" | "zettleFeeAccount" | "incomeFallbackAccount";
@@ -103,8 +102,9 @@ function IncomeSettings({
     .map((u) => ({ value: u.income!.id, label: u.resultUnit }));
 
   async function addFallback() {
-    const kronor = Number(newFallback.amount.replace(",", "."));
-    if (!Number.isFinite(kronor) || kronor <= 0) return;
+    // parseSEK, as every amount field: the field holds "1 000,00" (sekToInput).
+    const kronor = parseSEK(newFallback.amount);
+    if (kronor <= 0) return;
     const ok = await mutate("/api/income/swish-fallbacks", {
       key: "addFallback",
       body: { amount: sekToOre(kronor), message: newFallback.message },
