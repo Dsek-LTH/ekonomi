@@ -12,12 +12,12 @@ import { formatNumber } from "@/lib/ui/format";
 import { Combobox } from "@/components/ui/combobox";
 import { DragHandle } from "@/components/ui/drag";
 import { IconButton } from "@/components/ui/icon-button";
-import { Notice } from "@/components/ui/notice";
+import { Issues } from "@/components/ui/notice";
 import { IconLock, IconX } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { withBlankRows } from "@/lib/ui/blank-rows";
-import { isAmountInput, isSum, isSumInput, settleAmount } from "@/lib/domain/money";
+import { isAmountInput, isSum, isSumInput, sekToInput, settleAmount } from "@/lib/domain/money";
 import type { VoucherBlocker } from "@/lib/domain/voucher";
 import { retagRowText } from "@/lib/domain/cost-center-tag";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
@@ -392,23 +392,39 @@ export function VoucherEditor({
         );
   return (
     <>
-      {(unknownAccounts.length > 0 ||
-        unknownCostCenters.length > 0 ||
-        unknownProjects.length > 0) && (
-        <div className="px-inset py-4">
-          <Notice>
-            {unknownAccounts.length > 0 && (
-              <p>{t("unknownAccounts", { list: unknownAccounts.join(", ") })}</p>
-            )}
-            {unknownCostCenters.length > 0 && (
-              <p>{t("unknownCostCenters", { list: unknownCostCenters.join(", ") })}</p>
-            )}
-            {unknownProjects.length > 0 && (
-              <p>{t("unknownProjects", { list: unknownProjects.join(", ") })}</p>
-            )}
-          </Notice>
-        </div>
-      )}
+      {/* Over the table they are about: the cells themselves are marked too. */}
+      <Issues
+        className="px-inset pt-3"
+        items={[
+          ...(unknownAccounts.length > 0
+            ? [
+                {
+                  key: "accounts",
+                  tone: "danger" as const,
+                  text: t("unknownAccounts", { list: unknownAccounts.join(", ") }),
+                },
+              ]
+            : []),
+          ...(unknownCostCenters.length > 0
+            ? [
+                {
+                  key: "costCenters",
+                  tone: "danger" as const,
+                  text: t("unknownCostCenters", { list: unknownCostCenters.join(", ") }),
+                },
+              ]
+            : []),
+          ...(unknownProjects.length > 0
+            ? [
+                {
+                  key: "projects",
+                  tone: "danger" as const,
+                  text: t("unknownProjects", { list: unknownProjects.join(", ") }),
+                },
+              ]
+            : []),
+        ]}
+      />
 
       <div className="flex justify-end px-inset py-1.5 md:hidden">
         <Button variant="ghost" size="sm" onClick={() => setAllColumns((on) => !on)}>

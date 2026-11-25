@@ -47,7 +47,8 @@ export function ViewToggle<T extends string>({
             onClick={() => onChange(opt.value)}
             className={cn(
               "flex items-center justify-center rounded-mark transition-colors",
-              labels ? "h-7 gap-1.5 px-2.5 text-sm font-medium" : "size-7",
+              // 26px inside the track's border and padding: 32px in all, the height of a field or button beside it.
+              labels ? "h-[26px] gap-1.5 px-2.5 text-sm font-medium" : "size-[26px]",
               active
                 ? // The selected pill in a track, as in CollectionSwitch.
                   "bg-background text-foreground shadow-[var(--shadow-pill)]"

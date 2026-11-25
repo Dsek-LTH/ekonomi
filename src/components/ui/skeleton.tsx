@@ -50,7 +50,7 @@ export function SkeletonPage({
           <TitleOrBar
             page={
               <>
-                <Skeleton className={cn("h-8", titleWidth)} />
+                <Skeleton className={cn("h-7", titleWidth)} />
                 {subtitle && <Skeleton className="mt-1 h-7 w-44" />}
               </>
             }

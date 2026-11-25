@@ -39,7 +39,7 @@ export function EventDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal label={title} onClose={onClose} className="max-w-md">
       <ModalHeader title={title} subtitle={t("event.newHint")} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <Field
           label={t("event.field.name")}
           hint={t("event.field.nameHint")}

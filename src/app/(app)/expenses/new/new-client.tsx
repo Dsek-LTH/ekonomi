@@ -640,7 +640,7 @@ export default function NewExpenseClient({
               <FieldGroup label={t("claim")} requirement={locked ? undefined : "required"}>
                 {/* Container query, not viewport: the receipt panel and nav rail eat the width. `@xl` is where three cards read comfortably. */}
                 <div className="@container">
-                  <div className="grid gap-3 @2xl:grid-cols-3">
+                  <div className="grid gap-3 @xl:grid-cols-3">
                     {claimOptions.map((c) => {
                       // The icon in its own colour, the same mark the list shows afterwards. `min-w-0` on the label so a long one wraps inside the card.
                       const content = (

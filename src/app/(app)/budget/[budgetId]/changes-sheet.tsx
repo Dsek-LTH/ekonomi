@@ -196,7 +196,7 @@ export function ChangesSheet({
 
         {open && (
           <div className="border-t border-border px-inset py-4">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <FieldGroup label={t("kindLabel")} requirement="required">
                 <SegmentedControl<ChangeKind>
                   options={[

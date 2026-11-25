@@ -7,7 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Notice } from "@/components/ui/notice";
+import { Issues, type IssueItem } from "@/components/ui/notice";
 import { Tooltip } from "@/components/ui/tooltip";
 import { IconAlert, IconCheck, IconDots } from "@/components/ui/icons";
 import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
@@ -16,9 +16,9 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
 import { useProgressRouter } from "@/components/shell/route-progress";
-import { today } from "@/lib/domain/date";
+import { useGoUp } from "@/components/shell/route-history";
 import { giroMismatch } from "@/lib/domain/payment-ref";
-import { PAYABLE_ACCOUNT, ROUNDING_ACCOUNT, daysUntilDue } from "@/lib/domain/supplier-invoice";
+import { PAYABLE_ACCOUNT, ROUNDING_ACCOUNT } from "@/lib/domain/supplier-invoice";
 import { formatSEK } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
@@ -59,21 +59,21 @@ export function InvoiceRecordClient({
   const { invoice } = data;
   const title = useInvoiceTitle();
   const booked = invoice.status === "BOOKED" || invoice.status === "EXPORTED";
-  const subtitle = [
+  // The small line over the title, as on an utlägg: the reference and whose it is (the supplier once booked).
+  const eyebrow = [
     invoice.description && invoice.reference,
     booked ? invoice.supplierName : (invoice.mail?.fromName ?? invoice.receivedByName),
   ]
     .filter(Boolean)
     .join(" - ");
   return (
-    <PageShell
-      width="content"
+    <InvoiceRecord
+      {...data}
       title={title(invoice)}
-      subtitle={subtitle || undefined}
-      back={backHref}
-    >
-      <InvoiceRecord {...data} backHref={backHref} fortnox={fortnox} />
-    </PageShell>
+      eyebrow={eyebrow || undefined}
+      backHref={backHref}
+      fortnox={fortnox}
+    />
   );
 }
 
@@ -88,16 +88,25 @@ export function InvoiceMissing() {
   );
 }
 
-function InvoiceRecord(
-  props: WorkspaceProps & { backHref: string; fortnox: FortnoxStatus | null },
-) {
-  const { invoice, can, backHref, fortnox } = props;
+function InvoiceRecord({
+  title,
+  eyebrow,
+  ...props
+}: WorkspaceProps & {
+  title: string;
+  eyebrow?: string;
+  backHref: string;
+  fortnox: FortnoxStatus | null;
+}) {
+  const { invoice, can, backHref } = props;
   const tDetail = useTranslations("invoices.detail");
-  const router = useProgressRouter();
+  // The invoice is gone: back out to the list rather than leaving its record in the history.
+  const goUp = useGoUp();
   const docs = useMutation();
   const [moving, setMoving] = useState(false);
   const uncertain = invoice.exportState === "UNCERTAIN" && can.canBook;
   const documents = useInvoicePanelDocuments(invoice);
+  const sendIssues = useSendIssues(invoice);
 
   async function uploadDocument(file: File) {
     const form = new FormData();
@@ -108,8 +117,23 @@ function InvoiceRecord(
     });
   }
 
+  // The next step beside the title, as on an utlägg. What is worth a look before sending sits beside the button that sends.
+  const actions = (
+    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+      {can.canSend && !uncertain && (
+        <Issues items={sendIssues} className="sm:max-w-xs sm:text-right" />
+      )}
+      <RecordActions
+        {...props}
+        sendBlocked={uncertain}
+        onMove={() => setMoving(!moving)}
+        onGone={() => goUp(backHref)}
+      />
+    </div>
+  );
+
   return (
-    <>
+    <PageShell width="content" title={title} eyebrow={eyebrow} aside={actions} back={backHref}>
       <ReceiptPanelSource
         documents={documents}
         onFile={can.canEditDocuments ? (f) => void uploadDocument(f) : undefined}
@@ -126,22 +150,9 @@ function InvoiceRecord(
       />
 
       <ReturnedNotice invoice={invoice} />
-      {can.canSend && !uncertain && <SendNotice invoice={invoice} fortnox={fortnox} />}
       {uncertain && <UncertainExport invoice={invoice} />}
 
       <Card>
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 px-inset py-4">
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <InvoiceStatusPill status={invoice.status} />
-            <WaitingOn invoice={invoice} />
-          </div>
-          <RecordActions
-            {...props}
-            sendBlocked={uncertain}
-            onMove={() => setMoving(!moving)}
-            onGone={() => router.push(backHref)}
-          />
-        </div>
         {moving && (
           <MoveSection
             invoice={invoice}
@@ -160,7 +171,7 @@ function InvoiceRecord(
 
         <Timeline invoice={invoice} />
       </Card>
-    </>
+    </PageShell>
   );
 }
 
@@ -183,42 +194,34 @@ function WaitingOn({ invoice }: { invoice: SupplierInvoiceView }) {
           ),
         ]
       : [invoice.resultUnitName ?? "-"];
-  return <span className="text-sm text-muted">{t("waitingFor", { units: units.join(", ") })}</span>;
+  return (
+    <span className="mt-1 block truncate text-xs text-muted">
+      {t("waitingFor", { units: units.join(", ") })}
+    </span>
+  );
 }
 
 /** Warnings before sending to Fortnox. None blocks, except a missing Fortnox connection. */
-function SendNotice({
-  invoice,
-  fortnox,
-}: {
-  invoice: SupplierInvoiceView;
-  fortnox: FortnoxStatus | null;
-}) {
-  const t = useTranslations("invoices.record");
+/**
+ * Worth a look before sending. Overdue is said on the due date itself and "Fortnox not connected" is the send button's
+ * disabled reason, so only a bankgiro that differs from Fortnox's register is left: money to the wrong account.
+ */
+function useSendIssues(invoice: SupplierInvoiceView): IssueItem[] {
   const tWs = useTranslations("invoices.workspace");
   const tField = useTranslations("invoices.field");
-  const days = daysUntilDue(invoice.dueDate || null, today());
   const mismatch = invoice.register ? giroMismatch(invoice, invoice.register) : null;
-  const notConnected = fortnox !== null && !fortnox.connected;
-  if (!(days != null && days < 0) && !mismatch && !notConnected) return null;
-  return (
-    <Notice tone={mismatch ? "warning" : undefined}>
-      <p className="font-medium">{t("sendWarningsTitle")}</p>
-      <ul className="mt-1 list-disc pl-5">
-        {days != null && days < 0 && <li>{t("warning.overdue", { days: -days })}</li>}
-        {mismatch && (
-          <li>
-            {tWs("giroWarning", {
-              field: tField(mismatch.field).toLowerCase(),
-              invoice: mismatch.invoice,
-              register: mismatch.register ?? tWs("giroNone"),
-            })}
-          </li>
-        )}
-        {notConnected && <li>{t("fortnoxNotConnected")}</li>}
-      </ul>
-    </Notice>
-  );
+  if (!mismatch) return [];
+  return [
+    {
+      key: "giro",
+      tone: "danger",
+      text: tWs("giroWarning", {
+        field: tField(mismatch.field).toLowerCase(),
+        invoice: mismatch.invoice,
+        register: mismatch.register ?? tWs("giroNone"),
+      }),
+    },
+  ];
 }
 
 type Action = {
@@ -466,7 +469,7 @@ function MoveSection({
   const t = useTranslations("invoices.record");
   const tr = useTransition(invoice.id);
   return (
-    <section className="border-t border-border px-inset py-3">
+    <section className="border-t border-border px-inset py-3 first:border-t-0">
       <div className="max-w-sm">
         <Combobox
           size="sm"
@@ -490,8 +493,13 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
   const t = useTranslations("invoices.field");
   const tRecord = useTranslations("invoices.record");
   return (
-    <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-3">
-      <StripCell label={t("amount")} className="col-span-2 sm:col-span-1" truncate>
+    // Where it stands first, as on an utlägg. First in the card, it drops its top rule and takes the card's top corners.
+    <div className="grid grid-cols-2 gap-px overflow-hidden border-t border-border bg-border first:rounded-t-panel first:border-t-0 sm:grid-cols-4">
+      <StripCell label={tRecord("status")}>
+        <InvoiceStatusPill status={invoice.status} />
+        <WaitingOn invoice={invoice} />
+      </StripCell>
+      <StripCell label={t("amount")} truncate>
         {invoice.amount == null ? (
           <span className="text-muted">-</span>
         ) : (
@@ -500,7 +508,7 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
       </StripCell>
       <StripCell label={t("dueDate")} truncate>
         {invoice.dueDate ? (
-          <DueLabel dueDate={invoice.dueDate} />
+          <DueLabel dueDate={invoice.dueDate} spelled />
         ) : (
           <span className="text-muted">-</span>
         )}

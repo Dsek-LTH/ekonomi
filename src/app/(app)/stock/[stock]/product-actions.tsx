@@ -60,7 +60,7 @@ export function PurchaseDialog({
   return (
     <Modal label={t("purchase.title")} onClose={onClose} className="max-w-md">
       <ModalHeader title={t("purchase.title")} subtitle={product.name} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <Field
           label={product.kind === "VOLUME" ? t("purchase.bottles") : t("purchase.units")}
           hint={t("purchase.sealedHint")}
@@ -160,7 +160,7 @@ export function StocktakeDialog({
   return (
     <Modal label={t("stocktake.title")} onClose={onClose} className="max-w-md">
       <ModalHeader title={t("stocktake.title")} subtitle={product.name} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <p className="text-sm text-muted">{t("stocktake.lead")}</p>
 
         <Field
@@ -300,7 +300,7 @@ export function SpoilageDialog({
   return (
     <Modal label={t("spoilage.title")} onClose={onClose} className="max-w-md">
       <ModalHeader title={t("spoilage.title")} subtitle={product.name} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <p className="text-sm text-muted">{t("spoilage.lead")}</p>
 
         {isVolume && (
@@ -349,7 +349,7 @@ export function SpoilageDialog({
           ))}
 
         {/* The two words mean the same to someone holding a broken bottle, and the log keeps them apart. */}
-        <Notice tone="warning">{t("spoilage.atEvent")}</Notice>
+        <Notice tone="info">{t("spoilage.atEvent")}</Notice>
 
         <Field label={t("field.note")} hint={t("spoilage.noteHint")} requirement="optional">
           <Input value={note} onChange={(e) => setNote(e.target.value)} />

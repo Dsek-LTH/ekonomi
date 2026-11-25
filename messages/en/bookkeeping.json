@@ -35,7 +35,6 @@
   "review": {
     "open": "Review",
     "ownBooking": "You booked this expense yourself, so someone else needs to review and post it.",
-    "warningsTitle": "Worth a look before you post",
     "warning": {
       "outsideFinancialYear": "The voucher date is outside the financial years fetched from Fortnox.",
       "prefixOnlyText": "The voucher text says nothing beyond who paid.",

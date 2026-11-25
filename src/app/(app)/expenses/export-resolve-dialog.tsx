@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
-import { Notice } from "@/components/ui/notice";
+import { Issue, Notice } from "@/components/ui/notice";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useMutation } from "@/components/shell/use-mutation";
 import type { ResolveExport } from "@/lib/api/schemas/expense";
@@ -67,7 +67,7 @@ export function ExportResolveDialog({
     <Modal label={t("title", { id: label })} onClose={onClose} className="sm:max-w-lg">
       <ModalHeader title={t("title", { id: label })} />
       <ModalBody>
-        <Notice>{by ? t("explain", { name: by }) : t("explainUnknown")}</Notice>
+        <Notice tone="info">{by ? t("explain", { name: by }) : t("explainUnknown")}</Notice>
         <SegmentedControl<Outcome>
           options={[
             { value: "exists", label: t("exists") },
@@ -78,7 +78,7 @@ export function ExportResolveDialog({
         />
         {outcome === "exists" ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("series")} requirement="required">
                 <Input value={series} onChange={(e) => setSeries(e.target.value)} placeholder="A" />
               </Field>
@@ -97,7 +97,10 @@ export function ExportResolveDialog({
           </>
         ) : (
           <>
-            <Notice tone="danger">{t("noneWarning")}</Notice>
+            {/* About the choice just made, right under it. */}
+            <Issue tone="danger" className="-mt-1">
+              {t("noneWarning")}
+            </Issue>
             <Field label={t("reason")} requirement="required">
               <Textarea
                 rows={3}

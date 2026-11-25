@@ -74,8 +74,7 @@
   "datePlaceholder": "yyyy-mm-dd",
   "openDatePicker": "Pick a date from a calendar",
   "field": {
-    "required": "required",
-    "optional": "Optional"
+    "required": "required"
   },
   "themeMode": {
     "toggle": "Switch colour theme"

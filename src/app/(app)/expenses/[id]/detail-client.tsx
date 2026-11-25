@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { MatchHelp, TransactionPicker } from "@/components/transaction-picker";
@@ -18,7 +17,6 @@ import { cn } from "@/lib/ui/utils";
 import type { BankTransaction, Expense, FortnoxStatus } from "@/lib/domain/types";
 import {
   AllocationSection,
-  ExpenseSummary,
   FactStrip,
   NotesSection,
   TimelineSection,
@@ -29,11 +27,12 @@ import { ExpenseActionNotice, ExpenseActions } from "./expense-actions";
 import { ReminderDialog } from "@/components/reminder-dialog";
 import type { ExpenseCapabilities } from "@/lib/domain/expense-capabilities";
 import { useExpenseMutations } from "./use-expense-mutations";
-import { Notice } from "@/components/ui/notice";
+import { Card } from "@/components/ui/card";
+import { Issues, Notice } from "@/components/ui/notice";
 import { expenseLabel } from "@/lib/domain/reference";
 import type { ReviewWarning } from "@/lib/domain/review";
 import { useLiveBookkeeping } from "../use-live-bookkeeping";
-import { useBookingPresence } from "./book/use-booking-presence";
+import { useBookingPresence } from "@/components/shell/use-booking-presence";
 import { useConfirm } from "@/components/confirm-dialog";
 import { PersonName } from "@/components/ui/avatar";
 
@@ -133,7 +132,7 @@ function ExpenseDetail({
   // Who else granskar this konterat utlägg. Announced only by someone who could bokföra it from here.
   // Advisory: the export lock stops a second export.
   const reviewers = useBookingPresence(
-    can.canExport && !review?.ownBooking ? expense.id : null,
+    can.canExport && !review?.ownBooking ? `/api/expenses/${expense.id}/presence` : null,
     null,
     "review",
   ).others;
@@ -150,18 +149,67 @@ function ExpenseDetail({
         : tBookkeeping("exportUncertain", { name: lockedBy })
       : null;
 
+  // Out of the card, beside the title: where the utlägg stands and what to do next head the page, the card holds the
+  // utlägg itself.
+  const actions = (
+    // Voucher warnings sit beside the button that bokför: none stops it.
+    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+      <Issues
+        className="sm:max-w-xs sm:text-right"
+        items={(review?.warnings ?? []).map((w) => ({
+          key: w,
+          text: tBookkeeping(`review.warning.${w}`),
+        }))}
+      />
+      <ExpenseActions
+        expenseId={expense.id}
+        can={can}
+        fortnox={fortnox}
+        exportBlock={exportBlock}
+        onExport={async () => {
+          // Somebody else is looking it over too. Not a lock.
+          if (
+            reviewers.length > 0 &&
+            !(await confirm({
+              title: tBookkeeping("review.confirmTitle"),
+              message: tBookkeeping("review.confirmMessage", {
+                names: reviewerNames,
+                count: reviewers.length,
+              }),
+              confirmLabel: t("review"),
+            }))
+          ) {
+            return;
+          }
+          if (!(await mutations.exportToFortnox(expenseLabel(expense)))) live.refresh();
+        }}
+        busy={mutations.busy}
+        onTransition={mutations.transition}
+        onApprove={() => mutations.transition("approve")}
+        approveAll={attestable > 1 ? attestable : null}
+        onWithdrawAttest={() => mutations.withdrawAttest()}
+        // How many rows are signed, so the confirmation can say what taking it back costs somebody else.
+        onRecall={() => mutations.recall(expense.allocations.filter((a) => a.approvedById).length)}
+        onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
+        onRemind={() => setReminding(true)}
+        onDelete={mutations.remove}
+      />
+    </div>
+  );
+
   return (
     <PageShell
       // The same width as the form that made it.
       width="content"
       title={expense.title}
       // Before submission there is no reference: the name alone, not a gap.
-      subtitle={
-        <span className="inline-flex flex-wrap items-center gap-x-2">
+      eyebrow={
+        <>
           {expense.reference && `${expense.reference} - `}
           <PersonName userId={expense.submitterId} name={expense.submitterName} />
-        </span>
+        </>
       }
+      aside={actions}
       back="/expenses"
     >
       {/* The panel is declared here and stood beside the page by the shell: the utläggsräkning then the underlag (Fortnox stapling order),
@@ -175,7 +223,7 @@ function ExpenseDetail({
       <ExpenseActionNotice can={can} fortnox={fortnox} paymentType={expense.paymentType} />
 
       {reviewers.length > 0 && (
-        <Notice>
+        <Notice tone="info">
           {tBookkeeping("review.othersReviewing", {
             names: reviewerNames,
             count: reviewers.length,
@@ -183,60 +231,7 @@ function ExpenseDetail({
         </Notice>
       )}
 
-      {/* Voucher warnings: none stops the bokföring. */}
-      {review && review.warnings.length > 0 && (
-        <Notice>
-          <p className="font-medium">{tBookkeeping("review.warningsTitle")}</p>
-          <ul className="mt-1 list-disc pl-5">
-            {review.warnings.map((w) => (
-              <li key={w}>{tBookkeeping(`review.warning.${w}`)}</li>
-            ))}
-          </ul>
-        </Notice>
-      )}
-
       <Card>
-        <ExpenseSummary
-          expense={expense}
-          actions={
-            <ExpenseActions
-              expenseId={expense.id}
-              can={can}
-              fortnox={fortnox}
-              exportBlock={exportBlock}
-              onExport={async () => {
-                // Somebody else is looking it over too. Not a lock.
-                if (
-                  reviewers.length > 0 &&
-                  !(await confirm({
-                    title: tBookkeeping("review.confirmTitle"),
-                    message: tBookkeeping("review.confirmMessage", {
-                      names: reviewerNames,
-                      count: reviewers.length,
-                    }),
-                    confirmLabel: t("review"),
-                  }))
-                ) {
-                  return;
-                }
-                if (!(await mutations.exportToFortnox(expenseLabel(expense)))) live.refresh();
-              }}
-              busy={mutations.busy}
-              onTransition={mutations.transition}
-              onApprove={() => mutations.transition("approve")}
-              approveAll={attestable > 1 ? attestable : null}
-              onWithdrawAttest={() => mutations.withdrawAttest()}
-              // How many rows are signed, so the confirmation can say what taking it back costs somebody else.
-              onRecall={() =>
-                mutations.recall(expense.allocations.filter((a) => a.approvedById).length)
-              }
-              onRevokeDeadlineWaiver={mutations.revokeDeadlineWaiver}
-              onRemind={() => setReminding(true)}
-              onDelete={mutations.remove}
-            />
-          }
-        />
-
         <FactStrip expense={expense} />
 
         <NotesSection expense={expense} />

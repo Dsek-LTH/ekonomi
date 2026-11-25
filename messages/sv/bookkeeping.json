@@ -35,7 +35,6 @@
   "review": {
     "open": "Granska",
     "ownBooking": "Du har konterat utlägget själv, så någon annan behöver granska och bokföra det.",
-    "warningsTitle": "Värt att titta på innan du bokför",
     "warning": {
       "outsideFinancialYear": "Verifikationsdatumet ligger utanför de räkenskapsår som är hämtade från Fortnox.",
       "prefixOnlyText": "Verifikationstexten säger inget mer än vem som lade ut.",

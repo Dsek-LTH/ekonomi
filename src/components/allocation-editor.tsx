@@ -34,8 +34,8 @@ interface Props {
   onChange: (rows: AllocationRow[]) => void;
 }
 
-// The table's columns, from the container's 2xl up.
-const COLS = "@2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_9rem_2.25rem]";
+// The table's columns, from the container's xl (36rem) up, so the split keeps its table beside the document panel.
+const COLS = "@xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_9rem_2.25rem]";
 
 export function AllocationEditor({ costCenters, grossAmount, value, onChange }: Props) {
   const t = useTranslations("allocation");
@@ -86,10 +86,10 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
 
   return (
     <div className="@container">
-      <div className="space-y-2 @2xl:space-y-0 @2xl:overflow-hidden @2xl:rounded-control @2xl:border @2xl:border-border">
+      <div className="space-y-2 @xl:space-y-0 @xl:overflow-hidden @xl:rounded-control @xl:border @xl:border-border">
         <div
           className={cn(
-            "hidden divide-x divide-border border-b border-border bg-surface text-xs font-medium text-muted @2xl:grid",
+            "hidden divide-x divide-border border-b border-border bg-surface text-xs font-medium text-muted @xl:grid",
             COLS,
           )}
         >
@@ -104,7 +104,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
             key={row.id}
             className={cn(
               "group relative grid gap-2 rounded-control border border-border bg-surface/50 p-2",
-              "@2xl:gap-0 @2xl:divide-x @2xl:divide-border @2xl:rounded-none @2xl:border-0 @2xl:border-b @2xl:bg-transparent @2xl:p-0 @2xl:last:border-b-0",
+              "@xl:gap-0 @xl:divide-x @xl:divide-border @xl:rounded-none @xl:border-0 @xl:border-b @xl:bg-transparent @xl:p-0 @xl:last:border-b-0",
               COLS,
             )}
           >
@@ -119,7 +119,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               aria-label={t("costCenter")}
               variant="cell"
             />
-            <div className="grid grid-cols-[minmax(0,1fr)_9rem] gap-2 @2xl:contents">
+            <div className="grid grid-cols-[minmax(0,1fr)_9rem] gap-2 @xl:contents">
               <input
                 type="text"
                 placeholder={t("commentPlaceholder")}
@@ -151,7 +151,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                 />
               )}
             </div>
-            <span className="contents @2xl:flex @2xl:items-center @2xl:justify-center">
+            <span className="contents @xl:flex @xl:items-center @xl:justify-center">
               {!single && (
                 <button
                   type="button"
@@ -160,11 +160,11 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                   title={t("removeRow")}
                   className={cn(
                     "absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full border border-border bg-background text-muted shadow-sm",
-                    "@2xl:static @2xl:size-7 @2xl:rounded-control @2xl:border-0 @2xl:bg-transparent @2xl:shadow-none",
+                    "@xl:static @xl:size-7 @xl:rounded-control @xl:border-0 @xl:bg-transparent @xl:shadow-none",
                     "opacity-0 transition-opacity hover:text-danger focus:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100",
                   )}
                 >
-                  <IconX className="size-3 @2xl:size-4" />
+                  <IconX className="size-3 @xl:size-4" />
                 </button>
               )}
             </span>
@@ -174,11 +174,11 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-2 pt-1",
-            "@2xl:grid @2xl:items-center @2xl:gap-0 @2xl:border-t @2xl:border-border @2xl:bg-surface @2xl:pt-0",
+            "@xl:grid @xl:items-center @xl:gap-0 @xl:border-t @xl:border-border @xl:bg-surface @xl:pt-0",
             COLS,
           )}
         >
-          <div className="@2xl:col-span-2 @2xl:flex @2xl:items-center @2xl:justify-between @2xl:gap-2 @2xl:px-2.5 @2xl:py-2">
+          <div className="@xl:col-span-2 @xl:flex @xl:items-center @xl:justify-between @xl:gap-2 @xl:px-2.5 @xl:py-2">
             <Button
               variant="link"
               type="button"
@@ -189,20 +189,20 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               {single ? t("split") : t("add")}
             </Button>
             {!single && (
-              <span className="hidden @2xl:inline">
+              <span className="hidden @xl:inline">
                 <BalanceChip balanced={balanced} left={left} gross={grossAmount} />
               </span>
             )}
           </div>
           {!single && (
-            <span className="flex items-center gap-2 @2xl:block @2xl:px-2.5 @2xl:py-2 @2xl:text-right">
-              <span className="@2xl:hidden">
+            <span className="flex items-center gap-2 @xl:block @xl:px-2.5 @xl:py-2 @xl:text-right">
+              <span className="@xl:hidden">
                 <BalanceChip balanced={balanced} left={left} gross={grossAmount} />
               </span>
               <span className="text-sm font-medium tabular-nums">{formatSEK(total)}</span>
             </span>
           )}
-          <span className="hidden @2xl:block" />
+          <span className="hidden @xl:block" />
         </div>
       </div>
     </div>

@@ -196,7 +196,7 @@ export function BarcodeScanner({
   return (
     <Modal label={t("scan.title")} onClose={onCancel} className="max-w-md">
       <ModalHeader title={t("scan.title")} subtitle={t("scan.subtitle")} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <div
           className={cn(
             "relative overflow-hidden rounded-panel border border-border bg-black",

@@ -53,7 +53,7 @@ export function EntryDialog({ row, onClose }: { row: CellarRowDto; onClose: () =
           date: row.occurredAt ?? row.at.slice(0, 10),
         })}
       />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <Field label={t("entry.qty")} hint={t("entry.qtyHint", { was })} requirement="required">
           <Input
             value={text}

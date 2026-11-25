@@ -4,7 +4,7 @@ import { Spinner } from "./spinner";
 
 type Variant =
   "primary" | "secondary" | "soft" | "ghost" | "quiet" | "danger" | "dangerOutline" | "link";
-type Size = "sm" | "md" | "lg";
+type Size = "xs" | "sm" | "md" | "lg";
 
 /**
  * The pink hue: the third of the three colours a button may have (full pink, white, this). The sidebar's current
@@ -20,20 +20,26 @@ export const TEXT_HOVER = "hover:bg-action-from/10";
 // quiet are text, with the faint hue on hover. Danger is red, which is a warning and not a fourth colour.
 const VARIANTS: Record<Variant, string> = {
   primary: "action-fill text-white border active:scale-[0.98]",
+  // On a dark ground a white button is a lighter grey block (the hover grey), outline kept, so it holds its own beside a
+  // pink one. Hover lifts it one step more. Light stays white.
   secondary:
-    "bg-background text-foreground border border-border-control hover:bg-hover active:scale-[0.98]",
+    "bg-background dark:bg-hover text-foreground border border-border-control hover:bg-hover dark:hover:bg-[color-mix(in_srgb,var(--color-hover),white_7%)] active:scale-[0.98]",
   soft: `${SOFT_FILL} ${SOFT_HOVER} active:scale-[0.98]`,
   ghost: `text-foreground ${TEXT_HOVER}`,
   quiet: `text-foreground ${TEXT_HOVER}`,
   danger: "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
   dangerOutline:
-    "bg-background text-danger border border-border-control hover:bg-danger-soft hover:border-danger",
+    "bg-background dark:bg-hover text-danger border border-border-control hover:bg-danger-soft dark:hover:bg-danger-soft hover:border-danger",
   link: "font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40",
 };
 
-// md is 40px on a phone and 32px from sm up (CONTROL_SIZES in ui/field.tsx). sm sits in table rows.
+// One height for every control that can sit beside another: 40px on a phone, 32px from sm up, the same as a field
+// (CONTROL_SIZES in ui/field.tsx), a menu button and the collection switch. sm and md differ only in padding, so a
+// button never comes out shorter than the input next to it. xs is the exception: an action inside a table row,
+// where nothing sits beside it and the row's height is the point. Still 32px on a phone, for the thumb.
 const SIZES: Record<Size, string> = {
-  sm: "h-7 px-2.5 text-xs",
+  xs: "h-8 gap-1.5 px-2 text-xs sm:h-6",
+  sm: "h-10 px-2.5 text-sm sm:h-8",
   md: "h-10 px-3 text-sm sm:h-8",
   lg: "h-10 px-4 text-sm sm:h-9",
 };
@@ -51,7 +57,7 @@ type CommonProps = {
 };
 
 // The spinner shares the label's grid cell so a busy button keeps its width. The label stays in layout (invisible) and aria-busy says why.
-const BUSY_SPINNER: Record<Size, "sm" | "md"> = { sm: "sm", md: "sm", lg: "md" };
+const BUSY_SPINNER: Record<Size, "sm" | "md"> = { xs: "sm", sm: "sm", md: "sm", lg: "md" };
 
 export function Button({
   variant = "primary",
@@ -100,14 +106,17 @@ export function ButtonLink({
   children,
   href,
   replace,
+  onClick,
 }: CommonProps & {
   href: string;
   replace?: boolean;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
     <Link
       href={href}
       replace={replace}
+      onClick={onClick}
       className={cn(
         variant !== "link" && cn(BASE, DIMMED, SIZES[size]),
         VARIANTS[variant],

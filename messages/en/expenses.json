@@ -153,7 +153,8 @@
     "review": "Review and post",
     "corrected": {
       "purchaseDate": "Receipt date: {from} to {to}"
-    }
+    },
+    "status": "Status"
   },
   "mutations": {
     "transition": {

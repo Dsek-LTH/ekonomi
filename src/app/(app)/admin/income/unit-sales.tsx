@@ -185,8 +185,8 @@ export function UnitSales({
       </div>
 
       {income && open && (
-        <div className="mt-4 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <FieldGroup label={tIncome("description")} hint={tIncome("descriptionHint")}>
               <Input
                 size="sm"

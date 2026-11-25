@@ -36,7 +36,8 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(opt.value)}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-control font-medium transition-colors",
-              size === "sm" ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm",
+              // The control height (ui/field.tsx), so it lines up with the fields and buttons around it.
+              size === "sm" ? "h-10 px-3 text-xs sm:h-8" : "h-10 px-4 text-sm sm:h-8",
               // Chosen is the pink hue, never black (see SOFT_FILL).
               active ? SOFT_FILL : cn("text-muted hover:text-foreground", TEXT_HOVER),
             )}

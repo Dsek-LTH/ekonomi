@@ -170,7 +170,7 @@ function PriceDialog({
   return (
     <Modal label={price.name} onClose={onClose} className="max-w-md">
       <ModalHeader title={price.name} subtitle={t("dialog.hint")} />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-inset py-4">
         <Field
           label={t("dialog.price")}
           // A warning, not a refusal: selling under cost is the board's call to make.

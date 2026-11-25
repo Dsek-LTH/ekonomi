@@ -200,7 +200,7 @@ function FetchForm({
     return (
       <>
         <ModalBody>
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-5">{fields}</div>
+          <div className="flex flex-wrap items-end gap-3">{fields}</div>
         </ModalBody>
         <ModalFooter blocker={ready ? null : t("fetch.notReady")}>
           <span />
@@ -217,7 +217,7 @@ function FetchForm({
 
   return (
     // One row on a laptop, wrapping on a narrow window; bottom-aligned so the labels sit above a single line of controls.
-    <CardBody className="flex flex-wrap items-end gap-x-4 gap-y-5">
+    <CardBody className="flex flex-wrap items-end gap-3">
       {fields}
       {submit}
     </CardBody>

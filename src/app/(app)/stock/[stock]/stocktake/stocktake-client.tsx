@@ -222,7 +222,7 @@ export default function StocktakeClient({
   return (
     <PageShell title={t("stocktakeSheet.title")} back={href()} width="content">
       <Card>
-        <div className="grid gap-4 px-inset py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+        <div className="grid gap-3 px-inset py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
           <Field label={t("field.date")} requirement="required">
             <DateInput
               value={draft.occurredAt}

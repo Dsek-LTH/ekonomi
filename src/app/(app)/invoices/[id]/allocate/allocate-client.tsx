@@ -249,8 +249,8 @@ export function AllocateForm({
       {notice}
 
       <Card>
-        <section className="space-y-4 px-inset py-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_10rem]">
+        <section className="space-y-3 px-inset py-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_10rem]">
             <Field label={tField("description")} requirement="required">
               <Input
                 value={description}
@@ -267,7 +267,7 @@ export function AllocateForm({
               <DateInput value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </Field>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[12rem_9rem]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[12rem_9rem]">
             <Field
               label={tField("amount")}
               hint={fromScan.amount ? t("fromScan") : undefined}
@@ -293,7 +293,7 @@ export function AllocateForm({
           </div>
         </section>
 
-        <section className="border-t border-border px-inset py-5">
+        <section className="border-t border-border px-inset py-4">
           <FieldGroup label={tAttest("distribution")} requirement="required">
             <AllocationEditor
               costCenters={options}

@@ -34,7 +34,9 @@ function useFieldWiring(given?: string): {
   };
 }
 
-/** Both halves are said out loud, so an unmarked field means it is not part of a form that asks. Required is a star on the name, optional a word at the far end. */
+/** Required is a star on the name (and "krävs" to a screen reader). Optional is the absence of the star: a
+ *  word for it at every optional field took a column of room for no news. "optional" is still passed, so a form says
+ *  which it means, but it draws nothing. */
 type Requirement = "required" | "optional";
 
 // No focus styling here: the app draws one ring from globals.css.
@@ -51,9 +53,8 @@ export const CONTROL_SIZES: Record<ControlSize, string> = {
   md: "field-ring h-10 rounded-control px-2.5 sm:h-8",
 };
 
-/** A cell of a table from its container's 2xl up: no box, the grid lines are the boxes. Overrides CONTROL_SIZES.sm only inside the container query. */
-export const CONTROL_CELL =
-  "@2xl:h-10 @2xl:rounded-none @2xl:border-0 @2xl:bg-transparent focus-inset";
+/** A cell of a table from its container's xl (36rem) up: no box, the grid lines are the boxes. Overrides CONTROL_SIZES.sm only inside the container query. */
+export const CONTROL_CELL = "@xl:h-10 @xl:rounded-none @xl:border-0 @xl:bg-transparent focus-inset";
 
 // Sized by padding, not height, so a single line lands at 32px.
 const TEXTAREA = "field-ring rounded-control px-2.5 py-1.5";
@@ -88,7 +89,7 @@ function FieldContent({
   return (
     <>
       {/* 20px line so fields side by side align even when one carries something at the far end. */}
-      <span className="mb-1 flex min-h-5 items-center justify-between gap-2 text-[13px] font-medium text-foreground">
+      <span className="mb-1 flex min-h-5 items-center justify-between gap-2 text-xs font-medium text-foreground">
         <span className="flex min-w-0 items-center gap-1">
           {label}
           {requirement === "required" && (
@@ -101,14 +102,7 @@ function FieldContent({
             </>
           )}
         </span>
-        {(requirement === "optional" || action) && (
-          <span className="flex shrink-0 items-center gap-2">
-            {requirement === "optional" && (
-              <span className="text-xs font-normal text-muted">{t("optional")}</span>
-            )}
-            {action}
-          </span>
-        )}
+        {action && <span className="flex shrink-0 items-center gap-2">{action}</span>}
       </span>
       {children}
       {/* Replaces the standing hint, and carries the id aria-describedby points at. */}

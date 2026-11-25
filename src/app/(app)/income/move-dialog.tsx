@@ -181,7 +181,9 @@ export function MoveLinesDialog({
           </table>
         </div>
 
-        {target && unchanged > 0 && <Notice>{t("stillOnOldAccount", { count: unchanged })}</Notice>}
+        {target && unchanged > 0 && (
+          <Notice tone="info">{t("stillOnOldAccount", { count: unchanged })}</Notice>
+        )}
       </ModalBody>
 
       <ModalFooter blocker={target ? null : t("destinationRequired")}>

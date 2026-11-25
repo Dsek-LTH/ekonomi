@@ -19,7 +19,17 @@ function dueTone(days: number | null): "plain" | "warning" | "danger" {
   return days < 3 ? "danger" : "warning";
 }
 
-export function DueLabel({ dueDate, className }: { dueDate: string | null; className?: string }) {
+/** The due date, coloured by how close it is. `spelled` writes out what the colour means (förföll för 6 dagar sedan)
+ *  under it, for a record where the date is the one place that says so. In a list the colour and the hover do. */
+export function DueLabel({
+  dueDate,
+  className,
+  spelled = false,
+}: {
+  dueDate: string | null;
+  className?: string;
+  spelled?: boolean;
+}) {
   const t = useTranslations("invoices.due");
   const { date } = useFormat();
   const days = daysUntilDue(dueDate || null, today());
@@ -44,6 +54,7 @@ export function DueLabel({ dueDate, className }: { dueDate: string | null; class
       )}
     >
       {date(dueDate!)}
+      {spelled && hint && <span className="block text-xs">{hint}</span>}
     </span>
   );
 }

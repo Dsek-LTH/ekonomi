@@ -88,8 +88,8 @@ export function ProfileClient({
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title={tProfile("payoutTitle")} subtitle={tProfile("payoutDescription")} />
-            <CardBody className="space-y-5">
-              <div className="grid gap-5 sm:grid-cols-2">
+            <CardBody className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {/* Named and autoComplete="off" (plus 1Password's opt-out) so password managers do not
                     read this as a login form. No inputMode="numeric": the format has a hyphen and spaces. */}
                 <Field label={tProfile("clearing")}>
@@ -135,7 +135,7 @@ export function ProfileClient({
           {fortnox && (
             <Card>
               <CardHeader title="Fortnox" subtitle={tProfile("fortnoxSubtitle")} />
-              <CardBody className="space-y-4">
+              <CardBody className="space-y-3">
                 <FortnoxBanner
                   ok={!!session}
                   title={

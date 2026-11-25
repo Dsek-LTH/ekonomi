@@ -158,7 +158,7 @@ export function MileageRatesClient({ rates }: { rates: MileageRateRow[] }) {
       </div>
 
       {adding && (
-        <div className="grid gap-4 border-t border-border bg-surface px-inset py-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,10rem)_minmax(0,1fr)] sm:items-start">
+        <div className="grid gap-3 border-t border-border bg-surface px-inset py-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,10rem)_minmax(0,1fr)] sm:items-start">
           <Field label={t("validFrom")} requirement="required">
             <DateInput size="sm" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
           </Field>

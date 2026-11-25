@@ -109,7 +109,7 @@ export function ModalHeader({ title, subtitle }: { title: string; subtitle?: str
 export function ModalBody({ children }: { children: React.ReactNode }) {
   // overscroll-contain: otherwise reaching the end hands the gesture to the page behind.
   return (
-    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-inset py-4">
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
       {children}
     </div>
   );

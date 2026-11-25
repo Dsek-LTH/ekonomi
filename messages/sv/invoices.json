@@ -67,10 +67,9 @@
     "loadingSuppliers": "Hämtar leverantörer…",
     "pickSupplier": "Välj leverantör",
     "searchSupplier": "Sök namn, organisationsnummer eller bankgiro",
-    "supplierNotInRegister": "{name} finns inte i Fortnox leverantörsregister. Lägg till leverantören i Fortnox, så går den att välja här.",
+    "supplierNotInRegister": "{name} finns inte i Fortnox. Lägg till leverantören där.",
     "exported": "Exporterad till Fortnox",
     "linked": "Fanns redan i Fortnox som leverantörsfaktura {number}. Kopplad, och uppgifterna därifrån har tagits över.",
-    "giroWarningTitle": "Kontrollera betalningsmottagaren",
     "giroWarning": "Fakturan anger {field} {invoice}, men Fortnox har {register} för leverantören. Ett nytt bankgiro på en faktura från en känd leverantör är det vanligaste sättet att lura till sig en betalning.",
     "giroNone": "inget",
     "giroConfirm": "Jag har kontrollerat med leverantören att numret stämmer",
@@ -233,10 +232,7 @@
     "giroNotInRegister": "Stämmer inte med leverantörsregistret i Fortnox",
     "bookedBy": "Konterad",
     "notAllocated": "{unit} har inte fördelat fakturan än.",
-    "sendWarningsTitle": "Värt att titta på innan den skickas",
-    "warning": {
-      "overdue": "{days, plural, one {Förfallodagen passerade för # dag sedan.} other {Förfallodagen passerade för # dagar sedan.}}"
-    }
+    "status": "Status"
   },
   "notAllocated": "Inte fördelad än",
   "fromForwarder": "Från {name}",

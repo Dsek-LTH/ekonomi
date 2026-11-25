@@ -2,7 +2,6 @@
 
 // One result unit: which cost centres are its, which Authentik groups answer for it, and whether it sells.
 // Everything about the unit is edited here except its sales, which the Försäljning page sets up unit by unit.
-import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 

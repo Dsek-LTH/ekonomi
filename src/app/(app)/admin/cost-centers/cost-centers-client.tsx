@@ -334,7 +334,12 @@ function CostCentersTable({ costCenters }: { costCenters: CostCenter[] }) {
           !adding && (
             <div className="flex flex-wrap items-center gap-2">
               {suggestable > 0 && (
-                <ButtonLink variant="secondary" size="sm" href="/admin/cost-centers/short-names">
+                <ButtonLink
+                  variant="secondary"
+                  size="sm"
+                  href="/admin/cost-centers/short-names"
+                  onClick={toShortNames}
+                >
                   {t("suggest")}
                   <span className="tabular-nums text-muted">{suggestable}</span>
                 </ButtonLink>

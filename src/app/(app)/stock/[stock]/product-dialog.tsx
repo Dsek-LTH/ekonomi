@@ -1,6 +1,7 @@
 "use client";
 
 // The form a product is created and corrected in, opened from the list (new) and from the product page (existing).
+import { Issue } from "@/components/ui/notice";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -232,7 +233,7 @@ export function ProductDialog({
         title={product ? product.name : t("products.new")}
         subtitle={t("products.dialogHint")}
       />
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-inset py-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
         <Field label={t("products.field.name")} requirement="required">
           <Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus />
         </Field>
@@ -298,8 +299,9 @@ export function ProductDialog({
             {t("barcode.none")}
           </Checkbox>
           {askingNoBarcode && !d.noBarcode && (
-            <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm">
-              <p>{t("barcode.confirm")}</p>
+            // A question about the field above, under it: no box (docs/layout.md).
+            <div>
+              <Issue>{t("barcode.confirm")}</Issue>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => answerNoBarcode(true)}>
                   {t("barcode.confirmYes")}
@@ -330,7 +332,7 @@ export function ProductDialog({
 
         {/* FieldGroup, not Field: a combobox trigger is a <button>, and a <label> would pop the menu open on a click beside it. */}
         {reported && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <FieldGroup
               label={t("products.field.kind")}
               hint={t(`kindHint.${d.kind}`)}
@@ -385,7 +387,7 @@ export function ProductDialog({
           </FieldGroup>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {reported && (
             <Field label={t("products.field.abv")} requirement="required">
               {/* The unit is inside the box: the wrong reading (0,4 for 40 %) is a plausible number nothing downstream would question. */}

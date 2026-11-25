@@ -8,7 +8,8 @@ export function StatusPill({ status, className }: { status: ExpenseStatus; class
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-control px-1.5 py-0.5 text-xs font-medium",
+        // A transparent border so it is the PaymentTag's height (22px), which has a visible one: the two sit side by side.
+        "inline-flex items-center whitespace-nowrap rounded-control border border-transparent px-1.5 py-0.5 text-xs font-medium",
         TONE_CLASSES[STATUS_TONE[status]],
         className,
       )}
@@ -37,7 +38,9 @@ export function Tag({
       title={title}
       className={cn(
         "inline-flex items-center whitespace-nowrap rounded-control font-medium",
-        size === "sm" ? "px-1.5 py-px text-[11px]" : "px-1.5 py-0.5 text-xs",
+        size === "sm"
+          ? "px-1.5 py-px text-[11px]"
+          : "border border-transparent px-1.5 py-0.5 text-xs",
         TONE_CLASSES[tone],
         className,
       )}

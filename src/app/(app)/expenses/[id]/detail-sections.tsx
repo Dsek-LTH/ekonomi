@@ -23,29 +23,17 @@ import {
   type VoucherFact,
 } from "@/components/record-card";
 
-/** The head of the card: where the utlägg stands and the actions (top right, wrapping under the status on a phone). See components/page-shell.tsx. */
-export function ExpenseSummary({
-  expense,
-  actions,
-}: {
-  expense: Expense;
-  actions: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 px-inset py-4">
-      <StatusPill status={expense.status} className="mt-1.5" />
-      {actions}
-    </div>
-  );
-}
-
-/** The amount, date and payment type in ruled columns. The rules are the grid's gap; on a phone the amount takes the first row. */
+/** Where it stands, the amount, date and payment type in ruled columns. The rules are the grid's gap; two to a row on a
+ *  phone. First in the card, it drops its top rule and takes the card's top corners. */
 export function FactStrip({ expense }: { expense: Expense }) {
   const t = useTranslations("expenses.detail");
   const { date } = useFormat();
   return (
-    <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-3">
-      <StripCell label={t("amount")} className="col-span-2 sm:col-span-1">
+    <div className="grid grid-cols-2 gap-px overflow-hidden border-t border-border bg-border first:rounded-t-panel first:border-t-0 sm:grid-cols-4">
+      <StripCell label={t("status")}>
+        <StatusPill status={expense.status} />
+      </StripCell>
+      <StripCell label={t("amount")}>
         <Amount value={expense.grossAmount} size="md" signed />
       </StripCell>
       {/* A milersättning has no purchase date: the field holds the day it was driven, which the filing deadline runs from. */}

@@ -17,7 +17,7 @@ import { IconDots, IconPencil, IconTrash } from "@/components/ui/icons";
 import { PurchaseDialog, SpoilageDialog, StocktakeDialog } from "../product-actions";
 import { BottleLevels } from "@/components/stock/bottle-levels";
 import { isInternalCode, validGtin } from "@/lib/stock/barcode";
-import { Notice } from "@/components/ui/notice";
+import { Issue, Notice } from "@/components/ui/notice";
 import { CategoryMark } from "@/components/stock/category-mark";
 import { ProductDialog } from "../product-dialog";
 import { TagChips } from "@/components/stock/tag-chips";
@@ -237,11 +237,7 @@ export default function StockProductClient({
 
           {product.impossible && <p className="text-sm text-danger">{t("product.impossible")}</p>}
           {/* A made-up barcode from before the field checked: it cannot be scanned and the next edit refuses it. */}
-          {product.ean && !validGtin(product.ean) && (
-            <Notice>
-              <p>{t("barcode.invalidHint")}</p>
-            </Notice>
-          )}
+          {product.ean && !validGtin(product.ean) && <Issue>{t("barcode.invalidHint")}</Issue>}
 
           {/* Best-before is hedged on purpose: the app has never seen a crate, only that a delivery came in and the product keeps so many months.
               A row per delivery, since the work is going down them ticking each off. Deliveries the shelf has been empty since are gone, not dismissed. */}

@@ -579,7 +579,10 @@
    the element (a shadow added where it is used) still wins. */
 @layer components {
   .action-fill {
-    background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to));
+    /* `border-box`: sized to the whole box, border included. By default it is sized to the area inside the transparent
+       border and repeats into it, which drew a light strip down one side and a dark one down the other. Written in the
+       shorthand: a separate background-origin is dropped by the CSS minifier when it folds the two together. */
+    background: linear-gradient(135deg, var(--color-action-from), var(--color-action-to)) border-box;
     border-color: transparent;
     transition: box-shadow 150ms var(--ease-out-quint);
   }

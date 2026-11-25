@@ -236,7 +236,7 @@ function StepForm({
 
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (d.title.trim() && offsetOk) void onSubmit(d);
@@ -248,7 +248,7 @@ function StepForm({
       <Field label={t("field.howTo")} hint={t("field.howToHint")}>
         <Textarea value={d.howTo} onChange={(e) => set("howTo")(e.target.value)} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field label={t("field.ownerRole")}>
           <Combobox
             value={d.ownerRole}
