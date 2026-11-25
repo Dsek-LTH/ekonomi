@@ -2,7 +2,7 @@
 
 // The columns every expense list is built from; a page picks and orders them and adds its own.
 import { StatusPill } from "@/components/ui/status-pill";
-import { PaymentTag } from "@/components/ui/payment-tag";
+import { PaymentGlyph, PaymentTag } from "@/components/ui/payment-tag";
 import type { Column } from "@/components/ui/data-table";
 import { EXPENSE_STATUSES } from "@/lib/domain/status";
 
@@ -29,9 +29,9 @@ export const expenseDateColumn = (
   cell: (e) => date(e.purchaseDate),
 });
 
-// Title with reference and payment type as the second line. Each is `true` (always), `false`
-// (the list gives it its own column) or "below-xl" (its own column is there only from xl, so the
-// second line carries it on narrower tables).
+// Title with payment type and reference beside it. Each is `true` (always), `false` (the list
+// gives it its own column) or "below-xl" (its own column is there only from xl, so the title
+// carries it on narrower tables).
 type SecondLine = boolean | "below-xl";
 
 export const expenseTitleColumn = (
@@ -43,33 +43,33 @@ export const expenseTitleColumn = (
 ): Column<Expense> => ({
   key: "title",
   header,
+  // The column takes the width the others leave (w-full) and no more (max-w-0), so a long
+  // title clips instead of widening the table.
+  className: "w-full max-w-0",
   value: (e) => e.title,
   sortable: true,
   searchable: true,
 
   mobile: "title",
   mobileCell: (e) => e.title,
+  // One line, so a row is one line high: the type as an icon before the title and the reference
+  // after it, small and muted. The title is what gives when the row is short of room.
   cell: (e) => {
-    // An utlägg not yet submitted has no reference, so the second line may be empty.
+    // An utlägg not yet submitted has no reference.
     const ref = reference && e.reference;
     const narrow = (part: SecondLine) => (part === "below-xl" ? "xl:hidden" : undefined);
     return (
-      <>
-        <p className="font-medium">{e.title}</p>
-        {(ref || paymentType) && (
-          <p
-            className={cn(
-              "mt-0.5 flex items-center gap-1.5 text-xs text-muted",
-              reference !== true && paymentType !== true && "xl:hidden",
-            )}
-          >
-            {paymentType && (
-              <PaymentTag type={e.paymentType} compact className={narrow(paymentType)} />
-            )}
-            {ref && <span className={narrow(reference)}>{ref}</span>}
-          </p>
+      <span className="flex min-w-0 items-center gap-2">
+        {paymentType && <PaymentGlyph type={e.paymentType} className={narrow(paymentType)} />}
+        <span className="min-w-0 truncate font-medium" title={e.title}>
+          {e.title}
+        </span>
+        {ref && (
+          <span className={cn("shrink-0 text-xs tabular-nums text-muted", narrow(reference))}>
+            {ref}
+          </span>
         )}
-      </>
+      </span>
     );
   },
 });
@@ -109,9 +109,11 @@ export const expenseSubmitterColumn = (header: string, hidden = false): Column<E
   value: (e) => e.submitterName,
   sortable: true,
   searchable: true,
-  className: "text-muted",
+  // On one line, so the column is as wide as the name ("David Mitterer Stråhle") rather than
+  // squeezed by the title, which takes the spare width. A name past 14rem is clipped.
+  className: "whitespace-nowrap text-muted",
   mobile: "meta",
-  cell: (e) => <PersonName userId={e.submitterId} name={e.submitterName} />,
+  cell: (e) => <PersonName userId={e.submitterId} name={e.submitterName} className="max-w-56" />,
 });
 
 // Sorted by position in the status chain, not by label.

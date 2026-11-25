@@ -84,7 +84,7 @@ export function useBookingColumn(
         {mayBook && e.status === "APPROVED" && (
           // Said, not enforced: the booking screen asks before saving over a colleague.
           <Tooltip label={bookings[e.id] ? bookingHint(bookings[e.id]) : null}>
-            <ButtonLink href={`/expenses/${e.id}/book`} size="sm">
+            <ButtonLink href={`/expenses/${e.id}/book`} size="xs">
               {t("book")}
               {bookings[e.id] && <span className="sr-only">{bookingHint(bookings[e.id])}</span>}
             </ButtonLink>
@@ -100,7 +100,7 @@ export function useBookingColumn(
             if (isOwn(e)) {
               return (
                 <Tooltip label={t("review.ownBooking")}>
-                  <Button size="sm" variant="secondary" disabled>
+                  <Button size="xs" variant="secondary" disabled>
                     {t("review.open")}
                     <span className="sr-only">{`. ${t("review.ownBooking")}`}</span>
                   </Button>
@@ -110,7 +110,7 @@ export function useBookingColumn(
             if (locked?.lock === "uncertain" && mayResolve) {
               return (
                 <Tooltip label={exportHint(locked)}>
-                  <Button size="sm" variant="secondary" onClick={() => setResolving(e)}>
+                  <Button size="xs" variant="secondary" onClick={() => setResolving(e)}>
                     {t("resolveExport")}
                   </Button>
                   <CornerDot tone="danger" />
@@ -122,7 +122,7 @@ export function useBookingColumn(
             const hint = locked ? exportHint(locked) : reviewers ? reviewingHint(reviewers) : null;
             return (
               <Tooltip label={hint}>
-                <ButtonLink href={`/expenses/${e.id}`} size="sm" variant="secondary">
+                <ButtonLink href={`/expenses/${e.id}`} size="xs" variant="secondary">
                   {t("review.open")}
                   {hint && <span className="sr-only">{hint}</span>}
                 </ButtonLink>

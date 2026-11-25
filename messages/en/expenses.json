@@ -42,7 +42,8 @@
     "waiting": "Awaiting approval",
     "attestedBy": "Approved by {name}{date}",
     "waitingResultUnit": "Awaiting approval - {resultUnit}",
-    "noResultUnit": "no result unit"
+    "noResultUnit": "no result unit",
+    "attestedCount": "{done} of {total}"
   },
   "submitBlocker": {
     "match": "Match it against a bank transaction before you can submit.",

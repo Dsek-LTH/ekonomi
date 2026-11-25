@@ -19,6 +19,19 @@ export function PaymentIcon({ type, className }: { type: PaymentType; className?
   return <Icon className={cn(PAYMENT_TEXT[type], className)} />;
 }
 
+/** The icon alone in a list row, its word on hover and for screen readers. */
+export function PaymentGlyph({ type, className }: { type: PaymentType; className?: string }) {
+  const t = useTranslations("common.payment");
+  const Icon = PAYMENT_ICONS[type];
+  const label = t(`${type}.label`);
+  return (
+    <span className={cn("inline-flex shrink-0", PAYMENT_TEXT[type], className)} title={label}>
+      <Icon className="size-3.5" />
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
 export function PaymentTag({
   type,
   /** Icon alone below md (where DataTable swaps cards for the table). sr-only, not hidden: the word stays in the accessibility tree. */

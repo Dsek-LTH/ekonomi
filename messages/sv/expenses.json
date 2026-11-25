@@ -42,7 +42,8 @@
     "waiting": "Väntar på attest",
     "attestedBy": "Attesterad av {name}{date}",
     "waitingResultUnit": "Väntar på attest - {resultUnit}",
-    "noResultUnit": "utan resultatenhet"
+    "noResultUnit": "utan resultatenhet",
+    "attestedCount": "{done} av {total}"
   },
   "submitBlocker": {
     "match": "Matcha mot en banktransaktion innan du kan skicka in.",

@@ -24,6 +24,7 @@ import type { RowPage } from "@/lib/data/list-query";
 
 import type { Expense } from "@/lib/domain/types";
 import { useFormat } from "@/lib/ui/use-format";
+import { cn } from "@/lib/ui/utils";
 import { useBookingColumn } from "./booking-column";
 import { EXPENSE_TABS, expenseDefaultTab, type ExpenseScope, type ExpenseTab } from "./scope";
 
@@ -97,7 +98,12 @@ export function ExpensesClient({
       picks.column,
       // Verifikation, Typ and Attest show from xl. Below it the first two fold into the title's
       // second line and Attest is on the utlägg's page, so a narrow laptop does not side scroll.
-      { ...expenseReferenceColumn(t("col.verification")), from: "xl" },
+      // The number speaks for itself, so no heading on screen. Kept for screen readers.
+      {
+        ...expenseReferenceColumn(t("col.verification")),
+        header: <span className="sr-only">{t("col.verification")}</span>,
+        from: "xl",
+      },
       expenseTitleColumn(t("col.title"), { reference: "below-xl", paymentType: "below-xl" }),
       expenseDateColumn(t("col.date"), date),
       {
@@ -112,43 +118,51 @@ export function ExpensesClient({
         // Off the phone row: a line per allocation is a column on a table, not a clause in a summary. It is on the utlägg's page under Fördelning.
         mobile: "hide",
         from: "xl",
-        cell: (e) =>
-          e.allocations.length === 0 ? (
-            <span className="text-muted">-</span>
-          ) : (
-            <div className="space-y-0.5">
-              {e.allocations.map((a) => {
-                const attested = !!a.approvedById;
-                return (
-                  <div
-                    key={a.id}
-                    className="flex items-center gap-1.5 whitespace-nowrap text-xs"
-                    title={
-                      attested
-                        ? t("attest.attestedBy", {
-                            name: a.approvedByName ?? "-",
-                            date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
-                          })
-                        : t("attest.waitingResultUnit", {
-                            resultUnit: a.resultUnit ?? t("attest.noResultUnit"),
-                          })
-                    }
-                  >
-                    {/* The slot is kept when empty so a waiting name lines up with an attested one. */}
-                    <span className="flex size-3.5 shrink-0 items-center justify-center">
-                      {attested && <IconCheck className="size-3.5 text-success" />}
-                    </span>
-                    <span className={attested ? "font-medium" : "text-muted"}>
-                      {attested ? a.approvedByName : (a.resultUnit ?? t("attest.waiting"))}
-                    </span>
-                    {e.allocations.length > 1 && (
-                      <span className="text-muted">{a.costCenterCode}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ),
+        // One line, so a split utlägg is no taller than any other: who attested a single
+        // allocation, or how many of several are attested, each one listed on hover.
+        cell: (e) => {
+          if (e.allocations.length === 0) return <span className="text-muted">-</span>;
+          const line = (a: (typeof e.allocations)[number]) =>
+            a.approvedById
+              ? t("attest.attestedBy", {
+                  name: a.approvedByName ?? "-",
+                  date: a.approvedAt ? ` ${date(a.approvedAt)}` : "",
+                })
+              : t("attest.waitingResultUnit", {
+                  resultUnit: a.resultUnit ?? t("attest.noResultUnit"),
+                });
+          const done = e.allocations.filter((a) => a.approvedById).length;
+          const single = e.allocations.length === 1 ? e.allocations[0] : null;
+          return (
+            <span
+              className="flex items-center gap-1.5 whitespace-nowrap text-xs"
+              title={e.allocations
+                .map((a) => (single ? line(a) : `${a.costCenterCode}: ${line(a)}`))
+                .join("\n")}
+            >
+              {/* The slot is kept when empty so a waiting line lines up with an attested one. */}
+              <span className="flex size-3.5 shrink-0 items-center justify-center">
+                {done === e.allocations.length && <IconCheck className="size-3.5 text-success" />}
+              </span>
+              {single ? (
+                <span className={single.approvedById ? "font-medium" : "text-muted"}>
+                  {single.approvedById
+                    ? single.approvedByName
+                    : (single.resultUnit ?? t("attest.waiting"))}
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    done === e.allocations.length ? "font-medium" : "text-muted",
+                  )}
+                >
+                  {t("attest.attestedCount", { done, total: e.allocations.length })}
+                </span>
+              )}
+            </span>
+          );
+        },
       },
       expenseAmountColumn(t("col.amount")),
       ...(booking.column ? [booking.column] : []),
