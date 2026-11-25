@@ -72,7 +72,7 @@ const PINNED_PURE: Record<string, string[]> = {
     "status.ts",
     "tags.ts",
   ],
-  fortnox: ["oauth-state.ts", "sie.ts", "voucher-text.ts"],
+  fortnox: ["oauth-state.ts", "rows.ts", "sie.ts", "voucher-text.ts"],
 };
 
 describe.each(Object.entries(PINNED_PURE))("lib/%s: the pure half stays pure", (folder, names) => {

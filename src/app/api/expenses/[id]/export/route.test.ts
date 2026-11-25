@@ -134,6 +134,8 @@ vi.mock("@/lib/fortnox", () => ({
   },
   FortnoxAuthRequiredError,
   FortnoxError,
+  refusedByFortnox: (e: unknown) =>
+    e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500,
 }));
 
 vi.mock("@/lib/expense/document", () => ({

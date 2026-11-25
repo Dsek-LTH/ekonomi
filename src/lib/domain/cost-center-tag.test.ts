@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { retagRowText, withCostCenterTag, withoutCostCenterTag } from "./cost-center-tag";
+import {
+  retagRowText,
+  sendableCostCenter,
+  withCostCenterTag,
+  withoutCostCenterTag,
+} from "./cost-center-tag";
 
 const local = new Set(["SEX-ALKO", "MED-ALKO"]);
 const isLocal = (code: string) => local.has(code);
@@ -46,5 +51,18 @@ describe("retagRowText", () => {
 
   it("leaves a Fortnox cost centre's row text alone", () => {
     expect(retagRowText("Kolsyra", "", "SEX01", isLocal)).toBe("Kolsyra");
+  });
+});
+
+describe("sendableCostCenter", () => {
+  it("lets only an active Fortnox cost centre travel as one", () => {
+    expect(sendableCostCenter({ code: "SEX01", source: "FORTNOX", active: true })).toBe("SEX01");
+    expect(sendableCostCenter({ code: "SEX-ALKO", source: "LOCAL", active: true })).toBeUndefined();
+    expect(sendableCostCenter({ code: "SEX09", source: "FORTNOX", active: false })).toBeUndefined();
+  });
+
+  it("sends nothing for a code the register does not know", () => {
+    expect(sendableCostCenter(null)).toBeUndefined();
+    expect(sendableCostCenter(undefined)).toBeUndefined();
   });
 });

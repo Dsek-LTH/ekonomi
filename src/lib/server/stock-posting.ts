@@ -10,12 +10,12 @@ import type { StockEntryKind } from "@/lib/domain/types";
 import {
   createVoucher,
   financialYearsFor,
-  FortnoxError,
   getServiceToken,
   listFinancialYears,
   listVouchers,
+  refusedByFortnox,
 } from "@/lib/fortnox";
-import { voucherRows } from "@/lib/fortnox/export";
+import { voucherRows } from "@/lib/fortnox/rows";
 import { getStockSettings, type StockSettingsView } from "@/lib/data/stock-settings";
 import {
   bucketsThrough,
@@ -610,7 +610,7 @@ export async function exportStockVoucher(
     });
   } catch (e) {
     // A plain refusal (a locked period, a retired cost centre) made no voucher: the day is free again.
-    if (e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500) {
+    if (refusedByFortnox(e)) {
       await prisma.stockVoucher.deleteMany({ where: { id: voucherId, exportClaimedAt: claim } });
       return refuse(e.status, e.message);
     }
@@ -952,7 +952,7 @@ export async function exportReconciliation(
       rows: voucherRows(voucher.verification!.lines),
     });
   } catch (e) {
-    if (e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500) {
+    if (refusedByFortnox(e)) {
       await prisma.stockVoucher.deleteMany({ where: { id: voucher.id, exportClaimedAt: claim } });
       return refuse(e.status, e.message);
     }

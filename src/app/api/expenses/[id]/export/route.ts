@@ -18,15 +18,16 @@ import {
 import { getObjectBuffer } from "@/lib/server/storage";
 import { storeExpenseDocument } from "@/lib/expense/document";
 import { mergeCoverAndReceipts, PdfMergeError } from "@/lib/server/pdf-merge";
-import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
-import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
 import {
-  attachBestEffort,
-  recordExport,
-  userToken,
-  voucherRows,
-  VOUCHER_INCLUDE,
-} from "@/lib/fortnox/export";
+  createVoucher,
+  getConnection,
+  uploadInboxFile,
+  FortnoxError,
+  refusedByFortnox,
+} from "@/lib/fortnox";
+import { loadBookkeepingSettings } from "@/lib/server/bookkeeping-settings";
+import { attachBestEffort, recordExport, userToken, VOUCHER_INCLUDE } from "@/lib/fortnox/export";
+import { voucherRows } from "@/lib/fortnox/rows";
 import { voucherText } from "@/lib/fortnox/voucher-text";
 import { deliverSoon, notify } from "@/lib/server/notify";
 import { expenseNotice } from "@/lib/email/content";
@@ -173,7 +174,7 @@ async function exportHolding(
     });
   } catch (e) {
     // A refusal with a reason (4xx) made no voucher, so the lock goes.
-    if (e instanceof FortnoxError && e.status && e.status >= 400 && e.status < 500) {
+    if (refusedByFortnox(e)) {
       await releaseExport(claim);
       return fail(e.status, e.message);
     }

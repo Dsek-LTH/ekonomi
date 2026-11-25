@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/server/db";
 import { decryptSecret, encryptSecret } from "@/lib/server/secrets";
 import { VOUCHER_DESCRIPTION_MAX } from "./voucher-text";
+import { ROW_TEXT_MAX } from "@/lib/domain/cost-center-tag";
 import { FORTNOX_WRITE_TIMEOUT_MS } from "@/lib/domain/export-claim";
 
 const AUTH_URL = "https://apps.fortnox.se/oauth-v1/auth";
@@ -47,6 +48,15 @@ export class FortnoxError extends Error {
     super(message);
     this.name = "FortnoxError";
   }
+}
+
+/**
+ * Fortnox answered a write with a refusal (4xx): nothing was made, so an export's lock can go and
+ * the treasurer can fix the cause and try again. Anything else (no answer, a 5xx, an answer that
+ * cannot be read) may have made the voucher or invoice, and every export keeps its lock and says so.
+ */
+export function refusedByFortnox(e: unknown): e is FortnoxError & { status: number } {
+  return e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500;
 }
 
 // Needs a personal Fortnox login and none is usable. Callers should prompt to log in, not
@@ -631,7 +641,7 @@ export async function createVoucher(
     if (r.credit > 0) row.Credit = r.credit;
     if (r.costCenter) row.CostCenter = r.costCenter;
     if (r.project) row.Project = r.project;
-    if (r.description) row.TransactionInformation = r.description.slice(0, 100);
+    if (r.description) row.TransactionInformation = r.description.slice(0, ROW_TEXT_MAX);
     return row;
   });
 
@@ -880,7 +890,7 @@ export async function createSupplierInvoice(
     ...(r.debit ? { Debit: r.debit } : { Credit: r.credit }),
     ...(r.costCenter && { CostCenter: r.costCenter }),
     ...(r.project && { Project: r.project }),
-    ...(r.text && { TransactionInformation: r.text.slice(0, 100) }),
+    ...(r.text && { TransactionInformation: r.text.slice(0, ROW_TEXT_MAX) }),
   }));
   // No row for the rounding: Fortnox books RoundOffValue on its own rounding account.
   rows.push({ Account: input.payableAccount, Code: "TOT", Credit: input.total });

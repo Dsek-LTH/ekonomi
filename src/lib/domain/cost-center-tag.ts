@@ -1,9 +1,41 @@
 // A local cost centre (CostCenterSource in the schema) is never sent to Fortnox, which rejects the
 // voucher if it is named. Its code goes into the row text instead: "Öl till pub (SEX-ALKO)". Written
 // while booking and again at export (idempotent) for rows booked earlier or whose text lost it.
+// Every export decides which cost centre goes as one through `sendableCostCenter`, so none forgets.
 
-/** Fortnox's limit on a voucher row's text (TransactionInformation). */
-const ROW_TEXT_MAX = 100;
+/** Fortnox's limit on a row's text (TransactionInformation), on a voucher and a supplier invoice alike. */
+export const ROW_TEXT_MAX = 100;
+
+/** What an export knows about a row's cost centre. Null when the code is not in the register at all. */
+export interface ExportCostCenter {
+  code: string;
+  source: string;
+  active: boolean;
+}
+
+/**
+ * The code to send Fortnox as the row's cost centre, or undefined. Only one Fortnox has and has
+ * active: a local one, a deactivated one or a code the register does not know gets the whole
+ * voucher or invoice rejected.
+ */
+export function sendableCostCenter(cc: ExportCostCenter | null | undefined): string | undefined {
+  return cc?.source === "FORTNOX" && cc.active ? cc.code : undefined;
+}
+
+/**
+ * A row as Fortnox takes it: the cost centre when it may go (`sendableCostCenter`), otherwise its
+ * code tagged onto the text so the row still says where it belongs. `code` is the row's own,
+ * `cc` what the register says about it (null when it does not know the code).
+ */
+export function exportRowCostCenter(
+  code: string | null | undefined,
+  cc: ExportCostCenter | null | undefined,
+  text: string,
+): { costCenter: string | undefined; text: string } {
+  const costCenter = sendableCostCenter(cc);
+  if (costCenter || !code) return { costCenter, text };
+  return { costCenter: undefined, text: withCostCenterTag(text, code) };
+}
 
 const costCenterTag = (code: string): string => `(${code})`;
 

@@ -9,13 +9,8 @@ import { fail, gate } from "@/lib/api/guard";
 import { canBookkeep, canReviewOwnBooking } from "@/lib/domain/permissions";
 import { reviewBlocker } from "@/lib/domain/review";
 import { createVoucher, getConnection, uploadInboxFile, FortnoxError } from "@/lib/fortnox";
-import {
-  attachBestEffort,
-  recordExport,
-  userToken,
-  voucherRows,
-  VOUCHER_INCLUDE,
-} from "@/lib/fortnox/export";
+import { attachBestEffort, recordExport, userToken, VOUCHER_INCLUDE } from "@/lib/fortnox/export";
+import { voucherRows } from "@/lib/fortnox/rows";
 import { fortnoxIncomeVouchers } from "@/lib/income/duplicate";
 import { isLegacyReport } from "@/lib/income/legacy";
 import { incomeVoucherSeries } from "@/lib/income/voucher";

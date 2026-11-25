@@ -93,6 +93,13 @@ vi.mock("@/lib/server/db", () => {
       },
       user: { findMany: async () => [{ id: "klara", name: "Klara Ström" }] },
       resultUnit: { findMany: async () => [] },
+      // The register the export asks what each line's cost centre is (supplierInvoiceRows).
+      costCenter: {
+        findMany: async () => [
+          { code: "SEX01", source: "FORTNOX", active: true },
+          { code: "SEX-ALKO", source: "LOCAL", active: true },
+        ],
+      },
       $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
         fn({
           supplierInvoice: { updateMany },
@@ -139,6 +146,8 @@ vi.mock("@/lib/fortnox", () => {
   }
   return {
     FortnoxError,
+    refusedByFortnox: (e: unknown) =>
+      e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500,
     // The register is read as the organisation; only the writes are Maja's.
     getServiceToken: async () => "service-token",
     getSupplier: async () => h.supplier,
@@ -215,6 +224,26 @@ describe("export", () => {
     });
     expect(states()).toEqual(["CLAIMED", "SENT", "DONE"]);
     expect(h.connect).toHaveBeenCalledWith("t", "file-1", "4711");
+  });
+
+  it("puts a local cost centre in the row text, never in Fortnox's cost centre", async () => {
+    h.invoice = {
+      lines: [
+        {
+          account: "5615",
+          costCenterCode: "SEX-ALKO",
+          project: null,
+          description: "Öl",
+          debit: 125000,
+          credit: 0,
+        },
+      ],
+    };
+    const res = await call();
+    expect(res.status).toBe(200);
+    const [row] = (h.create.mock.calls[0][1] as { rows: Record<string, unknown>[] }).rows;
+    expect(row.costCenter).toBeUndefined();
+    expect(row.text).toBe("Öl (SEX-ALKO)");
   });
 
   it("refuses a second press while the first holds the lock", async () => {

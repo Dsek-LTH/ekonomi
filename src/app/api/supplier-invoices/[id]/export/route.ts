@@ -17,8 +17,10 @@ import {
   getServiceToken,
   getSupplier,
   uploadInboxFile,
+  refusedByFortnox,
 } from "@/lib/fortnox";
 import { userToken } from "@/lib/fortnox/export";
+import { supplierInvoiceRows } from "@/lib/fortnox/rows";
 import { canBookkeep } from "@/lib/domain/permissions";
 import { exportBlocker, ocrDigits, PAYABLE_ACCOUNT } from "@/lib/domain/supplier-invoice";
 import { giroMismatch } from "@/lib/domain/payment-ref";
@@ -37,8 +39,6 @@ const ExportBody = z.object({
 /** Whether a failed create certainly made nothing. A 4xx is Fortnox refusing
  *  the request outright; anything else (a timeout, a dropped connection, a
  *  5xx, a 2xx with no number in it) may have made one. */
-const certainlyNotCreated = (e: unknown) =>
-  e instanceof FortnoxError && e.status !== undefined && e.status >= 400 && e.status < 500;
 
 // POST /api/supplier-invoices/:id/export
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -209,6 +209,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
   }
 
+  // What each kontering line's cost centre is, so one Fortnox cannot take goes into the row
+  // text instead (supplierInvoiceRows). Read before the lock, so nothing is held while it runs.
+  const codes = [
+    ...new Set(invoice.lines.map((l) => l.costCenterCode).filter((c): c is string => !!c)),
+  ];
+  const register = new Map(
+    (
+      await prisma.costCenter.findMany({
+        where: { code: { in: codes } },
+        select: { code: true, source: true, active: true },
+      })
+    ).map((c) => [c.code, c]),
+  );
+
   // The lock. Still konterad and nobody else's is part of the condition.
   const claimedAt = new Date();
   const { count } = await prisma.supplierInvoice.updateMany({
@@ -263,24 +277,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       payableAccount: PAYABLE_ACCOUNT,
       ...(invoice.rounding && { rounding: oreToSEK(invoice.rounding) }),
       // The kontering as the treasurer saved it. With the rounding, its
-      // lines book exactly the amount to pay (exportBlocker).
-      rows: invoice.lines.map((l) => ({
-        account: Number(l.account),
-        debit: oreToSEK(l.debit),
-        credit: oreToSEK(l.credit),
-        costCenter: l.costCenterCode ?? undefined,
-        project: l.project ?? undefined,
-        text: l.description ?? undefined,
-      })),
+      // lines book exactly the amount to pay (exportBlocker). A cost centre
+      // Fortnox cannot take goes into the row text (supplierInvoiceRows).
+      rows: supplierInvoiceRows(invoice.lines, register),
     });
   } catch (e) {
-    if (certainlyNotCreated(e)) {
+    if (refusedByFortnox(e)) {
       await release();
-      if ((e as FortnoxError).status === 403) {
-        console.error(`[supplier-invoices] ${invoice.id}: create refused`, (e as Error).message);
+      if (e.status === 403) {
+        console.error(`[supplier-invoices] ${invoice.id}: create refused`, e.message);
         return fail(403, "fortnox.userSupplierInvoiceForbidden");
       }
-      return fail((e as FortnoxError).status!, (e as Error).message);
+      return fail(e.status, e.message);
     }
     await prisma.supplierInvoice.updateMany({
       where: ours,

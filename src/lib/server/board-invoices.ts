@@ -13,11 +13,12 @@ import { getBoardWithdrawals, BOARD_STOCK } from "@/lib/data/board";
 import { getStockSettings } from "@/lib/data/stock-settings";
 import { isoDay, today } from "@/lib/domain/date";
 import { oreToSEK } from "@/lib/domain/money";
+import { sendableCostCenter } from "@/lib/domain/cost-center-tag";
 import {
   createCustomerInvoice,
   findCustomerInvoice,
-  FortnoxError,
   getServiceToken,
+  refusedByFortnox,
 } from "@/lib/fortnox";
 import type { FiscalYear } from "@/lib/ui/fiscal-year";
 import { prisma } from "./db";
@@ -275,14 +276,13 @@ async function sendInvoice(
         description: l.description,
         quantity: l.qty,
         price: oreToSEK(l.unitPriceOre),
-        // Only a cost centre Fortnox has and has active can travel on a row.
-        costCenter:
-          l.costCenter?.source === "FORTNOX" && l.costCenter.active ? l.costCenter.code : undefined,
+        // The shared rule for what may travel as a cost centre. The code is not tagged onto the
+        // text here, unlike a voucher's: an invoice row's text is printed for the member to read.
+        costCenter: sendableCostCenter(l.costCenter),
       })),
     });
   } catch (e) {
-    const refused =
-      e instanceof FortnoxError && e.status != null && e.status >= 400 && e.status < 500;
+    const refused = refusedByFortnox(e);
     await prisma.customerInvoice.update({
       where: { id: invoice.id },
       // A plain refusal made nothing. Anything else is left flagged, and the next try looks in Fortnox first.
