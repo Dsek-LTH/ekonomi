@@ -41,14 +41,6 @@
       "title": "Stock",
       "body": "The products, sales events and stock history."
     },
-    "groupRental": {
-      "title": "Rentals",
-      "body": "Rentals and the equipment that is rented out."
-    },
-    "groupAdmin": {
-      "title": "Agreements",
-      "body": "The section's agreements and the parties to them."
-    },
     "settings": {
       "title": "Settings",
       "body": "Roles, cost centres, Fortnox and the rest of the app's settings."

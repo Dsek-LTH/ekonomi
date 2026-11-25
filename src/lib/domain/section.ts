@@ -1,8 +1,8 @@
-// The section's own details, printed on the letterhead of every uthyrningsavtal. Check them
-// against the section's registration before the first contract goes out.
+// The section's own details. Levfaktura reads the organisation number to tell the section's
+// own number on an invoice from the supplier's (lib/server/invoice-prefill.ts).
 //
-// Local on purpose, not read from Fortnox: a contract's wording must not depend on an
-// integration being connected, and the address should change in a reviewable diff.
+// Local on purpose, not read from Fortnox: the figures must not depend on an integration being
+// connected, and a change should come as a reviewable diff.
 
 interface SectionIdentity {
   name: string;

@@ -41,14 +41,6 @@
       "title": "Lager",
       "body": "Varorna, försäljningstillfällena och lagrets historik."
     },
-    "groupRental": {
-      "title": "Uthyrning",
-      "body": "Uthyrningar och utrustningen som hyrs ut."
-    },
-    "groupAdmin": {
-      "title": "Avtal",
-      "body": "Sektionens avtal och motparterna i dem."
-    },
     "settings": {
       "title": "Inställningar",
       "body": "Roller, kostnadsställen, Fortnox och resten av appens inställningar."

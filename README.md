@@ -92,7 +92,7 @@ src/components/  Shared components. ui/ holds the primitives.
 src/lib/domain/  Pure rules: money, status, permissions. No I/O. Most tests live here.
 src/lib/server/  Everything with side effects: database, env, storage, session, mail.
 src/lib/data/    Database reads shaped for the screens.
-src/lib/<area>/  budget, ledger, fortnox, expense, contract, income, stock, mileage.
+src/lib/<area>/  budget, ledger, fortnox, expense, income, stock, mileage.
 src/auth.ts      Auth.js wired to Authentik.
 prisma/          schema/ (one file per domain), migrations/, seed.
 scripts/         Things run by hand: Fortnox sync, imports, maintenance.

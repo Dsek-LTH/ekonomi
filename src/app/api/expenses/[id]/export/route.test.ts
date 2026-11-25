@@ -201,7 +201,7 @@ describe("POST /api/expenses/[id]/export", () => {
   });
 
   it("refuses a revisor, who may read the books and not work them", async () => {
-    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW", "CONTRACT_VIEW"];
+    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW"];
     const res = await exportIt();
     expect(res.status).toBe(403);
     expect(h.calls).toEqual([]);

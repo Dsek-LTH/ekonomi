@@ -21,7 +21,7 @@ One per page, and one for Översikt that goes over the whole app.
 | `ledger` | Utfall & rapporter | picking a report, table or chart, export |
 | `stock` | Lager | the section's pages, Behöver ses över, registering |
 
-Bokslut, Uthyrning, Avtal and Inställningar have no guide of their own.
+Bokslut and Inställningar have no guide of their own.
 
 ## Who sees what
 

@@ -121,14 +121,6 @@ Styrelseborder
     /board/invoices/[memberId]  that person's tab
   Priser  /board/prices
 
-Uthyrning
-  Uthyrningar  /rentals
-  Utrustning  /rentals/equipment
-
-Avtal
-  Arkiv  /contracts
-  Motparter  /contracts/counterparties
-
 Frågor & svar  /faq
 Inställningar  (overlay, see settings.md)
 ```

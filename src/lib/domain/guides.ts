@@ -49,8 +49,6 @@ export const GUIDES: Guide[] = [
       { key: "groupBookkeeping", target: "nav-group:groupBookkeeping", opens: "nav" },
       { key: "groupBudget", target: "nav-group:groupBudget", opens: "nav" },
       { key: "groupStock", target: "nav-group:groupStock", opens: "nav" },
-      { key: "groupRental", target: "nav-group:groupRental", opens: "nav" },
-      { key: "groupAdmin", target: "nav-group:groupAdmin", opens: "nav" },
       { key: "settings", target: "nav-settings", opens: "nav" },
       { key: "year", target: "fiscal-year" },
       // The header's Frågor & svar from md. A phone has no header.

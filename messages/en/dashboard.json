@@ -43,8 +43,6 @@
   "calendar": {
     "title": "Calendar",
     "invoice": "Invoice from <b>{title}</b> falls due",
-    "pickup": "<b>{title}</b> is picked up",
-    "contractEnds": "The contract <b>{title}</b> ends",
     "stockEvent": "Stock occasion: <b>{title}</b>",
     "untitled": "an unknown supplier",
     "more": "Show {count} more"

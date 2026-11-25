@@ -21,7 +21,6 @@ import {
   EXPENSES,
   EXTRA_ACCOUNTS,
   PROJECTS,
-  RENTAL_ITEMS,
   CAFE_MOVES,
   CAFE_PRODUCTS,
   STOCK_EVENTS,
@@ -390,8 +389,6 @@ async function main() {
   await prisma.expense.deleteMany();
   await prisma.bankTransaction.deleteMany();
   await prisma.card.deleteMany();
-  await prisma.contract.deleteMany(); // cascades → files, rental → lines
-  await prisma.rentalItem.deleteMany();
   await prisma.resultUnit.deleteMany(); // cascades → prefixes
   await prisma.budget.deleteMany(); // cascades cost-centre links → accounts → rows
   await prisma.fortnoxFinancialYear.deleteMany(); // cascades → vouchers → ledger rows
@@ -590,14 +587,6 @@ async function main() {
     });
   }
 
-  // ── Uthyrningsobjekt ────────────────────────────────────────────
-  //
-  // The gear catalogue, so a fresh checkout can draw an uthyrningsavtal without
-  // somebody first having to invent a speaker. No contracts are seeded: one
-  // would carry a signed document. Drawing one is the first thing to try on
-  // /contracts.
-  await prisma.rentalItem.createMany({ data: [...RENTAL_ITEMS] });
-
   // ── The budget, and a year of utfall against it ─────────────────
   // Both columns of the workbook, as the importer makes them: the one the
   // section voted through, sealed, so it is the year's budget everywhere a
@@ -710,7 +699,6 @@ async function main() {
     expenses: await prisma.expense.count(),
     allocations: await prisma.expenseCostAllocation.count(),
     events: await prisma.expenseEvent.count(),
-    rentalItems: await prisma.rentalItem.count(),
     budgets: await prisma.budget.count(),
     stockProducts: await prisma.stockProduct.count(),
     stockEntries: await prisma.stockEntry.count(),

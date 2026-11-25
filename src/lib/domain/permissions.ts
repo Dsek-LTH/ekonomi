@@ -127,23 +127,6 @@ export const canChangeLockedBudget = (caps: readonly Capability[]) =>
 /** May see the attest queue. Whether a given utlägg can be attested is `canAttestAllocation`'s per-row answer. */
 export const hasAttestRole = (caps: readonly Capability[]) => has(caps, "ATTEST_VIEW");
 
-// ── Avtal ─────────────────────────────────────────────────────────
-// Two capabilities: avtal name non-members and bind the section, so reading the archive is narrower than reading a budget.
-
-/** May read the whole avtal archive, every kind of agreement in it. */
-export const canViewContracts = (caps: readonly Capability[]) => has(caps, "CONTRACT_VIEW");
-
-/** May read uthyrningsavtal. Implied by the wider grant above. */
-export const canViewRentals = (caps: readonly Capability[]) =>
-  has(caps, "RENTAL_VIEW") || canViewContracts(caps);
-
-/** May draw an uthyrningsavtal and keep the gear catalogue. Implied by the wider grant. */
-export const canManageRentals = (caps: readonly Capability[]) =>
-  has(caps, "RENTAL_MANAGE") || has(caps, "CONTRACT_MANAGE");
-
-/** May archive a contract, draw an uthyrningsavtal, and edit the gear catalogue. Not authority to bind the section (firmateckning, decided outside this app). */
-export const canManageContracts = (caps: readonly Capability[]) => has(caps, "CONTRACT_MANAGE");
-
 // ── Reminders ─────────────────────────────────────────────────────
 
 /** May remind whoever an utlägg is waiting on, by mail. See lib/server/reminders.ts. */
@@ -211,7 +194,6 @@ export const ROLES: readonly Role[] = [
   "SKATTFORMAN",
   "RESULTATANSVARIG",
   "STOCKARE",
-  "UTHYRNINGSANSVARIG",
   "CAFE_STOCKARE",
   "STYRELSE",
   "REVISOR",
@@ -244,15 +226,9 @@ const CAPABILITY_ORDER = {
   BUDGET_COMMENT: 7,
   BUDGET_LOCK: 8,
   BUDGET_CHANGE_LOCKED: 9,
-  CONTRACT_VIEW: 10,
-  CONTRACT_MANAGE: 11,
   FORTNOX_LOGIN: 12,
   EXPORT_UNDO: 13,
   EXPENSE_DEADLINE_WAIVE: 14,
-  // Last, to avoid renumbering the CONTRACT_* pair it belongs with.
-  RENTAL_VIEW: 15,
-  RENTAL_MANAGE: 16,
-  FIRMATECKNARE: 17,
   SEND_REMINDERS: 18,
   INVOICE_TRIAGE: 19,
   REVIEW_OWN_BOOKING: 20,

@@ -63,8 +63,6 @@ const GROUP_HREF: Record<TodoGroupKind, string> = {
 
 const CALENDAR_HREF: Record<UpcomingItem["kind"], (id: string) => string> = {
   invoice: (id) => `/invoices/${id}`,
-  pickup: (id) => `/contracts/${id}`,
-  contractEnds: (id) => `/contracts/${id}`,
   stockEvent: (id) => `/stock/alcohol/events/${id}`,
 };
 

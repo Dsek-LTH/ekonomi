@@ -32,8 +32,6 @@ export const MESSAGE_NAMESPACES = [
   "errorPage",
   "income",
   "stock",
-  "contracts",
-  "rentals",
   "email",
   "invoices",
   "closing",

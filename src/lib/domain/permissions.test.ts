@@ -72,9 +72,6 @@ describe("the defaults the section starts from", () => {
       "BUDGET_COMMENT",
       "BUDGET_LOCK",
       "BUDGET_CHANGE_LOCKED",
-      "CONTRACT_MANAGE",
-      "RENTAL_MANAGE",
-      "FIRMATECKNARE",
     ];
     for (const cap of acting) expect(revisor).not.toContain(cap);
     expect(canBookkeep(revisor)).toBe(false);

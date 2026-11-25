@@ -55,12 +55,6 @@ export function expenseDocumentKey(expenseId: string, filename: string): string 
   return `expenses/${expenseId}/${safeName(filename)}`;
 }
 
-// A file belonging to an avtal (original, rendered, signed PDF, evidence log). One prefix for all roles,
-// because the role lives in ContractFile.role and a key is never rewritten. The fileId carries uniqueness.
-export function contractFileKey(contractId: string, fileId: string, filename: string): string {
-  return `contracts/${contractId}/${fileId}-${safeName(filename)}`;
-}
-
 // A levfaktura's PDF or specification. The documentId carries uniqueness.
 export function supplierInvoiceDocumentKey(
   invoiceId: string,

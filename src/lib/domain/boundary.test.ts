@@ -61,17 +61,6 @@ const PINNED_PURE: Record<string, string[]> = {
   ],
   // report-shape.ts and cost-center-filter.ts are imported by browser code.
   ledger: ["bas.ts", "cost-center-filter.ts", "report-shape.ts"],
-  // These are run in the browser, so they must stay reachable from a client component.
-  contract: [
-    "availability.ts",
-    "document-url.ts",
-    "file-roles.ts",
-    "rental-state.ts",
-    "section.ts",
-    "signatory.ts",
-    "status.ts",
-    "tags.ts",
-  ],
   fortnox: ["oauth-state.ts", "rows.ts", "sie.ts", "voucher-text.ts"],
 };
 

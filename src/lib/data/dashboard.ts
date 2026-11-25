@@ -4,8 +4,6 @@ import { prisma } from "@/lib/server/db";
 import { today } from "@/lib/domain/date";
 import {
   canSeeInvoices,
-  canViewContracts,
-  canViewRentals,
   canViewStock,
 } from "@/lib/domain/permissions";
 import type { Viewer } from "./expense-scope";
@@ -72,13 +70,12 @@ export async function getWaitingOnOthers(userId: string): Promise<WaitingOwn[]> 
     .sort((a, b) => b.days - a.days);
 }
 
-/** How far ahead the list looks. Contracts get longer: a renewal is planned. */
+/** How far ahead the list looks. */
 const AHEAD_DAYS = 14;
-const CONTRACT_AHEAD_DAYS = 30;
 const UPCOMING_TAKE = 8;
 
 export interface UpcomingItem {
-  kind: "invoice" | "pickup" | "contractEnds" | "stockEvent";
+  kind: "invoice" | "stockEvent";
   id: string;
   title: string;
   date: string;
@@ -92,7 +89,7 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
   const ahead = day(plusDays(now, AHEAD_DAYS));
   const caps = viewer.capabilities;
 
-  const [invoices, pickups, contracts, events] = await Promise.all([
+  const [invoices, events] = await Promise.all([
     // Not yet due. One already past it, or waiting on the reader, is on the to-do list instead.
     canSeeInvoices(caps)
       ? invoiceViewerOf(viewer).then((v) =>
@@ -107,30 +104,6 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
             select: { id: true, supplierName: true, description: true, dueDate: true },
           }),
         )
-      : [],
-    canViewRentals(caps)
-      ? prisma.rentalDetails.findMany({
-          where: { pickupAt: { gte: from, lte: ahead } },
-          orderBy: { pickupAt: "asc" },
-          take: UPCOMING_TAKE,
-          select: {
-            contractId: true,
-            pickupAt: true,
-            contract: { select: { title: true } },
-          },
-        })
-      : [],
-    canViewContracts(caps)
-      ? prisma.agreementDetails.findMany({
-          where: { validTo: { gte: from, lte: day(plusDays(now, CONTRACT_AHEAD_DAYS)) } },
-          orderBy: { validTo: "asc" },
-          take: UPCOMING_TAKE,
-          select: {
-            contractId: true,
-            validTo: true,
-            contract: { select: { title: true } },
-          },
-        })
       : [],
     canViewStock(caps, "alcohol")
       ? prisma.stockEvent.findMany({
@@ -148,18 +121,6 @@ export async function getUpcoming(viewer: Viewer): Promise<UpcomingItem[]> {
       id: i.id,
       title: i.supplierName ?? i.description ?? "",
       date: isoDate(i.dueDate),
-    })),
-    ...pickups.map((r) => ({
-      kind: "pickup" as const,
-      id: r.contractId,
-      title: r.contract.title,
-      date: isoDate(r.pickupAt),
-    })),
-    ...contracts.map((a) => ({
-      kind: "contractEnds" as const,
-      id: a.contractId,
-      title: a.contract.title,
-      date: isoDate(a.validTo),
     })),
     ...events.map((e) => ({
       kind: "stockEvent" as const,

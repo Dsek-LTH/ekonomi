@@ -43,8 +43,6 @@
   "calendar": {
     "title": "Kalender",
     "invoice": "Faktura från <b>{title}</b> förfaller",
-    "pickup": "<b>{title}</b> hämtas",
-    "contractEnds": "Avtalet <b>{title}</b> löper ut",
     "stockEvent": "Lagertillfälle: <b>{title}</b>",
     "untitled": "okänd leverantör",
     "more": "Visa {count} till"

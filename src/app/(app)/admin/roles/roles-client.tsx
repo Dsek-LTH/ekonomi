@@ -56,15 +56,10 @@ const AREA_OF: Record<Capability, Area> = {
   CAFE_STOCK_VIEW: "stock",
   CAFE_STOCK_MANAGE: "stock",
   BOARD_TAB: "stock",
-  CONTRACT_VIEW: "contracts",
-  CONTRACT_MANAGE: "contracts",
-  RENTAL_VIEW: "contracts",
-  RENTAL_MANAGE: "contracts",
-  FIRMATECKNARE: "contracts",
   SETTINGS: "settings",
   GRANT_ACCESS: "settings",
 };
-const AREAS = ["expenses", "bookkeeping", "budget", "stock", "contracts", "settings"] as const;
+const AREAS = ["expenses", "bookkeeping", "budget", "stock", "settings"] as const;
 type Area = (typeof AREAS)[number];
 
 // Two tables, so two sections of the page rather than a view toggle (docs/settings.md): what each role may do,

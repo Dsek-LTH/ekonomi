@@ -145,7 +145,7 @@ describe("POST /api/income/reports/[id]/export", () => {
   });
 
   it("refuses a revisor, who may read the books and not work them", async () => {
-    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW", "CONTRACT_VIEW"];
+    h.capabilities = ["BOOKKEEPING_VIEW", "BUDGET_VIEW", "STOCK_VIEW"];
     expect((await exportIt()).status).toBe(403);
     expect(h.calls).toEqual([]);
   });

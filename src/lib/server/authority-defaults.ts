@@ -18,9 +18,6 @@ export const DEFAULT_GROUP_ROLES: readonly { group: string; role: Role }[] = [
   { group: "dsek.sex.bar.mstr", role: "STOCKARE" },
   { group: "dsek.sex.bar.vice_mstr", role: "STOCKARE" },
 
-  // Guess at the group; an unheld group grants nothing and is reported as such in Roller.
-  { group: "dsek.km.uthyrning", role: "UTHYRNINGSANSVARIG" },
-
   // Guess at the group.
   { group: "dsek.revisor", role: "REVISOR" },
 ];
@@ -96,7 +93,6 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "STOCKARE", capability: "BUDGET_VIEW" },
   { role: "CAFE_STOCKARE", capability: "BUDGET_VIEW" },
   { role: "STYRELSE", capability: "BUDGET_VIEW" },
-  { role: "UTHYRNINGSANSVARIG", capability: "BUDGET_VIEW" },
   { role: "ORDINARIE", capability: "BUDGET_VIEW" },
 
   { role: "SKATTMASTARE", capability: "BUDGET_COMMENT" },
@@ -115,29 +111,10 @@ export const DEFAULT_ROLE_CAPABILITIES: readonly { role: Role; capability: Capab
   { role: "ORDFORANDE", capability: "ATTEST_VIEW" },
   { role: "RESULTATANSVARIG", capability: "ATTEST_VIEW" },
 
-  // Not granted to ORDINARIE: the archive holds personal data of non-members.
-  { role: "SKATTMASTARE", capability: "CONTRACT_VIEW" },
-  { role: "ORDFORANDE", capability: "CONTRACT_VIEW" },
-  { role: "VICE_SKATTMASTARE", capability: "CONTRACT_VIEW" },
-  { role: "SKATTFORMAN", capability: "CONTRACT_VIEW" },
-  { role: "RESULTATANSVARIG", capability: "CONTRACT_VIEW" },
-
-  { role: "SKATTMASTARE", capability: "CONTRACT_MANAGE" },
-  { role: "ORDFORANDE", capability: "CONTRACT_MANAGE" },
-
-  // Records who holds firmateckning (each severally), so the rental form offers the right names.
-  { role: "ORDFORANDE", capability: "FIRMATECKNARE" },
-  { role: "SKATTMASTARE", capability: "FIRMATECKNARE" },
-
-  // Uthyrningen: rentals and gear only, not CONTRACT_VIEW.
-  { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_VIEW" },
-  { role: "UTHYRNINGSANSVARIG", capability: "RENTAL_MANAGE" },
-
   // Revisorerna read everything and change nothing. No ATTEST_VIEW.
   { role: "REVISOR", capability: "BOOKKEEPING_VIEW" },
   { role: "REVISOR", capability: "BUDGET_VIEW" },
   { role: "REVISOR", capability: "ALCOHOL_STOCK_VIEW" },
   { role: "REVISOR", capability: "CAFE_STOCK_VIEW" },
-  { role: "REVISOR", capability: "CONTRACT_VIEW" },
   { role: "REVISOR", capability: "AUDIT_REVIEW" },
 ];

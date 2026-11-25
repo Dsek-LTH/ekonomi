@@ -14,7 +14,6 @@ import { AppHeader, FiscalYearPicker, MenuButton, type FiscalYears } from "./app
 import { FiscalYearProvider } from "./fiscal-year-context";
 import { useGuides } from "./guide";
 import {
-  IconArchive,
   IconBox,
   IconPlus,
   IconCalendar,
@@ -24,11 +23,9 @@ import {
   IconBudget,
   IconCard,
   IconChart,
-  IconContract,
   IconGear,
   IconGrid,
   IconHelp,
-  IconKey,
   IconLedger,
   IconList,
   IconMail,
@@ -41,10 +38,7 @@ import {
   canViewBookkeeping,
   canAccessBudget,
   canSeeUsers,
-  canManageRentals,
   canTriageInvoices,
-  canViewContracts,
-  canViewRentals,
   canViewStock,
   hasBoardTab,
   canBookkeep,
@@ -262,42 +256,6 @@ const NAV_GROUPS: NavGroup[] = [
         label: "boardPrices",
         icon: IconList,
         visible: (u) => hasBoardTab(u.capabilities) || canViewBookkeeping(u.capabilities),
-      },
-    ],
-  },
-  {
-    label: "groupRental",
-    icon: IconKey,
-    items: [
-      {
-        href: "/rentals",
-        label: "rentals",
-        icon: IconContract,
-        visible: (u) => canViewRentals(u.capabilities),
-      },
-      {
-        href: "/rentals/equipment",
-        label: "rentalItems",
-        icon: IconBox,
-        visible: (u) => canManageRentals(u.capabilities),
-      },
-    ],
-  },
-  {
-    label: "groupAdmin",
-    icon: IconArchive,
-    items: [
-      {
-        href: "/contracts",
-        label: "contracts",
-        icon: IconList,
-        visible: (u) => canViewContracts(u.capabilities),
-      },
-      {
-        href: "/contracts/counterparties",
-        label: "counterparties",
-        icon: IconUsers,
-        visible: (u) => canManageRentals(u.capabilities),
       },
     ],
   },

@@ -16,9 +16,6 @@ export type NotificationKind = Schema.NotificationKind;
 
 // ── Avtal ─────────────────────────────────────────────────────────
 
-export type ContractKind = Schema.ContractKind;
-export type ContractStatus = "DRAFT" | "SIGNED";
-export type ContractFileRole = Schema.ContractFileRole;
 
 // ── Alkohollager ──────────────────────────────────────────────────
 

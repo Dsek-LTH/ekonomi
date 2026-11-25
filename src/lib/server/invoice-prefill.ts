@@ -5,7 +5,7 @@ import "server-only";
 
 import { parseInvoiceText, type InvoiceTextFields } from "@/lib/domain/invoice-text";
 import { isoToDate } from "@/lib/domain/date";
-import { SECTION } from "@/lib/contract/section";
+import { SECTION } from "@/lib/domain/section";
 import { pdfLines } from "./pdf-text";
 import type { KnownSupplier } from "./supplier-register";
 

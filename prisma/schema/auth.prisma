@@ -46,13 +46,6 @@ enum Capability {
   /// See the attest queue. Whether any single utlägg in it can actually be
   /// attested is still canAttestAllocation's answer, per row.
   ATTEST_VIEW
-  /// Read the avtal archive and open the documents in it.
-  CONTRACT_VIEW
-  /// Put a contract in the archive, draw an uthyrningsavtal, edit the gear
-  /// catalogue. Deliberately not the same as being allowed to bind the
-  /// section: who may sign for it is a question about firmateckning, and the
-  /// answer is FIRMATECKNARE below.
-  CONTRACT_MANAGE
   /// Grant one late eget utlägg a dispens, so it may be filed after the
   /// 60-day deadline has passed. Per claim, with a reason, before it goes for
   /// attest. Held by the skattmästare alone by default, the way BUDGET_LOCK
@@ -65,32 +58,6 @@ enum Capability {
   /// skattmästare alone by default. See canReviewOwnBooking in
   /// lib/domain/permissions.ts.
   REVIEW_OWN_BOOKING
-  /// May be named as the section's signatory on a contract.
-  ///
-  /// Firmateckning is a fact about the section's stadgar rather than a
-  /// permission this app grants, and this row does not confer it. What it does
-  /// is record who holds it, so the rental form can offer those people and only
-  /// those people. Held by ordförande and skattmästare, which means a handover
-  /// in Authentik is a handover here with nothing to remember.
-  ///
-  /// It opens nothing. Somebody holding this and nothing else can be named on a
-  /// contract and cannot open the archive it is filed in. That is the whole
-  /// point of it being separate from CONTRACT_MANAGE: the uthyrningsansvarig
-  /// who draws a contract is usually not the person who signs it.
-  FIRMATECKNARE
-  /// Read uthyrningsavtal, and nothing else in the archive.
-  ///
-  /// The narrow half of CONTRACT_VIEW. Somebody running uthyrningen needs to
-  /// find last spring's rental and has no business reading what the section
-  /// pays a sponsor. Which contracts that leaves reachable is one filter in
-  /// lib/data/contract-scope.ts, applied by every query and every route.
-  RENTAL_VIEW
-  /// Draw an uthyrningsavtal and keep the gear catalogue.
-  ///
-  /// The narrow half of CONTRACT_MANAGE, and it can only ever touch a contract
-  /// whose kind is RENTAL. A holder of this cannot file a sponsoravtal, edit
-  /// one, or delete one.
-  RENTAL_MANAGE
   /// Send a reminder about an utlägg to whoever it is waiting on: its
   /// attesters, or the submitter. From the utlägg itself, or several at once
   /// from the list. Held by the admins by default.
@@ -143,11 +110,6 @@ enum Role {
   // lagerbokföring is not bookkeeping, and the people who do it are not the
   // people who book vouchers. See canManageStock in lib/domain/permissions.ts.
   STOCKARE
-  // Runs uthyrningen. Outside the treasury roles for the same reason STOCKARE
-  // is: letting out the section's gear is not bookkeeping, and what this role
-  // reaches is uthyrningsavtal and the gear catalogue, not the avtal archive.
-  // A sponsoravtal's terms are none of its business. See contract-scope.ts.
-  UTHYRNINGSANSVARIG
   // The section's revisorer. Reads everything and changes nothing: every view
   // capability, and none of the ones that act. Not a treasury role, since the
   // point of a revisor is to stand outside the treasury.
@@ -260,22 +222,18 @@ model User {
   /// This person's customer number in Fortnox, once an invoice has been made
   /// for them. Kept so the next invoice goes to the same customer.
   fortnoxCustomerNumber String?
-  mileageRates          MileageRate[]            @relation("MileageRateAuthor")
-  contracts             Contract[]               @relation("ContractCreator")
-  contractFiles         ContractFile[]           @relation("ContractFileUploader")
-  rentalChecks          RentalDetails[]          @relation("RentalChecker")
-  counterparties        Counterparty[]           @relation("CounterpartyCreator")
-  outboundEmails        OutboundEmail[]          @relation("EmailRecipient")
-  sentTestEmails        OutboundEmail[]          @relation("EmailSender")
+  mileageRates          MileageRate[]             @relation("MileageRateAuthor")
+  outboundEmails        OutboundEmail[]           @relation("EmailRecipient")
+  sentTestEmails        OutboundEmail[]           @relation("EmailSender")
   notificationPrefs     NotificationPreference[]
-  expensePresence       ExpensePresence[]        @relation("ExpensePresenceUser")
+  expensePresence       ExpensePresence[]         @relation("ExpensePresenceUser")
   invoicePresence       SupplierInvoicePresence[] @relation("SupplierInvoicePresenceUser")
-  voucherReviews        VoucherReview[]          @relation("VoucherReviewer")
-  voucherComments       VoucherComment[]         @relation("VoucherCommentAuthor")
-  checklistItemsDone    ChecklistItem[]          @relation("ChecklistItemDoneBy")
-  reconciliations       AccountReconciliation[]  @relation("AccountReconciler")
-  accountNotes          AccountNote[]            @relation("AccountNoteAuthor")
-  exportClaims          Expense[]                @relation("ExpenseExportClaim")
+  voucherReviews        VoucherReview[]           @relation("VoucherReviewer")
+  voucherComments       VoucherComment[]          @relation("VoucherCommentAuthor")
+  checklistItemsDone    ChecklistItem[]           @relation("ChecklistItemDoneBy")
+  reconciliations       AccountReconciliation[]   @relation("AccountReconciler")
+  accountNotes          AccountNote[]             @relation("AccountNoteAuthor")
+  exportClaims          Expense[]                 @relation("ExpenseExportClaim")
 
   receivedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceReceiver")
   assignedSupplierInvoices SupplierInvoice[]           @relation("SupplierInvoiceAssigner")
