@@ -269,11 +269,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       ocr: invoice.ocr && ocrDigits(invoice.ocr),
       yourReference: invoice.yourReference,
       ourReference: invoice.ourReference,
-      // Our number at the end, so the Fortnox invoice traces back.
-      comments:
-        [invoice.description, invoice.reference && `(${invoice.reference})`]
-          .filter(Boolean)
-          .join(" ") || null,
       payableAccount: PAYABLE_ACCOUNT,
       ...(invoice.rounding && { rounding: oreToSEK(invoice.rounding) }),
       // The kontering as the treasurer saved it. With the rounding, its

@@ -760,7 +760,6 @@ export interface SupplierInvoiceInput {
   ocr?: string | null;
   yourReference?: string | null;
   ourReference?: string | null;
-  comments?: string | null;
   rows: {
     account: number;
     debit: number;
@@ -910,7 +909,6 @@ export async function createSupplierInvoice(
         ...(input.ocr && { OCR: input.ocr }),
         ...(input.yourReference && { YourReference: input.yourReference.slice(0, 50) }),
         ...(input.ourReference && { OurReference: input.ourReference.slice(0, 50) }),
-        ...(input.comments && { Comments: input.comments.slice(0, 1000) }),
         SupplierInvoiceRows: rows,
       },
     },
