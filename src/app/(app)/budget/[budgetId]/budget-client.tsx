@@ -302,7 +302,7 @@ export default function BudgetClient({
   }, [budget]);
   const record = useCallback((step: UndoStep) => recordRef.current(step), []);
 
-  const { renderCell, renderFormula, commitField } = useBudgetCells({
+  const { renderCell, renderFormula, renderFormulaBar, commitField } = useBudgetCells({
     grid,
     isAdmin: canEdit,
     budget,
@@ -762,6 +762,10 @@ export default function BudgetClient({
                     userId={user.id}
                     renderCell={renderCell}
                     renderFormula={renderFormula}
+                    formulaBar={renderFormulaBar({
+                      formula: t("formulaBar"),
+                      hint: t("formulaBarHint"),
+                    })}
                     api={api}
                     budgetId={budgetId}
                     accounts={accounts}

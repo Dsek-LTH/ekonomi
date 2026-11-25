@@ -25,7 +25,6 @@ describe("orderedColumns", () => {
   it("lays out Konto, Beskrivning, Belopp in that order", () => {
     expect(columns.map((c) => c.key)).toEqual(["konto", "beskrivning", "expression"]);
   });
-
 });
 
 describe("buildGrid", () => {
@@ -71,9 +70,7 @@ describe("toStored: what was typed → what is kept", () => {
   });
 
   it("rewrites every reference in an expression", () => {
-    expect(toStored("=#6+#7", "SEX02", grid)).toBe(
-      "=@Lli2:expression+@Lli3:expression",
-    );
+    expect(toStored("=#6+#7", "SEX02", grid)).toBe("=@Lli2:expression+@Lli3:expression");
   });
 
   it("leaves variables and numbers in an expression untouched", () => {
@@ -84,11 +81,6 @@ describe("toStored: what was typed → what is kept", () => {
   it("leaves a reference that resolves to nothing alone", () => {
     expect(toStored("=#99", "SEX02", grid)).toBe("=#99");
     expect(toStored("=NOPE#3", "SEX02", grid)).toBe("=NOPE#3");
-  });
-
-  // A section row has a number but no figure.
-  it("refuses to bind a reference to a section row", () => {
-    expect(toStored("=#1", "SEX02", grid)).toBe("=#1");
   });
 
   // The A1 form from before row references is not read: C6 is a variable name like any other.
@@ -132,17 +124,13 @@ describe("toDisplay: what is kept → what is shown while editing", () => {
 
 describe("round trip", () => {
   // Opening a formula for editing and closing it unchanged must not change what is stored.
-  it.each([
-    "=#6",
-    "=#6+#7",
-    "=#5*2",
-    "=KM01#4",
-    "=2*TROJA_POLICY",
-    "1200",
-  ])("%s survives reference → token → reference", (typed) => {
-    const stored = toStored(typed, "SEX02", grid);
-    expect(toDisplay(stored, "SEX02", grid)).toBe(typed);
-  });
+  it.each(["=#6", "=#6+#7", "=#5*2", "=KM01#4", "=2*TROJA_POLICY", "1200"])(
+    "%s survives reference → token → reference",
+    (typed) => {
+      const stored = toStored(typed, "SEX02", grid);
+      expect(toDisplay(stored, "SEX02", grid)).toBe(typed);
+    },
+  );
 
   // A row that moves keeps its meaning: the formula follows it to its new coordinates.
   it("follows a row that has moved", () => {
@@ -165,5 +153,29 @@ describe("round trip", () => {
       columns,
     );
     expect(toDisplay(stored, "SEX02", moved)).toBe("=#7");
+  });
+});
+
+describe("sheet totals", () => {
+  it("stores #intäkter, #kostnader and #resultat bound to the sheet", () => {
+    expect(toStored("=#intäkter*0,05", "SEX02", grid)).toBe("=income(SEX02)*0,05");
+    expect(toStored("=#Kostnader", "SEX02", grid)).toBe("=cost(SEX02)");
+    expect(toStored("=KM01#resultat", "SEX02", grid)).toBe("=result(KM01)");
+    expect(toStored("=#intakter", "SEX02", grid)).toBe("=income(SEX02)");
+  });
+
+  it("reads a section's heading row as its total", () => {
+    expect(toStored("=#1", "SEX02", grid)).toBe("=income(SEX02)");
+    expect(toStored("=KM01#2", "SEX02", grid)).toBe("=cost(KM01)");
+    expect(grid.sectionRow.get("SEX02|COST")).toBe(4);
+  });
+
+  it("leaves a sheet that does not exist as typed", () => {
+    expect(toStored("=NOPE01#resultat", "SEX02", grid)).toBe("=NOPE01#resultat");
+  });
+
+  it("shows the stored token as the word, with the sheet only when it is another one", () => {
+    expect(toDisplay("=income(SEX02)*0.05", "SEX02", grid)).toBe("=#intäkter*0.05");
+    expect(toDisplay("=result(KM01)", "SEX02", grid)).toBe("=KM01#resultat");
   });
 });

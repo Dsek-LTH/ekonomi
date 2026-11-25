@@ -124,7 +124,9 @@
     "view": "Vy",
     "detailBudget": "Detaljbudget",
     "changeName": "Byt namn på budgeten",
-    "changeAdoptedAt": "Ändra antagningsdatum"
+    "changeAdoptedAt": "Ändra antagningsdatum",
+    "formulaBar": "Formel",
+    "formulaBarHint": "Markera en cell. Referera med #5, SEX01#5, #intäkter, #kostnader och #resultat"
   },
   "col": {
     "konto": "Konto",

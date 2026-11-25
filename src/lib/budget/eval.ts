@@ -1,10 +1,11 @@
 // Expression evaluator for budget line items and variables.
 // No leading "=" is a literal number, "=..." a formula (numbers, + - * /, parentheses, variables,
-// `account(CC_CODE, ACCT_CODE)`, cell refs `@L<lineItemId>:<fieldKey>`, see lib/budget/grid.ts), anything else is NaN.
+// `account(CC_CODE, ACCT_CODE)`, sheet totals `income(CC)` / `cost(CC)` / `result(CC)`, cell refs `@L<lineItemId>:<fieldKey>`, see lib/budget/grid.ts), anything else is NaN.
 // Fixed-point iteration resolves chains across cost centres. Circular dependencies hit a pass limit and give NaN.
 // A formula is read whole or not at all, and a cell that did not resolve poisons its readers instead of counting
 // as zero, so an account total is either right or flagged in `badAccounts`.
 
+import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { sekToOre } from "@/lib/domain/money";
 
 // Units: the language is not all money (a headcount, `67%`), so arithmetic happens in kronor and money results
@@ -18,7 +19,8 @@ type CellValues = Map<string, number>;
 type KnownAccounts = ReadonlySet<string>;
 
 // "bad" is a character with no meaning. `parseAtom` answers NaN for it, so `=350 kr` is not read as 350.
-type TokKind = "num" | "id" | "ref" | "acct" | "op" | "lparen" | "rparen" | "comma" | "bad" | "eof";
+type TokKind =
+  "num" | "id" | "ref" | "acct" | "total" | "op" | "lparen" | "rparen" | "comma" | "bad" | "eof";
 interface Tok {
   kind: TokKind;
   val: string;
@@ -27,6 +29,10 @@ interface Tok {
 // Any letter may start or continue a name, not just A-Z: variable names are never validated, so ÅRSAVGIFT must lex as one name.
 const ID_START = /[\p{L}_]/u;
 const ID_PART = /[\p{L}\p{N}_]/u;
+
+// A sheet's totals: what its income accounts sum to, its cost accounts, and the difference.
+const TOTAL_FNS = new Set(["income", "cost", "result"]);
+type TotalFn = "income" | "cost" | "result";
 
 /** The argument text of an `account(…)` starting at `from`, or null if no call follows. `end` is where lexing resumes. */
 function acctArgs(src: string, from: number): { raw: string; end: number } | null {
@@ -60,9 +66,13 @@ function tokenise(src: string): Tok[] {
       let id = "";
       while (i < src.length && ID_PART.test(src[i])) id += src[i++];
       // account(CC_CODE, ACCT_CODE): arguments are opaque codes taken whole, since a code may hold Å/Ä/Ö or a hyphen and lead with a digit.
-      const args = id.toLowerCase() === "account" ? acctArgs(src, i) : null;
-      if (args) {
+      const fn = id.toLowerCase();
+      const args = fn === "account" || TOTAL_FNS.has(fn) ? acctArgs(src, i) : null;
+      if (args && fn === "account") {
         toks.push({ kind: "acct", val: args.raw });
+        i = args.end;
+      } else if (args) {
+        toks.push({ kind: "total", val: `${fn}|${args.raw.trim()}` });
         i = args.end;
       } else {
         toks.push({ kind: "id", val: id });
@@ -97,10 +107,16 @@ interface EvalCtx {
   cells: CellValues;
   badCells: Set<string>;
   known: KnownAccounts;
+  /** Income and cost per sheet code, in öre. */
+  sheets: Map<string, Record<AccountKind, number>>;
+  /** "CODE:INCOME" / "CODE:COST" for a side with a row that did not resolve. */
+  badSides: Set<string>;
+  /** The row being evaluated, so it cannot read a total it is part of. Unset for variables. */
+  self?: { sheet: string; kind: AccountKind };
 }
 
 function evalExpr(src: string, ctx: EvalCtx): number {
-  const { vars, accounts, cells, badCells, known } = ctx;
+  const { vars, accounts, cells, badCells, known, sheets, badSides, self } = ctx;
   const toks = tokenise(src);
   let pos = 0;
 
@@ -170,6 +186,19 @@ function evalExpr(src: string, ctx: EvalCtx): number {
       if (total !== undefined) return total / 100;
       // An account the budget holds with no rows is zero. One it does not hold is NaN ("fel"), like an unknown variable.
       return known.has(key) ? 0 : NaN;
+    }
+    if (t.kind === "total") {
+      consume();
+      const [fn, code] = t.val.split("|", 2) as [TotalFn, string];
+      const sides: AccountKind[] =
+        fn === "income" ? ["INCOME"] : fn === "cost" ? ["COST"] : ["INCOME", "COST"];
+      // A row cannot read the total it is counted in. Said at once rather than left to the pass limit.
+      if (self && self.sheet === code && sides.includes(self.kind)) return NaN;
+      const totals = sheets.get(code);
+      if (!totals || sides.some((k) => badSides.has(`${code}:${k}`))) return NaN;
+      const ore =
+        fn === "income" ? totals.INCOME : fn === "cost" ? totals.COST : totals.INCOME - totals.COST;
+      return ore / 100;
     }
     if (t.kind === "id") {
       consume();
@@ -249,7 +278,21 @@ export function evaluate(
   const badCells = new Set<string>();
   const liValues: Map<string, number> = new Map();
   const errors: string[] = [];
-  const ctx: EvalCtx = { vars, accounts, cells, badCells, known };
+  const sheets = new Map<string, Record<AccountKind, number>>();
+  const badSides = new Set<string>();
+  const ctx: EvalCtx = { vars, accounts, cells, badCells, known, sheets, badSides };
+  const splitKey = (accountKey: string) => {
+    const at = accountKey.lastIndexOf(":");
+    return { sheet: accountKey.slice(0, at), kind: effectiveKind(accountKey.slice(at + 1)) };
+  };
+  // Every sheet the budget holds reads as zero until its rows say otherwise.
+  const zeroSheets = () => {
+    sheets.clear();
+    for (const key of [...known, ...lineItems.map((li) => li.accountKey)]) {
+      sheets.set(splitKey(key).sheet, { INCOME: 0, COST: 0 });
+    }
+  };
+  zeroSheets();
 
   let pass = 0;
   let stable = false;
@@ -261,10 +304,12 @@ export function evaluate(
     // Cells are part of the convergence test too, or an unsettled chain would be declared stable.
     const prevCells = new Map(cells);
     const prevBad = new Set(badCells);
+    const prevSides = new Set(badSides);
 
     // Step 1: evaluate line items + their cells using current var/account/cell values
     badCells.clear();
     for (const li of lineItems) {
+      ctx.self = splitKey(li.accountKey);
       const kr = evalCell(li.expression, ctx);
       // The rounding boundary: a row's Belopp becomes integer öre here, once.
       const ore = Number.isFinite(kr) ? sekToOre(kr) : 0;
@@ -282,6 +327,7 @@ export function evaluate(
         if (!Number.isFinite(cv) && (li.values?.[colId] ?? "").trim()) badCells.add(colKey);
       }
     }
+    ctx.self = undefined;
 
     // Step 2: sum rows into account totals, then add adjustments by key: a förflyttning may fund an account the sheet never budgeted.
     // Integer öre on both sides, so the addition is exact.
@@ -292,6 +338,21 @@ export function evaluate(
     }
     for (const adj of adjustments) {
       accounts.set(adj.accountKey, (accounts.get(adj.accountKey) ?? 0) + adj.amount);
+    }
+
+    // Sheet totals from the account totals, and which sides are missing a row.
+    zeroSheets();
+    for (const [key, ore] of accounts) {
+      const { sheet, kind } = splitKey(key);
+      const totals = sheets.get(sheet) ?? { INCOME: 0, COST: 0 };
+      totals[kind] += ore;
+      sheets.set(sheet, totals);
+    }
+    badSides.clear();
+    for (const li of lineItems) {
+      if (!badCells.has(`${li.id}:expression`)) continue;
+      const { sheet, kind } = splitKey(li.accountKey);
+      badSides.add(`${sheet}:${kind}`);
     }
 
     // Step 3: evaluate variables in declaration order (later vars can ref earlier)
@@ -308,15 +369,19 @@ export function evaluate(
       same(accounts, prevAccts) &&
       same(cells, prevCells) &&
       badCells.size === prevBad.size &&
-      [...badCells].every((k) => prevBad.has(k));
+      [...badCells].every((k) => prevBad.has(k)) &&
+      badSides.size === prevSides.size &&
+      [...badSides].every((k) => prevSides.has(k));
   }
 
   // Final pass to flag cells/variables that don't resolve (after convergence).
   const badLineItems: string[] = [];
   for (const li of lineItems) {
+    ctx.self = splitKey(li.accountKey);
     const value = evalCell(li.expression, ctx);
     if (!Number.isFinite(value)) badLineItems.push(li.id);
   }
+  ctx.self = undefined;
   const badVariables: string[] = [];
   for (const v of variables) {
     const val = evalCell(v.expression, ctx);

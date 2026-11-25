@@ -124,7 +124,9 @@
     "view": "View",
     "detailBudget": "Detail budget",
     "changeName": "Rename the budget",
-    "changeAdoptedAt": "Change the adoption date"
+    "changeAdoptedAt": "Change the adoption date",
+    "formulaBar": "Formula",
+    "formulaBarHint": "Select a cell. Refer with #5, SEX01#5, #intäkter, #kostnader and #resultat"
   },
   "col": {
     "konto": "Account",

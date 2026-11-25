@@ -4,13 +4,13 @@
 // leaving a cell commits it); an edit begun by Enter, F2 or double-click keeps the arrows for
 // the caret. Enter ends an edit and moves down, Shift+Enter up. Tab is the browser's own.
 // Spread the returned props onto the element wrapping the tables.
-import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/ui/utils";
 
 interface CellEditProps {
   className: string;
   onKeyDownCapture: (e: KeyboardEvent) => void;
-  onFocusCapture: () => void;
+  onFocusCapture: (e: FocusEvent) => void;
   onDoubleClick: (e: MouseEvent) => void;
 }
 
@@ -64,6 +64,30 @@ export function neighbourCell(
     }
   }
   return best;
+}
+
+/** The nearest ancestor that scrolls vertically: the sheet pane from lg, otherwise the page. */
+function scrollerOf(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const y = getComputedStyle(p).overflowY;
+    if ((y === "auto" || y === "scroll") && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
+}
+
+/**
+ * Keeps a focused cell out from under the pinned totals card ([data-sheet-head],
+ * cost-center-sheet.tsx). The browser's own scroll-into-view does not know the card is there.
+ */
+function revealCell(container: HTMLElement, input: HTMLElement) {
+  const head = container.querySelector<HTMLElement>("[data-sheet-head]");
+  if (!head || head.offsetHeight === 0) return; // no card (a phone, another sheet)
+  const cell = (input.closest("td") ?? input).getBoundingClientRect();
+  const covered = head.getBoundingClientRect().bottom - cell.top;
+  if (covered <= 0) return;
+  const scroller = scrollerOf(input);
+  if (scroller) scroller.scrollBy({ top: -covered });
+  else window.scrollBy({ top: -covered });
 }
 
 export function useCellEdit(className?: string): CellEditProps {
@@ -146,8 +170,15 @@ export function useCellEdit(className?: string): CellEditProps {
   return {
     className: cn(className, editing && "is-editing"),
     onKeyDownCapture,
-    // Moving to another cell (click or keyboard) leaves edit mode: focus selects.
-    onFocusCapture: () => setEditing(false),
+    // Moving to another cell (click or keyboard) leaves edit mode: focus selects. The cell is
+    // then brought out from under the pinned card, once the browser's own scroll has run.
+    onFocusCapture: (e: FocusEvent) => {
+      setEditing(false);
+      const container = e.currentTarget as HTMLElement;
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-sheet-head]")) return; // the formula bar is in the card
+      requestAnimationFrame(() => revealCell(container, target));
+    },
     onDoubleClick: (e: MouseEvent) => {
       const t = e.target as HTMLElement;
       // Collapse the word-selection so a double-click leaves a caret.

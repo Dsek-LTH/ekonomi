@@ -155,6 +155,8 @@ export function useSheetClipboard({
         target instanceof HTMLTextAreaElement ||
         target?.isContentEditable === true;
       if (typing && !sheetRef.current?.contains(target)) return;
+      // The formula bar is in the sheet but is text, like a cell being edited.
+      if (target?.dataset.formulaBar) return;
 
       const took = key === "c" ? copyHere() : pasteHere();
       // Nothing copied means nothing taken: the browser's own copy still works.

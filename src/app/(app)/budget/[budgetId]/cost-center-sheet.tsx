@@ -2,7 +2,7 @@
 // rows. Owns the drag handlers and per-sheet drafts; select/edit comes from useCellEdit.
 import { Button } from "@/components/ui/button";
 import { SelectionBar } from "@/components/selection-bar";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
@@ -29,7 +29,7 @@ import { useCellEdit } from "./use-cell-edit";
 import type { UndoStep } from "./use-undo";
 import { useSheetClipboard } from "./use-sheet-clipboard";
 import { SheetProvider, type SheetValue } from "./sheet-context";
-import { SectionCard } from "./sheet-section";
+import { SheetGrid, SheetHeader } from "./sheet-section";
 import { useNotify } from "@/components/shell/notifications";
 import type { AccountRecord } from "@/lib/domain/types";
 import type {
@@ -64,6 +64,8 @@ export function CostCenterSheet(props: {
   userId: string;
   renderCell: CellFn;
   renderFormula: FormulaFn;
+  /** The formula bar (use-budget-cells.tsx), drawn above the sheet. */
+  formulaBar: ReactNode;
   api: ApiFn;
   budgetId: string;
   accounts: AccountRecord[];
@@ -85,6 +87,7 @@ export function CostCenterSheet(props: {
     userId,
     renderCell,
     renderFormula,
+    formulaBar,
     api,
     budgetId,
     accounts,
@@ -531,6 +534,7 @@ export function CostCenterSheet(props: {
   const summary = [
     {
       label: t("totalIncome"),
+      ref: "#intäkter",
       v: totals.income,
       a: compareTotals.income,
       incomeLike: true,
@@ -539,6 +543,7 @@ export function CostCenterSheet(props: {
     },
     {
       label: t("totalCosts"),
+      ref: "#kostnader",
       v: totals.cost,
       a: compareTotals.cost,
       incomeLike: false,
@@ -547,6 +552,7 @@ export function CostCenterSheet(props: {
     },
     {
       label: tRam("result"),
+      ref: "#resultat",
       v: totals.result,
       a: compareTotals.result,
       signed: true,
@@ -701,59 +707,6 @@ export function CostCenterSheet(props: {
           </div>
         </div>
 
-        <div className="hidden grid-cols-3 divide-x divide-border rounded-panel border border-border bg-background md:grid">
-          {summary.map((s) => (
-            <div key={s.label} className="min-w-0 px-4 py-2.5">
-              <p className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-xs text-muted">
-                  {compare ? tGroup("ofBudget", { label: s.label }) : s.label}
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 text-base font-semibold tabular-nums",
-                    s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
-                  )}
-                >
-                  {s.signed ? fmtSigned(s.v) : fmt(s.v)}
-                </span>
-              </p>
-              {/* Name each figure, or they run together. */}
-              {compare && (
-                <>
-                  <p className="mt-1 flex items-baseline justify-between gap-3 text-xs">
-                    <span className="truncate text-muted">{compare.label}</span>
-                    <span className="shrink-0 tabular-nums">{fmt(s.a)}</span>
-                  </p>
-                  <p
-                    className="mt-1 flex items-baseline justify-between gap-3 text-xs"
-                    title={tGroup("diffHint")}
-                  >
-                    <span className="truncate text-muted">{tGroup("diff")}</span>
-                    <span
-                      className={cn("shrink-0 tabular-nums", diffClass(s.a - s.v, s.incomeLike))}
-                    >
-                      {fmtSigned(s.a - s.v)}
-                    </span>
-                  </p>
-                </>
-              )}
-
-              {s.impact !== undefined && s.impact !== 0 && (
-                <p className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted">
-                  <span className="truncate">{tRam("changes")}</span>
-                  <span className="shrink-0 tabular-nums">
-                    <span className={diffClass(s.impact, true)}>{fmtSigned(s.impact)}</span>
-                    <span className="ml-2">
-                      {t("originallyLabel")}{" "}
-                      <span className="text-foreground">{fmtSigned(s.v - s.impact)}</span>
-                    </span>
-                  </span>
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
         {/* What can be done with the ticked rows, floating at the foot of the screen as on the
             other lists (SelectionBar). Accounts win, as a copy takes them over their rows. */}
         {isAdmin && (
@@ -796,17 +749,101 @@ export function CostCenterSheet(props: {
           </div>
         )}
 
-        <SectionCard
-          kind="INCOME"
-          label={tRam("income")}
-          accts={income}
-          ghosts={ghostAccounts.filter((a) => a.kind === "INCOME")}
-        />
-        <SectionCard
-          kind="COST"
-          label={tRam("costs")}
-          accts={cost}
-          ghosts={ghostAccounts.filter((a) => a.kind === "COST")}
+        {/* The totals, the formula bar and the column header as one card, pinned so they stay
+            in view while the rows scroll: under what the shell pins (--sticky-top, app-shell.tsx: the section band,
+            h-11 and its border) while the page scrolls, at the top of the sheet pane from lg,
+            where the pane scrolls on its own (budget-client.tsx). The grid hangs straight from
+            it (SheetGrid), so no gap below (mb-0 over space-y-4). Above it an opaque strip keeps
+            rows from showing between band and card, needless from lg, where nothing is above
+            the pane's top and the card then lines up with the sidebar. z-[15]: above a selected
+            cell (z-index 10, `.budget-grid` in globals.css), below the band (z-20). Cells moved
+            to are kept out from under it (`revealCell` in use-cell-edit.ts). */}
+        <div
+          data-sheet-head
+          className="sticky z-[15] -mt-2 mb-0 hidden bg-canvas pt-2 md:top-(--sticky-top) md:block lg:top-0 lg:mt-0 lg:pt-0"
+        >
+          <div className="budget-grid overflow-clip rounded-t-panel border border-b-0 border-border bg-background">
+            <div className="grid grid-cols-3 divide-x divide-border">
+              {summary.map((s) => (
+                <div key={s.label} className="min-w-0 px-4 py-2.5">
+                  <p className="flex items-baseline justify-between gap-3">
+                    <span className="flex min-w-0 items-baseline gap-2">
+                      <span className="truncate text-xs text-muted">
+                        {compare ? tGroup("ofBudget", { label: s.label }) : s.label}
+                      </span>
+                      {/* What a formula writes to read this figure, as the gutter shows a row's #. */}
+                      <span className="shrink-0 font-mono text-[11px] text-muted/70">{s.ref}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 text-base font-semibold tabular-nums",
+                        s.signed && (s.v < 0 ? "text-danger" : s.v > 0 ? "text-success" : ""),
+                      )}
+                    >
+                      {s.signed ? fmtSigned(s.v) : fmt(s.v)}
+                    </span>
+                  </p>
+                  {/* Name each figure, or they run together. */}
+                  {compare && (
+                    <>
+                      <p className="mt-1 flex items-baseline justify-between gap-3 text-xs">
+                        <span className="truncate text-muted">{compare.label}</span>
+                        <span className="shrink-0 tabular-nums">{fmt(s.a)}</span>
+                      </p>
+                      <p
+                        className="mt-1 flex items-baseline justify-between gap-3 text-xs"
+                        title={tGroup("diffHint")}
+                      >
+                        <span className="truncate text-muted">{tGroup("diff")}</span>
+                        <span
+                          className={cn(
+                            "shrink-0 tabular-nums",
+                            diffClass(s.a - s.v, s.incomeLike),
+                          )}
+                        >
+                          {fmtSigned(s.a - s.v)}
+                        </span>
+                      </p>
+                    </>
+                  )}
+
+                  {s.impact !== undefined && s.impact !== 0 && (
+                    <p className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted">
+                      <span className="truncate">{tRam("changes")}</span>
+                      <span className="shrink-0 tabular-nums">
+                        <span className={diffClass(s.impact, true)}>{fmtSigned(s.impact)}</span>
+                        <span className="ml-2">
+                          {t("originallyLabel")}{" "}
+                          <span className="text-foreground">{fmtSigned(s.v - s.impact)}</span>
+                        </span>
+                      </span>
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {formulaBar && <div className="border-t border-border">{formulaBar}</div>}
+            <div className="border-t border-border">
+              <SheetHeader />
+            </div>
+          </div>
+        </div>
+
+        <SheetGrid
+          sections={[
+            {
+              kind: "INCOME",
+              label: tRam("income"),
+              accts: income,
+              ghosts: ghostAccounts.filter((a) => a.kind === "INCOME"),
+            },
+            {
+              kind: "COST",
+              label: tRam("costs"),
+              accts: cost,
+              ghosts: ghostAccounts.filter((a) => a.kind === "COST"),
+            },
+          ]}
         />
       </div>
     </SheetProvider>

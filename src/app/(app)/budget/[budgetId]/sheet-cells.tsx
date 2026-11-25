@@ -1,4 +1,4 @@
-// Shared by the account block and the section card: a comparison pair is drawn against a
+// Shared by the account block and the section heading rows: a comparison pair is drawn against a
 // line, an account total and a section total.
 import { diffClass, fmt, fmtSigned } from "./budget-helpers";
 import { cn } from "@/lib/ui/utils";

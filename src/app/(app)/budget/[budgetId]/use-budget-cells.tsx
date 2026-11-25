@@ -58,6 +58,9 @@ export function useBudgetCells({
   const [pending, setPending] = useState<Record<string, string>>({});
   // Which formula cell is currently focused (shows the formula instead of the value).
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  // The formula cell the formula bar is showing, with what saving it needs. Kept while focus
+  // moves from the cell to the bar, so the bar edits the same buffered text.
+  const [active, setActive] = useState<ActiveCell | null>(null);
 
   const pVal = (id: string, field: string, actual: string) => pending[`${id}:${field}`] ?? actual;
   const setP = (id: string, field: string, v: string) =>
@@ -208,6 +211,7 @@ export function useBudgetCells({
   ) {
     const key = `${id}:${field}`;
     setFocusKey((k) => (k === key ? null : k));
+    setActive((a) => (a?.key === key ? null : a));
     const typed = pending[key];
     if (typed === undefined) return;
     // Forgiving entry ("2x3x12", "8 × TACK_POLICY") becomes a formula before row references are bound.
@@ -350,8 +354,10 @@ export function useBudgetCells({
           title={isFormula && !focused ? formulaText : undefined}
           // Focusing swaps the display to the formula, so the caret is placed after that
           // re-render. A gated cell is only selected on focus: leave a collapsed caret.
+          data-formula-key={key}
           onFocus={(e) => {
             setFocusKey(key);
+            setActive({ key, id, field, raw, sheet, url, payload, editText });
             if (pending[key] === undefined) setP(id, field, editText);
             const el = e.currentTarget;
             requestAnimationFrame(() => {
@@ -360,7 +366,12 @@ export function useBudgetCells({
             });
           }}
           onChange={(e) => setP(id, field, e.target.value)}
-          onBlur={() => commitFormula(id, field, raw, sheet, url, payload)}
+          onBlur={(e) => {
+            // Into the formula bar the edit goes on there, so it is not saved yet.
+            if (e.relatedTarget instanceof HTMLElement && e.relatedTarget.dataset.formulaBar)
+              return;
+            void commitFormula(id, field, raw, sheet, url, payload);
+          }}
           onPaste={(e) => {
             const text = pastedText(e, gated);
             if (text === null) return;
@@ -392,5 +403,60 @@ export function useBudgetCells({
     );
   };
 
-  return { renderCell, renderFormula, commitField };
+  /**
+   * The spreadsheet's formula bar: the selected Belopp cell's whole formula, editable at full
+   * width. With no cell selected it lists what a formula can refer to.
+   */
+  const renderFormulaBar = (labels: { formula: string; hint: string }) => {
+    if (!isAdmin) return null;
+    const key = active?.key;
+    const row = active ? grid.lineLoc.get(active.id)?.row : undefined;
+    return (
+      // Borderless: it is the foot of the totals card (cost-center-sheet.tsx).
+      <div className="flex items-center text-sm">
+        <span className="w-14 shrink-0 border-r border-border px-2 py-1.5 text-center font-mono text-xs text-muted">
+          {row !== undefined ? `#${row}` : "fx"}
+        </span>
+        <input
+          data-formula-bar="true"
+          aria-label={labels.formula}
+          readOnly={!active}
+          value={active && key ? (pending[key] ?? active.editText) : ""}
+          placeholder={labels.hint}
+          onChange={(e) => active && setP(active.id, active.field, e.target.value)}
+          onKeyDown={(e) => {
+            if (!active) return;
+            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Escape") {
+              clearP(active.id, active.field);
+              e.currentTarget.blur();
+            }
+          }}
+          onBlur={(e) => {
+            if (!active) return;
+            // Back into its own cell the edit carries on there.
+            const to = e.relatedTarget;
+            if (to instanceof HTMLElement && to.dataset.formulaKey === active.key) return;
+            const { id, field, raw, sheet, url, payload } = active;
+            void commitFormula(id, field, raw, sheet, url, payload);
+          }}
+          className="min-w-0 flex-1 bg-transparent px-2 py-1.5 font-mono text-xs outline-none placeholder:font-sans placeholder:text-muted"
+        />
+      </div>
+    );
+  };
+
+  return { renderCell, renderFormula, renderFormulaBar, commitField };
+}
+
+interface ActiveCell {
+  key: string;
+  id: string;
+  field: string;
+  raw: string;
+  sheet: string;
+  url: string;
+  payload: (v: string) => Record<string, unknown>;
+  /** The formula as it reads when the cell was selected, for after an Escape. */
+  editText: string;
 }

@@ -361,3 +361,69 @@ describe("money comes out as exact öre", () => {
     expect(result.lineItems.get("row")).toBe(kr(3000));
   });
 });
+
+describe("sheet totals", () => {
+  const rows = [
+    line("1000", "in", "SEX01:3010"),
+    line("200", "in2", "SEX01:3990"),
+    line("300", "out", "SEX01:5010"),
+  ];
+
+  it("reads a sheet's income, cost and result", () => {
+    const r = evaluate(
+      [],
+      [
+        ...rows,
+        line("=income(SEX01)*0.1", "fee", "KM01:4010"),
+        line("=cost(SEX01)", "c", "KM01:4020"),
+        line("=result(SEX01)", "r", "KM01:4030"),
+      ],
+    );
+    expect(r.lineItems.get("fee")).toBe(kr(120));
+    expect(r.lineItems.get("c")).toBe(kr(300));
+    expect(r.lineItems.get("r")).toBe(kr(900));
+    expect(r.errors).toEqual([]);
+  });
+
+  it("lets a cost row read its own sheet's income", () => {
+    const r = evaluate([], [...rows, line("=income(SEX01)*0.05", "fee", "SEX01:6990")]);
+    expect(r.lineItems.get("fee")).toBe(kr(60));
+    expect(r.badLineItems).toEqual([]);
+  });
+
+  it("refuses a row reading a total it is part of", () => {
+    const r = evaluate(
+      [],
+      [
+        ...rows,
+        line("=result(SEX01)", "self", "SEX01:6990"),
+        line("=cost(SEX01)", "c", "SEX01:4010"),
+      ],
+    );
+    expect(r.badLineItems).toEqual(["self", "c"]);
+  });
+
+  it("is zero for a sheet with nothing on it and an error for one the budget does not hold", () => {
+    const r = evaluate(
+      [],
+      [line("=income(SEX01)", "a", "KM01:4010"), line("=income(NOPE)", "b", "KM01:4020")],
+      [],
+      [],
+      ["SEX01:3010"],
+    );
+    expect(r.lineItems.get("a")).toBe(0);
+    expect(r.badLineItems).toEqual(["b"]);
+  });
+
+  it("is an error while a row on that side does not resolve", () => {
+    const r = evaluate(
+      [],
+      [line("=OKÄND", "x", "SEX01:3010"), line("=income(SEX01)", "a", "KM01:4010")],
+    );
+    expect(r.badLineItems).toEqual(["x", "a"]);
+  });
+
+  it("can be read by a variable", () => {
+    expect(evaluate([{ name: "R", expression: "=result(SEX01)" }], rows).vars.get("R")).toBe(900);
+  });
+});

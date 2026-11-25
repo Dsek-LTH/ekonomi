@@ -49,6 +49,7 @@ type RowKind = "section" | "account" | "line";
 interface RowEntity {
   row: number;
   kind: RowKind;
+  section?: "INCOME" | "COST";
   accountId?: string;
   accountCode?: string;
   lineId?: string;
@@ -60,6 +61,8 @@ export interface BudgetGrid {
   rowAt: Map<string, RowEntity>; // `${sheet}|${row}` → entity (reference → token)
   lineLoc: Map<string, { sheet: string; row: number }>; // lineId → location (token → reference)
   acctCodeRow: Map<string, number>; // `${sheet}|${accountCode}` → row (token → reference)
+  sectionRow: Map<string, number>; // `${sheet}|INCOME` / `${sheet}|COST` → the section's heading row
+  sheets: Set<string>; // every sheet code, for `#resultat` and the like
   columns: ColumnDef[];
 }
 
@@ -69,15 +72,17 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
   const rowAt = new Map<string, RowEntity>();
   const lineLoc = new Map<string, { sheet: string; row: number }>();
   const acctCodeRow = new Map<string, number>();
+  const sectionRow = new Map<string, number>();
 
   for (const sheet of sheets) {
     const code = sheet.code;
     let r = 0;
     const income = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "INCOME");
     const cost = sheet.accounts.filter((a) => effectiveKind(a.accountCode) === "COST");
-    const emit = (accts: GridAccount[]) => {
+    const emit = (accts: GridAccount[], section: "INCOME" | "COST") => {
       r++;
-      rowAt.set(`${code}|${r}`, { row: r, kind: "section" });
+      rowAt.set(`${code}|${r}`, { row: r, kind: "section", section });
+      sectionRow.set(`${code}|${section}`, r);
       for (const a of accts) {
         r++;
         accountRow.set(`${code}|${a.id}`, r);
@@ -102,8 +107,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
         }
       }
     };
-    emit(income);
-    emit(cost);
+    emit(income, "INCOME");
+    emit(cost, "COST");
   }
 
   return {
@@ -112,6 +117,8 @@ export function buildGrid(sheets: GridSheet[], columns: ColumnDef[]): BudgetGrid
     rowAt,
     lineLoc,
     acctCodeRow,
+    sectionRow,
+    sheets: new Set(sheets.map((s) => s.code)),
     columns,
   };
 }
@@ -122,21 +129,31 @@ const CODE = String.raw`[\p{L}\p{N}_-]+`;
 const REF_CODE = String.raw`[\p{L}\p{N}_]+`;
 
 // A reference names a row: `#5`, or `SEX01#5` on another sheet. Belopp is the only column that holds a figure,
-// so a row is enough.
-const ROW_REF = new RegExp(String.raw`^(?:(${REF_CODE}))?#(\d+)$`, "u");
+// so a row is enough. A sheet's totals are named the same way: `#intäkter`, `#kostnader`, `#resultat`.
+const TOTAL_WORDS = { income: "intäkter", cost: "kostnader", result: "resultat" } as const;
+const TOTAL_WORD = String.raw`int[äa]kter|kostnader|resultat`;
+const ROW_REF = new RegExp(String.raw`^(?:(${REF_CODE}))?#(\d+|${TOTAL_WORD})$`, "iu");
 
 function refToToken(ref: string, currentSheet: string, grid: BudgetGrid): string | null {
   const m = ROW_REF.exec(ref.trim());
   if (!m) return null;
   const sheet = m[1] ?? currentSheet;
+  if (!/^\d/.test(m[2])) {
+    const word = m[2].toLowerCase().replace("intakter", "intäkter");
+    const fn = Object.entries(TOTAL_WORDS).find(([, w]) => w === word)?.[0];
+    return grid.sheets.has(sheet) ? `${fn}(${sheet})` : null;
+  }
   const e = grid.rowAt.get(`${sheet}|${parseInt(m[2], 10)}`);
   if (e?.kind === "line") return `@L${e.lineId}:expression`;
   if (e?.kind === "account") return `account(${sheet}, ${e.accountCode})`;
+  // A section's heading row holds its total, the same figure as `#intäkter` / `#kostnader`.
+  if (e?.kind === "section") return `${e.section === "INCOME" ? "income" : "cost"}(${sheet})`;
   return null;
 }
 
 const TOKEN_LINE = /^@L([a-z0-9]+):([A-Za-z0-9]+)$/i;
 const TOKEN_ACCT = new RegExp(String.raw`^account\(\s*(${CODE})\s*,\s*(${CODE})\s*\)$`, "iu");
+const TOKEN_TOTAL = new RegExp(String.raw`^(income|cost|result)\(\s*(${CODE})\s*\)$`, "iu");
 
 function tokenToRef(token: string, currentSheet: string, grid: BudgetGrid): string | null {
   let m = TOKEN_LINE.exec(token);
@@ -153,16 +170,24 @@ function tokenToRef(token: string, currentSheet: string, grid: BudgetGrid): stri
     if (row === undefined) return null;
     return (sheet === currentSheet ? "" : sheet) + "#" + row;
   }
+  m = TOKEN_TOTAL.exec(token);
+  if (m) {
+    const sheet = m[2];
+    // A hyphenated code would read as a subtraction, so that token stays as it is.
+    if (sheet !== currentSheet && !new RegExp(`^${REF_CODE}$`, "u").test(sheet)) return null;
+    const word = TOTAL_WORDS[m[1].toLowerCase() as keyof typeof TOTAL_WORDS];
+    return (sheet === currentSheet ? "" : sheet) + "#" + word;
+  }
   return null;
 }
 
 // The hyphen stays out of the lookbehind: in `=5-SEX01#4` the "-" is the operator.
 const REF_WORD = new RegExp(
-  String.raw`(?<![\p{L}\p{N}_#])((?:${REF_CODE})?#\d+)(?![\p{L}\p{N}_])`,
-  "gu",
+  String.raw`(?<![\p{L}\p{N}_#])((?:${REF_CODE})?#(?:\d+|${TOTAL_WORD}))(?![\p{L}\p{N}_])`,
+  "giu",
 );
 const TOKEN_WORD = new RegExp(
-  String.raw`@L[a-z0-9]+:[A-Za-z0-9]+|account\(\s*${CODE}\s*,\s*${CODE}\s*\)`,
+  String.raw`@L[a-z0-9]+:[A-Za-z0-9]+|account\(\s*${CODE}\s*,\s*${CODE}\s*\)|(?:income|cost|result)\(\s*${CODE}\s*\)`,
   "giu",
 );
 

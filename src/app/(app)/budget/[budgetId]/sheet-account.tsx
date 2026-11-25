@@ -563,9 +563,11 @@ export function AddAccountRow({ kind }: { kind: AccountKind }) {
   if (!isAdmin) return null;
   return (
     <tbody>
+      {/* Inside the column rules like any row: the picker where an account's number and name
+          go, Belopp left empty, so the columns run unbroken from heading to heading. */}
       <tr className="bg-background">
         <td className="w-9 border-r border-border/60" />
-        <td className="p-0" colSpan={columns.length + 1}>
+        <td className="border-r border-border/60 p-0" colSpan={columns.length - 1}>
           <Combobox
             options={accountOptionsFor(kind)}
             value=""
@@ -577,7 +579,9 @@ export function AddAccountRow({ kind }: { kind: AccountKind }) {
             aria-label={t("addAccount")}
           />
         </td>
+        <td />
         {actualPad}
+        <td />
       </tr>
     </tbody>
   );
