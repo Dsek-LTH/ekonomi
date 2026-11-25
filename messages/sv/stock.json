@@ -338,7 +338,7 @@
     },
     "sheet": {
       "column": "Vilken kolumn",
-      "addProduct": "Skriv eller välj en produkt…",
+      "addProduct": "Lägg till produkt…",
       "addSearch": "Sök produkt…",
       "remove": "Ta bort raden",
       "failed": "Raden kunde inte bokföras. Siffrorna läses om.",

@@ -562,6 +562,12 @@ export function AppShell({
               "pb-[calc(env(safe-area-inset-bottom)+2rem)] md:pb-20",
               receiptTab ? "[--main-pr:1.5rem] md:[--main-pr:3rem]" : "[--main-pr:1.5rem]",
               "pr-(--main-pr)",
+              // `--sticky-top`: how much is pinned over the page, for a page's own sticky parts
+              // (a table head). The phone's app bar, and the section band (h-11 and its border)
+              // where the section has tabs. The app bar is gone from md.
+              sectionNav
+                ? "[--sticky-top:calc(3rem+1px+env(safe-area-inset-top)+2.75rem+1px)] md:[--sticky-top:calc(2.75rem+1px)]"
+                : "[--sticky-top:calc(3rem+1px+env(safe-area-inset-top))] md:[--sticky-top:0px]",
             )}
           >
             <SectionNavProvider

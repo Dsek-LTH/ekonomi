@@ -338,7 +338,7 @@
     },
     "sheet": {
       "column": "Which column",
-      "addProduct": "Type or pick a product…",
+      "addProduct": "Add product…",
       "addSearch": "Search products…",
       "remove": "Remove row",
       "failed": "That could not be booked. The figures are being re-read.",

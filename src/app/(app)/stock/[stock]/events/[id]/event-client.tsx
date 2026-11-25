@@ -6,7 +6,7 @@
 // so two phones in a cellar do not overwrite each other. Untouched cells are never sent.
 // On a phone the three columns become one at a time, which keeps a row on one line.
 import { useStock } from "@/components/stock/stock-context";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
@@ -461,11 +461,13 @@ export default function EventClient({
   // ── The grid ──
   // Same cell vocabulary as the voucher editor (components/voucher-editor.tsx): `divide-*` rules, a fixed layout, and `p-0` cells around a bare
   // full-height input so the focus ring lands on the cell.
-  const headerCell = "px-2 py-2.5 text-center font-medium";
+  const headerCell = "px-2 py-1.5 text-center font-medium";
   /** How many columns a full-width row spans: all from md, the three that show on a phone. A span counts only displayed cells. */
   const span = phone ? 3 : CELL_KINDS.length + 2;
+  // 32px, not the voucher editor's 40: an event sheet runs to forty products and their rungs.
+  // `scroll-mt`: a cell moved to by keyboard stops below the pinned toolbar and head, not under them.
   const cellInput =
-    "block h-10 w-full bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
+    "block h-8 w-full scroll-mt-[calc(var(--sticky-top)+0.5rem+var(--sheet-tools,0px)+2rem)] bg-transparent px-2 text-center text-sm tabular-nums placeholder:text-muted focus-inset";
 
   /**
    * The rows a product takes up: a can is one row, a spirit its name then one row per rung of its ladder.
@@ -522,6 +524,21 @@ export default function EventClient({
       onEscape: (k) => setTyped((prev) => ({ ...prev, [k]: bookedText(k) })),
     });
 
+  // The pinned toolbar's height as `--sheet-tools` on the card, so the column head pins right
+  // under it. It differs by screen (a phone's taller controls and its column tabs), hence measured.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const toolsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tools = toolsRef.current;
+    const card = cardRef.current;
+    if (!tools || !card) return;
+    const ro = new ResizeObserver(() =>
+      card.style.setProperty("--sheet-tools", `${tools.offsetHeight}px`),
+    );
+    ro.observe(tools);
+    return () => ro.disconnect();
+  }, [view]);
+
   // ── A cell ──
   // A function returning an input, not a component: one declared here is a new type each render and would drop focus on the first keystroke.
   function cellFor(product: StockLevelDto, kind: CellKind, level: number) {
@@ -529,7 +546,7 @@ export default function EventClient({
     if (lock) {
       return (
         <span
-          className="flex h-10 items-center justify-center text-muted"
+          className="flex h-8 items-center justify-center text-muted"
           title={t(`event.sheet.locked.${lock}`)}
         >
           <IconLock className="size-3.5" />
@@ -597,27 +614,27 @@ export default function EventClient({
           onSave={rename}
         />
       }
-      subtitle={
-        canManage ? (
-          // The weekday stays in words beside the field.
-          <>
-            <span className="capitalize">{weekday}</span>{" "}
-            <EditableText
-              value={event.date}
-              type="date"
-              label={t("event.changeDate")}
-              onSave={(date) => (date ? patchEvent({ name: event.name, date }) : false)}
-            />
-          </>
-        ) : (
-          longDate
-        )
-      }
       back={href("/events")}
       width="wide"
       // What applies to the whole night: how it is drawn and the menu of what is done to the night itself.
       aside={
         <>
+          {/* The night's date at the end of the title line, the weekday in words beside the field. */}
+          <span className="text-sm text-muted">
+            {canManage ? (
+              <>
+                <span className="capitalize">{weekday}</span>{" "}
+                <EditableText
+                  value={event.date}
+                  type="date"
+                  label={t("event.changeDate")}
+                  onSave={(date) => (date ? patchEvent({ name: event.name, date }) : false)}
+                />
+              </>
+            ) : (
+              <span className="capitalize">{longDate}</span>
+            )}
+          </span>
           <ViewToggle
             aria-label={t("event.view.label")}
             value={view}
@@ -658,46 +675,84 @@ export default function EventClient({
         </Card>
       ) : (
         <>
-          <Card>
-            <div className="flex items-center gap-2 border-b border-border px-inset py-2">
-              <div className="min-w-0 flex-1 sm:max-w-72">
-                <SearchInput
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("event.sheet.search")}
-                  aria-label={t("event.sheet.search")}
+          <Card ref={cardRef}>
+            {/* Search, scan and add, pinned with the column head below so they are at hand down a
+                long sheet. Under whatever the shell pins (--sticky-top, app-shell.tsx). */}
+            <div
+              ref={toolsRef}
+              // 0.5rem below the band when pinned, the gap filled with the page (`before:`) so rows
+              // do not show between. Its own border, laid over the card's (-m-px), so a pinned
+              // toolbar is framed while one at rest looks like the card's top.
+              className="sticky top-[calc(var(--sticky-top)+0.5rem)] z-10 -mx-px -mt-px rounded-t-panel border border-b-0 border-border bg-background before:pointer-events-none before:absolute before:inset-x-[-1px] before:bottom-[calc(100%+1px)] before:h-2 before:bg-canvas"
+            >
+              <div className="flex flex-wrap items-center gap-2 border-b border-border px-inset py-2">
+                <div className="min-w-0 flex-1 sm:max-w-72">
+                  <SearchInput
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t("event.sheet.search")}
+                    aria-label={t("event.sheet.search")}
+                  />
+                </div>
+                {canManage && (
+                  <Button variant="secondary" onClick={scan} title={t("event.sheet.scan")}>
+                    <IconScan className="size-4" />
+                    <span className="hidden sm:inline">{t("event.sheet.scanShort")}</span>
+                  </Button>
+                )}
+                {/* Picking by name puts that product on the event, and an unknown name offers to
+                  make it. A code the event already has, scanned, jumps to its row. */}
+                {canManage && (
+                  <div className="w-full sm:w-64">
+                    <Combobox
+                      size="sm"
+                      value=""
+                      onChange={add}
+                      options={products
+                        .filter((p) => !rows.includes(p.id))
+                        .map((p) => ({ value: p.id, label: p.name }))}
+                      onCreate={invent}
+                      createLabel={(text) => t("event.sheet.newProduct", { name: text })}
+                      placeholder={t("event.sheet.addProduct")}
+                      searchPlaceholder={t("event.sheet.addSearch")}
+                      aria-label={t("event.sheet.addProduct")}
+                      align="left"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="border-b border-border px-inset md:hidden">
+                <FilterTabs
+                  options={CELL_KINDS.map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
+                  value={column}
+                  onChange={setColumn}
+                  fill
+                  aria-label={t("event.sheet.column")}
                 />
               </div>
-              {canManage && (
-                <Button variant="secondary" onClick={scan} title={t("event.sheet.scan")}>
-                  <IconScan className="size-4" />
-                  <span className="hidden sm:inline">{t("event.sheet.scanShort")}</span>
-                </Button>
-              )}
-            </div>
-            <div className="border-b border-border px-inset md:hidden">
-              <FilterTabs
-                options={CELL_KINDS.map((kind) => ({ value: kind, label: t(`kind.${kind}`) }))}
-                value={column}
-                onChange={setColumn}
-                fill
-                aria-label={t("event.sheet.column")}
-              />
             </div>
 
             {/* No CardBody: the sheet is ruled to the card's own edge, as in the voucher editor. */}
-            {/* The spare rows are how a product gets onto the sheet, so an empty event still needs the table. */}
+            {/* A manager's empty event still draws the head, under the toolbar that fills it. */}
             {rows.length === 0 && !canManage ? (
               <div className="px-inset py-6">
                 <EmptyNote>{t("event.nothing")}</EmptyNote>
               </div>
             ) : (
-              /* Scrolls sideways only where needed: on a phone the three columns fit. */
-              <TableScroll minWidth="min-w-0 md:min-w-[36rem]">
+              /* Scrolls sideways only where needed: on a phone the three columns fit, and from lg the
+                 sheet is wide enough. There it is no scroll box (`overflow-visible`), so the head
+                 can stick to the page; between md and lg it scrolls and the head stays put. */
+              <TableScroll
+                minWidth="min-w-0 md:min-w-[36rem]"
+                className="max-md:overflow-visible lg:overflow-visible"
+              >
                 {/* table-fixed: header percentages decide the columns, so a long name cannot push them. */}
                 <table className="w-full table-fixed border-collapse text-sm">
-                  <thead>
-                    <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+                  {/* Pinned under the toolbar (--sheet-tools) and whatever the shell pins
+                      (--sticky-top, app-shell.tsx). A collapsed border stays behind with the
+                      table, so the rule under the head is a shadow. */}
+                  <thead className="sticky top-[calc(var(--sticky-top)+0.5rem+var(--sheet-tools,0px))] z-10">
+                    <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
                       <th className={cn(headerCell, "w-[34%] text-left")}>
                         {t("event.col.product")}
                       </th>
@@ -721,7 +776,7 @@ export default function EventClient({
                     <Fragment key={group}>
                       <tbody>
                         <tr className="border-b border-border bg-surface/60">
-                          <td colSpan={span} className="px-3 py-1.5">
+                          <td colSpan={span} className="px-3 py-1">
                             <span className="flex items-center gap-2 text-xs font-medium text-muted">
                               <CategoryMark category={byId.get(ids[0])?.category} />
                               {byId.get(ids[0])?.groupName}
@@ -745,7 +800,7 @@ export default function EventClient({
                           >
                             {/* A spirit's own row carries its name and total, typing happens on the ladder below. A can's one row is both. */}
                             <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>
-                              <td className="group px-2 py-1.5 align-middle">
+                              <td className="group px-2 py-1 align-middle">
                                 <div className="flex items-center justify-between gap-2">
                                   {swapping === productId ? (
                                     // The name while it is being changed, in place: the row is where "which product is this" is answered.
@@ -780,15 +835,17 @@ export default function EventClient({
                                       </IconButton>
                                     </div>
                                   ) : (
-                                    // The name, and under it what the cellar holds, on separate lines so a long name does not shift the count.
-                                    <span className="min-w-0">
+                                    // The name and what the cellar holds, on one line from md with the count at the
+                                    // right as on the rungs below (a long name truncates, the count does not). On a
+                                    // phone the column is too narrow for both, so the count goes under the name.
+                                    <span className="min-w-0 flex-1 md:flex md:flex-wrap md:items-baseline md:gap-x-2">
                                       <Link
                                         href={href(`/${productId}`)}
-                                        className="block truncate font-medium hover:underline"
+                                        className="block truncate font-medium hover:underline md:min-w-0 md:flex-1"
                                       >
                                         {product.name}
                                       </Link>
-                                      <span className="block truncate text-xs text-muted">
+                                      <span className="block truncate text-xs tabular-nums text-muted md:shrink-0">
                                         {isVolume
                                           ? t("holding.volume", {
                                               sealed: shelf.sealed,
@@ -802,7 +859,7 @@ export default function EventClient({
                                             })}
                                       </span>
                                       {fault && (
-                                        <span className="block text-xs text-danger">
+                                        <span className="block text-xs text-danger md:basis-full">
                                           {t(`fault.${fault}`)}
                                         </span>
                                       )}
@@ -814,7 +871,7 @@ export default function EventClient({
                                       label={t("event.sheet.rowActions")}
                                       iconOnly
                                       variant="ghost"
-                                      size="sm"
+                                      size="xs"
                                       icon={<IconDots className="size-4" />}
                                       className="shrink-0 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 md:opacity-100"
                                     >
@@ -887,7 +944,7 @@ export default function EventClient({
                     </Fragment>
                   ))}
 
-                  {/* Said inside the table so the spare rows below stay visible. */}
+                  {/* Said inside the table, under its head. */}
                   {shown.length === 0 && rows.length > 0 && (
                     <tbody>
                       <tr>
@@ -898,49 +955,6 @@ export default function EventClient({
                             })}
                           </EmptyNote>
                         </td>
-                      </tr>
-                    </tbody>
-                  )}
-
-                  {/* The next line: typing a name puts that product on the event, and an unknown name offers to make it. One spare row, since the scanner is the quick way in. */}
-                  {canManage && (
-                    <tbody>
-                      <tr className="divide-x divide-border">
-                        <td className="p-0 align-middle">
-                          {/* Picking by name. The scanner is on the toolbar: a code the event already has jumps to its row. */}
-                          <div className="flex items-center">
-                            <div className="min-w-0 flex-1">
-                              <Combobox
-                                value=""
-                                onChange={add}
-                                options={products
-                                  .filter((p) => !rows.includes(p.id))
-                                  .map((p) => ({
-                                    value: p.id,
-                                    label: p.name,
-                                  }))}
-                                onCreate={invent}
-                                createLabel={(text) =>
-                                  t("event.sheet.newProduct", {
-                                    name: text,
-                                  })
-                                }
-                                placeholder={t("event.sheet.addProduct")}
-                                searchPlaceholder={t("event.sheet.addSearch")}
-                                aria-label={t("event.sheet.addProduct")}
-                                align="left"
-                                buttonClassName="h-10 w-full bg-transparent px-2 text-left text-sm text-muted focus-inset"
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        {CELL_KINDS.map((kind) => (
-                          <td
-                            key={kind}
-                            className={cn(kind !== column && "hidden md:table-cell")}
-                          />
-                        ))}
-                        <td />
                       </tr>
                     </tbody>
                   )}
