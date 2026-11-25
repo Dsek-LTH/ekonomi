@@ -287,10 +287,12 @@ export default function ReceiptViewerImpl({
     <TransformWrapper
       minScale={0.5}
       maxScale={10}
-      panning={{ excluded: [TEXT_EXCLUDE] }}
+      // Up and down only while the page fits the width: there is nothing to the side to pan to. Zoomed in, the page is
+      // wider than the panel and both ways open up.
+      panning={{ excluded: [TEXT_EXCLUDE], lockAxisX: zoom <= 1 }}
       doubleClick={{ mode: "zoomIn", excluded: [TEXT_EXCLUDE] }}
       wheel={{ step: 0.005, wheelDisabled: true }}
-      trackPadPanning={{ disabled: false }}
+      trackPadPanning={{ disabled: false, lockAxisX: zoom <= 1 }}
       // Pan on the compositor (translate3d). The library defaults to 2D because 3D blurs SVG on Safari.
       customTransform={(x, y, scale) => `translate3d(${x}px, ${y}px, 0) scale(${scale})`}
       // Settled before it reaches state: re-rasterising an A4 page every frame costs too much.

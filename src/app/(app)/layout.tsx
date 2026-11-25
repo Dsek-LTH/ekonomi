@@ -4,12 +4,12 @@ import { AppShell } from "@/components/shell/app-shell";
 import { RouteHistoryRecorder } from "@/components/shell/route-history";
 import { SettingsReopener } from "@/components/shell/settings-bounce";
 import { RouteProgressBar } from "@/components/shell/route-progress";
+import { ReceiptPanelProvider } from "@/components/receipt/receipt-panel";
 import {
-  DEFAULT_WIDTH,
+  receiptWidthFrom,
   RECEIPT_COLLAPSED_COOKIE,
   RECEIPT_WIDTH_COOKIE,
-  ReceiptPanelProvider,
-} from "@/components/receipt/receipt-panel";
+} from "@/lib/ui/receipt-panel-cookies";
 import { RoleProvider } from "@/components/shell/role-context";
 import { NotificationBanners, NotificationsProvider } from "@/components/shell/notifications";
 import { ConfirmProvider } from "@/components/confirm-dialog";
@@ -65,9 +65,7 @@ export default async function AppLayout({
   ]);
   // Read here so the frame renders in its stored shape on first paint.
   const receiptCollapsed = cookieStore.get(RECEIPT_COLLAPSED_COOKIE)?.value === "1";
-  const storedWidth = Number(cookieStore.get(RECEIPT_WIDTH_COOKIE)?.value);
-  const receiptWidth =
-    Number.isFinite(storedWidth) && storedWidth > 0 ? storedWidth : DEFAULT_WIDTH;
+  const receiptWidth = receiptWidthFrom(cookieStore.get(RECEIPT_WIDTH_COOKIE)?.value);
 
   return (
     <RoleProvider user={{ ...currentUser, holdsCard }}>

@@ -26,15 +26,20 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { usePhone } from "@/lib/ui/media";
+import {
+  RECEIPT_COLLAPSED_COOKIE,
+  RECEIPT_MAX_FRACTION,
+  RECEIPT_MIN_WIDTH,
+  RECEIPT_WIDTH_COOKIE,
+} from "@/lib/ui/receipt-panel-cookies";
 
 const RECEIPT_FOLD_MS = 320;
 
-export const RECEIPT_COLLAPSED_COOKIE = "receipt_collapsed";
-export const RECEIPT_WIDTH_COOKIE = "receipt_width";
+const MIN_WIDTH = RECEIPT_MIN_WIDTH;
+const MAX_FRACTION = RECEIPT_MAX_FRACTION;
 
-const MIN_WIDTH = 360;
-const MAX_FRACTION = 0.7;
-export const DEFAULT_WIDTH = 520;
+/** The panel's width for CSS: a share of the frame it lies in, never under MIN_WIDTH. */
+const widthCss = (share: number) => `max(${MIN_WIDTH}px, ${(share * 100).toFixed(2)}%)`;
 
 const FLOATING_BTN =
   "flex size-7 items-center justify-center rounded-control border border-border bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-hover";
@@ -75,6 +80,7 @@ type Ctx = {
   setSource: (s: Source | null) => void;
   collapsed: boolean;
   setCollapsed: (next: boolean, persist?: boolean) => void;
+  /** A share of the frame, 0 to MAX_FRACTION. */
   width: number;
   setWidth: (w: number) => void;
   footerSlot: HTMLElement | null;
@@ -430,21 +436,26 @@ export function ReceiptPanelColumn() {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const startX = e.clientX;
-    const startWidth = widthRef.current;
+    const panel = panelRef.current;
+    const frameWidth =
+      (panel?.offsetParent as HTMLElement | null)?.clientWidth || window.innerWidth;
+    const startWidth = panel?.getBoundingClientRect().width ?? widthRef.current * frameWidth;
     setDragging(true);
     document.body.style.userSelect = "none";
     document.body.style.cursor = "col-resize";
 
+    // Dragged in pixels, kept as a share of the frame.
     const paint = () => {
       frame.current = 0;
       widthRef.current = pending.current;
-      panelRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
-      spacerRef.current?.style.setProperty("--receipt-w", `${pending.current}px`);
+      panelRef.current?.style.setProperty("--receipt-w", widthCss(pending.current));
+      spacerRef.current?.style.setProperty("--receipt-w", widthCss(pending.current));
     };
 
     const onMove = (ev: PointerEvent) => {
-      const max = Math.max(MIN_WIDTH, window.innerWidth * MAX_FRACTION);
-      pending.current = Math.min(max, Math.max(MIN_WIDTH, startWidth + (startX - ev.clientX)));
+      const max = Math.max(MIN_WIDTH, frameWidth * MAX_FRACTION);
+      const px = Math.min(max, Math.max(MIN_WIDTH, startWidth + (startX - ev.clientX)));
+      pending.current = Math.min(MAX_FRACTION, px / frameWidth);
       if (!frame.current) frame.current = requestAnimationFrame(paint);
     };
     const onUp = () => {
@@ -458,9 +469,9 @@ export function ReceiptPanelColumn() {
       widthRef.current = final;
       setWidth(final);
       setDragging(false);
-      writeCookie(RECEIPT_WIDTH_COOKIE, String(Math.round(final)));
+      writeCookie(RECEIPT_WIDTH_COOKIE, final.toFixed(3));
     };
-    pending.current = startWidth;
+    pending.current = widthRef.current;
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   };
@@ -707,7 +718,7 @@ export function ReceiptPanelColumn() {
         <div
           ref={spacerRef}
           aria-hidden
-          style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
+          style={{ "--receipt-w": widthCss(width) } as React.CSSProperties}
           className={cn(
             "hidden shrink-0 md:block md:max-w-[70vw] print:hidden",
             !dragging && "receipt-spacer",
@@ -720,7 +731,7 @@ export function ReceiptPanelColumn() {
           ref={panelRef}
           inert={leavingNow}
           {...dropHandlers}
-          style={{ "--receipt-w": `${width}px` } as React.CSSProperties}
+          style={{ "--receipt-w": widthCss(width) } as React.CSSProperties}
           className={cn(
             "flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 print:hidden",
             "receipt-panel fixed inset-y-0 left-0 right-0 z-40",
