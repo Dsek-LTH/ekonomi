@@ -180,8 +180,8 @@ export default function BankClient({
         linked: t("matched"),
         unmatched: (tx) =>
           tx.cardHolderId === viewerId ? (
-            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="sm">
-              <IconUpload className="size-4" />
+            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="xs">
+              <IconUpload className="size-3.5" />
               {t("account")}
             </ButtonLink>
           ) : null,
@@ -199,6 +199,7 @@ export default function BankClient({
         <span className="flex items-center justify-end gap-1">
           {canImport && (
             <IconButton
+              size="sm"
               tone="danger"
               onClick={() => deleteTxn(tx.id)}
               loading={pending === tx.id}
@@ -297,9 +298,9 @@ export default function BankClient({
  * purchaser's feed.
  */
 
-/** The box a card holder sits in: the picker's shape from md (176px), so names and the "Välj kort" picker line up. */
+/** The box a card holder sits in: from md as wide as the name and number need (up to 240px), 24px high like the row's other controls, so the chevron sits right after the number. */
 const CARD_BOX =
-  "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-8 md:w-44 md:px-2.5";
+  "flex w-full min-w-0 items-center gap-1.5 rounded-control border md:h-6 md:w-auto md:max-w-60 md:px-2";
 
 function CardCell({
   tx,
@@ -352,7 +353,7 @@ function CardCell({
   // utlägg and its submitter's own card), so it is not offered. Hover text, no chevron.
   if (tx.matchedExpenseId) {
     return (
-      <Tooltip label={t("cardLocked")} align="start" className="w-full md:w-44">
+      <Tooltip label={t("cardLocked")} align="start" className="w-full md:w-auto">
         <span className={cn(CARD_BOX, "border-transparent")}>
           <BankCardHolder tx={tx} />
           <span className="sr-only">{t("cardLocked")}</span>
@@ -364,7 +365,7 @@ function CardCell({
   // A picker at rest: name and number with a faint chevron (always, since a phone has no hover).
   if (row.cardLast4 && !picking) {
     return (
-      <Tooltip label={t("changeCard")} align="start" className="w-full md:w-44">
+      <Tooltip label={t("changeCard")} align="start" className="w-full md:w-auto">
         <button
           type="button"
           onClick={() => setPicking(true)}
@@ -373,7 +374,7 @@ function CardCell({
             "border-transparent text-left transition-colors hover:border-border-control hover:bg-background",
           )}
         >
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0">
             <BankCardHolder tx={row} />
           </span>
           <IconChevronDown aria-hidden className="size-4 shrink-0 text-faint" />
@@ -386,9 +387,9 @@ function CardCell({
   return (
     <Combobox
       size="sm"
-      className="md:w-44"
+      className="md:w-40"
       // On a phone a word opposite the row's second line: a 44px control overlapped the rows.
-      buttonClassName="md:h-8 md:rounded-control md:border md:border-border-control md:bg-background md:px-2.5"
+      buttonClassName="md:h-6 md:rounded-control md:border md:border-border-control md:bg-background md:px-2"
       chevronClassName="text-accent md:text-faint"
       allowClear
       disabled={busy}

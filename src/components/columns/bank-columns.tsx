@@ -33,8 +33,14 @@ export const bankDescriptionColumn = (header: string): Column<BankTransaction> =
   sortable: true,
   searchable: true,
   mobile: "title",
-  className: "font-medium",
-  cell: (tx) => <p className="truncate">{tx.description}</p>,
+  // The column takes the width the others leave (w-full) and no more (max-w-0), so a long
+  // description clips instead of widening the table, and the holder sits beside Belopp.
+  className: "w-full max-w-0 font-medium",
+  cell: (tx) => (
+    <p className="truncate" title={tx.description}>
+      {tx.description}
+    </p>
+  ),
 });
 
 /** A card's last four with the four-dot mask, written in one place. */
@@ -57,10 +63,10 @@ export const bankCardColumn = (header: string, hidden = false): Column<BankTrans
 export function BankCardHolder({ tx }: { tx: BankTransaction }) {
   if (!tx.cardLast4) return <span className="text-muted"></span>;
   // Spans, not paragraphs: a changeable screen wraps this in a button (phrasing content only).
-  // The name truncates first, the number never. Capped at the picker's 176px, since a cell's
-  // width is only a floor.
+  // The name truncates first, the number never. Capped at the picker's 240px, since a cell's
+  // width is only a floor. Wide enough for "David Mitterer Stråhle" beside the number.
   return (
-    <span className="flex min-w-0 max-w-44 items-baseline gap-1.5">
+    <span className="flex min-w-0 max-w-60 items-baseline gap-1.5">
       <span title={tx.cardHolderName} className="min-w-0 truncate text-sm font-medium">
         {tx.cardHolderName}
       </span>
@@ -82,13 +88,13 @@ export const bankHolderColumn = (
   mobileCell: (tx) => tx.cardHolderName ?? null,
   sortable: true,
   searchable: true,
-  // Fixed width and height so swapping between name, picker and dash does not reflow the
-  // table. 200px is the picker's 176 plus padding. Fixed 32px because an inline button picks
-  // up descender space and changes the row height. From md only: on a phone the cell is in
-  // the card's line of small text.
-  className: "w-50",
+  // As wide as the longest name on the page, so it sits close to Belopp. Never under the
+  // "Välj kort" picker (160px). Fixed 24px high, a row's own height, because
+  // an inline button picks up descender space and changes the row height. From md only: on a
+  // phone the cell is in the card's line of small text.
+  className: "whitespace-nowrap",
   cell: (tx) => (
-    <div className="flex flex-col justify-center md:h-8">
+    <div className="flex flex-col justify-center md:h-6 md:min-w-40">
       {cell ? cell(tx) : <BankCardHolder tx={tx} />}
     </div>
   ),
