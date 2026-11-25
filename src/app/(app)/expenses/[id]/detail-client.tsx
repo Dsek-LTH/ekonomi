@@ -313,7 +313,7 @@ function BankSection({
   if (matched) {
     // In the allocation table's columns, but drawn as a statement line on a tinted ground so the bank's figure is told from ours at once.
     const remove = canMatch ? (
-      <Button variant="secondary" size="sm" loading={matching} onClick={() => onMatch(null)}>
+      <Button variant="secondary" size="xs" loading={matching} onClick={() => onMatch(null)}>
         {t("removeMatch")}
       </Button>
     ) : null;
@@ -337,7 +337,9 @@ function BankSection({
             </tr>
           </thead>
           <tbody>
-            <tr className="align-top">
+            {/* Top-aligned on a phone, where the first cell carries a second line (date and
+                button); one centred line from sm. */}
+            <tr className="align-top sm:align-middle">
               <td className="rounded-l-control bg-surface py-2 pl-2.5 pr-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <PaymentIcon type="CARD" className="size-4 shrink-0" />
