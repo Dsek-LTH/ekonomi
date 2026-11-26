@@ -34,10 +34,7 @@ export function switchTheme(to: "light" | "dark", apply: () => void) {
     .then(() =>
       root.animate(
         {
-          clipPath: [
-            "inset(0 0 0 0)",
-            to === "dark" ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)",
-          ],
+          clipPath: ["inset(0 0 0 0)", to === "dark" ? "inset(0 0 0 100%)" : "inset(0 100% 0 0)"],
         },
         {
           duration: DURATION_MS,
