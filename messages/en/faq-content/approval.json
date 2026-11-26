@@ -49,107 +49,27 @@
         },
         {
           "t": "table",
-          "head": [
-            "Result unit",
-            "Prefix",
-            "Result owner"
-          ],
+          "head": ["Result unit", "Prefix", "Result owner"],
           "rows": [
-            [
-              "Aktivitetsutskottet",
-              "AKTU",
-              "Aktivitetsansvarig"
-            ],
-            [
-              "Cafémästeriet",
-              "CAFE",
-              "Cafémästaren"
-            ],
-            [
-              "Centralprocessutskottet",
-              "CPU",
-              "Processmästaren"
-            ],
-            [
-              "DELTA",
-              "DELT",
-              "Delta-general"
-            ],
-            [
-              "Framtidsutskottet",
-              "FRA",
-              "Framtidsordförande"
-            ],
-            [
-              "Informationsutskottet",
-              "INFU",
-              "Informationsansvarig"
-            ],
-            [
-              "Jubileumsgruppen",
-              "JUBI",
-              "Jubileumsgeneral"
-            ],
-            [
-              "Källarmästeriet",
-              "KAL",
-              "Källarmästaren"
-            ],
-            [
-              "Medaljelele-kommittén",
-              "MED",
-              "Övermarskalk"
-            ],
-            [
-              "Nollningsutskottet",
-              "NOLL",
-              "Øverphøs"
-            ],
-            [
-              "Näringslivsutskottet",
-              "NARU",
-              "Näringslivsansvarig"
-            ],
-            [
-              "Sexmästeriet",
-              "SEX",
-              "Sexmästaren"
-            ],
-            [
-              "Skattmästeriet",
-              "SKT",
-              "Skattmästaren"
-            ],
-            [
-              "Studierådet",
-              "SRD",
-              "Studierådsordförande"
-            ],
-            [
-              "Tackmästeriet",
-              "TACK",
-              "Tackmästaren"
-            ],
-            [
-              "Trivselrådet",
-              "TRI",
-              "Trivselmästaren"
-            ],
-            [
-              "Valberedningen",
-              "VAL",
-              "Valberedningsordförande"
-            ],
-            [
-              "Styrelsen",
-              "STYR",
-              "Ordförande"
-            ],
-            [
-              "Sektionen",
-              "SEKT",
-              "Firmatecknare"
-            ]
+            ["Aktivitetsutskottet", "AKTU", "Aktivitetsansvarig"],
+            ["Cafémästeriet", "CAFE", "Cafémästaren"],
+            ["Centralprocessutskottet", "CPU", "Processmästaren"],
+            ["DELTA", "DELT", "Delta-general"],
+            ["Framtidsutskottet", "FRA", "Framtidsordförande"],
+            ["Informationsutskottet", "INFU", "Informationsansvarig"],
+            ["Jubileumsgruppen", "JUBI", "Jubileumsgeneral"],
+            ["Källarmästeriet", "KAL", "Källarmästaren"],
+            ["Medaljelele-kommittén", "MED", "Övermarskalk"],
+            ["Nollningsutskottet", "NOLL", "Øverphøs"],
+            ["Näringslivsutskottet", "NARU", "Näringslivsansvarig"],
+            ["Sexmästeriet", "SEX", "Sexmästaren"],
+            ["Skattmästeriet", "SKT", "Skattmästaren"],
+            ["Studierådet", "SRD", "Studierådsordförande"],
+            ["Tackmästeriet", "TACK", "Tackmästaren"],
+            ["Trivselrådet", "TRI", "Trivselmästaren"],
+            ["Valberedningen", "VAL", "Valberedningsordförande"],
+            ["Styrelsen", "STYR", "Ordförande"],
+            ["Sektionen", "SEKT", "Firmatecknare"]
           ]
         }
       ]

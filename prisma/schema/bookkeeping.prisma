@@ -113,14 +113,14 @@ model Verification {
 // ROTATES on every use, so the new pair must be persisted on each refresh.
 // Token columns are encrypted at rest (lib/secrets.ts).
 model FortnoxConnection {
-  id            String   @id @default(cuid())
-  accessToken   String
-  refreshToken  String
-  expiresAt     DateTime // when the access token expires
-  scopes        String // space-delimited granted scopes
-  tokenType     String   @default("Bearer")
-  companyName   String? // from /3/companyinformation, for display
-  orgNumber     String? // organisationsnummer, personal logins are checked against it
+  id           String   @id @default(cuid())
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime // when the access token expires
+  scopes       String // space-delimited granted scopes
+  tokenType    String   @default("Bearer")
+  companyName  String? // from /3/companyinformation, for display
+  orgNumber    String? // organisationsnummer, personal logins are checked against it
 
   // Fortnox refused the last refresh (an invalid or revoked refresh token), and
   // what it said. The connection cannot recover from that by itself, so the

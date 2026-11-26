@@ -66,37 +66,13 @@
         },
         {
           "t": "table",
-          "head": [
-            "Cost center",
-            "Category",
-            "For example"
-          ],
+          "head": ["Cost center", "Category", "For example"],
           "rows": [
-            [
-              "ALKO01",
-              "Beer",
-              "Lager, sour beer"
-            ],
-            [
-              "ALKO02",
-              "Other fermented drink",
-              "Cider, fruit wines, mead"
-            ],
-            [
-              "ALKO03",
-              "Wine",
-              "At most 22 ‰, port, sherry, vermouth"
-            ],
-            [
-              "ALKO04",
-              "Spirits",
-              "Halmstad Crush, vodka, liqueurs"
-            ],
-            [
-              "ALKO05",
-              "Alcohol-like products",
-              "Alcoholic ice cream"
-            ]
+            ["ALKO01", "Beer", "Lager, sour beer"],
+            ["ALKO02", "Other fermented drink", "Cider, fruit wines, mead"],
+            ["ALKO03", "Wine", "At most 22 ‰, port, sherry, vermouth"],
+            ["ALKO04", "Spirits", "Halmstad Crush, vodka, liqueurs"],
+            ["ALKO05", "Alcohol-like products", "Alcoholic ice cream"]
           ]
         },
         {
@@ -135,32 +111,12 @@
         },
         {
           "t": "table",
-          "head": [
-            "Cost center",
-            "Amount",
-            "Comment"
-          ],
+          "head": ["Cost center", "Amount", "Comment"],
           "rows": [
-            [
-              "ALKO01",
-              "55.60 kr",
-              "Beer (deposit included)"
-            ],
-            [
-              "ALKO02",
-              "17.90 kr",
-              "Other fermented drink (deposit included)"
-            ],
-            [
-              "ALKO03",
-              "209.00 kr",
-              "Wine"
-            ],
-            [
-              "ALKO04",
-              "207.90 kr",
-              "Spirits (deposit included)"
-            ]
+            ["ALKO01", "55.60 kr", "Beer (deposit included)"],
+            ["ALKO02", "17.90 kr", "Other fermented drink (deposit included)"],
+            ["ALKO03", "209.00 kr", "Wine"],
+            ["ALKO04", "207.90 kr", "Spirits (deposit included)"]
           ]
         }
       ]

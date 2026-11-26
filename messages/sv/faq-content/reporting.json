@@ -66,37 +66,13 @@
         },
         {
           "t": "table",
-          "head": [
-            "Kostnadsställe",
-            "Kategori",
-            "Till exempel"
-          ],
+          "head": ["Kostnadsställe", "Kategori", "Till exempel"],
           "rows": [
-            [
-              "ALKO01",
-              "Öl",
-              "Bärs, suröl"
-            ],
-            [
-              "ALKO02",
-              "Annan jäst dryck",
-              "Cider, fruktviner, mjöd"
-            ],
-            [
-              "ALKO03",
-              "Vin",
-              "Högst 22 ‰, portvin, sherry, vermouth"
-            ],
-            [
-              "ALKO04",
-              "Spritdryck",
-              "Halmstad Crush, vodka, likörer"
-            ],
-            [
-              "ALKO05",
-              "Alkoholdrycksliknande preparat",
-              "Alkoglass"
-            ]
+            ["ALKO01", "Öl", "Bärs, suröl"],
+            ["ALKO02", "Annan jäst dryck", "Cider, fruktviner, mjöd"],
+            ["ALKO03", "Vin", "Högst 22 ‰, portvin, sherry, vermouth"],
+            ["ALKO04", "Spritdryck", "Halmstad Crush, vodka, likörer"],
+            ["ALKO05", "Alkoholdrycksliknande preparat", "Alkoglass"]
           ]
         },
         {
@@ -135,32 +111,12 @@
         },
         {
           "t": "table",
-          "head": [
-            "Kostnadsställe",
-            "Belopp",
-            "Kommentar"
-          ],
+          "head": ["Kostnadsställe", "Belopp", "Kommentar"],
           "rows": [
-            [
-              "ALKO01",
-              "55,60 kr",
-              "Öl (inklusive pant)"
-            ],
-            [
-              "ALKO02",
-              "17,90 kr",
-              "Annan jäst dryck (inklusive pant)"
-            ],
-            [
-              "ALKO03",
-              "209,00 kr",
-              "Vin"
-            ],
-            [
-              "ALKO04",
-              "207,90 kr",
-              "Spritdryck (inklusive pant)"
-            ]
+            ["ALKO01", "55,60 kr", "Öl (inklusive pant)"],
+            ["ALKO02", "17,90 kr", "Annan jäst dryck (inklusive pant)"],
+            ["ALKO03", "209,00 kr", "Vin"],
+            ["ALKO04", "207,90 kr", "Spritdryck (inklusive pant)"]
           ]
         }
       ]
