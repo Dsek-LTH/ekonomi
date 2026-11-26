@@ -12,10 +12,17 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     where: { id },
     select: {
       authorId: true,
+      // On an account, or on a line (lineItem's account): one of the two is set.
       account: { select: { budgetCostCenter: { select: { budgetId: true } } } },
+      lineItem: {
+        select: { account: { select: { budgetCostCenter: { select: { budgetId: true } } } } },
+      },
     },
   });
   if (!comment) return fail(404, "budget.commentNotFound");
+  const budgetId =
+    comment.account?.budgetCostCenter.budgetId ??
+    comment.lineItem?.account.budgetCostCenter.budgetId;
 
   // Your own comment, or an admin clearing up someone else's.
   if (comment.authorId !== g.actor.id && !isAdmin(g.actor.capabilities)) {
@@ -23,6 +30,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   }
 
   await prisma.budgetComment.delete({ where: { id } });
-  announceBudgetChange(comment.account.budgetCostCenter.budgetId);
+  if (budgetId) announceBudgetChange(budgetId);
   return new Response(null, { status: 204 });
 }

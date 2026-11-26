@@ -5,7 +5,13 @@ import { prisma } from "@/lib/server/db";
 import { resultUnitNameForCode, getPrefixes } from "@/lib/server/result-units";
 import { evaluate } from "@/lib/budget/eval";
 import { evaluatorInputs } from "@/lib/budget/inputs";
-import { toEvaluated, type BudgetPayload, type EvaluatedBudgetPayload } from "@/lib/budget/payload";
+import {
+  isCommentField,
+  toEvaluated,
+  type BudgetPayload,
+  type Comment,
+  type EvaluatedBudgetPayload,
+} from "@/lib/budget/payload";
 import { EXTRA_COLUMN_KEYS } from "@/lib/budget/grid";
 import { effectiveKind } from "@/lib/budget";
 import type { CompareSheet } from "@/lib/budget/compare";
@@ -19,6 +25,28 @@ export interface BudgetSummary {
   adoptedAt: string | null;
   createdAt: string;
   lockedAt: string | null;
+}
+
+// A sheet's comments as the loader reads them, on accounts and on lines alike.
+const COMMENTS = {
+  orderBy: { createdAt: "asc" },
+  include: { author: { select: { name: true, id: true } } },
+} as const;
+
+function commentOf(c: {
+  id: string;
+  body: string;
+  createdAt: Date;
+  field: string | null;
+  author: { id: string; name: string };
+}): Comment {
+  return {
+    id: c.id,
+    body: c.body,
+    createdAt: c.createdAt.toISOString(),
+    author: { id: c.author.id, name: c.author.name },
+    field: isCommentField(c.field) ? c.field : null,
+  };
 }
 
 /** Every budget, shallow and flat (same-year budgets are siblings). Shared by the list page and GET /api/budgets. */
@@ -92,11 +120,8 @@ export async function getEvaluatedBudget(
             include: {
               // The name is the chart's, synced from Fortnox.
               account: { select: { name: true } },
-              lineItems: { orderBy: { sortOrder: "asc" } },
-              comments: {
-                orderBy: { createdAt: "asc" },
-                include: { author: { select: { name: true, id: true } } },
-              },
+              lineItems: { orderBy: { sortOrder: "asc" }, include: { comments: COMMENTS } },
+              comments: COMMENTS,
             },
           },
         },
@@ -173,13 +198,9 @@ export async function getEvaluatedBudget(
           values: (li.values ?? {}) as Record<string, string>,
           quantity: li.quantity,
           unitPrice: li.unitPrice,
+          comments: li.comments.map(commentOf),
         })),
-        comments: acct.comments.map((c) => ({
-          id: c.id,
-          body: c.body,
-          createdAt: c.createdAt.toISOString(),
-          author: { id: c.author.id, name: c.author.name },
-        })),
+        comments: acct.comments.map(commentOf),
       })),
     })),
     changes: budget.changes.map((ch) => ({

@@ -31,10 +31,15 @@ describe("cell values", () => {
     expect(valueOf("100%")).toBe(kr(1));
   });
 
-  it("treats an empty or non-numeric cell as unresolved", () => {
+  it("treats an empty Belopp as zero, not as an error", () => {
     expect(valueOf("")).toBe(0);
+    expect(evaluate([], [line("")]).badLineItems).toEqual([]);
+    expect(evaluate([], [line("  ")]).badLineItems).toEqual([]);
+  });
+
+  it("treats a non-numeric cell as unresolved", () => {
     expect(valueOf("ungefär 300")).toBe(0);
-    expect(evaluate([], [line("")]).badLineItems).toEqual(["li1"]);
+    expect(evaluate([], [line("ungefär 300")]).badLineItems).toEqual(["li1"]);
     expect(evaluate([], [line("350")]).badLineItems).toEqual([]);
   });
 });

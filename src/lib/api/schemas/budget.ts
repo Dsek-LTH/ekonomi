@@ -2,6 +2,7 @@
 // (/api/budget-sheets, /api/budget-accounts, /api/budget-line-items,
 // /api/budget-variables, /api/budget-comments) that hang off it.
 import { z } from "zod";
+import { COMMENT_FIELDS } from "@/lib/budget/payload";
 import { Clearable, Id, IsoDate, NonEmpty, Trimmed, UpperCode, Year } from "./common";
 
 const AccountKind = z.enum(["INCOME", "COST"]);
@@ -73,7 +74,8 @@ export type CreateLineItem = z.infer<typeof CreateLineItem>;
 
 /** PATCH /api/budget-line-items/[id]. */
 export const PatchLineItem = z.object({
-  description: NonEmpty.optional(),
+  // May be emptied, as a row may be made without one (CreateLineItem), e.g. by moving cut cells.
+  description: Trimmed.optional(),
   expression: Trimmed.optional(),
   sortOrder: z.int().optional(),
   // The "antal × á-pris" form. Both are expression strings like `expression`
@@ -86,6 +88,49 @@ export const PatchLineItem = z.object({
 });
 export type PatchLineItem = z.infer<typeof PatchLineItem>;
 
+/**
+ * POST /api/budgets/[id]/cells: a block paste, all or none. `lines` are cells written on
+ * existing lines; `create` are new lines at the end of an account, for values that ran past
+ * its last line.
+ */
+export const PatchCells = z
+  .object({
+    lines: z
+      .array(
+        z.object({
+          id: Id,
+          description: Trimmed.optional(),
+          expression: Trimmed.optional(),
+        }),
+      )
+      .max(1000)
+      .default([]),
+    create: z
+      .array(z.object({ accountId: Id, description: Trimmed, expression: Trimmed }))
+      .max(1000)
+      .default([]),
+  })
+  .refine((b) => b.lines.length + b.create.length > 0, { message: "nothing to write" });
+export type PatchCells = z.infer<typeof PatchCells>;
+
+/** POST /api/budgets/[id]/lines/delete: several lines removed at once, all or none. */
+export const DeleteLines = z.object({ ids: z.array(Id).min(1).max(1000) });
+export type DeleteLines = z.infer<typeof DeleteLines>;
+
+/**
+ * POST /api/budgets/[id]/lines/restore: lines made again in one write (undoing a delete of
+ * several). `key` is the id the line had, so `orders` (each account's lines as they stood) can
+ * name the lines being made alongside those still there.
+ */
+export const RestoreLines = z.object({
+  lines: z
+    .array(z.object({ key: Id, accountId: Id, description: Trimmed, expression: Trimmed }))
+    .min(1)
+    .max(1000),
+  orders: z.array(z.object({ accountId: Id, ids: z.array(Id) })).default([]),
+});
+export type RestoreLines = z.infer<typeof RestoreLines>;
+
 /** PUT /api/budget-accounts/[id]/line-items/reorder. */
 export const ReorderLineItems = z.object({
   orderedIds: z.array(Id).default([]),
@@ -94,11 +139,18 @@ export type ReorderLineItems = z.infer<typeof ReorderLineItems>;
 
 /** POST /api/budgets/[id]/cost-centers/[ccId]/paste: copied rows or accounts, named by id (the server has the originals). */
 export const PasteIntoSheet = z.object({
-  /** Rows to append, and the account of this sheet to append them to. */
+  /** Rows to paste, and the account of this sheet to paste them into. */
   accountId: Id.optional(),
   lineItemIds: z.array(Id).default([]),
-  /** Accounts to bring over whole, merged into this sheet's own by code. */
+  /**
+   * A line of `accountId` to paste from: the rows overwrite it and the lines below it, and those
+   * that do not fit are added at the account's end. Without it they are all added at the end.
+   */
+  overwriteFrom: Id.optional(),
+  /** Accounts to bring over, merged into this sheet's own by code. */
   accountIds: z.array(Id).default([]),
+  /** Only these of the accounts' lines come with them. Without it, all of them. */
+  accountLineIds: z.array(Id).optional(),
 });
 export type PasteIntoSheet = z.infer<typeof PasteIntoSheet>;
 
@@ -122,6 +174,13 @@ export const BudgetCommentBody = z.object({
   body: NonEmpty,
 });
 export type BudgetCommentBody = z.infer<typeof BudgetCommentBody>;
+
+/** POST /api/budget-line-items/[id]/comments: on one of the line's cells. */
+export const BudgetLineCommentBody = z.object({
+  body: NonEmpty,
+  field: z.enum(COMMENT_FIELDS),
+});
+export type BudgetLineCommentBody = z.infer<typeof BudgetLineCommentBody>;
 
 /**
  * One account's share of a redaktionell ändring. `amount` is öre, or the string somebody typed ("1 234,50"), which

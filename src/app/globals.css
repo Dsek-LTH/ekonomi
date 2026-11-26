@@ -1182,10 +1182,10 @@ summary {
 .budget-grid input[data-cell]::selection {
   background-color: transparent;
 }
-/* Edit mode: the graphite box turns pink (the action colour) with a soft halo,
-   the blinking caret returns and the text selection is visible again. The colour
-   change is what separates the two states: pink with a halo in a sheet means
-   "you are typing here". */
+/* Edit mode: the graphite box turns pink (the action colour), the blinking caret
+   returns and the text selection is visible again. The colour alone separates the
+   two states: a pink box in a sheet means "you are typing here". No halo: one drawn
+   outside the cell lay over the neighbouring cells and their rules. */
 .is-editing input[data-cell]:focus {
   caret-color: auto;
 }
@@ -1194,8 +1194,6 @@ summary {
 }
 .is-editing :is(td, th):has(input[data-cell]:focus) {
   outline-color: var(--color-action-from);
-  /* halo, outside the box */
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-action-from) 20%, transparent);
 }
 
 /* ── Print ───────────────────────────────────────────────────────

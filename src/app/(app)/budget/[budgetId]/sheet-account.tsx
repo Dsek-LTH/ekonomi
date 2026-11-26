@@ -7,62 +7,66 @@ import { lineKeys, type JoinedAccount } from "@/lib/budget/compare";
 import type { ColumnDef } from "@/lib/budget/grid";
 import { cn } from "@/lib/ui/utils";
 import { Combobox } from "@/components/ui/combobox";
-import { DragHandle } from "@/components/ui/drag";
-import { SOFT_FILL, TEXT_HOVER } from "@/components/ui/button";
-import { IconComment } from "@/components/ui/icons";
+import { TEXT_HOVER } from "@/components/ui/button";
 import { fmt, fmtSigned } from "./budget-helpers";
-import {
-  withAccount,
-  withComment,
-  withoutAccount,
-  withoutComment,
-  withoutLine,
-} from "./patch-budget";
+import { withAccountCode, withoutAccount, withoutLine } from "./patch-budget";
 import { CompareCells } from "./sheet-cells";
 import { useSheet, type SheetValue } from "./sheet-context";
-import type { Account, Comment, LineItem } from "./budget-types";
+import type { Account, LineItem } from "./budget-types";
+import type { CommentField } from "@/lib/budget/payload";
+import { CellMark, type CommentTarget } from "./sheet-comments";
+import { headerKey } from "./use-range-select";
 
 // Every budget column is ruled off on its right except Belopp, the last: the actions beside it
 // are not a column of their own.
 const rule = (col: ColumnDef) => (col.key === "expression" ? "" : "border-r border-border/60");
 
-function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Account) {
+function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem) {
   const {
     badLine,
     ccCode,
-    draggingLineId,
+    editing,
+    heldCells,
+    comments,
     ev,
-    isAdmin,
     liUrl,
     renderCell,
     renderFormula,
-    startLineDrag,
-    t,
     tCol,
   } = sheet;
   const k = col.key;
+  // Beskrivning and Belopp take comments of their own: a pink corner, the thread on pointing.
+  const field: CommentField = k === "beskrivning" ? "description" : "expression";
+  const target: CommentTarget = { kind: "line", lineId: li.id, field };
+  const count = (li.comments ?? []).filter((c) => c.field === field).length;
+  // Beskrivning is the block's first column, Belopp its second (use-range-select.ts).
+  const rangeCol = field === "description" ? 0 : 1;
+  // Cut with ⌘X and waiting to be pasted: faded where it still is (framed in sheet-section.tsx).
+  const cut =
+    heldCells?.cut === true &&
+    heldCells.lines.includes(li.id) &&
+    rangeCol >= heldCells.left &&
+    rangeCol <= heldCells.right;
+  const commentProps = {
+    "data-comment-field": field,
+    "data-range-col": rangeCol,
+    onMouseEnter: count
+      ? (e: React.MouseEvent<HTMLElement>) => comments.hover(target, e.currentTarget)
+      : undefined,
+    onMouseLeave: count ? comments.leave : undefined,
+  };
   if (k === "konto")
-    return (
-      // Empty on a row with no number of its own, but for the drag grip on hover. The indent in
-      // Beskrivning already says which account the row belongs to.
-      <td key={k} className="border-r border-border/60 p-0">
-        <span className="flex items-center py-1 pl-1.5 pr-2">
-          {isAdmin && (
-            <DragHandle
-              onPointerDown={(e) => startLineDrag(e, account, li)}
-              className={cn(
-                "flex items-center text-faint hover:text-muted",
-                draggingLineId === li.id && "text-muted opacity-100",
-              )}
-              title={t("dragToReorder")}
-            />
-          )}
-        </span>
-      </td>
-    );
+    // Empty on a row with no number of its own. The indent in Beskrivning already says which
+    // account the row belongs to; the row is moved by its number in the margin.
+    return <td key={k} className="border-r border-border/60 p-0" />;
   if (k === "beskrivning")
     return (
-      <td key={k} className="border-r border-border/60 p-0">
+      <td
+        key={k}
+        className={cn("relative border-r border-border/60 p-0", cut && "opacity-50")}
+        {...commentProps}
+      >
+        <CellMark target={target} count={count} />
         {renderCell({
           id: li.id,
           field: "description",
@@ -77,7 +81,8 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
     );
   const val = ev.lineItems[li.id];
   return (
-    <td key={k} className="p-0 text-right">
+    <td key={k} className={cn("relative p-0 text-right", cut && "opacity-50")} {...commentProps}>
+      <CellMark target={target} count={count} />
       {renderFormula({
         id: li.id,
         field: "expression",
@@ -89,6 +94,7 @@ function lineCell(sheet: SheetValue, col: ColumnDef, li: LineItem, account: Acco
         url: liUrl(li.id),
         payload: (v) => ({ expression: v }),
         gated: true,
+        editing,
       })}
     </td>
   );
@@ -104,10 +110,11 @@ export function AccountBlock({ account }: { account: Account }) {
     api,
     record,
     badAccount,
-    canComment,
     ccCode,
+    range,
+    cutIds,
+    comments,
     columns,
-    commentDraft,
     compareAccounts,
     createLine,
     date,
@@ -118,28 +125,24 @@ export function AccountBlock({ account }: { account: Account }) {
     grid,
     gut,
     isAdmin,
-    isTicked,
     liUrl,
     liftRef,
     linesOf,
-    openComments,
-    setCommentDraft,
     setDraft,
-    setOpenComments,
     showCompare,
     t,
     tAlloc,
     tBook,
     tChanges,
     tCol,
-    tickBox,
-    totalCols,
-    userId,
+    pressRowNumber,
+    pressAccountNumber,
+    accountPicked,
   } = sheet;
   const accountKey = `${ccCode}:${account.accountCode}`;
+  const accountTarget: CommentTarget = { kind: "account", accountId: account.id };
   const total = ev.accounts[accountKey];
   const totalIncomplete = badAccount.has(accountKey);
-  const open = openComments.has(account.id);
   const d = draft(account.id);
   const incomeLike = effectiveKind(account.accountCode) === "INCOME";
 
@@ -199,13 +202,25 @@ export function AccountBlock({ account }: { account: Account }) {
       {/* Tinted: each account opens with a band holding its name and total, which sets the
           accounts apart as the Summa row under each one used to. */}
       <tr data-account-row={account.id} className="group bg-surface">
-        {gut(
-          grid.accountRow.get(`${ccCode}|${account.id}`),
-          isAdmin &&
-            tickBox("accounts", account.id, t("selectAccount", { code: account.accountCode })),
-        )}
+        {gut(grid.accountRow.get(`${ccCode}|${account.id}`), {
+          label: t("selectAccount", { code: account.accountCode }),
+          selected: accountPicked(account.id) || range.rowSelected(headerKey(account.id)),
+          account: true,
+          onPointerDown: (e) => pressAccountNumber(e, account),
+        })}
 
-        <td className="group relative border-r border-border/60 p-0 align-middle">
+        {/* The account's number is the cell its comments are pinned to. */}
+        <td
+          className="group relative border-r border-border/60 p-0 align-middle"
+          data-comment-field="account"
+          onMouseEnter={
+            account.comments.length
+              ? (e) => comments.hover(accountTarget, e.currentTarget)
+              : undefined
+          }
+          onMouseLeave={account.comments.length ? comments.leave : undefined}
+        >
+          <CellMark target={accountTarget} count={account.comments.length} />
           {isAdmin ? (
             <Combobox
               // Its own side only: swapping 3010 for 5010 under Intäkter would move it mid-edit.
@@ -216,11 +231,12 @@ export function AccountBlock({ account }: { account: Account }) {
                 // The code pulls the name with it (resolved from the chart), so take both from the
                 // answer and nothing else, since the account's rows are not in it.
                 api(`/api/budget-accounts/${account.id}`, "PATCH", { accountCode: v }, (b, data) =>
-                  withAccount(b, account.id, (a) => ({
-                    ...a,
-                    accountCode: (data as Account).accountCode,
-                    accountName: (data as Account).accountName,
-                  })),
+                  withAccountCode(
+                    b,
+                    account.id,
+                    (data as Account).accountCode,
+                    (data as Account).accountName,
+                  ),
                 );
               }}
               placeholder={tBook("accountPlaceholder")}
@@ -238,7 +254,12 @@ export function AccountBlock({ account }: { account: Account }) {
             </div>
           )}
         </td>
-        <td className="border-r border-border/60 px-3 py-1 text-sm" colSpan={columns.length - 2}>
+        <td
+          data-account-name
+          data-range-col={0}
+          className="border-r border-border/60 px-3 py-1 text-sm"
+          colSpan={columns.length - 2}
+        >
           <span className="flex items-baseline gap-2">
             <span className="min-w-0 truncate font-semibold">{account.accountName}</span>
             {adjTotal !== 0 && total !== undefined && (
@@ -255,6 +276,8 @@ export function AccountBlock({ account }: { account: Account }) {
         </td>
         {/* The account's total on its own row, as a subtotal reads in a spreadsheet. */}
         <td
+          data-account-total
+          data-range-col={1}
           className={cn(
             "px-2 py-1 text-right font-semibold tabular-nums",
             totalIncomplete && "text-warning",
@@ -268,35 +291,6 @@ export function AccountBlock({ account }: { account: Account }) {
         )}
         <td className="whitespace-nowrap px-1 text-left text-xs text-muted">
           <span className="flex items-center">
-            {canComment && (
-              <button
-                onClick={() =>
-                  setOpenComments((s) => {
-                    const n = new Set(s);
-                    if (n.has(account.id)) n.delete(account.id);
-                    else n.add(account.id);
-                    return n;
-                  })
-                }
-                title={t("comments")}
-                aria-label={t("commentsCount", { count: account.comments.length })}
-                aria-expanded={open}
-                className={cn(
-                  "flex items-center gap-1 rounded-control px-1 py-0.5 tabular-nums transition hover:text-foreground",
-                  // Open is a chosen state: the pink hue. Otherwise a text button's faint pink hover.
-                  open
-                    ? SOFT_FILL
-                    : cn(TEXT_HOVER, account.comments.length > 0 && "text-foreground"),
-                  // An account with nothing said about it shows the button only when pointed at.
-                  !open &&
-                    account.comments.length === 0 &&
-                    "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-                )}
-              >
-                <IconComment className="size-4" />
-                {account.comments.length > 0 && account.comments.length}
-              </button>
-            )}
             {isAdmin &&
               del(
                 () =>
@@ -321,21 +315,25 @@ export function AccountBlock({ account }: { account: Account }) {
             if (el && draggingLineId === li.id) liftRef.current = el;
           }}
           className={cn(
-            "group *:border-t transition-colors hover:bg-hover",
+            "group *:border-t transition-colors",
+            // While a block of cells is selected its box is the only tint: a hovered row under
+            // it would read as a second, different selection.
+            !range.multi && "hover:bg-hover",
+            // Cut and waiting to be pasted somewhere: still here until then, but on its way.
+            cutIds.has(li.id) && "opacity-50",
             // Lifted: opaque so rows do not read through it, and outlined. `pointer-events-none`
             // lets the drag see the sheet underneath. `transition-none`: transition-colors
             // animates outline-color too, from currentColor (near white in dark), which flashed.
             draggingLineId === li.id &&
               "pointer-events-none relative z-10 bg-background outline outline-1 outline-border transition-none",
-            // Ticked for copying: chosen, so the pink hue rather than grey.
-            isTicked("rows", li.id) && SOFT_FILL,
           )}
         >
-          {gut(
-            grid.lineRow.get(`${ccCode}|${li.id}`),
-            isAdmin && tickBox("rows", li.id, t("selectRow")),
-          )}
-          {columns.map((col) => lineCell(sheet, col, li, account))}
+          {gut(grid.lineRow.get(`${ccCode}|${li.id}`), {
+            label: isAdmin ? t("selectOrMoveRow") : t("selectRow"),
+            selected: range.rowSelected(li.id),
+            onPointerDown: (e) => pressRowNumber(e, account, li),
+          })}
+          {columns.map((col) => lineCell(sheet, col, li))}
           {showCompare && (
             <CompareCells
               other={cmpLines.get(keys[i])?.values[1]}
@@ -471,61 +469,6 @@ export function AccountBlock({ account }: { account: Account }) {
           })}
           {actualPad}
           <td />
-        </tr>
-      )}
-
-      {open && (
-        <tr className="bg-surface">
-          {/* sheet-field: a form field, not a sheet cell: keeps the focus ring and draws no cell box. */}
-          <td colSpan={totalCols} className="sheet-field px-4 py-3">
-            <div className="space-y-2">
-              {account.comments.length === 0 && (
-                <p className="text-xs text-muted">{t("noComments")}</p>
-              )}
-              {account.comments.map((cm) => (
-                <div key={cm.id} className="group flex items-start gap-2 text-sm">
-                  <span className="shrink-0 font-medium">{cm.author.name}</span>
-                  <span className="flex-1 text-muted">{cm.body}</span>
-                  {(cm.author.id === userId || isAdmin) && (
-                    <span className="shrink-0">
-                      {del(
-                        () =>
-                          api(`/api/budget-comments/${cm.id}`, "DELETE", undefined, (b) =>
-                            withoutComment(b, cm.id),
-                          ),
-                        t("removeComment"),
-                      )}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {canComment && (
-                <input
-                  value={commentDraft[account.id] ?? ""}
-                  onChange={(e) =>
-                    setCommentDraft((m) => ({
-                      ...m,
-                      [account.id]: e.target.value,
-                    }))
-                  }
-                  onKeyDown={async (e) => {
-                    if (e.key !== "Enter") return;
-                    const body = (commentDraft[account.id] ?? "").trim();
-                    if (!body) return;
-                    const ok = await api(
-                      `/api/budget-accounts/${account.id}/comments`,
-                      "POST",
-                      { body },
-                      (b, data) => withComment(b, account.id, data as Comment),
-                    );
-                    if (ok) setCommentDraft((m) => ({ ...m, [account.id]: "" }));
-                  }}
-                  placeholder={t("commentPlaceholder")}
-                  className="w-full rounded-control border border-border-control bg-background px-3 py-1.5 text-sm"
-                />
-              )}
-            </div>
-          </td>
         </tr>
       )}
     </tbody>

@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  withAccountCode,
+  withComment,
+  withoutComment,
   withLine,
   withLineOrder,
   withNewAccount,
   withoutAccount,
   withoutLine,
 } from "./patch-budget";
-import type { Account, Budget, LineItem } from "./budget-types";
+import type { Account, Budget, Comment, LineItem } from "./budget-types";
 
 // Stand-ins for what a write says it did. `withLineOrder` must match the reorder endpoint
 // (which also moves rows between accounts), or the sheet shows an arrangement the database
@@ -22,6 +25,7 @@ const line = (id: string): LineItem => ({
 
   quantity: null,
   unitPrice: null,
+  comments: [],
 });
 
 const account = (id: string, lineIds: string[]): Account => ({
@@ -92,5 +96,60 @@ describe("the rest", () => {
       "4010",
       "5800",
     ]);
+  });
+
+  it("moves an account to its new place when its number changes", () => {
+    const sheet = budgetOf(account("4010", []), account("5410", []), account("5800", []));
+    const changed = withAccountCode(sheet, "4010", "6110", "Kontorsmaterial");
+    expect(changed.costCenters[0].accounts.map((a) => a.accountCode)).toEqual([
+      "5410",
+      "5800",
+      "6110",
+    ]);
+    expect(changed.costCenters[0].accounts[2]).toMatchObject({
+      id: "4010",
+      accountName: "Kontorsmaterial",
+    });
+  });
+});
+
+describe("comments", () => {
+  const comment = (id: string, field: Comment["field"] = null): Comment => ({
+    id,
+    body: id,
+    createdAt: "2026-11-26T12:00:00.000Z",
+    author: { id: "u", name: "U" },
+    field,
+  });
+  const lineComments = (b: Budget, lineId: string) =>
+    b.costCenters[0].accounts.flatMap((a) => a.lineItems).find((l) => l.id === lineId)?.comments;
+
+  it("puts a cell's comment on its line, keeping the cell it names", () => {
+    const b = withComment(
+      budgetOf(account("A", ["1", "2"])),
+      { lineId: "2" },
+      comment("c", "expression"),
+    );
+    expect(lineComments(b, "2")).toEqual([comment("c", "expression")]);
+    expect(lineComments(b, "1")).toEqual([]);
+    expect(b.costCenters[0].accounts[0].comments).toEqual([]);
+  });
+
+  it("puts an account's comment on the account", () => {
+    const b = withComment(budgetOf(account("A", ["1"])), { accountId: "A" }, comment("c"));
+    expect(b.costCenters[0].accounts[0].comments).toEqual([comment("c")]);
+    expect(lineComments(b, "1")).toEqual([]);
+  });
+
+  it("takes a comment off wherever it was", () => {
+    let b = withComment(
+      budgetOf(account("A", ["1"])),
+      { lineId: "1" },
+      comment("on-line", "description"),
+    );
+    b = withComment(b, { accountId: "A" }, comment("on-account"));
+    b = withoutComment(withoutComment(b, "on-line"), "on-account");
+    expect(lineComments(b, "1")).toEqual([]);
+    expect(b.costCenters[0].accounts[0].comments).toEqual([]);
   });
 });

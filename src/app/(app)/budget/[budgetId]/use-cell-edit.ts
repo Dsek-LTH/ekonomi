@@ -3,8 +3,17 @@
 // the arrows move a selected cell, and also an edit begun by typing (which saves it, since
 // leaving a cell commits it); an edit begun by Enter, F2 or double-click keeps the arrows for
 // the caret. Enter ends an edit and moves down, Shift+Enter up. Tab is the browser's own.
+// Shift+arrow on a selected cell grows a block of cells instead, and Escape drops the block
+// (use-range-select.ts).
 // Spread the returned props onto the element wrapping the tables.
-import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { cn } from "@/lib/ui/utils";
 
 interface CellEditProps {
@@ -90,7 +99,18 @@ function revealCell(container: HTMLElement, input: HTMLElement) {
   else window.scrollBy({ top: -covered });
 }
 
-export function useCellEdit(className?: string): CellEditProps {
+/** The block of cells a sheet keeps (use-range-select.ts), reached late: it is made after this hook. */
+export interface RangeKeys {
+  extend: (dir: Direction) => boolean;
+  collapse: () => boolean;
+  /** Delete or Backspace on what is chosen (rows, or a block of cells): emptied. False when nothing is. */
+  remove: () => boolean;
+}
+
+export function useCellEdit(
+  className?: string,
+  range?: RefObject<RangeKeys | null>,
+): CellEditProps {
   const [editing, setEditing] = useState(false);
   // How the edit began: typing over the cell lets the arrows leave it, as in Excel.
   const typedOver = useRef(false);
@@ -131,6 +151,19 @@ export function useCellEdit(className?: string): CellEditProps {
       }
       return;
     }
+    // Delete or Backspace with rows or a block chosen acts on those, from a selected cell or
+    // from a tick box, not on the one cell. Text being typed (a blank row, the comment box) keeps
+    // its keys.
+    if ((e.key === "Delete" || e.key === "Backspace") && !editing && range?.current) {
+      const typing =
+        t instanceof HTMLTextAreaElement ||
+        (t instanceof HTMLInputElement && t.type !== "checkbox" && t.dataset.cell === undefined);
+      if (!typing && range.current.remove()) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
     if (!t.dataset.cell) return; // not a sheet cell (the comment box, say)
 
     if (editing) {
@@ -151,7 +184,11 @@ export function useCellEdit(className?: string): CellEditProps {
     // ⌘V on a selected cell is the cell's own (onPaste in use-budget-cells.tsx).
     if (e.metaKey || e.ctrlKey || e.altKey) return; // leave shortcuts alone
     if (e.key === "Tab") return; // native focus order owns movement
-    if (dir) {
+    if (dir && e.shiftKey && range?.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      range.current.extend(dir);
+    } else if (dir) {
       e.preventDefault();
       e.stopPropagation();
       move(container, input, dir);
@@ -164,6 +201,7 @@ export function useCellEdit(className?: string): CellEditProps {
     else {
       e.preventDefault();
       e.stopPropagation();
+      if (e.key === "Escape") range?.current?.collapse();
     } // ignore other keys while just selected
   }
 

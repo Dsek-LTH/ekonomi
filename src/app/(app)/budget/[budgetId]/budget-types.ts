@@ -23,8 +23,10 @@ export interface Draft {
 
 /** What has been copied, by id (the server has the rows). Held on the page because a sheet unmounts when you leave it. `label` is shown in the paste hint ("3 rader"). */
 export type BudgetClip =
-  | { kind: "rows"; ids: string[]; label: string }
-  | { kind: "accounts"; ids: string[]; label: string };
+  /** `cut`: pasting moves the rows rather than copying them, and the clip is then spent. */
+  | { kind: "rows"; ids: string[]; label: string; cut?: boolean }
+  /** `lineIds`: only these of the accounts' lines go with them (picked in a block). Else all. */
+  | { kind: "accounts"; ids: string[]; label: string; lineIds?: string[] };
 
 /**
  * A write and what it does to the budget on screen. `apply` patches the budget in place
@@ -74,5 +76,10 @@ export interface FormulaArgs {
   gated?: boolean;
   /** What `computed` is: money in öre (the default) or a plain number such as a headcount. */
   unit?: "ore" | "scalar";
+  /**
+   * Whether the sheet is in edit mode (use-cell-edit.ts). Given, a selected cell shows its value
+   * and only an edit shows the formula. Left out, selecting shows the formula (Variabler).
+   */
+  editing?: boolean;
 }
 export type FormulaFn = (a: FormulaArgs) => ReactNode;

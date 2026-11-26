@@ -28,6 +28,28 @@ export type UndoStep =
       cell?: string;
     }
   | {
+      /** Several steps as one (a block paste that also made lines): undone and redone together. */
+      kind: "group";
+      steps: UndoStep[];
+    }
+  | {
+      /** Many cells written as one edit (a block paste): undone and redone together. */
+      kind: "fields";
+      steps: { url: string; before: Payload; after: Payload }[];
+    }
+  | {
+      /**
+       * Several lines made or deleted as one (a paste that made lines, Ta bort on several):
+       * deleted or made again in one request each way.
+       */
+      kind: "lines";
+      /** True for lines made, false for lines deleted. */
+      created: boolean;
+      lines: { accountId: string; lineId: string; body: LineBody }[];
+      /** Each account's line ids, in order, as they were with these lines in place. */
+      orders: { accountId: string; ids: string[] }[];
+    }
+  | {
       kind: "line";
       /** True for a line made, false for one deleted. */
       created: boolean;
@@ -41,32 +63,54 @@ export type UndoStep =
 export interface UndoHandlers {
   /** Write a cell's value the way an edit does, without recording it. */
   applyField: (url: string, payload: Payload) => Promise<void>;
+  /** Write many cells in one request, without recording it. Each entry is a line's url and fields. */
+  applyFields: (writes: { url: string; payload: Payload }[]) => Promise<void>;
   /** Make a line in `accountId`; the new line's id, or null if refused. */
   createLine: (accountId: string, body: LineBody) => Promise<string | null>;
   deleteLine: (lineId: string) => Promise<boolean>;
   /** Order the account's lines; `made` is a line just made, kept even if not yet on screen. */
   reorder: (accountId: string, ids: string[], made: string) => Promise<boolean>;
+  /** Delete many lines in one request. */
+  deleteLines: (lineIds: string[]) => Promise<boolean>;
+  /** Make many lines again in one request, each account put back in order. Old id to new, or null. */
+  restoreLines: (
+    lines: { accountId: string; lineId: string; body: LineBody }[],
+    orders: { accountId: string; ids: string[] }[],
+  ) => Promise<Record<string, string> | null>;
 }
 
 const LIMIT = 100;
 
 /** A line made again has a new id: the steps still naming the old one, made to name the new one. */
 export function repointSteps(steps: UndoStep[], from: string, to: string): UndoStep[] {
+  const url = (u: string) =>
+    u.endsWith(`/budget-line-items/${from}`) ? u.slice(0, -from.length) + to : u;
+  const id = (x: string) => (x === from ? to : x);
   return steps.map((s) =>
-    s.kind === "line"
-      ? {
-          ...s,
-          lineId: s.lineId === from ? to : s.lineId,
-          order: s.order.map((id) => (id === from ? to : id)),
-        }
-      : {
-          ...s,
-          // A line's url ends with its id (`/api/budget-line-items/<id>`): matched whole.
-          url: s.url.endsWith(`/budget-line-items/${from}`)
-            ? s.url.slice(0, -from.length) + to
-            : s.url,
-          cell: s.cell?.startsWith(`${from}:`) ? to + s.cell.slice(from.length) : s.cell,
-        },
+    s.kind === "group"
+      ? { ...s, steps: repointSteps(s.steps, from, to) }
+      : s.kind === "lines"
+        ? {
+            ...s,
+            lines: s.lines.map((l) => ({ ...l, lineId: id(l.lineId) })),
+            orders: s.orders.map((o) => ({ ...o, ids: o.ids.map(id) })),
+          }
+        : s.kind === "fields"
+          ? { ...s, steps: s.steps.map((f) => ({ ...f, url: url(f.url) })) }
+          : s.kind === "line"
+            ? {
+                ...s,
+                lineId: s.lineId === from ? to : s.lineId,
+                order: s.order.map((id) => (id === from ? to : id)),
+              }
+            : {
+                ...s,
+                // A line's url ends with its id (`/api/budget-line-items/<id>`): matched whole.
+                url: s.url.endsWith(`/budget-line-items/${from}`)
+                  ? s.url.slice(0, -from.length) + to
+                  : s.url,
+                cell: s.cell?.startsWith(`${from}:`) ? to + s.cell.slice(from.length) : s.cell,
+              },
   );
 }
 
@@ -109,6 +153,59 @@ export function useUndo(handlers: UndoHandlers) {
   /** Apply `step` forwards (redo) or backwards (undo). */
   async function apply(step: UndoStep, back: boolean): Promise<boolean> {
     const h = live.current;
+    if (step.kind === "lines") {
+      // Undoing lines made deletes them, as does redoing lines deleted; the other two remake them.
+      if (step.created === back) return h.deleteLines(step.lines.map((l) => l.lineId));
+      const made = await h.restoreLines(step.lines, step.orders);
+      if (!made) return false;
+      // The lines have new ids: this step and every other naming the old ones follow them.
+      for (const [old, now] of Object.entries(made)) {
+        step.lines = step.lines.map((l) => (l.lineId === old ? { ...l, lineId: now } : l));
+        step.orders = step.orders.map((o) => ({
+          ...o,
+          ids: o.ids.map((x) => (x === old ? now : x)),
+        }));
+        repoint(old, now);
+      }
+      return true;
+    }
+    if (step.kind === "group") {
+      // Backwards in reverse: the lines made are deleted before the cells are written back.
+      const order = back ? [...step.steps].reverse() : [...step.steps];
+      for (let i = 0; i < order.length; i++) {
+        const sub = order[i];
+        const was =
+          sub.kind === "line"
+            ? [sub.lineId]
+            : sub.kind === "lines"
+              ? sub.lines.map((l) => l.lineId)
+              : [];
+        if (!(await apply(sub, back))) return false;
+        const now =
+          sub.kind === "line"
+            ? [sub.lineId]
+            : sub.kind === "lines"
+              ? sub.lines.map((l) => l.lineId)
+              : [];
+        // A line made again has a new id. The steps after it in this group (off the stacks while
+        // the group runs, so `repoint` does not reach them) are pointed at it here, or a later
+        // one would name the old id and miss the line just made.
+        was.forEach((old, k) => {
+          if (now[k] === old) return;
+          const rest = repointSteps(order.slice(i + 1), old, now[k]);
+          order.splice(i + 1, rest.length, ...rest);
+        });
+      }
+      // Kept in the group's own order, with any new ids, for the next undo or redo.
+      step.steps = back ? order.reverse() : order;
+      return true;
+    }
+    if (step.kind === "fields") {
+      await h.applyFields(
+        step.steps.map((f) => ({ url: f.url, payload: back ? f.before : f.after })),
+      );
+      return true;
+    }
     if (step.kind === "field") {
       await h.applyField(step.url, back ? step.before : step.after);
       if (step.cell) {

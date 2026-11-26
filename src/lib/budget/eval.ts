@@ -327,7 +327,8 @@ export function evaluate(
       // Stored in kronor from the rounded öre, so a formula reads the figure the sheet shows.
       const key = `${li.id}:expression`;
       cells.set(key, ore / 100);
-      if (!Number.isFinite(kr)) badCells.add(key);
+      // An empty Belopp is a zero, not a failure: a row is often written before its amount.
+      if (!Number.isFinite(kr) && (li.expression ?? "").trim()) badCells.add(key);
       for (const colId of extraColumnKeys) {
         const cv = evalCell(li.values?.[colId], ctx);
         const colKey = `${li.id}:${colId}`;
@@ -388,7 +389,8 @@ export function evaluate(
   for (const li of lineItems) {
     ctx.self = { ...splitKey(li.accountKey), id: li.id };
     const value = evalCell(li.expression, ctx);
-    if (!Number.isFinite(value)) badLineItems.push(li.id);
+    // An empty Belopp is a zero, as in the passes above.
+    if (!Number.isFinite(value) && (li.expression ?? "").trim()) badLineItems.push(li.id);
   }
   ctx.self = undefined;
   const badVariables: string[] = [];

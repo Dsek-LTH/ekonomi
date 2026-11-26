@@ -1,9 +1,10 @@
 // Shared by the account block and the section heading rows: a comparison pair is drawn against a
 // line, an account total and a section total.
-import { diffClass, fmt, fmtSigned } from "./budget-helpers";
+import { compareDiff, diffClass, fmt, fmtSigned } from "./budget-helpers";
+import { useSheet } from "./sheet-context";
 import { cn } from "@/lib/ui/utils";
 
-/** The other budget's figure and the difference from ours, as two cells. `incomeLike` decides which way a difference is good (diffClass). */
+/** The other side's figure and the difference (compareDiff), as two cells. `incomeLike` decides which way a difference is good (diffClass). */
 export function CompareCells({
   other,
   own,
@@ -15,7 +16,9 @@ export function CompareCells({
   incomeLike: boolean;
   strong?: boolean;
 }) {
-  const diff = other === undefined ? undefined : other - (own ?? 0);
+  const { compare } = useSheet();
+  const diff =
+    other === undefined ? undefined : compareDiff(own ?? 0, other, compare?.vsActuals ?? false);
 
   return (
     <>

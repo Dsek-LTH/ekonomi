@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   CHANGES,
+  landsInside,
+  compareDiff,
+  diffClass,
   editFormula,
   fmt,
   RAMBUDGET,
@@ -127,5 +130,35 @@ describe("editFormula", () => {
     "=TROJA_POLICY",
   ])("%s comes back unchanged when saved untouched", (stored) => {
     expect(normalizeFormula(editFormula(stored))).toBe(stored);
+  });
+});
+
+describe("compareDiff", () => {
+  it("is the outcome minus the budget against Utfall", () => {
+    expect(compareDiff(100, 130, true)).toBe(30);
+  });
+
+  it("is this budget minus the other against another budget, green when this one does better", () => {
+    // The screenshot's row: +216 522,40 here against -39 137,50 there.
+    const diff = compareDiff(216522.4, -39137.5, false);
+    expect(diff).toBeCloseTo(255659.9);
+    expect(diffClass(diff, true)).toBe("text-success");
+  });
+});
+
+describe("landsInside", () => {
+  const held = ["b", "c", "d"];
+
+  it("is true for a row dropped between copied rows", () => {
+    expect(landsInside(["a", "b", "x", "c", "d"], "x", held)).toBe(true);
+  });
+
+  it("is false for a row dropped above or below them", () => {
+    expect(landsInside(["x", "a", "b", "c", "d"], "x", held)).toBe(false);
+    expect(landsInside(["a", "b", "c", "d", "x"], "x", held)).toBe(false);
+  });
+
+  it("is false where none of them are", () => {
+    expect(landsInside(["p", "x", "q"], "x", held)).toBe(false);
   });
 });

@@ -33,6 +33,8 @@ interface CompareOption {
 export interface Comparison {
   joined: Joined;
   otherLabel: string | null;
+  /** Held up against the year's outcome rather than another budget (decides compareDiff). */
+  vsActuals: boolean;
 }
 
 export function useComparison(budget: Budget) {
@@ -74,14 +76,18 @@ export function useComparison(budget: Budget) {
         sheets: budget.actuals ?? [],
         vars: {},
       };
-      return { joined: joinSnapshots([own, actuals]), otherLabel: label };
+      return { joined: joinSnapshots([own, actuals]), otherLabel: label, vsActuals: true };
     }
     // Still loading, or the budget went away: show this budget alone, not half a comparison.
     if (target && other && other.id === target) {
       const snapshot = snapshotOf(other, budgetLabel(other));
-      return { joined: joinSnapshots([own, snapshot]), otherLabel: snapshot.label };
+      return {
+        joined: joinSnapshots([own, snapshot]),
+        otherLabel: snapshot.label,
+        vsActuals: false,
+      };
     }
-    return { joined: joinSnapshots([own]), otherLabel: null };
+    return { joined: joinSnapshots([own]), otherLabel: null, vsActuals: false };
   }, [budget, target, other]);
 
   return { target, setTarget, options, comparison };

@@ -205,3 +205,64 @@ export function MenuLabel({ children }: { children: React.ReactNode }) {
 export function MenuNote({ children }: { children: React.ReactNode }) {
   return <p className="px-2.5 pb-1.5 pt-1 text-xs leading-snug text-muted">{children}</p>;
 }
+
+/**
+ * A menu at the pointer, for a right-click. The same panel and items as `Menu`; it closes on a
+ * pick, a press outside, Escape, or a scroll (it is pinned to a point, not to an element).
+ */
+export function ContextMenu({
+  x,
+  y,
+  label,
+  onClose,
+  children,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDismissOnOutside(true, panelRef, onClose);
+  useEscape(true, onClose);
+
+  const latest = useRef(onClose);
+  useEffect(() => {
+    latest.current = onClose;
+  });
+  useEffect(() => {
+    // The first item takes focus, so the arrow-free menu still works from the keyboard (Tab).
+    panelRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    const close = () => latest.current();
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, []);
+
+  const WIDTH = 224;
+  const style = {
+    ...placeAnchored(new DOMRect(x, y, 0, 0), { wanted: 160 }),
+    left: Math.min(Math.max(8, x), window.innerWidth - WIDTH - 8),
+  };
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      role="menu"
+      aria-label={label}
+      data-popup-layer=""
+      style={style}
+      tabIndex={-1}
+      onContextMenu={(e) => e.preventDefault()}
+      // Fades in (@starting-style). It goes at once on a pick, so what was picked shows without a wait.
+      className="z-[210] w-56 overflow-y-auto rounded-panel border border-border bg-background p-1 shadow-[var(--shadow-pop)] transition-[opacity,scale] duration-150 ease-[var(--ease-out-quint)] starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none"
+    >
+      <CloseCtx.Provider value={onClose}>{children}</CloseCtx.Provider>
+    </div>,
+    document.body,
+  );
+}

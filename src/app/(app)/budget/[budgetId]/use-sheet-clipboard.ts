@@ -1,72 +1,49 @@
 "use client";
 
-// Ticking rows on a budget sheet and copying them elsewhere (ticks, ⌘C/⌘V, and the clipboard
-// the page holds between sheets). Rows go to the server by id: the paste route also re-points
-// equations inside a copied block at the copies. Rows are copied only when ticked; ⌘C on a
-// selected cell copies the cell's text, as in a spreadsheet.
-import { useEffect, useRef, useState } from "react";
+// ⌘C, ⌘X and ⌘V on a budget sheet, and the clipboard the page holds between sheets. What they
+// act on is the selection (use-range-select.ts): rows picked by their numbers, or a block of
+// cells. Rows go to the server by id: the paste route also re-points equations inside a copied
+// block at the copies.
+import { useEffect, useRef } from "react";
 
-import type { Account, BudgetClip, LineItem } from "./budget-types";
-
-interface SheetSelection {
-  accounts: string[];
-  rows: string[];
-}
+import type { BudgetClip } from "./budget-types";
 
 export function useSheetClipboard({
-  accounts,
-  linesOf,
   clip,
   onCopy,
   canPaste,
   onPaste,
   sheetRef,
   isEditing,
+  copyRange,
+  cutRows,
+  copyCell,
   notify,
   t,
 }: {
-  accounts: Account[];
-  linesOf: (account: Account) => LineItem[];
   clip: BudgetClip | null;
   onCopy: (clip: BudgetClip | null) => void;
   canPaste: boolean;
   /** Send the paste, given the clipboard and the account the caret is in (null if none: rows must land in an account). */
-  onPaste: (clip: BudgetClip, accountId: string | null) => void | Promise<unknown>;
+  onPaste: (
+    clip: BudgetClip,
+    accountId: string | null,
+    /** The line the caret is on, if any: copied rows are written over it and those below. */
+    lineId: string | null,
+  ) => void | Promise<unknown>;
   /** The sheet's element, to tell whether a focused text field is one of its cells. */
   sheetRef: React.RefObject<HTMLElement | null>;
   /** Whether a cell is being edited now. Read when a key arrives, since the listener outlives a render. */
   isEditing: () => boolean;
+  /** Copy the block of cells selected (use-range-select.ts). False when there is none. */
+  copyRange?: () => boolean;
+  /** ⌘X: cut the rows or cells selected. False when there are none. */
+  cutRows?: () => boolean;
+  /** Copy the one selected cell (its input) as the sheet copies a block. False to copy its text. */
+  copyCell?: (input: HTMLInputElement) => boolean;
   notify: { success: (m: string) => void; info: (m: string) => void };
   t: (key: string, values?: Record<string, number>) => string;
 }) {
-  /** What is ticked. Kept across sheets on purpose: copying a block between cost centres is the point. */
-  const [ticked, setTicked] = useState<{ rows: Set<string>; accounts: Set<string> }>({
-    rows: new Set(),
-    accounts: new Set(),
-  });
-
-  const toggle = (kind: "rows" | "accounts", id: string) =>
-    setTicked((was) => {
-      const next = new Set(was[kind]);
-      if (!next.delete(id)) next.add(id);
-      return { ...was, [kind]: next };
-    });
-
-  const clearTicks = () => setTicked({ rows: new Set(), accounts: new Set() });
-
-  /** What is ticked on this sheet, in drawing order (the paste order). Ticks outlive the sheet, so other sheets' rows are excluded. */
-  function selection(): SheetSelection {
-    const accs: string[] = [];
-    const rows: string[] = [];
-    for (const account of accounts) {
-      if (ticked.accounts.has(account.id)) accs.push(account.id);
-      for (const li of linesOf(account)) if (ticked.rows.has(li.id)) rows.push(li.id);
-    }
-    return { accounts: accs, rows };
-  }
-
-  const marked = selection();
-
   function focusedRow(): { accountId: string; lineId?: string } | null {
     const el = document.activeElement as HTMLElement | null;
     const line = el?.closest<HTMLElement>("tr[data-line]");
@@ -77,37 +54,19 @@ export function useSheetClipboard({
     return null;
   }
 
-  /** Put the ticked things on the clipboard. Accounts win: an account brings its rows, so taking them twice would paste them twice. */
-  function copySelection(): boolean {
-    if (marked.accounts.length > 0) {
-      const label = accounts.find((a) => a.id === marked.accounts[0])?.accountCode ?? "";
-      onCopy({ kind: "accounts", ids: marked.accounts, label });
-      notify.success(t("copiedAccounts", { count: marked.accounts.length }));
-      // Clear the ticks so the "N markerade" bar does not linger over a copy already taken
-      // (the paste bar says what is on the clipboard).
-      clearTicks();
-      return true;
-    }
-    if (marked.rows.length > 0) {
-      onCopy({ kind: "rows", ids: marked.rows, label: String(marked.rows.length) });
-      notify.success(t("copiedRows", { count: marked.rows.length }));
-      clearTicks();
-      return true;
-    }
-    return false;
-  }
-
   /**
-   * ⌘C: the ticked rows or accounts, else the selected cell's text (what it shows: a Belopp
+   * ⌘C: the rows or block selected, else the selected cell's value (what it shows: a Belopp
    * cell being stood in shows its formula). A selected cell has no visible text selection, so
    * the browser's own copy would take nothing. Copying a cell lets go of copied rows, so the
    * next ⌘V pastes the text (use-cell-edit.ts) and not the rows.
    */
   function copyHere(): boolean {
-    if (copySelection()) return true;
+    // The selection says itself what it leaves on the page's clipboard (rows, or nothing).
+    if (copyRange?.()) return true;
     const el = document.activeElement;
     if (!(el instanceof HTMLInputElement) || el.dataset.cell === undefined) return false;
     if (!sheetRef.current?.contains(el)) return false;
+    if (copyCell?.(el)) return true;
     void navigator.clipboard.writeText(el.value).catch(() => {});
     if (clip) onCopy(null);
     return true;
@@ -126,7 +85,7 @@ export function useSheetClipboard({
       return true;
     }
     pasting.current = true;
-    void Promise.resolve(onPaste(clip, at?.accountId ?? null)).finally(() => {
+    void Promise.resolve(onPaste(clip, at?.accountId ?? null, at?.lineId ?? null)).finally(() => {
       pasting.current = false;
     });
     return true;
@@ -143,7 +102,7 @@ export function useSheetClipboard({
     const onKey = (e: KeyboardEvent) => {
       if (!e.metaKey && !e.ctrlKey) return;
       const key = e.key.toLowerCase();
-      if (key !== "c" && key !== "v") return;
+      if (key !== "c" && key !== "v" && key !== "x") return;
       if (isEditing()) return;
 
       const target = e.target as HTMLElement | null;
@@ -158,7 +117,7 @@ export function useSheetClipboard({
       // The formula bar is in the sheet but is text, like a cell being edited.
       if (target?.dataset.formulaBar) return;
 
-      const took = key === "c" ? copyHere() : pasteHere();
+      const took = key === "c" ? copyHere() : key === "x" ? (cutRows?.() ?? false) : pasteHere();
       // Nothing copied means nothing taken: the browser's own copy still works.
       if (!took) return;
       e.preventDefault();
@@ -167,15 +126,6 @@ export function useSheetClipboard({
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
     // No dependency array on purpose: what a copy takes changes on almost every render, and a
-    // stale list would copy rows ticked renders ago.
+    // stale list would copy rows selected renders ago.
   });
-
-  return {
-    ticked,
-    toggle,
-    clearTicks,
-    marked,
-    copySelection,
-    isTicked: (kind: "rows" | "accounts", id: string) => ticked[kind].has(id),
-  };
 }

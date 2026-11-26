@@ -270,10 +270,29 @@ export function groupByResultUnit<T>(
   return groups;
 }
 
-// Colour a "Utfall - Budget" difference so green is favourable: positive is good for
+/**
+ * The Avvikelse column. Against the outcome it is Utfall minus Budget (how the year went against
+ * the plan). Against another budget it is this budget minus that one, so the difference speaks
+ * for the budget being edited: more income or less cost here is green.
+ */
+export function compareDiff(own: number, other: number, vsActuals: boolean): number {
+  return vsActuals ? other - own : own - other;
+}
+
+// Colour a difference (compareDiff) so green is favourable: positive is good for
 // income-like rows (and result rows), the reverse for cost-like rows.
 export function diffClass(diff: number, incomeLike: boolean): string {
   if (diff === 0) return "text-muted";
   const good = incomeLike ? diff > 0 : diff < 0;
   return good ? "text-success" : "text-danger";
+}
+
+/**
+ * Whether a row moved to `moved`'s place in `order` (an account's lines after the move) lands
+ * between the first and last of `held` there: slotted into the middle of what was copied.
+ */
+export function landsInside(order: readonly string[], moved: string, held: readonly string[]) {
+  const at = order.flatMap((id, i) => (id !== moved && held.includes(id) ? [i] : []));
+  const i = order.indexOf(moved);
+  return at.length > 0 && i > at[0] && i < at[at.length - 1];
 }

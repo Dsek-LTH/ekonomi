@@ -1,7 +1,8 @@
 // The per-cost-centre sheet: income and costs as two cards of account, line-item and Summa
 // rows. Owns the drag handlers and per-sheet drafts; select/edit comes from useCellEdit.
-import { Button } from "@/components/ui/button";
+import { Button, SOFT_FILL } from "@/components/ui/button";
 import { SelectionBar } from "@/components/selection-bar";
+import { Kbd } from "@/components/ui/kbd";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
@@ -11,21 +12,47 @@ import { autoScrollStep, verticalScroller } from "@/lib/ui/auto-scroll";
 import { useFormat } from "@/lib/ui/use-format";
 import { usePhone } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
-import { IconTrash } from "@/components/ui/icons";
+import { IconComment, IconCopy, IconPaste, IconScissors, IconTrash } from "@/components/ui/icons";
+import { ContextMenu, MenuItem } from "@/components/ui/menu";
+import type { CommentField } from "@/lib/budget/payload";
 import { resultImpact } from "@/lib/budget/changes";
 
 import {
   ccTotals,
+  compareDiff,
+  landsInside,
   diffClass,
   fmt,
   fmtSigned,
   normalizeFormula,
   type AdjustmentRow,
 } from "./budget-helpers";
-import { withLine, withLineOrder, withNewAccount, withSheet } from "./patch-budget";
-import { useCellEdit } from "./use-cell-edit";
+import {
+  withComment,
+  withLine,
+  withLineOrder,
+  withNewAccount,
+  withoutComment,
+  withoutLine,
+  withLineFields,
+  withSheet,
+} from "./patch-budget";
+import {
+  CommentPanel,
+  commentsAt,
+  targetKey,
+  useCommentThreads,
+  type CommentTarget,
+} from "./sheet-comments";
+import { useCellEdit, type RangeKeys } from "./use-cell-edit";
+import {
+  amountForCopy,
+  headerKey,
+  isHeaderKey,
+  RANGE_COLS,
+  useRangeSelect,
+} from "./use-range-select";
 import type { UndoStep } from "./use-undo";
 import { useSheetClipboard } from "./use-sheet-clipboard";
 import { SheetProvider, type SheetValue } from "./sheet-context";
@@ -34,8 +61,10 @@ import { useNotify } from "@/components/shell/notifications";
 import type { AccountRecord } from "@/lib/domain/types";
 import type {
   Account,
+  Budget,
   BudgetCC,
   BudgetClip,
+  Comment,
   Evaluated,
   LineItem,
   Draft,
@@ -47,6 +76,7 @@ import type {
 export interface SheetCompare {
   label: string;
   sheet: JoinedSheet;
+  vsActuals: boolean;
 }
 
 // How far the pointer moves on the grip before a row lifts. Below it the press is a click.
@@ -66,6 +96,8 @@ export function CostCenterSheet(props: {
   renderFormula: FormulaFn;
   /** The formula bar (use-budget-cells.tsx), drawn above the sheet. */
   formulaBar: ReactNode;
+  /** Drop a cell's edit buffer after writing it from outside (use-budget-cells.tsx). */
+  forgetCell: (id: string, field: string) => void;
   api: ApiFn;
   budgetId: string;
   accounts: AccountRecord[];
@@ -88,6 +120,7 @@ export function CostCenterSheet(props: {
     renderCell,
     renderFormula,
     formulaBar,
+    forgetCell,
     api,
     budgetId,
     accounts,
@@ -106,47 +139,88 @@ export function CostCenterSheet(props: {
   const tLedger = useTranslations("ledger");
   const { date } = useFormat();
 
-  const cellEdit = useCellEdit("space-y-4");
+  // The block of cells (use-range-select.ts) is made further down, once the rows are known;
+  // the cell keys reach it through this ref.
+  const rangeKeys = useRef<RangeKeys | null>(null);
+  // Accounts picked by their own numbers (a click, Shift+click, or a drag over them): each with
+  // its header row and lines, for copying whole accounts. Apart from the block of cells: picking
+  // one lets go of the other.
+  const [accountPick, setAccountPick] = useState<{ from: string; to: string } | null>(null);
+  // Cells last copied (⌘C) or cut (⌘X): where they are, framed until let go, and the text they
+  // put on the system clipboard, so a paste can tell it is those values coming back. A cut is
+  // also faded, and its cells are emptied once pasted.
+  const [heldCells, setHeldCells] = useState<{
+    lines: string[];
+    left: number;
+    right: number;
+    text: string;
+    cut: boolean;
+  } | null>(null);
+  const cellEdit = useCellEdit("space-y-4", rangeKeys);
   const notify = useNotify();
 
-  // Sheet-local UI state: accounts with comments expanded, and drafts for the new-row inputs.
-  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
-  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
+  // Sheet-local UI state: the open comment thread, half-written comments (by target, so one
+  // survives closing its thread), the right-click menu, and drafts for the new-row inputs.
+  const comments = useCommentThreads();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const commentDraft = {
+    get: (key: string) => drafts[key] ?? "",
+    set: (key: string, v: string) => setDrafts((m) => ({ ...m, [key]: v })),
+  };
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    anchor: HTMLElement;
+    items: { target: CommentTarget; label: string }[];
+  } | null>(null);
   const [newRow, setNewRow] = useState<Record<string, Draft>>({});
 
   const badLine = new Set(ev.badLineItems);
   const badAccount = new Set(ev.badAccounts);
   // Accounts whose total is short a row that did not resolve (the figure is the sum of the rest).
-  // Left margin: the row number, which gives way to the copy tick box when the row is pointed
-  // at or the box has focus, and to every box while anything is ticked (as in a mail list).
-  // Faded, not hidden, so the box stays in the tab order. `table-fixed` sizes from the
-  // colgroup, so a 0px column with padded cells overflows into its neighbour; on a phone the
-  // cell is emptied instead. Reads `marked` at render, after the clipboard hook below.
-  const gut = (n: number | undefined, box?: React.ReactNode) => {
+  // Left margin: the row number, which is the row's handle as in a spreadsheet. A click
+  // selects the row (Shift: the rows to it), a press and drag moves it (`startLineDrag`).
+  // `table-fixed` sizes from the colgroup, so a 0px column with padded cells overflows into its
+  // neighbour; on a phone the cell is emptied instead.
+  const gut = (
+    n: number | undefined,
+    handle?: {
+      label: string;
+      selected: boolean;
+      onPointerDown: (e: React.PointerEvent) => void;
+      /** An account's own number (picks the account), not a line's. */
+      account?: boolean;
+    },
+  ) => {
     if (narrow) return <td className="p-0" />;
-    const anyTicked = marked.rows.length > 0 || marked.accounts.length > 0;
-    const hasBox = Boolean(box);
     return (
-      <td className="group/gut relative select-none border-r border-border/60 px-1 align-middle">
-        <span
-          className={cn(
-            "absolute inset-0 flex items-center justify-center text-[11px] tabular-nums text-faint",
-            hasBox &&
-              (anyTicked ? "invisible" : "group-hover:invisible group-focus-within/gut:invisible"),
-          )}
-        >
-          {n ?? ""}
-        </span>
-        <span
-          className={cn(
-            "relative flex h-7 items-center justify-center",
-            hasBox &&
-              !anyTicked &&
-              "opacity-0 group-hover:opacity-100 group-focus-within/gut:opacity-100",
-          )}
-        >
-          {box}
-        </span>
+      <td
+        className={cn(
+          "relative select-none border-r border-border/60 p-0 align-middle",
+          handle?.selected && SOFT_FILL,
+        )}
+      >
+        {handle ? (
+          <button
+            type="button"
+            data-row-number
+            data-account-number={handle.account || undefined}
+            tabIndex={-1}
+            aria-label={handle.label}
+            title={handle.label}
+            onPointerDown={handle.onPointerDown}
+            className={cn(
+              "flex h-7 w-full cursor-pointer items-center justify-center text-[11px] tabular-nums",
+              handle.selected ? "font-medium text-foreground" : "text-faint hover:text-muted",
+            )}
+          >
+            {n ?? ""}
+          </button>
+        ) : (
+          <span className="flex h-7 items-center justify-center text-[11px] tabular-nums text-faint">
+            {n ?? ""}
+          </span>
+        )}
       </td>
     );
   };
@@ -190,16 +264,17 @@ export function CostCenterSheet(props: {
     </>
   ) : null;
 
-  const totalCols = columns.length + 2 + (showCompare ? 2 : 0); // full-width spanners (comments)
+  const totalCols = columns.length + 2 + (showCompare ? 2 : 0); // full-width spanners
   const liUrl = (id: string) => `/api/budget-line-items/${id}`;
 
   // Fixed widths; Beskrivning is elastic. On a phone (361px) the desktop set leaves
   // Beskrivning nothing, so chrome shrinks: gutter 58 to 0 (drag is not usable on touch),
   // konto 110 to 26 (just the elbow), belopp 260 to 110 (equation is shown on tap, see
-  // `compact` in use-budget-cells.tsx), action 78 to 40 (one icon).
-  // The margin holds one thing at a time (number or tick box); the actions a comment and a delete.
+  // `compact` in use-budget-cells.tsx).
+  // The margin holds one thing at a time (number or tick box). The actions hold only the delete
+  // (a 24px icon button and its cell's padding), the same at every width.
   const GUT_W = narrow ? 0 : 36,
-    ACT_W = narrow ? 40 : 60;
+    ACT_W = 32;
   const staticWidth = (c: ColumnDef): number | undefined =>
     c.key === "beskrivning"
       ? undefined
@@ -362,41 +437,628 @@ export function CostCenterSheet(props: {
     [],
   );
 
-  const { toggle, clearTicks, marked, isTicked, copySelection } = useSheetClipboard({
-    accounts: cc.accounts,
-    linesOf,
+  // Drawn order: Intäkter, then Kostnader, each account's rows as they stand (mid-drag too).
+  // Each account's own row comes first, then its lines: the block can take the account's row
+  // (its name and total) as well as its lines'.
+  const lineOrder = [...income, ...cost].flatMap((a) => [
+    headerKey(a.id),
+    ...linesOf(a).map((l) => l.id),
+  ]);
+  // Which account each line (and account row) is drawn under: a block, and a paste, stay inside one.
+  const accountOfLine = new Map(
+    cc.accounts.flatMap((a) => [
+      [headerKey(a.id), a] as const,
+      ...linesOf(a).map((l) => [l.id, a] as const),
+    ]),
+  );
+  const range = useRangeSelect({
+    order: lineOrder,
+    accountOf: (id) => accountOfLine.get(id)?.id,
+    sheetRef,
+    isEditing: () => cellEdit.className.includes("is-editing"),
+  });
+
+  /**
+   * A block that spans the whole row (Beskrivning and Belopp) over two rows or more is those
+   * rows, as selecting whole rows is in a spreadsheet. Anything narrower is cells: their values,
+   * never the rows they sit on. The bar says which (rader or celler), so a copy is never a guess.
+   */
+  // Whole rows selected (by their numbers, ⌘-clicked, or a block across the row).
+  const blockIsRows = range.rows.length > 0;
+  /**
+   * A block across the row that takes an account's own row: that account, with the lines in the
+   * block (some, all or none), copied and pasted together.
+   */
+  const blockAccount = (() => {
+    if (!blockIsRows) return null;
+    const header = range.rows.find(isHeaderKey);
+    const account = header ? accountOfLine.get(header) : undefined;
+    return account ? { account, lines: range.rows.filter((id) => !isHeaderKey(id)) } : null;
+  })();
+
+  /**
+   * ⌘C on a block: tab-separated, a line per row, what the cells show (Belopp as kronor), for
+   * a spreadsheet elsewhere. A block of whole rows is also put on the page's clipboard as those
+   * rows, as Kopiera rader would, so ⌘V in an account here pastes them as rows.
+   */
+  function copyRange(): boolean {
+    if (chosenAccounts.length > 0) {
+      copyAccounts();
+      return true;
+    }
+    // Whole rows: their two columns, even when picked apart with ⌘-click. Else the block's.
+    const rect = blockIsRows ? { left: 0, right: RANGE_COLS.length - 1 } : range.rect;
+    if (!rect || (!blockIsRows && !range.multi)) return false;
+    const lines = blockIsRows ? range.rows : range.lines;
+    const text = blockText(lines, rect.left, rect.right);
+    void navigator.clipboard.writeText(text).catch(() => {});
+    // The whole account (its row and all its lines): copied as the account, as its number does.
+    if (blockAccount) {
+      onCopy({
+        kind: "accounts",
+        ids: [blockAccount.account.id],
+        label: blockAccount.account.accountCode,
+        lineIds: blockAccount.lines,
+      });
+      setHeldCells(null);
+      range.clear();
+    } else if (blockIsRows) copyRows(rowsChosen(), false);
+    else holdCells(lines, rect.left, rect.right, text, false);
+    return true;
+  }
+
+  /**
+   * ⌘C on the one selected cell: its value in the same form as a block's (Belopp as kronor, not
+   * what the cell shows, which for a formula is its working too), framed like a block.
+   */
+  function copyCell(input: HTMLInputElement): boolean {
+    const line = input.closest<HTMLElement>("tr[data-line]")?.dataset.line;
+    const col = Number(input.closest<HTMLElement>("td[data-range-col]")?.dataset.rangeCol);
+    if (!line || !Number.isFinite(col)) return false;
+    const text = blockText([line], col, col);
+    void navigator.clipboard.writeText(text).catch(() => {});
+    holdCells([line], col, col, text, false);
+    return true;
+  }
+
+  /** A block's values as a spreadsheet takes them: a line per row, tabs between columns. */
+  function blockText(lines: string[], left: number, right: number): string {
+    const cols = RANGE_COLS.slice(left, right + 1);
+    return lines
+      .map((id) => {
+        // An account's own row: its name and its total.
+        const account = isHeaderKey(id) ? accountOfLine.get(id) : undefined;
+        return cols
+          .map((c) =>
+            account
+              ? c === "description"
+                ? account.accountName
+                : amountForCopy(ev.accounts[`${ccCode}:${account.accountCode}`])
+              : c === "description"
+                ? (lineById.get(id)?.description ?? "")
+                : amountForCopy(ev.lineItems[id]),
+          )
+          .join("\t");
+      })
+      .join("\n");
+  }
+
+  /**
+   * ⌘X on cells (a block, or the one selected cell): their values go on the system clipboard
+   * and the cells are marked, faded and framed. The next ⌘V of those values moves them: written
+   * from the selected cell and emptied where they were (`pasteBlock`).
+   */
+  function cutCellsHere(): boolean {
+    if (!isAdmin) return false;
+    let lines: string[];
+    let left: number;
+    let right: number;
+    if (range.multi && range.rect) {
+      lines = range.lines;
+      left = range.rect.left;
+      right = range.rect.right;
+    } else {
+      const el = document.activeElement as HTMLElement | null;
+      const line = el?.closest<HTMLElement>("tr[data-line]")?.dataset.line;
+      const col = Number(el?.closest<HTMLElement>("td[data-range-col]")?.dataset.rangeCol);
+      if (!line || !sheetRef.current?.contains(el) || !Number.isFinite(col)) return false;
+      lines = [line];
+      left = right = col;
+    }
+    const text = blockText(lines, left, right);
+    void navigator.clipboard.writeText(text).catch(() => {});
+    holdCells(lines, left, right, text, true);
+    return true;
+  }
+
+  /** Cells copied or cut: framed (and faded, if cut) until pasted, let go or replaced. */
+  function holdCells(lines: string[], left: number, right: number, text: string, cut: boolean) {
+    if (clip) onCopy(null);
+    setHeldCells({ lines, left, right, text, cut });
+    // Let go of the block, so the bar turns to what was taken and how to paste it.
+    range.clear();
+  }
+
+  /**
+   * ⌘V of several values on a selected cell: written from that cell down and to the right, within
+   * its account (nothing past Belopp, never into the next account). Rows past the account's last
+   * line become new lines at its end. When they are the cells cut with ⌘X, those are emptied
+   * after, except where they were written over. One value is left to the cell's own paste
+   * (use-budget-cells.tsx), unless it is a cut.
+   */
+  function onPasteCapture(e: React.ClipboardEvent) {
+    const el = e.target as HTMLElement;
+    if (!isAdmin || !(el instanceof HTMLInputElement) || el.dataset.cell === undefined) return;
+    if (cellEdit.className.includes("is-editing")) return; // typing: the caret takes it
+    const line = el.closest<HTMLElement>("tr[data-line]")?.dataset.line;
+    const col = Number(el.closest<HTMLElement>("td[data-range-col]")?.dataset.rangeCol);
+    if (!line || !Number.isFinite(col)) return;
+    const text = e.clipboardData.getData("text/plain").replace(/\r?\n$/, "");
+    const moving = heldCells?.cut === true && text === heldCells.text;
+    const rows = text.split(/\r?\n/).map((r) => r.split("\t"));
+    if (!moving && rows.length === 1 && rows[0].length === 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void pasteBlock(line, col, rows, moving ? heldCells : null);
+  }
+
+  async function pasteBlock(
+    line: string,
+    col: number,
+    rows: string[][],
+    from: { lines: string[]; left: number; right: number } | null,
+  ) {
+    // A cut is spent once pasted; a copy stays framed, to be pasted again.
+    if (from) setHeldCells(null);
+    // Every cell the paste changes, worked out first and then sent as one write, so the block
+    // lands at once (and is one ⌘Z step) rather than cell by cell.
+    const changes = new Map<string, Partial<Record<(typeof RANGE_COLS)[number], string>>>();
+    const before = new Map<string, Partial<Record<(typeof RANGE_COLS)[number], string>>>();
+    const put = (id: string, field: (typeof RANGE_COLS)[number], value: string) => {
+      const li = lineById.get(id);
+      if (!li) return;
+      const stored =
+        field === "expression" ? toStored(normalizeFormula(value), ccCode, grid) : value;
+      forgetCell(id, field);
+      // Written over again with what it holds already: nothing to change after all.
+      if (stored === li[field]) {
+        const had = changes.get(id);
+        if (had) delete had[field];
+        return;
+      }
+      changes.set(id, { ...changes.get(id), [field]: stored });
+      before.set(id, { ...before.get(id), [field]: li[field] });
+    };
+    const account = accountOfLine.get(line);
+    if (!account) return;
+    const own = linesOf(account).map((l) => l.id);
+    const written = new Set<string>();
+    const create: { accountId: string; description: string; expression: string }[] = [];
+    const start = own.indexOf(line);
+    for (let r = 0; r < rows.length; r++) {
+      const id = own[start + r];
+      if (id) {
+        for (let c = 0; c < rows[r].length; c++) {
+          const field = RANGE_COLS[col + c];
+          if (!field) break;
+          written.add(`${id}:${field}`);
+          put(id, field, rows[r][c].trim());
+        }
+        continue;
+      }
+      // Past the account's last line: a new line at its end, as typing in its blank row makes.
+      const made = { description: "", expression: "" };
+      for (let c = 0; c < rows[r].length; c++) {
+        const field = RANGE_COLS[col + c];
+        if (!field) break;
+        const v = rows[r][c].trim();
+        made[field] = field === "expression" ? toStored(normalizeFormula(v), ccCode, grid) : v;
+      }
+      if (made.description || made.expression) create.push({ accountId: account.id, ...made });
+    }
+    if (from)
+      for (const id of from.lines)
+        for (const field of RANGE_COLS.slice(from.left, from.right + 1))
+          if (!written.has(`${id}:${field}`)) put(id, field, "");
+
+    const lines = [...changes].flatMap(([id, fields]) =>
+      Object.keys(fields).length ? [{ id, ...fields }] : [],
+    );
+    if (lines.length === 0 && create.length === 0) return;
+    const madeOf = (data: unknown) => (data as { created: LineItem[] }).created;
+    await api(
+      `/api/budgets/${budgetId}/cells`,
+      "POST",
+      { lines, create },
+      (b, data) =>
+        madeOf(data).reduce(
+          (acc, li) => withLine(acc, account.id, li),
+          lines.reduce<Budget>((acc, { id, ...fields }) => withLineFields(acc, id, fields), b),
+        ),
+      // One ⌘Z for the whole paste: the cells written back and the lines made deleted.
+      (data) => {
+        const made = madeOf(data);
+        const order = [...own, ...made.map((m) => m.id)];
+        const steps: UndoStep[] = [];
+        if (lines.length)
+          steps.push({
+            kind: "fields",
+            steps: lines.map(({ id, ...after }) => ({
+              url: liUrl(id),
+              before: before.get(id) ?? {},
+              after,
+            })),
+          });
+        if (made.length)
+          steps.push({
+            kind: "lines",
+            created: true,
+            lines: made.map((m) => ({
+              accountId: account.id,
+              lineId: m.id,
+              body: { description: m.description, expression: m.expression },
+            })),
+            orders: [{ accountId: account.id, ids: order }],
+          });
+        record(steps.length === 1 ? steps[0] : { kind: "group", steps });
+      },
+    );
+  }
+
+  /**
+   * Copied rows pasted with the caret on a line: written over it and the lines below it in its
+   * account, the rest added at the account's end. With the caret on the account's own row, all
+   * are added at the end. One ⌘Z puts back what was written over and deletes what was made.
+   */
+  function pasteRows(ids: string[], accountId: string | null, lineId: string | null) {
+    if (!accountId) return;
+    const was = new Map(
+      (cc.accounts.find((a) => a.id === accountId)?.lineItems ?? []).map((l) => [l.id, l]),
+    );
+    return api(
+      `/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`,
+      "POST",
+      { accountId, lineItemIds: ids, ...(lineId && { overwriteFrom: lineId }) },
+      // Only this sheet's accounts are taken from the answer.
+      (b, data) =>
+        withSheet(b, cc.id, (sheet) => ({ ...sheet, accounts: (data as BudgetCC).accounts })),
+      (data) => {
+        const { accounts, pasted } = data as BudgetCC & {
+          pasted: { overwritten: string[]; created: string[] };
+        };
+        const now = accounts.find((a) => a.id === accountId)?.lineItems ?? [];
+        const after = new Map(now.map((l) => [l.id, l]));
+        const order = now.map((l) => l.id);
+        const steps: UndoStep[] = [];
+        if (pasted.overwritten.length)
+          steps.push({
+            kind: "fields",
+            steps: pasted.overwritten.flatMap((id) => {
+              const before = was.get(id);
+              const to = after.get(id);
+              return before && to
+                ? [
+                    {
+                      url: liUrl(id),
+                      before: { description: before.description, expression: before.expression },
+                      after: { description: to.description, expression: to.expression },
+                    },
+                  ]
+                : [];
+            }),
+          });
+        const made = pasted.created.flatMap((id) => {
+          const li = after.get(id);
+          return li
+            ? [
+                {
+                  accountId,
+                  lineId: id,
+                  body: { description: li.description, expression: li.expression },
+                },
+              ]
+            : [];
+        });
+        if (made.length)
+          steps.push({
+            kind: "lines",
+            created: true,
+            lines: made,
+            orders: [{ accountId, ids: order }],
+          });
+        if (steps.length) record(steps.length === 1 ? steps[0] : { kind: "group", steps });
+      },
+    );
+  }
+
+  /** Delete on rows or a block of cells: emptied in one write, one ⌘Z, as a paste is sent. */
+  async function clearCells(lines: string[], left: number, right: number) {
+    const fields = RANGE_COLS.slice(left, right + 1);
+    const writes = lines.flatMap((id) => {
+      const li = lineById.get(id);
+      if (!li) return [];
+      const before: Partial<Record<(typeof RANGE_COLS)[number], string>> = {};
+      const after: Partial<Record<(typeof RANGE_COLS)[number], string>> = {};
+      for (const f of fields) {
+        forgetCell(id, f);
+        if (li[f] === "") continue;
+        before[f] = li[f];
+        after[f] = "";
+      }
+      return Object.keys(after).length ? [{ id, before, after }] : [];
+    });
+    if (writes.length === 0) return;
+    const body = { lines: writes.map(({ id, after }) => ({ id, ...after })) };
+    await api(
+      `/api/budgets/${budgetId}/cells`,
+      "POST",
+      body,
+      (b) => body.lines.reduce<Budget>((acc, { id, ...f }) => withLineFields(acc, id, f), b),
+      () =>
+        record({
+          kind: "fields",
+          steps: writes.map(({ id, before, after }) => ({ url: liUrl(id), before, after })),
+        }),
+    );
+  }
+
+  // Rows chosen to act on: those selected whole (by their numbers, or a block across the row).
+  // An account's own row is never one of them: rows act on lines (it is copied with them only
+  // as the whole account, `blockIsAccount`).
+  const rowsChosen = (): string[] => range.rows.filter((id) => !isHeaderKey(id));
+
+  /** Rows onto the page's clipboard. Cut: the next paste moves them there instead. */
+  function copyRows(ids: string[], cut: boolean) {
+    if (ids.length === 0) return;
+    setHeldCells(null);
+    onCopy({ kind: "rows", ids, label: String(ids.length), cut });
+    // Let go of the choice, so the bar turns to what was copied and how to paste it.
+    range.clear();
+  }
+
+  async function removeRows(ids: string[]) {
+    // No question first: one ⌘Z brings them all back, as a single row's delete does.
+    if (ids.length === 0) return;
+    range.clear();
+    // One write for them all, and one ⌘Z (use-undo.ts) that makes them all again, in one write,
+    // where they stood.
+    const lines = ids.flatMap((id) => {
+      const account = cc.accounts.find((a) => a.lineItems.some((l) => l.id === id));
+      const li = account?.lineItems.find((l) => l.id === id);
+      return account && li
+        ? [
+            {
+              accountId: account.id,
+              lineId: id,
+              body: { description: li.description, expression: li.expression },
+            },
+          ]
+        : [];
+    });
+    const orders = [...new Set(lines.map((l) => l.accountId))].map((accountId) => ({
+      accountId,
+      ids: (cc.accounts.find((a) => a.id === accountId)?.lineItems ?? []).map((l) => l.id),
+    }));
+    await api(
+      `/api/budgets/${budgetId}/lines/delete`,
+      "POST",
+      { ids },
+      (b) => ids.reduce((acc, id) => withoutLine(acc, id), b),
+      () => record({ kind: "lines", created: false, lines, orders }),
+    );
+  }
+
+  // The sum of the block's Belopp cells, for the line beside the formula bar.
+  const rangeSum =
+    blockIsRows || (range.multi && range.rect && range.rect.right >= 1)
+      ? (blockIsRows ? range.rows : range.lines).reduce(
+          (sum, id) => sum + (ev.lineItems[id] ?? 0),
+          0,
+        )
+      : null;
+  const rangeStatus = range.multi && (
+    <span className="shrink-0 px-3 py-1.5 text-xs tabular-nums text-muted">
+      {rangeSum !== null && <>{t("rangeSum", { sum: fmt(rangeSum) })} - </>}
+      {t("rangeCount", { count: range.count })}
+    </span>
+  );
+
+  useSheetClipboard({
     sheetRef,
     // Read when a key arrives: the document listener outlives any one render.
     isEditing: () => cellEdit.className.includes("is-editing"),
+    copyRange,
+    // ⌘C on the one selected cell (after a block and ticked rows).
+    copyCell,
+    // ⌘X: the rows chosen, else the cells selected.
+    cutRows: () => {
+      const ids = rowsChosen();
+      if (!isAdmin) return false;
+      if (ids.length === 0) return cutCellsHere();
+      copyRows(ids, true);
+      return true;
+    },
     clip,
     onCopy,
     canPaste: isAdmin,
-    onPaste: (c, accountId) =>
-      // Only this sheet's accounts are taken from the answer.
-      api(
-        `/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`,
-        "POST",
-        c.kind === "accounts" ? { accountIds: c.ids } : { accountId, lineItemIds: c.ids },
-        (b, data) =>
-          withSheet(b, cc.id, (sheet) => ({
-            ...sheet,
-            accounts: (data as BudgetCC).accounts,
-          })),
-      ),
+    onPaste: (c, accountId, lineId) =>
+      // Cut rows move: onto the end of this account, wherever they were in the budget (the
+      // reorder route moves a row it is handed from another account). The clip is then spent.
+      c.kind === "rows" && c.cut && accountId
+        ? (() => {
+            const own = (cc.accounts.find((a) => a.id === accountId)?.lineItems ?? [])
+              .map((l) => l.id)
+              .filter((id) => !c.ids.includes(id));
+            const ids = [...own, ...c.ids];
+            return api(
+              `/api/budget-accounts/${accountId}/line-items/reorder`,
+              "POST",
+              { orderedIds: ids },
+              (b) => withLineOrder(b, accountId, ids),
+              () => onCopy(null),
+            );
+          })()
+        : c.kind === "rows"
+          ? pasteRows(c.ids, accountId, lineId)
+          : // Only this sheet's accounts are taken from the answer.
+            api(
+              `/api/budgets/${budgetId}/cost-centers/${cc.id}/paste`,
+              "POST",
+              { accountIds: c.ids, ...(c.lineIds && { accountLineIds: c.lineIds }) },
+              (b, data) =>
+                withSheet(b, cc.id, (sheet) => ({
+                  ...sheet,
+                  accounts: (data as BudgetCC).accounts,
+                })),
+            ),
     notify,
     t,
   });
 
-  const sheetProps = cellEdit;
+  // The cell keys' reach into the block and what is chosen (use-cell-edit.ts), kept current.
+  useEffect(() => {
+    rangeKeys.current = {
+      extend: range.extend,
+      // Escape drops the block first, then what is copied or cut (its frame), as in a
+      // spreadsheet.
+      collapse: () => {
+        if (range.collapse()) return true;
+        if (accountPick) {
+          setAccountPick(null);
+          return true;
+        }
+        if (!heldCells && !clip) return false;
+        setHeldCells(null);
+        if (clip) onCopy(null);
+        return true;
+      },
+      // Delete empties, as in a spreadsheet: the rows chosen keep their place with Beskrivning
+      // and Belopp emptied, a block of cells is emptied. Removing rows is Ta bort in the bar.
+      remove: () => {
+        if (!isAdmin) return false;
+        const rows = rowsChosen();
+        if (rows.length > 0) {
+          void clearCells(rows, 0, RANGE_COLS.length - 1);
+          return true;
+        }
+        if (!range.multi || !range.rect) return false;
+        void clearCells(range.lines, range.rect.left, range.rect.right);
+        return true;
+      },
+    };
+  });
 
-  /** The tick box in the margin, on every row that can be copied. */
-  function tickBox(kind: "rows" | "accounts", id: string, label: string) {
-    return (
-      <Checkbox checked={isTicked(kind, id)} onChange={() => toggle(kind, id)} label={label} />
-    );
+  const sheetProps = cellEdit;
+  const chosen = rowsChosen();
+  // Rows cut and waiting for a paste, drawn faded where they still are.
+  const cutIds = new Set(clip?.kind === "rows" && clip.cut ? clip.ids : []);
+  // Rows copied or cut, in runs of neighbours as drawn, each framed (sheet-section.tsx).
+  const heldIds = new Set(clip?.kind === "rows" ? clip.ids : []);
+  const heldRuns: string[][] = [];
+  {
+    let run: string[] = [];
+    for (const id of lineOrder) {
+      if (heldIds.has(id)) run.push(id);
+      else if (run.length) {
+        heldRuns.push(run);
+        run = [];
+      }
+    }
+    if (run.length) heldRuns.push(run);
+  }
+  // Accounts copied, framed from the name on their own row to the Belopp of their last line.
+  // The accounts picked, as drawn (Intäkter, then Kostnader), from the one first picked to the last.
+  const accountOrder = [...income, ...cost];
+  const chosenAccounts = (() => {
+    if (!accountPick) return [];
+    const i = accountOrder.findIndex((a) => a.id === accountPick.from);
+    const j = accountOrder.findIndex((a) => a.id === accountPick.to);
+    if (i < 0 || j < 0) return [];
+    return accountOrder.slice(Math.min(i, j), Math.max(i, j) + 1);
+  })();
+
+  /** The accounts picked onto the page's clipboard, number and lines: ⌘V in a sheet adds them. */
+  function copyAccounts() {
+    if (chosenAccounts.length === 0) return;
+    onCopy({
+      kind: "accounts",
+      ids: chosenAccounts.map((a) => a.id),
+      label: chosenAccounts[0].accountCode,
+    });
+    setHeldCells(null);
+    setAccountPick(null);
   }
 
-  function startLineDrag(e: React.PointerEvent, account: Account, li: LineItem) {
+  // With only some of its lines copied, the frame ends at the last of those.
+  const heldAccounts =
+    clip?.kind === "accounts"
+      ? cc.accounts
+          .filter((a) => clip.ids.includes(a.id))
+          .map((a) => {
+            const lines = linesOf(a).filter((l) => !clip.lineIds || clip.lineIds.includes(l.id));
+            return { id: a.id, lastLine: lines.at(-1)?.id ?? null };
+          })
+      : [];
+
+  /** A press on a line's number: a click selects the row (Shift: the rows to it, ⌘: adds it), a drag moves it. */
+  function pressRowNumber(e: React.PointerEvent, account: Account, li: LineItem) {
+    if (e.button !== 0) return;
+    // ⌘-click (Ctrl elsewhere): the row joins the selection, or leaves it, and nothing is dragged.
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault();
+      range.toggleRow(li.id);
+      return;
+    }
+    const shift = e.shiftKey;
+    const select = () => range.selectRows(li.id, shift);
+    if (!isAdmin) {
+      e.preventDefault();
+      select();
+      return;
+    }
+    startLineDrag(e, account, li, select);
+  }
+
+  /** A press on an account's own number: picks the account (Shift: the accounts to it), and a drag picks those it passes over. */
+  function pressAccountNumber(e: React.PointerEvent, account: Account) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    // ⌘-click: the account's own row joins the rows selected (or leaves), as a line's does, so
+    // an account is copied with just the lines picked beside it.
+    if (e.metaKey || e.ctrlKey) {
+      setAccountPick(null);
+      range.toggleRow(headerKey(account.id));
+      return;
+    }
+    range.clear();
+    const from = e.shiftKey && accountPick ? accountPick.from : account.id;
+    setAccountPick({ from, to: account.id });
+    // Dragged on, over other accounts' rows: they join, as rows do under a dragged row number.
+    const move = (ev: PointerEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const over =
+        el?.closest<HTMLElement>("tr[data-account-row]")?.dataset.accountRow ??
+        el?.closest<HTMLElement>("tr[data-line]")?.dataset.account;
+      if (over && sheetRef.current?.contains(el))
+        setAccountPick((p) => (p && p.to !== over ? { ...p, to: over } : p));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
+  /** `onClick`: what a press that never moved far enough to lift the row does instead. */
+  function startLineDrag(
+    e: React.PointerEvent,
+    account: Account,
+    li: LineItem,
+    onClick?: () => void,
+  ) {
     if (!isAdmin || e.button !== 0) return;
     const tr = (e.target as HTMLElement).closest("tr");
     if (!tr) return;
@@ -404,10 +1066,12 @@ export function CostCenterSheet(props: {
     const startX = e.clientX;
     const startY = e.clientY;
     const grab = startY - tr.getBoundingClientRect().top;
-    // Lifted only once the pointer has moved, so a click on the grip does not flash the
-    // lifted row (outline and fill) on and off.
+    // Lifted only once the pointer has moved, so a click on the number does not flash the
+    // lifted row (outline and fill) on and off; a click selects the row instead.
+    let lifted = false;
     const move = (ev: PointerEvent) => {
       if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD_PX) return;
+      lifted = true;
       done();
       const ids: Record<string, string[]> = {};
       for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
@@ -427,11 +1091,15 @@ export function CostCenterSheet(props: {
     };
     const done = () => {
       window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", done);
+      window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", done);
     };
+    const up = () => {
+      done();
+      if (!lifted) onClick?.();
+    };
     window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", done);
+    window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", done);
   }
 
@@ -439,6 +1107,21 @@ export function CostCenterSheet(props: {
   useLayoutEffect(() => {
     if (draggingLineId) lift();
   }, [placement, draggingLineId, lift]);
+  // What the drop below calls once a row has moved, kept current here since the drag's listeners
+  // are set up once per drag: ends a copy (or cut) that holds the row.
+  const letGoOfCopy = useRef<(lineId: string, order: string[]) => void>(() => {});
+  useEffect(() => {
+    // `order` is the account's lines as the row now stands among them. A copy ends when one
+    // of its rows moves, or another row is slotted in between them: either way it is no longer
+    // the rows that were copied, as they sat together.
+    letGoOfCopy.current = (lineId, order) => {
+      const changes = (held: string[]) => held.includes(lineId) || landsInside(order, lineId, held);
+      if (clip?.kind === "rows" && changes(clip.ids)) onCopy(null);
+      if (heldCells && changes(heldCells.lines)) setHeldCells(null);
+      // A selected block is bounded by its corner rows, so a row slotted in would join it.
+      range.clear();
+    };
+  });
 
   // Followed on the window: the pointer leaves the grip quickly.
   useEffect(() => {
@@ -497,6 +1180,9 @@ export function CostCenterSheet(props: {
       const to = d?.accountId;
       const moved = d && to && (to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join());
       if (d && to && moved) {
+        // A copy is of rows where they stood: moving one of them ends it (and its frame), so a
+        // copy never comes to span two accounts. The same for cells on the row moved.
+        letGoOfCopy.current(d.id, d.ids[to]);
         const ids = d.ids[to];
         api(`/api/budget-accounts/${to}/line-items/reorder`, "POST", { orderedIds: ids }, (b) =>
           withLineOrder(b, to, ids),
@@ -561,6 +1247,54 @@ export function CostCenterSheet(props: {
     },
   ];
 
+  // Comments go on a locked budget too (the routes skip the write lock), so neither waits on isAdmin.
+  async function postComment(target: CommentTarget, body: string) {
+    if (target.kind === "account")
+      return api(`/api/budget-accounts/${target.accountId}/comments`, "POST", { body }, (b, data) =>
+        withComment(b, { accountId: target.accountId }, { ...(data as Comment), field: null }),
+      );
+    return api(
+      `/api/budget-line-items/${target.lineId}/comments`,
+      "POST",
+      { body, field: target.field },
+      (b, data) => withComment(b, { lineId: target.lineId }, data as Comment),
+    );
+  }
+  function deleteComment(id: string) {
+    return api(`/api/budget-comments/${id}`, "DELETE", undefined, (b) => withoutComment(b, id));
+  }
+
+  /**
+   * Right-click on a cell that takes comments (an account's number, a line's Beskrivning or
+   * Belopp): comment on it. While a cell is being written in, the browser's own menu stays (paste,
+   * spelling). Someone who may only read gets the menu only where there is something to read.
+   */
+  function onContextMenu(e: React.MouseEvent) {
+    const el = e.target as HTMLElement;
+    if (
+      el.matches("input, textarea") &&
+      el === document.activeElement &&
+      cellEdit.className.includes("is-editing")
+    )
+      return;
+    const td = el.closest<HTMLElement>("td[data-comment-field]");
+    const tr = td?.closest<HTMLElement>("tr[data-line], tr[data-account-row]");
+    if (!td || !tr) return;
+    const target: CommentTarget = tr.dataset.line
+      ? { kind: "line", lineId: tr.dataset.line, field: td.dataset.commentField as CommentField }
+      : { kind: "account", accountId: tr.dataset.accountRow! };
+    const count = commentsAt(cc, target).length;
+    if (count === 0 && !canComment) return;
+    e.preventDefault();
+    comments.close();
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      anchor: td,
+      items: [{ target, label: count ? t("cellComments", { count }) : t("commentCell") }],
+    });
+  }
+
   // Gathered once for the four nested table levels (see ./sheet-context).
   const sheet: SheetValue = {
     cc,
@@ -606,9 +1340,16 @@ export function CostCenterSheet(props: {
     badLine,
     liUrl,
     accountOptionsFor,
-    isTicked,
-    marked,
-    tickBox,
+    pressRowNumber,
+    pressAccountNumber,
+    accountPicked: (id: string) => chosenAccounts.some((a) => a.id === id),
+    pickedAccounts: chosenAccounts.length
+      ? {
+          first: chosenAccounts[0].id,
+          last: chosenAccounts[chosenAccounts.length - 1].id,
+          lastLine: linesOf(chosenAccounts[chosenAccounts.length - 1]).at(-1)?.id ?? null,
+        }
+      : null,
     draggingLineId,
     linesOf,
     startLineDrag,
@@ -617,15 +1358,41 @@ export function CostCenterSheet(props: {
     setDraft,
     createLine,
     createAccount,
-    openComments,
-    setOpenComments,
+    comments,
+    thread: comments.thread,
     commentDraft,
-    setCommentDraft,
+    postComment,
+    deleteComment,
+    range,
+    editing: cellEdit.className.includes("is-editing"),
+    cutIds,
+    heldRuns,
+    heldAccounts,
+    heldCells,
   };
 
   return (
     <SheetProvider value={sheet}>
-      <div ref={sheetRef} {...sheetProps}>
+      {/* The mouse handlers delegate for the cells inside, which have their own keyboard
+          (use-cell-edit.ts): the wrapper itself is not something to operate. */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        ref={sheetRef}
+        {...sheetProps}
+        onContextMenu={onContextMenu}
+        onPasteCapture={onPasteCapture}
+        onMouseDown={(e) => {
+          // Anything but an account's number lets go of picked accounts (portals aside).
+          const el = e.target as Element;
+          if (sheetRef.current?.contains(el) && !el.closest("[data-account-number]"))
+            setAccountPick(null);
+          range.onMouseDown(e);
+        }}
+        onFocus={(e) => {
+          if (sheetRef.current?.contains(e.target as Node)) setAccountPick(null);
+          range.onFocus(e);
+        }}
+      >
         {/* Sticky layer is square and opaque; the rounded card inside it would show rows through its corner arcs. */}
         <div className="sticky top-app-bar z-10 bg-canvas md:hidden">
           <div className="rounded-panel border border-border bg-background">
@@ -668,10 +1435,10 @@ export function CostCenterSheet(props: {
                         <span
                           className={cn(
                             "shrink-0 tabular-nums",
-                            diffClass(s.a - s.v, s.incomeLike),
+                            diffClass(compareDiff(s.v, s.a, compare.vsActuals), s.incomeLike),
                           )}
                         >
-                          {fmtSigned(s.a - s.v)}
+                          {fmtSigned(compareDiff(s.v, s.a, compare.vsActuals))}
                         </span>
                       </p>
                     </div>
@@ -707,47 +1474,80 @@ export function CostCenterSheet(props: {
           </div>
         </div>
 
-        {/* What can be done with the ticked rows, floating at the foot of the screen as on the
-            other lists (SelectionBar). Accounts win, as a copy takes them over their rows. */}
-        {isAdmin && (
-          <SelectionBar
-            count={marked.accounts.length || marked.rows.length}
-            label={(count) =>
-              marked.accounts.length > 0
-                ? t("markedAccounts", { count })
-                : t("markedRows", { count })
-            }
-          >
-            <Button variant="quiet" onClick={clearTicks}>
-              {t("clearMarked")}
-            </Button>
-            <Button onClick={copySelection} title="⌘/Ctrl+C">
-              {t("copyMarked")}
-            </Button>
-          </SelectionBar>
-        )}
-
-        {/* What the page's clipboard holds: a status, not a choice, so neutral. */}
-        {isAdmin && clip && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-border bg-surface px-4 py-2 text-sm">
-            <span className="font-medium">
-              {clip.kind === "rows"
-                ? t("copiedRows", { count: clip.ids.length })
-                : t("copiedAccountCode", { code: clip.label })}
-            </span>
-            <span className="text-xs text-muted">
-              {clip.kind === "rows" ? t("pasteRowsHint") : t("pasteAccountsHint")}
-            </span>
-            <Button
-              variant="link"
-              type="button"
-              onClick={() => onCopy(null)}
-              className="ml-auto text-xs"
+        {/* What can be done with the chosen rows (ticked, or a block of cells over several rows),
+            floating at the foot of the screen as on the other lists (SelectionBar). Accounts win,
+            as a copy takes them over their rows; they can only be copied from here. */}
+        {isAdmin &&
+          (chosenAccounts.length > 0 || blockAccount ? (
+            // Accounts picked by their numbers, or a block over one account's row and all its
+            // lines: whole accounts, copied as such.
+            <SelectionBar
+              count={blockAccount ? 1 : chosenAccounts.length}
+              label={(count) =>
+                blockAccount
+                  ? t("markedAccountRows", { count: blockAccount.lines.length })
+                  : t("markedAccounts", { count })
+              }
             >
-              {t("clearClipboard")}
-            </Button>
-          </div>
-        )}
+              <Button onClick={blockAccount ? copyRange : copyAccounts} title="⌘/Ctrl+C">
+                <IconCopy className="size-4" />
+                {t("copyMarked")}
+              </Button>
+            </SelectionBar>
+          ) : chosen.length === 0 && range.multi ? (
+            // A block of cells, not whole rows: only its values can be taken.
+            <SelectionBar count={range.count} label={(count) => t("markedCells", { count })}>
+              <Button onClick={copyRange} title="⌘/Ctrl+C">
+                <IconCopy className="size-4" />
+                {t("copyMarked")}
+              </Button>
+            </SelectionBar>
+          ) : chosen.length === 0 && heldCells ? (
+            // What is copied or cut, said in a word, and the key that pastes it. The frame on the
+            // sheet shows where it is; a cut is also faded there.
+            <SelectionBar
+              count={heldCells.lines.length * (heldCells.right - heldCells.left + 1)}
+              label={(count) => t("heldCells", { count })}
+            >
+              <PasteKey label={t("paste")} />
+              <Button variant="quiet" onClick={() => setHeldCells(null)}>
+                {t("clearClipboard")}
+              </Button>
+            </SelectionBar>
+          ) : chosen.length === 0 && clip ? (
+            // Nothing chosen and something copied: what the page's clipboard holds, in a word, and
+            // the key that pastes it, in the same place the actions were.
+            <SelectionBar
+              count={clip.ids.length}
+              label={(count) =>
+                clip.kind === "rows"
+                  ? t("heldRows", { count })
+                  : clip.lineIds
+                    ? t("heldAccountRows", { count: clip.lineIds.length })
+                    : t("heldAccounts", { count })
+              }
+            >
+              <PasteKey label={t("paste")} />
+              <Button variant="quiet" onClick={() => onCopy(null)}>
+                {t("clearClipboard")}
+              </Button>
+            </SelectionBar>
+          ) : (
+            <SelectionBar count={chosen.length} label={(count) => t("markedRows", { count })}>
+              <Button variant="secondary" onClick={() => removeRows(chosen)}>
+                <IconTrash className="size-4" />
+                {t("removeMarked")}
+              </Button>
+              <Button variant="secondary" onClick={() => copyRows(chosen, true)} title="⌘/Ctrl+X">
+                <IconScissors className="size-4" />
+                {t("cutMarked")}
+              </Button>
+              <Button onClick={() => copyRows(chosen, false)} title="⌘/Ctrl+C">
+                <IconCopy className="size-4" />
+                {t("copyMarked")}
+              </Button>
+            </SelectionBar>
+          ))}
 
         {/* The totals, the formula bar and the column header as one card, pinned so they stay
             in view while the rows scroll: under what the shell pins (--sticky-top, app-shell.tsx: the section band,
@@ -792,16 +1592,16 @@ export function CostCenterSheet(props: {
                       </p>
                       <p
                         className="mt-1 flex items-baseline justify-between gap-3 text-xs"
-                        title={tGroup("diffHint")}
+                        title={tGroup(compare.vsActuals ? "diffHintActuals" : "diffHintBudget")}
                       >
                         <span className="truncate text-muted">{tGroup("diff")}</span>
                         <span
                           className={cn(
                             "shrink-0 tabular-nums",
-                            diffClass(s.a - s.v, s.incomeLike),
+                            diffClass(compareDiff(s.v, s.a, compare.vsActuals), s.incomeLike),
                           )}
                         >
-                          {fmtSigned(s.a - s.v)}
+                          {fmtSigned(compareDiff(s.v, s.a, compare.vsActuals))}
                         </span>
                       </p>
                     </>
@@ -822,7 +1622,12 @@ export function CostCenterSheet(props: {
                 </div>
               ))}
             </div>
-            {formulaBar && <div className="border-t border-border">{formulaBar}</div>}
+            {(formulaBar || rangeStatus) && (
+              <div className="flex items-center border-t border-border">
+                <div className="min-w-0 flex-1">{formulaBar}</div>
+                {rangeStatus && <span className="border-l border-border">{rangeStatus}</span>}
+              </div>
+            )}
             <div className="border-t border-border">
               <SheetHeader />
             </div>
@@ -846,6 +1651,31 @@ export function CostCenterSheet(props: {
           ]}
         />
       </div>
+      <CommentPanel />
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} label={t("comments")} onClose={() => setMenu(null)}>
+          {menu.items.map((it) => (
+            <MenuItem
+              key={targetKey(it.target)}
+              onClick={() => comments.open(it.target, menu.anchor)}
+            >
+              <IconComment className="size-4 text-muted" />
+              {it.label}
+            </MenuItem>
+          ))}
+        </ContextMenu>
+      )}
     </SheetProvider>
+  );
+}
+
+/** How to paste what is copied: the paste icon, the word and its key, as a hint (not a button). */
+function PasteKey({ label }: { label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-sm text-muted">
+      <IconPaste className="size-4" />
+      {label}
+      <Kbd mod k="V" />
+    </span>
   );
 }

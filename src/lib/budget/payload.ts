@@ -15,6 +15,16 @@ export interface LineItem {
   /** The "antal × á-pris" form, when the row is written that way. */
   quantity: string | null;
   unitPrice: string | null;
+  /** On its cells, each naming the cell in `field`. */
+  comments: Comment[];
+}
+
+/** The cells of a line that can carry a comment of their own: Beskrivning and Belopp. */
+export const COMMENT_FIELDS = ["description", "expression"] as const;
+export type CommentField = (typeof COMMENT_FIELDS)[number];
+
+export function isCommentField(v: unknown): v is CommentField {
+  return (COMMENT_FIELDS as readonly unknown[]).includes(v);
 }
 
 export interface Comment {
@@ -22,6 +32,8 @@ export interface Comment {
   body: string;
   createdAt: string;
   author: { id: string; name: string };
+  /** The line's cell it is pinned to. Null on an account, where it is the account's number. */
+  field: CommentField | null;
 }
 
 export interface Account {

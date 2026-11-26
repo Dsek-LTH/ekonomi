@@ -52,7 +52,7 @@ import { ChangesSheet } from "./changes-sheet";
 import { CostCenterSheet } from "./cost-center-sheet";
 import { CostCenterHeader } from "./cost-center-header";
 import type { Budget, BudgetClip, LineItem } from "./budget-types";
-import { withLine, withLineOrder, withoutLine } from "./patch-budget";
+import { withLine, withLineFields, withLineOrder, withoutLine } from "./patch-budget";
 import { SearchInput } from "@/components/ui/search-input";
 import { nameUnderUnit } from "@/lib/domain/cost-center-short-name";
 import { ViewToggle } from "@/components/ui/view-toggle";
@@ -93,9 +93,17 @@ export default function BudgetClient({
   // Client state: committing a cell re-evaluates every formula in the browser (use-budget-cells).
   const [budget, setBudget] = useState<Budget>(initialBudget);
   // What is open: rambudget, variables, changes, or a sheet by id. Null opens the first cost centre.
-  const urlSheet = sheetFromUrl(initialSheet);
+  // Read from the address as it is now, not as the page was loaded: the address follows every
+  // pick (setSelected), so a remount (a hot reload, say) reopens what was open rather than the
+  // view the page first came up on. The props are the same address on the server's first render.
+  const [address] = useState(() => {
+    if (typeof window === "undefined") return { view: initialView, sheet: initialSheet };
+    const q = new URLSearchParams(window.location.search);
+    return { view: q.get("view") ?? undefined, sheet: q.get("sheet") ?? undefined };
+  });
+  const urlSheet = sheetFromUrl(address.sheet);
   const [picked, setPicked] = useState<string | null>(
-    initialView === "frame" ? RAMBUDGET : urlSheet,
+    address.view === "frame" ? RAMBUDGET : urlSheet,
   );
   // Written to the address with the native history API, which Next syncs with its router. A
   // router.replace would re-render the page on the server, fetching the whole budget again
@@ -302,7 +310,7 @@ export default function BudgetClient({
   }, [budget]);
   const record = useCallback((step: UndoStep) => recordRef.current(step), []);
 
-  const { renderCell, renderFormula, renderFormulaBar, commitField } = useBudgetCells({
+  const { renderCell, renderFormula, renderFormulaBar, commitField, forgetCell } = useBudgetCells({
     grid,
     isAdmin: canEdit,
     budget,
@@ -316,6 +324,19 @@ export default function BudgetClient({
 
   const undo = useUndo({
     applyField: commitField,
+    // Many cells in one request (api/budgets/[id]/cells), shown together once it answers.
+    applyFields: async (writes) => {
+      const lines = writes.flatMap((w) => {
+        const id = w.url.match(/\/budget-line-items\/([^/]+)$/)?.[1];
+        // Only Beskrivning and Belopp travel in a fields step (a block paste).
+        const fields = w.payload as { description?: string; expression?: string };
+        return id ? [{ id, ...fields }] : [];
+      });
+      if (lines.length === 0) return;
+      await api(`/api/budgets/${budgetId}/cells`, "POST", { lines }, (b) =>
+        lines.reduce<Budget>((acc, { id, ...fields }) => withLineFields(acc, id, fields), b),
+      );
+    },
     createLine: async (accountId, body) => {
       let id: string | null = null;
       const ok = await api(
@@ -331,6 +352,35 @@ export default function BudgetClient({
     },
     deleteLine: (lineId) =>
       api(`/api/budget-line-items/${lineId}`, "DELETE", undefined, (b) => withoutLine(b, lineId)),
+    deleteLines: (lineIds) =>
+      api(`/api/budgets/${budgetId}/lines/delete`, "POST", { ids: lineIds }, (b) =>
+        lineIds.reduce((acc, id) => withoutLine(acc, id), b),
+      ),
+    restoreLines: async (lines, orders) => {
+      let made: Record<string, string> | null = null;
+      type Restored = {
+        made: Record<string, string>;
+        created: (LineItem & { accountId: string })[];
+        orders: { accountId: string; ids: string[] }[];
+      };
+      const ok = await api(
+        `/api/budgets/${budgetId}/lines/restore`,
+        "POST",
+        {
+          lines: lines.map((l) => ({ key: l.lineId, accountId: l.accountId, ...l.body })),
+          orders,
+        },
+        (b, data) => {
+          const r = data as Restored;
+          const withMade = r.created.reduce((acc, li) => withLine(acc, li.accountId, li), b);
+          return r.orders.reduce((acc, o) => withLineOrder(acc, o.accountId, o.ids), withMade);
+        },
+        (data) => {
+          made = (data as Restored).made;
+        },
+      );
+      return ok ? made : null;
+    },
     reorder: (accountId, ids, made) => {
       // Only lines still in this account: the route moves a line from another account onto
       // this one, so a line dragged away since would be pulled back. Read from the latest
@@ -394,21 +444,20 @@ export default function BudgetClient({
   );
   const availableCc = allCostCenters.filter((c) => c.active && !usedCc.has(c.id));
   const q = search.trim().toLowerCase();
-  // In sheet order (compareSheets). filter() already copied, so sorting in place is safe.
-  const filteredCc = budget.costCenters
-    .filter(
-      (c) =>
-        !q ||
-        sheetName(c, t("unnamed")).toLowerCase().includes(q) ||
-        (c.costCenter?.shortName?.toLowerCase().includes(q) ?? false) ||
-        (c.costCenter?.code.toLowerCase().includes(q) ?? false),
-    )
-    .sort((a, b) =>
-      compareSheets(
-        { code: a.costCenter?.code ?? null, name: sheetName(a, t("unnamed")) },
-        { code: b.costCenter?.code ?? null, name: sheetName(b, t("unnamed")) },
-      ),
-    );
+  // In sheet order (compareSheets), as the sidebar lists them.
+  const sortedCc = [...budget.costCenters].sort((a, b) =>
+    compareSheets(
+      { code: a.costCenter?.code ?? null, name: sheetName(a, t("unnamed")) },
+      { code: b.costCenter?.code ?? null, name: sheetName(b, t("unnamed")) },
+    ),
+  );
+  const filteredCc = sortedCc.filter(
+    (c) =>
+      !q ||
+      sheetName(c, t("unnamed")).toLowerCase().includes(q) ||
+      (c.costCenter?.shortName?.toLowerCase().includes(q) ?? false) ||
+      (c.costCenter?.code.toLowerCase().includes(q) ?? false),
+  );
 
   const groups = groupByResultUnit(filteredCc, resultUnitOf);
   // Opens on the first cost centre as listed unfiltered (so searching does not move it), or on
@@ -444,6 +493,15 @@ export default function BudgetClient({
     groups[0]?.items[0]?.id ??
     VARS;
 
+  /** The sheet after `id` in the list as drawn (the one before, if it was last), else Variabler. */
+  const neighbourOf = (id: string) => {
+    const order = groupByResultUnit(sortedCc, resultUnitOf).flatMap((g) =>
+      g.items.map((c) => c.id),
+    );
+    const i = order.indexOf(id);
+    return order[i + 1] ?? order[i - 1] ?? VARS;
+  };
+
   // Editorial changes in force: rows per account and the effect on each sheet's result.
   const adjustments = adjustmentRows(budget.changes);
   const impactBySheet = changeImpactBySheet(budget);
@@ -455,7 +513,9 @@ export default function BudgetClient({
   // The open sheet, joined against the comparison. Misses only while it is loading.
   const openSheet = cc ? comparison.joined.sheets.find((s) => s.key === compareKey(cc)) : undefined;
   const sheetCompare =
-    comparison.otherLabel && openSheet ? { label: comparison.otherLabel, sheet: openSheet } : null;
+    comparison.otherLabel && openSheet
+      ? { label: comparison.otherLabel, sheet: openSheet, vsActuals: comparison.vsActuals }
+      : null;
 
   async function cloneCc(sourceId: string) {
     const data = await mutate<{ id: string }>(`/api/budgets/${budgetId}/cost-centers`, {
@@ -716,9 +776,9 @@ export default function BudgetClient({
                         ids: cc.accounts.map((a) => a.id),
                         label: sheetName(cc, t("unnamed")),
                       });
-                      notify.success(t("copiedAccounts", { count: cc.accounts.length }));
                     }}
-                    onRemoved={() => setSelected(RAMBUDGET)}
+                    // The sheet beside it in the list, so removing one stays in the detail view.
+                    onRemoved={() => setSelected(neighbourOf(cc.id))}
                   />
                   <CostCenterSheet
                     cc={cc}
@@ -732,6 +792,7 @@ export default function BudgetClient({
                     userId={user.id}
                     renderCell={renderCell}
                     renderFormula={renderFormula}
+                    forgetCell={forgetCell}
                     formulaBar={renderFormulaBar({
                       formula: t("formulaBar"),
                       hint: t("formulaBarHint"),

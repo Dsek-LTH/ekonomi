@@ -56,7 +56,7 @@ export function useBudgetCells({
 
   // Buffered in-progress cell edits, keyed `${id}:${field}`.
   const [pending, setPending] = useState<Record<string, string>>({});
-  // Which formula cell is currently focused (shows the formula instead of the value).
+  // Which formula cell is currently focused (it shows its formula once edited, see `showing`).
   const [focusKey, setFocusKey] = useState<string | null>(null);
   // The formula cell the formula bar is showing, with what saving it needs. Kept while focus
   // moves from the cell to the bar, so the bar edits the same buffered text.
@@ -297,23 +297,29 @@ export function useBudgetCells({
     display = "value",
     gated,
     unit = "ore",
+    editing,
   }: FormulaArgs) => {
     const key = `${id}:${field}`;
     // A Belopp is öre, a variable is whatever it means: the shared renderer needs to be told.
     const show = unit === "scalar" ? fmtScalar : fmt;
     const focused = focusKey === key;
-    const empty = raw.trim() === "";
+    // The formula is shown while it is being written: in edit mode, or typed (here or in the
+    // formula bar). Only selected, the cell reads as its value, as a spreadsheet's does.
+    const showing = focused && (editing === undefined || editing || pending[key] !== undefined);
+    // An empty amount is a zero (lib/budget/eval.ts) and reads as one, not as a faint hint. Only
+    // a formula column (Variabler) keeps an empty cell empty.
+    const empty = raw.trim() === "" && display === "formula";
     const isFormula = raw.trim().startsWith("=");
     const formulaText = toDisplay(raw, sheet, grid);
 
     const pretty = isFormula ? prettyFormula(formulaText) : formulaText;
-    // Selected or being edited, the formula reads as it is typed (editFormula), not spaced out.
+    // Being edited, the formula reads as it is typed (editFormula), not spaced out.
     const editText = isFormula ? editFormula(formulaText) : formulaText;
-    const asFormula = display === "formula" || focused;
+    const asFormula = display === "formula" || showing;
     const idle = formulaIdleText({
-      raw,
+      raw: raw.trim() === "" && display === "value" ? "0" : raw,
       pretty,
-      value: show(computed),
+      value: show(computed ?? 0),
       placeholder,
       asFormula: display === "formula",
       bad,
@@ -321,7 +327,7 @@ export function useBudgetCells({
     });
     // On a wide screen an idle formula reads as its working, muted, then its answer, so the
     // column still reads as a column of figures ("30 × 375" then "11 250").
-    const split = !focused && display === "value" && isFormula && !bad && !compact && !empty;
+    const split = !showing && display === "value" && isFormula && !bad && !compact && !empty;
     const working = split && (
       <>
         <span className="min-w-0 truncate text-muted">{pretty}</span>
@@ -349,16 +355,19 @@ export function useBudgetCells({
       <div className="relative">
         <input
           data-cell={gated ? key : undefined}
-          value={focused ? (pending[key] ?? editText) : empty ? "" : idle}
+          value={showing ? (pending[key] ?? editText) : empty ? "" : idle}
           placeholder={placeholder}
-          title={isFormula && !focused ? formulaText : undefined}
+          title={isFormula && !showing ? formulaText : undefined}
           // Focusing swaps the display to the formula, so the caret is placed after that
           // re-render. A gated cell is only selected on focus: leave a collapsed caret.
           data-formula-key={key}
           onFocus={(e) => {
             setFocusKey(key);
             setActive({ key, id, field, raw, sheet, url, payload, editText });
-            if (pending[key] === undefined) setP(id, field, editText);
+            // Where selecting shows the value, nothing is buffered until an edit: a buffer of
+            // the formula made on focus was saved back on leaving, over a value written since
+            // (a block paste).
+            if (editing === undefined && pending[key] === undefined) setP(id, field, editText);
             const el = e.currentTarget;
             requestAnimationFrame(() => {
               if (gated) el.setSelectionRange(el.value.length, el.value.length);
@@ -446,7 +455,16 @@ export function useBudgetCells({
     );
   };
 
-  return { renderCell, renderFormula, renderFormulaBar, commitField };
+  /**
+   * Let go of what the cell `id:field` holds for an edit, after it was written from outside
+   * (a block paste), so neither the cell nor the formula bar puts the old text back.
+   */
+  const forgetCell = (id: string, field: string) => {
+    clearP(id, field);
+    setActive((a) => (a?.key === `${id}:${field}` ? null : a));
+  };
+
+  return { renderCell, renderFormula, renderFormulaBar, commitField, forgetCell };
 }
 
 interface ActiveCell {

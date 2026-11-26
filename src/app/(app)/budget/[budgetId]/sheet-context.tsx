@@ -24,11 +24,14 @@ import type {
 export interface SheetCompare {
   label: string;
   sheet: JoinedSheet;
+  vsActuals: boolean;
 }
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 import type { UndoStep } from "./use-undo";
+import type { CommentTarget, CommentThreads } from "./sheet-comments";
+import type { RangeSelect } from "./use-range-select";
 
 export interface SheetValue {
   /** Puts a line made or deleted on the page's ⌘Z history (use-undo.ts). */
@@ -58,7 +61,15 @@ export interface SheetValue {
 
   // ── Layout ───────────────────────────────────────────────────────
   narrow: boolean;
-  gut: (n: number | undefined, box?: React.ReactNode) => React.ReactNode;
+  gut: (
+    n: number | undefined,
+    handle?: {
+      label: string;
+      selected: boolean;
+      onPointerDown: (e: React.PointerEvent) => void;
+      account?: boolean;
+    },
+  ) => React.ReactNode;
   del: (onClick: () => void, label: string) => React.ReactNode;
   actualPad: React.ReactNode;
   totalCols: number;
@@ -88,10 +99,15 @@ export interface SheetValue {
   /** The chart narrowed to what may go under `kind`. `keep` is a row's own account, kept so its value resolves. */
   accountOptionsFor: (kind: AccountKind, keep?: string) => { value: string; label: string }[];
 
-  // ── Ticking and copying (lib: ./use-sheet-clipboard) ─────────────
-  isTicked: (kind: "rows" | "accounts", id: string) => boolean;
-  marked: { accounts: string[]; rows: string[] };
-  tickBox: (kind: "rows" | "accounts", id: string, label: string) => React.ReactNode;
+  // ── The row numbers, each its row's handle ───────────────────────
+  /** A press on a line's number: select the row, or drag it (cost-center-sheet.tsx). */
+  pressRowNumber: (e: React.PointerEvent, account: Account, li: LineItem) => void;
+  /** A press on an account's own number: pick the account (Shift or a drag: several). */
+  pressAccountNumber: (e: React.PointerEvent, account: Account) => void;
+  /** Whether an account is picked (its number drawn chosen). */
+  accountPicked: (id: string) => boolean;
+  /** The accounts picked, by the first and last, and the last one's last line (for the box). */
+  pickedAccounts: { first: string; last: string; lastLine: string | null } | null;
 
   // ── Dragging a row to a new place ────────────────────────────────
   draggingLineId: string | null;
@@ -106,11 +122,26 @@ export interface SheetValue {
   createLine: (accountId: string) => void | Promise<unknown>;
   createAccount: (kind: AccountKind, code: string) => void | Promise<unknown>;
 
-  // ── Comments ─────────────────────────────────────────────────────
-  openComments: Set<string>;
-  setOpenComments: React.Dispatch<React.SetStateAction<Set<string>>>;
-  commentDraft: Record<string, string>;
-  setCommentDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  // ── Comments (./sheet-comments) ──────────────────────────────────
+  comments: CommentThreads;
+  thread: CommentThreads["thread"];
+  /** Half-written comments by target (targetKey). */
+  commentDraft: { get: (key: string) => string; set: (key: string, v: string) => void };
+  postComment: (target: CommentTarget, body: string) => Promise<boolean>;
+  deleteComment: (id: string) => Promise<boolean>;
+
+  // ── The block of cells selected (./use-range-select) ──────────────
+  range: RangeSelect;
+  /** Whether a cell is being edited (use-cell-edit.ts): only then does Belopp show its formula. */
+  editing: boolean;
+  /** Rows cut and not yet pasted, drawn faded. */
+  cutIds: Set<string>;
+  /** Rows copied or cut, in runs of neighbours as drawn, each framed. */
+  heldRuns: string[][];
+  /** Accounts copied, each framed from its name to the Belopp of its last line (if any). */
+  heldAccounts: { id: string; lastLine: string | null }[];
+  /** Cells copied or cut and not yet let go: framed, and faded if `cut`. */
+  heldCells: { lines: string[]; left: number; right: number; cut: boolean } | null;
 }
 
 const Ctx = createContext<SheetValue | null>(null);

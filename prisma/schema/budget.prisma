@@ -123,8 +123,8 @@ model BudgetAccount {
 // One line item beneath an account. Amount is an expression string so it
 // can reference variables (e.g. "MEMBERS * TICKET_PRICE").
 model BudgetLineItem {
-  id          String        @id @default(cuid())
-  account     BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id          String          @id @default(cuid())
+  account     BudgetAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId   String
   description String
   // When both `quantity` and `unitPrice` are set the amount is their product
@@ -133,11 +133,12 @@ model BudgetLineItem {
   quantity    String? // e.g. "2", "MEMBERS", "PASLAG_OL"
   unitPrice   String? // e.g. "350", "TACK_POLICY"
   expression  String // e.g. "1500", "MEMBERS * 5"
-  sortOrder   Int           @default(0)
+  sortOrder   Int             @default(0)
   // Per-line values for the six general columns, keyed x1…x6 (see
   // EXTRA_COLUMN_KEYS in lib/budget/grid.ts). Each holds a literal or formula
   // string, exactly like `expression`.
-  values      Json          @default("{}")
+  values      Json            @default("{}")
+  comments    BudgetComment[]
 
   @@index([accountId])
 }
@@ -231,17 +232,29 @@ model BudgetAdjustment {
   @@index([accountId])
 }
 
-// Approver comment on a specific account within a budget. Not copied when a
-// budget is duplicated, because a comment is a discussion about the figures in front of
-// it, not part of them.
+// A comment on a budget sheet, pinned like a spreadsheet note to one cell:
+//
+//   an account's number   accountId set, field null
+//   a line's cell         lineItemId set, field the cell's key ("description" or "expression")
+//
+// Exactly one of accountId and lineItemId is set, and field goes with lineItemId (check
+// constraints in the migrations). A line's comments hang on the line, not its account, so
+// they follow it when it is dragged to another account, and go with it when it is deleted.
+//
+// Not copied when a budget is duplicated or rows are pasted, because a comment is a
+// discussion about the figures in front of it, not part of them.
 model BudgetComment {
-  id        String        @id @default(cuid())
-  account   BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId String
-  author    User          @relation("BudgetCommentAuthor", fields: [authorId], references: [id])
-  authorId  String
-  body      String
-  createdAt DateTime      @default(now())
+  id         String          @id @default(cuid())
+  account    BudgetAccount?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId  String?
+  lineItem   BudgetLineItem? @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+  lineItemId String?
+  field      String?
+  author     User            @relation("BudgetCommentAuthor", fields: [authorId], references: [id])
+  authorId   String
+  body       String
+  createdAt  DateTime        @default(now())
 
   @@index([accountId])
+  @@index([lineItemId])
 }

@@ -17,7 +17,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
 
   const parsed = await parseBody(req, PasteIntoSheet);
   if (!parsed.ok) return parsed.res;
-  const { accountId, lineItemIds, accountIds } = parsed.data;
+  const { accountId, lineItemIds, accountIds, accountLineIds, overwriteFrom } = parsed.data;
   if (lineItemIds.length === 0 && accountIds.length === 0) {
     return fail(422, "budget.nothingToPaste");
   }
@@ -54,7 +54,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
     if (!target || target.budgetCostCenterId !== ccId) return fail(404, "budgetAccount.notFound");
   }
 
-  await prisma.$transaction(async (tx) => {
+  const pasted = await prisma.$transaction(async (tx) => {
     // Locks the sheet so concurrent pastes do not number accounts the same.
     await lockForAppend(tx, "budgetCostCenter", ccId);
 
@@ -98,9 +98,41 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       });
     }
 
+    /** Lines written over by the paste (`overwriteFrom`), kept in order for the answer. */
+    const overwritten: string[] = [];
+
     if (accountId && rows.length > 0) {
       await lockForAppend(tx, "budgetAccount", accountId);
-      await appendRows(accountId, rows);
+      // From `overwriteFrom` down, each copied row takes the place of the line there; what runs
+      // past the account's last line is added after it, as a plain paste adds everything.
+      let rest = rows;
+      if (overwriteFrom) {
+        const own = await tx.budgetLineItem.findMany({
+          where: { accountId },
+          orderBy: { sortOrder: "asc" },
+          select: { id: true },
+        });
+        const start = own.findIndex((l) => l.id === overwriteFrom);
+        const targets = start < 0 ? [] : own.slice(start, start + rows.length);
+        for (const [i, target] of targets.entries()) {
+          const row = rows[i];
+          await tx.budgetLineItem.update({
+            where: { id: target.id },
+            data: {
+              description: row.description,
+              expression: row.expression,
+              quantity: row.quantity,
+              unitPrice: row.unitPrice,
+              values: row.values ?? {},
+            },
+          });
+          copied.set(row.id, target.id);
+          made.push({ id: target.id, from: row });
+          overwritten.push(target.id);
+        }
+        rest = rows.slice(targets.length);
+      }
+      await appendRows(accountId, rest);
     }
 
     for (const source of accounts) {
@@ -121,7 +153,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       } else {
         await lockForAppend(tx, "budgetAccount", into);
       }
-      await appendRows(into, source.lineItems);
+      // The lines picked with the account, or all of them.
+      await appendRows(
+        into,
+        accountLineIds
+          ? source.lineItems.filter((l) => accountLineIds.includes(l.id))
+          : source.lineItems,
+      );
     }
 
     // Rebind equations that pointed at another copied row to that row's copy; outside references stay.
@@ -130,6 +168,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       const bound = rebindCopiedRefs(row.from, copied);
       if (bound) await tx.budgetLineItem.update({ where: { id: row.id }, data: bound });
     }
+    const madeNew = new Set(overwritten);
+    return { overwritten, created: made.map((m) => m.id).filter((id) => !madeNew.has(id)) };
   });
 
   const updated = await prisma.budgetCostCenter.findUnique({
@@ -140,7 +180,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
         // Same order as lib/data/budget.ts.
         orderBy: { accountCode: "asc" },
         include: {
-          lineItems: { orderBy: { sortOrder: "asc" } },
+          lineItems: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              comments: {
+                orderBy: { createdAt: "asc" },
+                include: { author: { select: { name: true, id: true } } },
+              },
+            },
+          },
           comments: {
             orderBy: { createdAt: "asc" },
             include: { author: { select: { name: true, id: true } } },
@@ -149,5 +197,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; cc
       },
     },
   });
-  return NextResponse.json(updated, { status: 201 });
+  // The sheet as it now stands, and which lines the paste wrote over or made (for ⌘Z).
+  return NextResponse.json({ ...updated, pasted }, { status: 201 });
 }

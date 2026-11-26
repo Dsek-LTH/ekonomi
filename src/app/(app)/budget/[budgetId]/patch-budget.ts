@@ -17,8 +17,28 @@ export function withSheet(b: Budget, sheetId: string, fn: (cc: BudgetCC) => Budg
   return { ...b, costCenters: b.costCenters.map((cc) => (cc.id === sheetId ? fn(cc) : cc)) };
 }
 
+/** The budget with some of a line's own fields written (a cell edit, as the PATCH route does). */
+export function withLineFields(
+  b: Budget,
+  lineId: string,
+  fields: Partial<Pick<LineItem, "description" | "expression">>,
+): Budget {
+  return {
+    ...b,
+    costCenters: b.costCenters.map((cc) => ({
+      ...cc,
+      accounts: cc.accounts.map((a) => ({
+        ...a,
+        lineItems: a.lineItems.map((li) => (li.id === lineId ? { ...li, ...fields } : li)),
+      })),
+    })),
+  };
+}
+
 export function withLine(b: Budget, accountId: string, line: LineItem): Budget {
-  return withAccount(b, accountId, (a) => ({ ...a, lineItems: [...a.lineItems, line] }));
+  // The create route answers with the bare row: a new line has nothing said about it yet.
+  const made = { ...line, comments: line.comments ?? [] };
+  return withAccount(b, accountId, (a) => ({ ...a, lineItems: [...a.lineItems, made] }));
 }
 
 export function withoutLine(b: Budget, lineId: string): Budget {
@@ -35,15 +55,38 @@ export function withoutLine(b: Budget, lineId: string): Budget {
 }
 
 /**
- * The budget with a created account placed in account-number order, as
- * lib/data/budget.ts sorts, so it does not jump on reload. BAS codes are four digits, so
- * string comparison is numeric.
+ * Accounts in account-number order, as lib/data/budget.ts sorts, so nothing jumps on reload.
+ * BAS codes are four digits, so string comparison is numeric.
  */
+function byCode(accounts: Account[]): Account[] {
+  return [...accounts].sort((x, y) => x.accountCode.localeCompare(y.accountCode));
+}
+
+/** The budget with a created account placed in account-number order. */
 export function withNewAccount(b: Budget, sheetId: string, account: Account): Budget {
-  return withSheet(b, sheetId, (cc) => ({
-    ...cc,
-    accounts: [...cc.accounts, account].sort((x, y) => x.accountCode.localeCompare(y.accountCode)),
-  }));
+  return withSheet(b, sheetId, (cc) => ({ ...cc, accounts: byCode([...cc.accounts, account]) }));
+}
+
+/** The budget with an account's number (and the name that comes with it) changed, re-sorted. */
+export function withAccountCode(
+  b: Budget,
+  accountId: string,
+  accountCode: string,
+  accountName: string,
+): Budget {
+  return {
+    ...b,
+    costCenters: b.costCenters.map((cc) =>
+      cc.accounts.some((a) => a.id === accountId)
+        ? {
+            ...cc,
+            accounts: byCode(
+              cc.accounts.map((a) => (a.id === accountId ? { ...a, accountCode, accountName } : a)),
+            ),
+          }
+        : cc,
+    ),
+  };
 }
 
 export function withoutAccount(b: Budget, accountId: string): Budget {
@@ -94,19 +137,42 @@ export function withoutVariable(b: Budget, variableId: string): Budget {
   return { ...b, variables: b.variables.filter((v) => v.id !== variableId) };
 }
 
-/** The budget with a comment added to or taken off an account (nothing re-derived). */
-export function withComment(b: Budget, accountId: string, comment: Comment): Budget {
-  return withAccount(b, accountId, (a) => ({ ...a, comments: [...a.comments, comment] }));
-}
-
-export function withoutComment(b: Budget, commentId: string): Budget {
+/**
+ * The budget with a comment added: on an account (`lineId` null), or on a line or one of its
+ * cells (the comment's own `field` says which). Nothing is re-derived.
+ */
+export function withComment(
+  b: Budget,
+  at: { accountId: string } | { lineId: string },
+  comment: Comment,
+): Budget {
+  if ("accountId" in at)
+    return withAccount(b, at.accountId, (a) => ({ ...a, comments: [...a.comments, comment] }));
   return {
     ...b,
     costCenters: b.costCenters.map((cc) => ({
       ...cc,
       accounts: cc.accounts.map((a) => ({
         ...a,
-        comments: a.comments.filter((c) => c.id !== commentId),
+        lineItems: a.lineItems.map((li) =>
+          li.id === at.lineId ? { ...li, comments: [...(li.comments ?? []), comment] } : li,
+        ),
+      })),
+    })),
+  };
+}
+
+/** The budget without a comment, wherever it was pinned. */
+export function withoutComment(b: Budget, commentId: string): Budget {
+  const keep = (c: Comment) => c.id !== commentId;
+  return {
+    ...b,
+    costCenters: b.costCenters.map((cc) => ({
+      ...cc,
+      accounts: cc.accounts.map((a) => ({
+        ...a,
+        comments: a.comments.filter(keep),
+        lineItems: a.lineItems.map((li) => ({ ...li, comments: (li.comments ?? []).filter(keep) })),
       })),
     })),
   };

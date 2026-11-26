@@ -8,6 +8,7 @@ import { sheetTotals, ZERO_TOTALS, type JoinedSheet, type Totals } from "@/lib/b
 import {
   resultUnitLabel,
   resultUnitOfSheet,
+  compareDiff,
   diffClass,
   fmt,
   fmtSigned,
@@ -104,7 +105,12 @@ export function Rambudget({
           </tr>
           <tr className="border-b-2 border-border bg-surface font-semibold">
             <td className="px-3 py-2">{t("total")}</td>
-            <Amounts {...sum(rows)} showCompare={showCompare} showImpact={showImpact} />
+            <Amounts
+              {...sum(rows)}
+              showCompare={showCompare}
+              vsActuals={comparison.vsActuals}
+              showImpact={showImpact}
+            />
           </tr>
         </thead>
         <tbody>
@@ -114,6 +120,7 @@ export function Rambudget({
               resultUnit={resultUnitLabel(g.resultUnit, tGroup)}
               {...sum(g.items)}
               showCompare={showCompare}
+              vsActuals={comparison.vsActuals}
               showImpact={showImpact}
             >
               {g.items.map((row) => {
@@ -147,6 +154,7 @@ export function Rambudget({
                       other={row.other}
                       impact={row.impact}
                       showCompare={showCompare}
+                      vsActuals={comparison.vsActuals}
                       showImpact={showImpact}
                       soft
                     />
@@ -169,6 +177,7 @@ function Amounts({
   other,
   impact,
   showCompare,
+  vsActuals,
   showImpact,
   soft,
 }: {
@@ -176,10 +185,12 @@ function Amounts({
   other: Totals;
   impact: number;
   showCompare: boolean;
+  vsActuals: boolean;
   showImpact: boolean;
   soft?: boolean;
 }) {
   const divider = soft ? "border-l border-border/50" : "border-l border-border";
+  const diff = compareDiff(own.result, other.result, vsActuals);
   return (
     <>
       <td data-rule="l" className={cn(divider, numCls)}>
@@ -203,11 +214,7 @@ function Amounts({
           {fmtSigned(other.result)}
         </td>
       )}
-      {showCompare && (
-        <td className={cn(numCls, diffClass(other.result - own.result, true))}>
-          {fmtSigned(other.result - own.result)}
-        </td>
-      )}
+      {showCompare && <td className={cn(numCls, diffClass(diff, true))}>{fmtSigned(diff)}</td>}
     </>
   );
 }
@@ -218,6 +225,7 @@ function FragmentGroup({
   other,
   impact,
   showCompare,
+  vsActuals,
   showImpact,
   children,
 }: {
@@ -226,6 +234,7 @@ function FragmentGroup({
   other: Totals;
   impact: number;
   showCompare: boolean;
+  vsActuals: boolean;
   showImpact: boolean;
   children: React.ReactNode;
 }) {
@@ -250,6 +259,7 @@ function FragmentGroup({
           other={other}
           impact={impact}
           showCompare={showCompare}
+          vsActuals={vsActuals}
           showImpact={showImpact}
           soft
         />
