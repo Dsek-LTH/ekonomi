@@ -18,7 +18,7 @@ export function ThemeToggle({ round = false }: { round?: boolean }) {
 
   function toggle() {
     const next: Theme = resolvedTheme(document.documentElement) === "dark" ? "light" : "dark";
-    switchTheme(() => apply(next));
+    switchTheme(next, () => apply(next));
   }
 
   return (
