@@ -6,7 +6,7 @@ export type PageTitle = keyof (typeof sv)["titles"];
 
 /**
  * A page's tab title, in the reader's language. The root layout's template
- * appends the app name, so a tab reads "Utlägg | D-sektionen | Ekonomi".
+ * appends the app name, so a tab reads "Utlägg | D-sektionen Ekonomi".
  * Used as `export const generateMetadata = titled("expenses");`.
  */
 export function titled(key: PageTitle) {

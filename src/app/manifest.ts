@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "D-sektionen | Ekonomi",
+    name: "D-sektionen Ekonomi",
     short_name: "Ekonomi",
     description: "Utlägg, budget och bokföring för D-sektionen",
     start_url: "/dashboard",
