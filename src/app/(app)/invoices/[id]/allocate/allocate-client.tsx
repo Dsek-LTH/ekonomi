@@ -274,6 +274,7 @@ export function AllocateForm({
               requirement="required"
             >
               <AmountInput
+                width="full"
                 suffix="kr"
                 value={totalInput}
                 onChange={setTotalInput}

@@ -5,7 +5,7 @@
 // the same idle and focused. No sign key: a phone's number pad has no minus.
 // Not type="number": it drops a lone "-", refuses "1 234,50" and blanks half-typed input.
 import { fullAmountForm, isAmountInput } from "@/lib/domain/money";
-import { Input, SuffixedInput, type ControlSize } from "@/components/ui/field";
+import { Input, SuffixedInput, type ControlSize, type FieldWidth } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
 
 export function amountFieldProps({
@@ -36,6 +36,7 @@ export function AmountInput({
   onChange,
   suffix,
   size = "md",
+  width = "sm",
   className,
   inputClassName,
   onFocus,
@@ -46,9 +47,11 @@ export function AmountInput({
   onChange: (value: string) => void;
   suffix?: React.ReactNode;
   size?: ControlSize;
+  /** An amount's own width by default (FIELD_WIDTH in components/ui/field.tsx). */
+  width?: FieldWidth;
   className?: string;
   inputClassName?: string;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size">) {
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size" | "width">) {
   const field = amountFieldProps({ value, onChange });
 
   const shared = {
@@ -60,6 +63,7 @@ export function AmountInput({
       onBlur?.(e);
     },
     size,
+    width,
   };
 
   if (suffix != null) {

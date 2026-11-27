@@ -423,7 +423,7 @@ export function ProductDialog({
               hint={t("products.field.costHint")}
               requirement="required"
             >
-              <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
+              <AmountInput width="full" value={d.costPrice} onChange={(v) => set("costPrice", v)} />
             </Field>
           </div>
           <div className={reported ? "sm:col-span-3" : "sm:col-span-2"}>

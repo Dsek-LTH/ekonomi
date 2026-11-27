@@ -8,7 +8,13 @@ import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { usePhone } from "@/lib/ui/media";
-import { CONTROL_CELL, CONTROL_SIZES, type ControlSize } from "./field";
+import {
+  CONTROL_CELL,
+  CONTROL_SIZES,
+  FIELD_WIDTH,
+  type ControlSize,
+  type FieldWidth,
+} from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
 
@@ -35,6 +41,8 @@ type SharedProps = {
   disabled?: boolean;
   align?: "left" | "center";
   className?: string;
+  /** How wide it is from sm, by what it holds (FIELD_WIDTH in ui/field.tsx). Full by default. */
+  width?: FieldWidth;
   /** Height from the shared control table. Filter bars and table toolbars pass "sm". */
   size?: ControlSize;
   /** "cell" turns into a borderless table cell inside a 2xl container (CONTROL_CELL in ui/field.tsx). */
@@ -110,6 +118,7 @@ function ComboboxBase({
   align = "left",
   size = "md",
   className,
+  width = "full",
   variant = "field",
   buttonClassName,
   chevronClassName,
@@ -275,7 +284,7 @@ function ComboboxBase({
 
   return (
     // min-w-0: a truncate label floors the flex item at its whole string, so the field would not shrink below its placeholder.
-    <div className={cn("relative min-w-0", className)}>
+    <div className={cn("relative min-w-0", FIELD_WIDTH[width], className)}>
       <button
         ref={triggerRef}
         type="button"

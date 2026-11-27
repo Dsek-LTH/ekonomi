@@ -691,7 +691,8 @@ export default function NewExpenseClient({
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+            {/* Halves on a phone; from sm side by side at their own widths (a date, an amount), not spread over the card. */}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:items-start sm:gap-5">
               <Field
                 label={t("purchaseDate")}
                 requirement="required"

@@ -317,7 +317,8 @@ export function DataTable<T>({
 
             {hasText && (
               <SearchInput
-                className="min-w-0 flex-1 sm:min-w-48 sm:flex-1"
+                // Grows with the toolbar, up to a search's width: past it a box only gets emptier.
+                className="min-w-0 flex-1 sm:min-w-48 sm:max-w-sm sm:flex-1"
                 value={controls.query}
                 placeholder={searchPlaceholder ?? t("searchPlaceholder")}
                 onChange={(e) => controls.setQuery(e.target.value)}
@@ -733,7 +734,7 @@ function Pagination({
             size="sm"
             searchable={false}
             // An explicit width: the trigger is w-full of this wrapper and has nothing to size against.
-            className="w-24"
+            className="w-20"
             aria-label={`${t("show")} ${t("perPage")}`}
             value={String(pageSize)}
             options={PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))}

@@ -55,6 +55,20 @@ export const CONTROL_SIZES: Record<ControlSize, string> = {
 /** A cell of a table from its container's xl (36rem) up: no box, the grid lines are the boxes. Overrides CONTROL_SIZES.sm only inside the container query. */
 export const CONTROL_CELL = "@xl:h-10 @xl:rounded-none @xl:border-0 @xl:bg-transparent focus-inset";
 
+/**
+ * How wide a field is, from what goes in it rather than how wide the page is: a page size or a percentage (xs), a
+ * date, an amount or a clearing number (sm), an account or a name (md), free text and search (full). From sm only: on
+ * a phone every field takes the row, which is what a thumb wants. A field in a table cell or a grid column that has
+ * to line up takes `full` and leaves the width to the column.
+ */
+export type FieldWidth = "xs" | "sm" | "md" | "full";
+export const FIELD_WIDTH: Record<FieldWidth, string> = {
+  xs: "sm:w-20",
+  sm: "sm:w-40",
+  md: "sm:w-56",
+  full: "",
+};
+
 // Sized by padding, not height, so a single line lands at 32px.
 const TEXTAREA = "field-ring rounded-control px-2.5 py-1.5";
 const SIZES = CONTROL_SIZES;
@@ -186,34 +200,40 @@ export function FieldGroup({
 export function Input({
   className,
   size = "md",
+  width = "full",
   id,
   ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "width"> & {
   size?: Size;
+  width?: FieldWidth;
   // Declared so screens can move focus to it (React 19 passes ref as a prop).
   ref?: React.Ref<HTMLInputElement>;
 }) {
   const wiring = useFieldWiring(id);
-  return <input {...wiring} className={control(size, className)} {...props} />;
+  return (
+    <input {...wiring} className={control(size, cn(FIELD_WIDTH[width], className))} {...props} />
+  );
 }
 
 /** An input with something fastened to the end inside the same border (a unit, or a button). `className` dresses the box, `inputClassName` the text. No disabled styling yet: CONTROL's rules key off the input. */
 export function SuffixedInput({
   suffix,
   size = "md",
+  width = "full",
   className,
   inputClassName,
   id,
   ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "width"> & {
   suffix: React.ReactNode;
   size?: Size;
+  width?: FieldWidth;
   className?: string;
   inputClassName?: string;
   ref?: React.Ref<HTMLInputElement>;
 }) {
   return (
-    <div className={suffixBox(size, className)}>
+    <div className={suffixBox(size, cn(FIELD_WIDTH[width], className))}>
       <input {...useFieldWiring(id)} {...props} className={cn(SUFFIXED_TEXT, inputClassName)} />
       {suffix}
     </div>
@@ -272,6 +292,7 @@ export function Textarea({
 export function DateInput({
   className,
   size = "md",
+  width = "sm",
   value,
   onChange,
   disabled,
@@ -279,7 +300,11 @@ export function DateInput({
   min,
   max,
   ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size"> & { size?: Size }) {
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "size" | "width"> & {
+  size?: Size;
+  /** A date's own width by default. */
+  width?: FieldWidth;
+}) {
   const t = useTranslations("common");
   const wiring = useFieldWiring(id);
   const picker = useRef<HTMLInputElement>(null);
@@ -300,7 +325,12 @@ export function DateInput({
     <div
       className={suffixBox(
         size,
-        cn("relative min-w-fit", disabled && "cursor-not-allowed bg-surface text-muted", className),
+        cn(
+          "relative min-w-fit",
+          FIELD_WIDTH[width],
+          disabled && "cursor-not-allowed bg-surface text-muted",
+          className,
+        ),
       )}
     >
       <DateInputBase

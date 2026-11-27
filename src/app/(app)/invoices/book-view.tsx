@@ -124,8 +124,10 @@ function HeadInput({
 }) {
   if (amount) {
     return (
+      // Full: the head's fields line up in columns against the document beside them.
       <AmountInput
         size="sm"
+        width="full"
         suffix="kr"
         value={value}
         onChange={(v) => onChange?.(v)}
@@ -138,6 +140,7 @@ function HeadInput({
     return (
       <DateInput
         size="sm"
+        width="full"
         value={value}
         onChange={(e) => {
           onChange?.(e.target.value);

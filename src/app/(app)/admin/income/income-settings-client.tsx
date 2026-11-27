@@ -279,6 +279,7 @@ function IncomeSettings({
           <li className="flex flex-wrap items-center gap-3 px-inset py-3">
             <div className="w-28 shrink-0">
               <AmountInput
+                width="full"
                 value={newFallback.amount}
                 onChange={(amount) => setNewFallback({ ...newFallback, amount })}
                 placeholder={t("fallbacks.amountPlaceholder")}

@@ -89,11 +89,13 @@ export function ProfileClient({
           <Card>
             <CardHeader title={tProfile("payoutTitle")} subtitle={tProfile("payoutDescription")} />
             <CardBody className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              {/* Each as wide as what goes in it, side by side: a clearing number is five digits, an account ten or so. */}
+              <div className="flex flex-col gap-3 sm:flex-row">
                 {/* Named and autoComplete="off" (plus 1Password's opt-out) so password managers do not
                     read this as a login form. No inputMode="numeric": the format has a hyphen and spaces. */}
                 <Field label={tProfile("clearing")}>
                   <Input
+                    width="sm"
                     name="bank-clearing"
                     autoComplete="off"
                     data-1p-ignore
@@ -104,6 +106,7 @@ export function ProfileClient({
                 </Field>
                 <Field label={tProfile("account")}>
                   <Input
+                    width="md"
                     name="bank-account"
                     autoComplete="off"
                     data-1p-ignore

@@ -141,6 +141,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
               ) : (
                 <AmountInput
                   size="sm"
+                  width="full"
                   value={row.amount}
                   onChange={(amount) => update(row.id, { amount })}
                   placeholder={t("amountPlaceholder")}

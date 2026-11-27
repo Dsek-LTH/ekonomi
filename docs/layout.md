@@ -33,6 +33,25 @@ crowding. These rules keep every form and card on one scale.
 - A table of inputs (the allocation editor, `CONTROL_CELL`) turns from stacked
   cards into a table at `@xl`.
 
+## Field widths
+
+A field is as wide as what goes in it, not as wide as the page. `width` on
+`Input`, `SuffixedInput`, `DateInput`, `AmountInput` and `Combobox` takes one of
+`FIELD_WIDTH` (components/ui/field.tsx), from `sm` up:
+
+| Width  | Size       | For                                                                                       |
+| ------ | ---------- | ----------------------------------------------------------------------------------------- |
+| `xs`   | 5rem       | a page size, a percentage, a count, months                                                |
+| `sm`   | 10rem      | a date, an amount, a clearing number, OCR (the default for `DateInput` and `AmountInput`) |
+| `md`   | 14rem      | an account, a cost centre, a name, an account number                                      |
+| `full` | the column | free text, a description, search, the supplier (the default for the rest)                 |
+
+On a phone every field takes the row. A field in a table cell, or in a grid
+whose columns have to line up (the kontering head beside the document), takes
+`full` and leaves the width to the column. Short fields that belong together
+stand side by side at their own widths rather than in halves of the card. A
+list's search grows with its toolbar up to `max-w-sm`.
+
 ## Warnings
 
 Where a warning goes depends on what it is about. None of them is a filled box,
