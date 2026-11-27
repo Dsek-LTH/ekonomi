@@ -284,6 +284,9 @@ export function DataTable<T>({
       )}
 
       {(hasText || hasDate || filters.length > 0 || toolbarSummary || action) && (
+        // From sm: the filters and the search at the start, the dates and the list's action at the end, so the row is
+        // weighted at both ends at any width. `order` does it, since the search shares the phone's first row with the
+        // filter button.
         <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
           {/* sm:contents: below sm one row with the trigger and search; from sm it dissolves. */}
           <div className="flex min-w-0 items-center gap-2 sm:contents">
@@ -317,8 +320,8 @@ export function DataTable<T>({
 
             {hasText && (
               <SearchInput
-                // Grows with the toolbar, up to a search's width: past it a box only gets emptier.
-                className="min-w-0 flex-1 sm:min-w-48 sm:max-w-sm sm:flex-1"
+                // A search's width, after the filters. It does not grow with the page: past this a box only gets emptier.
+                className="min-w-0 flex-1 sm:order-1 sm:w-72 sm:flex-none"
                 value={controls.query}
                 placeholder={searchPlaceholder ?? t("searchPlaceholder")}
                 onChange={(e) => controls.setQuery(e.target.value)}
@@ -328,7 +331,7 @@ export function DataTable<T>({
 
           {hasDate && (
             // The two dates stay on one line at every width and share it rather than each claiming 10rem.
-            <div className="hidden min-w-0 items-center gap-2 sm:flex">
+            <div className="hidden min-w-0 items-center gap-2 sm:order-2 sm:ml-auto sm:flex">
               <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
                 <DateInput
                   size="sm"
@@ -353,14 +356,21 @@ export function DataTable<T>({
 
           {/* [&>*]: reaches whatever the caller passed (Button, link, Menu wrapper). On a phone the action fills its own row. */}
           {toolbarSummary && (
-            <div className="flex min-w-0 items-center gap-2 text-sm sm:ml-auto">{summary}</div>
+            <div
+              className={cn(
+                "flex min-w-0 items-center gap-2 text-sm sm:order-4",
+                !hasDate && "sm:ml-auto",
+              )}
+            >
+              {summary}
+            </div>
           )}
           {action && (
             <div
               data-tour="list-action"
               className={cn(
-                "flex items-center gap-2 [&>*]:flex-1 sm:[&>*]:flex-none",
-                !toolbarSummary && "sm:ml-auto",
+                "flex items-center gap-2 [&>*]:flex-1 sm:order-5 sm:[&>*]:flex-none",
+                !toolbarSummary && !hasDate && "sm:ml-auto",
               )}
             >
               {action}
@@ -734,7 +744,7 @@ function Pagination({
             size="sm"
             searchable={false}
             // An explicit width: the trigger is w-full of this wrapper and has nothing to size against.
-            className="w-20"
+            className="w-16"
             aria-label={`${t("show")} ${t("perPage")}`}
             value={String(pageSize)}
             options={PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }))}

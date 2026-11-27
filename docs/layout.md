@@ -49,8 +49,9 @@ A field is as wide as what goes in it, not as wide as the page. `width` on
 On a phone every field takes the row. A field in a table cell, or in a grid
 whose columns have to line up (the kontering head beside the document), takes
 `full` and leaves the width to the column. Short fields that belong together
-stand side by side at their own widths rather than in halves of the card. A
-list's search grows with its toolbar up to `max-w-sm`.
+stand side by side at their own widths rather than in halves of the card. A list's toolbar puts the filters and the search (18rem) at the start and
+the dates and the list's action at the end, so it is weighted at both ends at
+any width.
 
 ## Warnings
 
