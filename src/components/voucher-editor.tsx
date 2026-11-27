@@ -174,6 +174,13 @@ export function VoucherEditor({
   const [allColumns, setAllColumns] = useState(false);
   /** On a column a phone leaves out until asked for. */
   const extra = allColumns ? "" : "max-md:hidden";
+  /**
+   * The Name column, folded to nothing where the table is narrow (beside the document panel), so Kredit and the row's
+   * controls fit without scrolling sideways. The cells stay, at no width, so the sums' spans still line up. The name is
+   * then on the account cell's hover, and in the account picker's options.
+   */
+  const nameCol =
+    "@max-[47.5rem]/voucher:w-0 @max-[47.5rem]/voucher:p-0 @max-[47.5rem]/voucher:border-r-0! @max-[47.5rem]/voucher:*:hidden";
 
   // Rows moved by hand (lib/ui/use-row-drag.ts, shared with the budget sheet). The order changes as the row passes
   // others, so the spare rows and the sums follow it. Escape puts back the order the drag found.
@@ -386,11 +393,11 @@ export function VoucherEditor({
         </Button>
       </div>
 
-      <div className={GRID_LINES}>
+      <div className={cn(GRID_LINES, "@container/voucher")}>
         {/* Full width wherever it fits. On a phone with every column, wide enough to read and scrolled sideways. */}
         <TableScroll
           minWidth={cn(
-            showProjects ? "md:min-w-[720px]" : "md:min-w-[600px]",
+            showProjects ? "md:min-w-[600px]" : "md:min-w-[540px]",
             allColumns && (showProjects ? "min-w-[720px]" : "min-w-[600px]"),
           )}
         >
@@ -399,8 +406,10 @@ export function VoucherEditor({
             <thead>
               <tr className={cn("bg-surface text-xs text-muted *:border-b", COLUMN_RULES)}>
                 <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
-                <th className={cn(headerCell, extra, showProjects ? "w-[15%]" : "w-[18%]")}>
-                  {t("colAccountName")}
+                <th
+                  className={cn(headerCell, extra, showProjects ? "w-[15%]" : "w-[18%]", nameCol)}
+                >
+                  <span>{t("colAccountName")}</span>
                 </th>
                 <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>
                   {t("colCostCenter")}
@@ -420,10 +429,13 @@ export function VoucherEditor({
             <tbody ref={bodyRef}>
               {(locked ? [locked].flat() : []).map((locked) => (
                 <tr key={locked.account} className={cn("bg-surface", ROW_RULES, COLUMN_RULES)}>
-                  <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
+                  <td
+                    title={locked.accountName}
+                    className="px-2 py-1.5 text-center align-middle font-medium tabular-nums"
+                  >
                     {locked.account}
                   </td>
-                  <td className={cn("px-2 align-middle", extra)}>
+                  <td className={cn("px-2 align-middle", extra, nameCol)}>
                     {cell(locked.accountName, false)}
                   </td>
                   <td className="px-2 text-center align-middle text-sm text-muted" />
@@ -483,6 +495,7 @@ export function VoucherEditor({
                     }}
                   >
                     <td
+                      title={accountName(r.account) || undefined}
                       className={
                         readOnly
                           ? "px-2 py-1.5 text-center align-middle tabular-nums"
@@ -505,7 +518,7 @@ export function VoucherEditor({
                         />
                       )}
                     </td>
-                    <td className={cn("px-2 align-middle", extra)}>
+                    <td className={cn("px-2 align-middle", extra, nameCol)}>
                       {cell(accountName(r.account), readOnly)}
                     </td>
                     <td

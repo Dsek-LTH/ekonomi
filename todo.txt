@@ -26,6 +26,7 @@ man kan hamna utanför document viewer när man scrollar långt ned på levfakt 
 default bredd ksk 40%
 lager öl försvann direkt när man valde kontot 1411
 lager sprit gjorde inte det när man valde kontot 1414
-bredden på action panelen vid kontering är för hög. 10000 wrapper dessutom på fakturor
+bredden på action panelen vid kontering är för hög. 10000 kr wrapper dessutom på fakturor
 uppdaterar inte register för kunder när man hämtar från fortnox
 add a delete for invoices
+add a check if the invoice already exists when kontering
