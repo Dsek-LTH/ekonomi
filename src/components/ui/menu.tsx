@@ -99,6 +99,8 @@ export function Menu({
           ref={triggerRef}
           type="button"
           disabled={disabled}
+          // Firefox restores a disabled state before hydration (see Button): off lets the server's answer stand.
+          {...{ autoComplete: "off" }}
           aria-haspopup="menu"
           aria-expanded={shown}
           aria-label={label}
@@ -180,6 +182,7 @@ export function MenuItem({
       type="button"
       role="menuitem"
       disabled={disabled}
+      {...{ autoComplete: "off" }}
       onClick={() => {
         close();
         onClick();

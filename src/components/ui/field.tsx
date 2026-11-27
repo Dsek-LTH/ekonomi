@@ -257,6 +257,8 @@ export function FieldAction({
       type="button"
       aria-label={label}
       title={label}
+      // Firefox restores a disabled state before hydration (see Button): off lets the server's answer stand.
+      {...{ autoComplete: "off" }}
       {...props}
       className={cn(
         // `-mr-1.5`: the field's 10px padding less 6px, so the gap to the border is the same at the end as above and below.

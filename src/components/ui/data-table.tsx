@@ -753,18 +753,24 @@ function Pagination({
           <span className="hidden sm:inline">{t("perPage")}</span>
         </span>
         <button
+          type="button"
           className={btn}
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
           aria-label={t("prevPage")}
+          // Firefox restores a button's disabled state on reload and Back, before hydration, which left a stale
+          // enabled "next" on a list with one page (see Button). Off lets the server's answer stand.
+          {...{ autoComplete: "off" }}
         >
           <IconChevronLeft className="size-4" />
         </button>
         <button
+          type="button"
           className={btn}
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
           aria-label={t("nextPage")}
+          {...{ autoComplete: "off" }}
         >
           <IconChevronRight className="size-4" />
         </button>
