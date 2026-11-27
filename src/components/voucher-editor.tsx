@@ -412,10 +412,25 @@ export function VoucherEditor({
                   <span>{t("colAccountName")}</span>
                 </th>
                 <th className={cn(headerCell, showProjects ? "w-[13%]" : "w-[18%]")}>
-                  {t("colCostCenter")}
+                  {/* Short, so the head fits a narrow table. The full name is the hover and what is read aloud. */}
+                  <abbr
+                    title={t("colCostCenter")}
+                    aria-label={t("colCostCenter")}
+                    className="no-underline"
+                  >
+                    {t("colCostCenterShort")}
+                  </abbr>
                 </th>
                 {showProjects && (
-                  <th className={cn(headerCell, extra, "w-[13%]")}>{t("colProject")}</th>
+                  <th className={cn(headerCell, extra, "w-[13%]")}>
+                    <abbr
+                      title={t("colProject")}
+                      aria-label={t("colProject")}
+                      className="no-underline"
+                    >
+                      {t("colProjectShort")}
+                    </abbr>
+                  </th>
                 )}
                 <th className={cn(headerCell, extra, showProjects ? "w-[16%]" : "w-[15%]")}>
                   {t("colDescription")}
