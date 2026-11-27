@@ -169,6 +169,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             units: columns.units,
             ...openColumns(columns.open),
             spilledQty: columns.spilledQty,
+            // The cost today. A return onto an empty shelf is worth this, not nothing.
+            unitCostOre: product.costPriceOre,
             eventId: id,
             occurredAt: new Date(body.occurredAt),
             actorId: g.actor.id,

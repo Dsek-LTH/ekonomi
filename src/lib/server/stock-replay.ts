@@ -8,6 +8,24 @@ import { differs, replay, type ReplayRow } from "@/lib/stock/replay";
 import { openColumns, openOf } from "./stock-state";
 import type { TxClient } from "./tx";
 
+/**
+ * Gives the product's price to the rows written before it had one. Such a row was booked at
+ * nothing, and a shelf booked at nothing hands that average to every later count and return,
+ * so the value stays at zero until a delivery. A row that carries a price keeps it.
+ */
+export async function priceUnpricedRows(
+  tx: TxClient,
+  productId: string,
+  costPriceOre: number | null,
+): Promise<number> {
+  if (costPriceOre == null || costPriceOre <= 0) return 0;
+  const { count } = await tx.stockEntry.updateMany({
+    where: { productId, unitCostOre: null },
+    data: { unitCostOre: costPriceOre },
+  });
+  return count;
+}
+
 /** How many rows it had to write. Zero is the ordinary answer. */
 export async function replayProduct(tx: TxClient, productId: string): Promise<number> {
   const rows = await tx.stockEntry.findMany({

@@ -78,7 +78,8 @@ async function main() {
       open: { 80: r.open80, 60: r.open60, 40: r.open40, 20: r.open20 },
       countedQty: r.countedQty,
       valueDeltaOre: r.valueDeltaOre,
-      unitCostOre: r.unitCostOre,
+      // A row written before the product had a price takes today's, as the app's button does.
+      unitCostOre: r.unitCostOre ?? product.costPriceOre,
     });
 
     const settled = replay(rows.map(asRow));
@@ -118,6 +119,10 @@ async function main() {
           },
         });
       }
+      await tx.stockEntry.updateMany({
+        where: { productId: product.id, unitCostOre: null },
+        data: { unitCostOre: product.costPriceOre },
+      });
     });
   }
 

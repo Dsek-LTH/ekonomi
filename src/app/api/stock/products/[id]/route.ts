@@ -16,6 +16,7 @@ import {
 } from "@/lib/server/stock-product-guard";
 import { isInternalCode } from "@/lib/stock/barcode";
 import { STOCKS } from "@/lib/stock/stocks";
+import { priceUnpricedRows, replayProduct } from "@/lib/server/stock-replay";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -100,8 +101,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   /**
    * What this patch actually changes, field by field, compared as text (read by a person, see
-   * StockProductChange). The price change is silent by design: it only affects the next delivery
-   * (StockEntry.unitCostOre), so it must be traceable.
+   * StockProductChange). The price change is silent by design: it affects the next delivery and rows
+   * that had no price (StockEntry.unitCostOre), so it must be traceable.
    */
   const asText = (v: unknown): string | null =>
     v == null ? null : Array.isArray(v) ? v.join(", ") : String(v);
@@ -124,6 +125,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           await tx.stockProductChange.createMany({
             data: edits.map((e) => ({ ...e, productId: id, actorId: g.actor.id })),
           });
+        }
+        // A price only reaches rows that have none: a cellar counted before it was priced.
+        if (body.costPriceOre != null && (await priceUnpricedRows(tx, id, body.costPriceOre)) > 0) {
+          await replayProduct(tx, id);
         }
         return row;
       }),

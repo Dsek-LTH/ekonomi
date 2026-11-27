@@ -396,7 +396,7 @@
   "revalue": {
     "action": "Räkna om lagervärdet",
     "title": "Räkna om lagervärdet?",
-    "description": "Varje produkts logg läses igenom igen och värdet skrivs om till det reglerna ger. Inköpspriser rörs inte: varje rad bär priset den bokades till.",
+    "description": "Varje produkts logg läses igenom igen och värdet skrivs om till det reglerna ger. En rad som bär ett inköpspris behåller det. En rad som skrevs innan produkten hade ett pris får dagens.",
     "done": "{rows} rader på {products} produkter. Lagret: {before} → {after}.",
     "settled": "Ingenting att räkna om. Lagervärdet är redan det reglerna ger.",
     "failed": "Kunde inte räkna om lagervärdet."

@@ -396,7 +396,7 @@
   "revalue": {
     "action": "Recalculate the stock value",
     "title": "Recalculate the stock value?",
-    "description": "Every product's log is read through again and its value rewritten to what the rules give. Purchase prices are left alone: each row carries the price it was booked at.",
+    "description": "Every product's log is read through again and its value rewritten to what the rules give. A row that carries a purchase price keeps it. A row written before the product had a price gets today's.",
     "done": "{rows} rows on {products} products. Stock: {before} → {after}.",
     "settled": "Nothing to recalculate. The stock value is already what the rules give.",
     "failed": "Could not recalculate the stock value."
