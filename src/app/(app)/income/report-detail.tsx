@@ -19,6 +19,8 @@ import { formatNumber } from "@/lib/ui/format";
 import { useFormat } from "@/lib/ui/use-format";
 import type { IncomeReportRow } from "@/lib/data/income";
 import type { DayVoucher, LineFindings } from "./voucher-draft";
+import { HEAD_ROW, NUM, TD, TH } from "@/lib/ui/table-style";
+import { cn } from "@/lib/ui/utils";
 
 type Translator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -234,45 +236,41 @@ export function VoucherCard({
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-y border-border bg-surface text-left text-xs text-muted">
-            <tr>
-              <th className="px-inset py-2 font-medium">{t("lines.account")}</th>
-              <th className="px-3 py-2 font-medium">{t("lines.costCenter")}</th>
-              {report.manual && <th className="px-3 py-2 font-medium">{t("manual.text")}</th>}
-              <th className="px-3 py-2 text-right font-medium">{t("book.debit")}</th>
-              <th className="px-inset py-2 text-right font-medium">{t("book.credit")}</th>
+          <thead>
+            <tr className={cn(HEAD_ROW, "border-t")}>
+              <th className={TH}>{t("lines.account")}</th>
+              <th className={TH}>{t("lines.costCenter")}</th>
+              {report.manual && <th className={TH}>{t("manual.text")}</th>}
+              <th className={cn(TH, NUM)}>{t("book.debit")}</th>
+              <th className={cn(TH, NUM)}>{t("book.credit")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {voucher.rows.map((r, i) => (
               <tr key={`${i}|${r.account}|${r.costCenterCode ?? ""}`}>
-                <td className="px-inset py-1.5">
+                <td className={TD}>
                   <span className="tnum">{r.account || "-"}</span>
                   {r.accountName && r.accountName !== r.account && (
                     <span className="text-muted"> - {r.accountName}</span>
                   )}
                 </td>
-                <td className="tnum px-3 py-1.5">
+                <td className={cn(TD, "tnum")}>
                   {r.costCenterCode ?? ""}
                   {r.project && <span className="text-muted"> - {r.project}</span>}
                 </td>
-                {report.manual && <td className="px-3 py-1.5 text-muted">{r.description ?? ""}</td>}
-                <td className="tnum px-3 py-1.5 text-right">{figure(r.debit)}</td>
-                <td className="tnum px-inset py-1.5 text-right">{figure(r.credit)}</td>
+                {report.manual && <td className={cn(TD, "text-muted")}>{r.description ?? ""}</td>}
+                <td className={cn(TD, NUM)}>{figure(r.debit)}</td>
+                <td className={cn(TD, NUM)}>{figure(r.credit)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot className="border-t border-border font-medium">
             <tr>
-              <td className="px-inset py-2" colSpan={report.manual ? 3 : 2}>
+              <td className={TD} colSpan={report.manual ? 3 : 2}>
                 {t("book.sum")}
               </td>
-              <td className="tnum px-3 py-2 text-right">
-                {formatNumber(voucher.totalDebit, 2, 2)}
-              </td>
-              <td className="tnum px-inset py-2 text-right">
-                {formatNumber(voucher.totalCredit, 2, 2)}
-              </td>
+              <td className={cn(TD, NUM)}>{formatNumber(voucher.totalDebit, 2, 2)}</td>
+              <td className={cn(TD, NUM)}>{formatNumber(voucher.totalCredit, 2, 2)}</td>
             </tr>
           </tfoot>
         </table>

@@ -18,6 +18,7 @@ import {
   type ServerControls,
   type TableControlState,
 } from "@/lib/data/use-list-query";
+import { CELL_X, HEAD_ROW, NUM, TD, TH } from "@/lib/ui/table-style";
 
 // md is where the sidebar becomes a 64px rail (components/shell/app-shell.tsx) and rows become phone cards. Move both together.
 
@@ -114,8 +115,9 @@ type MobileSlot = "title" | "trailing" | "meta" | "status" | "actions" | "hide";
 const alignCls = (a?: Column<unknown>["align"]) =>
   a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
-// Outer columns take the card's inset so edges line up with the toolbar; interior columns take a tighter 12px gutter.
-const CELL_X = "px-2.5 first:pl-inset last:pr-inset";
+// Head row, cell sizes and the figure column: one density for every read table (lib/ui/table-style.ts).
+/** A right-aligned column is a column of figures, so it gets NUM's width and never wraps. */
+const numCls = (a?: Column<unknown>["align"]) => (a === "right" ? NUM : undefined);
 
 type MobileGroups<T> = {
   title: Column<T> | undefined;
@@ -221,7 +223,7 @@ export function DataTable<T>({
 
   const head = (
     <thead>
-      <tr className="border-b border-border text-left text-xs font-medium text-muted">
+      <tr className={HEAD_ROW}>
         {cols.map((c) =>
           c.value && c.sortable ? (
             <SortableHeader
@@ -229,9 +231,9 @@ export function DataTable<T>({
               sortKey={c.key}
               controls={controls}
               className={cn(
-                CELL_X,
-                "py-2 font-medium",
+                TH,
                 alignCls(c.align),
+                numCls(c.align),
                 c.from && FROM_CLS[c.from],
                 c.className,
               )}
@@ -242,9 +244,9 @@ export function DataTable<T>({
             <th
               key={c.key}
               className={cn(
-                CELL_X,
-                "py-2 font-medium",
+                TH,
                 alignCls(c.align),
+                numCls(c.align),
                 c.from && FROM_CLS[c.from],
                 c.className,
               )}
@@ -495,9 +497,9 @@ export function DataTable<T>({
                           <td
                             key={c.key}
                             className={cn(
-                              CELL_X,
-                              "py-2",
+                              TD,
                               alignCls(c.align),
+                              numCls(c.align),
                               c.from && FROM_CLS[c.from],
                               c.className,
                             )}

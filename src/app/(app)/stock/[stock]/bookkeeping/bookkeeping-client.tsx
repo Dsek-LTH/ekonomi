@@ -30,6 +30,7 @@ import type { StockSetupGap } from "@/lib/stock/setup";
 import { stockPath, type StockSlug } from "@/lib/stock/stocks";
 import { formatOreKr } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
+import { HEAD_ROW, NUM, TD, TH } from "@/lib/ui/table-style";
 
 type Tab = "due" | "sent";
 
@@ -207,32 +208,32 @@ export default function BookkeepingClient({
           <div className="overflow-x-auto border-t border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-surface text-left text-xs text-muted">
-                  <th className="px-inset py-2 font-medium">{t("recon.col.group")}</th>
-                  <th className="px-3 py-2 font-medium">{t("recon.col.account")}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t("recon.col.app")}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t("recon.col.due")}</th>
-                  <th className="px-3 py-2 text-right font-medium">{t("recon.col.fortnox")}</th>
-                  <th className="px-inset py-2 text-right font-medium">{t("recon.col.diff")}</th>
+                <tr className={HEAD_ROW}>
+                  <th className={TH}>{t("recon.col.group")}</th>
+                  <th className={TH}>{t("recon.col.account")}</th>
+                  <th className={cn(TH, NUM)}>{t("recon.col.app")}</th>
+                  <th className={cn(TH, NUM)}>{t("recon.col.due")}</th>
+                  <th className={cn(TH, NUM)}>{t("recon.col.fortnox")}</th>
+                  <th className={cn(TH, NUM)}>{t("recon.col.diff")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60 tabular-nums">
+              <tbody className="divide-y divide-border">
                 {reconciliation.rows.map((r) => (
                   <tr key={r.groupId}>
-                    <td className="px-inset py-2">{r.name}</td>
-                    <td className="px-3 py-2 text-muted">{r.stockAccount ?? "-"}</td>
-                    <td className="px-3 py-2 text-right">
-                      {formatOreKr(r.appValueOre, { decimals: 2 })}
-                    </td>
-                    <td className="px-3 py-2 text-right text-muted">
+                    <td className={TD}>{r.name}</td>
+                    <td className={cn(TD, "text-muted")}>{r.stockAccount ?? "-"}</td>
+                    <td className={cn(TD, NUM)}>{formatOreKr(r.appValueOre, { decimals: 2 })}</td>
+                    <td className={cn(TD, NUM, "text-muted")}>
                       {r.dueOre === 0 ? "-" : signed(r.dueOre)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className={cn(TD, NUM)}>
                       {r.fortnoxOre == null ? "-" : formatOreKr(r.fortnoxOre, { decimals: 2 })}
                     </td>
                     <td
                       className={cn(
-                        "px-inset py-2 text-right font-medium",
+                        TD,
+                        NUM,
+                        "font-medium",
                         r.diffOre ? "text-warning" : "text-muted",
                       )}
                     >

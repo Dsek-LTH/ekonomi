@@ -15,6 +15,8 @@ import { Notice } from "@/components/ui/notice";
 import type { IncomeLineRow, IncomeMoveTarget } from "@/lib/data/income";
 import { productDisplayName } from "@/lib/income/product-groups";
 import type { AccountRecord } from "@/lib/domain/types";
+import { HEAD_ROW, NUM, TD, TH } from "@/lib/ui/table-style";
+import { cn } from "@/lib/ui/utils";
 
 export interface AssignRequest {
   lines: { id: string; resultUnitId: string; account?: string }[];
@@ -145,23 +147,23 @@ export function MoveLinesDialog({
 
         <div className="overflow-x-auto rounded-panel border border-border">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface text-left text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">{tLines("product")}</th>
-                <th className="px-3 py-2 font-medium">{t("account")}</th>
-                <th className="px-3 py-2 text-right font-medium">{tLines("total")}</th>
+            <thead>
+              <tr className={HEAD_ROW}>
+                <th className={TH}>{tLines("product")}</th>
+                <th className={TH}>{t("account")}</th>
+                <th className={cn(TH, NUM)}>{tLines("total")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {lines.map((line) => (
                 <tr key={line.id}>
-                  <td className="px-3 py-2">
+                  <td className={TD}>
                     {productDisplayName(line)}
                     <span className="block text-xs text-muted">
                       {t("wasAccount", { account: line.account })}
                     </span>
                   </td>
-                  <td className="w-56 px-3 py-2">
+                  <td className={cn(TD, "w-56")}>
                     <Combobox
                       options={options}
                       value={accountFor(line)}
@@ -172,7 +174,7 @@ export function MoveLinesDialog({
                       })}
                     />
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className={cn(TD, NUM)}>
                     <Amount value={line.total} />
                   </td>
                 </tr>

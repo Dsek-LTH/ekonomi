@@ -4,6 +4,7 @@ import { Card } from "./card";
 import { TitleOrBar } from "@/components/shell/settings-title";
 import { PageHeaderSkeleton } from "@/components/shell/section-nav";
 import { PAGE_WIDTH, type PageWidth } from "../page-shell";
+import { TD, TH } from "@/lib/ui/table-style";
 
 // Placeholders mirror the real components (Card, DataTable, PageShell) in widths and rows, so the page does not reflow when data lands.
 // Blocks are aria-hidden with one role=status on the page wrapper.
@@ -113,7 +114,8 @@ export function SkeletonTable({
           <thead>
             <tr className="border-b border-border">
               {cols.map((c) => (
-                <th key={c} className="px-2.5 py-2.5 first:pl-inset last:pr-inset">
+                // The real table's sizes (lib/ui/table-style.ts), so nothing moves when the rows arrive.
+                <th key={c} className={TH}>
                   <Skeleton className={cn("h-3", c === 0 ? "w-24" : "w-16")} />
                 </th>
               ))}
@@ -123,7 +125,7 @@ export function SkeletonTable({
             {Array.from({ length: rows }, (_, r) => (
               <tr key={r}>
                 {cols.map((c) => (
-                  <td key={c} className="px-2.5 py-3 first:pl-inset last:pr-inset">
+                  <td key={c} className={TD}>
                     <Skeleton
                       className={cn("h-4", c === 0 ? ROW_WIDTHS[r % ROW_WIDTHS.length] : "w-16")}
                     />

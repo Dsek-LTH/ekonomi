@@ -19,11 +19,12 @@ import {
 } from "@/lib/budget/compare";
 import { fmt, fmtSigned } from "../[budgetId]/budget-helpers";
 import { cn } from "@/lib/ui/utils";
+import { HEAD_ROW, NUM, TD, TH } from "@/lib/ui/table-style";
 
 // Spreadsheet notation (whole kronor, no unit), not `Amount`: it must read like /budget/[id].
 function Cell({ value, className }: { value: number | undefined; className?: string }) {
   return (
-    <td className={cn("px-4 py-2 text-right tabular-nums", className)}>
+    <td className={cn(TD, NUM, className)}>
       {value !== undefined ? fmt(value) : <span className="text-muted">-</span>}
     </td>
   );
@@ -32,16 +33,9 @@ function Cell({ value, className }: { value: number | undefined; className?: str
 // Only meaningful between exactly two columns.
 function Diff({ values, className }: { values: (number | undefined)[]; className?: string }) {
   const diff = (values[1] ?? 0) - (values[0] ?? 0);
-  if (diff === 0)
-    return <td className={cn("px-4 py-2 text-right tabular-nums text-muted", className)}>-</td>;
+  if (diff === 0) return <td className={cn(TD, NUM, "text-muted", className)}>-</td>;
   return (
-    <td
-      className={cn(
-        "px-4 py-2 text-right tabular-nums",
-        diff > 0 ? "text-success" : "text-danger",
-        className,
-      )}
-    >
+    <td className={cn(TD, NUM, diff > 0 ? "text-success" : "text-danger", className)}>
       {fmtSigned(diff)}
     </td>
   );
@@ -91,10 +85,10 @@ export function CompareClient({
           <TableScroll minWidth="min-w-[38rem]">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs font-medium text-muted">
-                  <th className="px-4 py-3">{t("colRow")}</th>
+                <tr className={HEAD_ROW}>
+                  <th className={TH}>{t("colRow")}</th>
                   {snapshots.map((s, i) => (
-                    <th key={s.id} className="px-4 py-3 text-right">
+                    <th key={s.id} className={cn(TH, "text-right")}>
                       <span className="inline-flex items-center gap-1">
                         {s.label}
                         <IconButton
@@ -109,7 +103,7 @@ export function CompareClient({
                       </span>
                     </th>
                   ))}
-                  {showDiff && <th className="px-4 py-3 text-right">{t("difference")}</th>}
+                  {showDiff && <th className={cn(TH, NUM)}>{t("difference")}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -121,7 +115,7 @@ export function CompareClient({
                         key={v.name}
                         className={cn("hover:bg-hover", differs(v.values) && "bg-warning/5")}
                       >
-                        <td className="px-4 py-2 font-mono text-xs font-semibold">{v.name}</td>
+                        <td className="h-10 px-4 py-2 font-mono text-xs font-semibold">{v.name}</td>
                         {v.values.map((value, i) => (
                           <Cell key={i} value={value} />
                         ))}
@@ -175,7 +169,7 @@ function SheetRows({
     <>
       <SectionHeader label={label} cols={cols} />
       <tr className="font-semibold">
-        <td className="px-4 py-2">{t("result")}</td>
+        <td className="h-10 px-4 py-2">{t("result")}</td>
         {results.map((v, i) => (
           <Cell key={i} value={sheet.present[i] ? v : undefined} />
         ))}
@@ -192,7 +186,7 @@ function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: 
   return (
     <>
       <tr className={cn("bg-surface", differs(account.totals) && "bg-warning/5")}>
-        <td className="px-4 py-2 pl-8">
+        <td className="h-10 px-4 py-2 pl-8">
           <span className="mr-2 font-mono text-xs font-semibold text-muted">{account.code}</span>
           {account.name}
         </td>
@@ -206,7 +200,7 @@ function AccountRows({ account, showDiff }: { account: JoinedAccount; showDiff: 
           key={line.key}
           className={cn("text-muted hover:bg-hover", differs(line.values) && "bg-warning/5")}
         >
-          <td className="px-4 py-2 pl-14 text-xs">{line.description || "-"}</td>
+          <td className="h-10 px-4 py-2 pl-14 text-xs">{line.description || "-"}</td>
           {line.values.map((v, i) => (
             <Cell key={i} value={v} className="text-xs" />
           ))}
