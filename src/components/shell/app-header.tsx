@@ -50,7 +50,9 @@ export function AppHeader({
   const t = useTranslations("nav");
   const pathname = usePathname();
   return (
-    <header className="z-30 hidden box-content h-12 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:flex print:hidden">
+    // The bottom border is kept, transparent, because h-app-bar counts it. The section band under the bar is the same
+    // white, so the two read as one header with the band's rule as its one line.
+    <header className="z-30 hidden box-content h-12 shrink-0 items-center gap-3 border-b border-transparent bg-background px-4 md:flex print:hidden">
       <MenuButton
         buttonRef={navToggleRef}
         open={navOpen}

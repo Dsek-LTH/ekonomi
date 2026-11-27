@@ -510,7 +510,7 @@ export function AppShell({
         >
           <header
             data-guide-edge="top"
-            className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-border bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden"
+            className="sticky top-0 z-20 flex h-app-bar shrink-0 items-center gap-3 border-b border-transparent bg-background px-4 pt-[env(safe-area-inset-top)] md:hidden print:hidden"
           >
             {/* The one way to move between sections on a phone, on every page: no bottom bar that comes and goes. */}
             <MenuButton
