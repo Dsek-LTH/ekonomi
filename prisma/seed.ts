@@ -262,7 +262,6 @@ async function seedStock(actorId: string) {
         stockId: "cafe",
         groupId: "stockgroup-dryck",
         unitMl: p.ml,
-        packSize: p.packSize,
         costPriceOre: p.costPriceOre,
         shelfLifeMonths: 9,
       },

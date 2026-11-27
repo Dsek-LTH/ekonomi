@@ -14,7 +14,6 @@ export interface BoardPriceDto {
   name: string;
   /** For a scan on Nytt uttag, matched in the browser: a board member cannot read the stock's own lookup. */
   ean?: string;
-  packSize?: number;
   /** What a unit costs to buy, for the warning when the board price is under it. */
   costPriceOre: number | null;
   /** Whole units the log holds. */
@@ -39,7 +38,6 @@ export async function getBoardPrices(): Promise<BoardPriceDto[]> {
         id: true,
         name: true,
         ean: true,
-        packSize: true,
         costPriceOre: true,
         boardPrices: {
           orderBy: { validFrom: "desc" },
@@ -67,7 +65,6 @@ export async function getBoardPrices(): Promise<BoardPriceDto[]> {
       productId: p.id,
       name: p.name,
       ean: p.ean ?? undefined,
-      packSize: p.packSize ?? undefined,
       costPriceOre: p.costPriceOre,
       onHand: held.get(p.id) ?? 0,
       priceOre: current?.priceOre ?? null,

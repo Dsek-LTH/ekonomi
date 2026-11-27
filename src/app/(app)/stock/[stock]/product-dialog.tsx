@@ -35,7 +35,6 @@ type Draft = {
   groupId: string;
   /** The drink type. Only asked for in a stock that files the restaurangrapport. */
   category: DrinkCategory;
-  packSize: string;
   abv: string;
   unitMl: string;
   nominalMl: string;
@@ -57,7 +56,6 @@ const emptyDraft = (groups: StockGroupChoice[]): Draft => ({
   kind: "UNIT",
   groupId: groupFor(groups, "OL"),
   category: "OL",
-  packSize: "",
   abv: "",
   unitMl: "",
   nominalMl: "",
@@ -74,7 +72,6 @@ const draftOf = (p: StockProductDto): Draft => ({
   kind: p.kind,
   groupId: p.groupId,
   category: p.category ?? "OL",
-  packSize: p.packSize?.toString() ?? "",
   abv: p.abv?.toString() ?? "",
   unitMl: p.unitMl?.toString() ?? "",
   nominalMl: p.nominalMl?.toString() ?? "",
@@ -141,7 +138,6 @@ export function ProductDialog({
   const ownCode = product && isInternalCode(product.ean) ? product.ean : null;
 
   const isVolume = traits.usesOpenLevels && d.kind === "VOLUME";
-  const packFault = d.packSize.trim() !== "" && !((int(d.packSize) ?? 0) >= 2);
 
   /** The tags on offer: the rest of the shelf's, less what this product already carries (those are the chips above the picker). */
   const tagOptions = cleanTags(knownTags).filter((tag) => !hasTag(d.tags, tag));
@@ -181,9 +177,7 @@ export function ProductDialog({
                   ? "sizeRequired"
                   : num(d.costPrice) == null
                     ? "costRequired"
-                    : packFault
-                      ? "packSizeInvalid"
-                      : null;
+                    : null;
 
   /** Why the save button is dead, in one sentence, or null. Shown for every product kind so an empty box is never unexplained. */
   const blocker = blockerFault
@@ -200,7 +194,6 @@ export function ProductDialog({
       kind: isVolume ? "VOLUME" : "UNIT",
       groupId: d.groupId || undefined,
       category: reported ? d.category : undefined,
-      packSize: int(d.packSize) ?? null,
       // The button is dead until `blocker` is null, so the fallback below is for the compiler.
       abv: reported ? (num(d.abv) ?? 0) : undefined,
       unitMl: isVolume ? null : (int(d.unitMl) ?? null),
@@ -233,7 +226,7 @@ export function ProductDialog({
   return (
     <Modal label={t("products.new")} onClose={onClose} className="max-w-2xl">
       <ModalHeader title={product ? product.name : t("products.new")} />
-      {/* Six columns from sm: the short fields share a row (two halves, or three thirds for the figures), so the whole
+      {/* Six columns from sm: the short fields share a row (halves where the drink type is filed, thirds in the café), so the whole
           product fits without scrolling. Required ones carry the star, and what is missing stands by the button. */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-inset py-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
@@ -432,7 +425,7 @@ export function ProductDialog({
             )}
           </div>
 
-          <div className="sm:col-span-2">
+          <div className={reported ? "sm:col-span-3" : "sm:col-span-2"}>
             <Field
               label={t("products.field.cost")}
               hint={t("products.field.costHint")}
@@ -441,18 +434,7 @@ export function ProductDialog({
               <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
             </Field>
           </div>
-          <div className="sm:col-span-2">
-            <Field label={t("products.field.packSize")} requirement="optional">
-              <Input
-                value={d.packSize}
-                onChange={(e) => set("packSize", e.target.value)}
-                inputMode="numeric"
-                placeholder="24"
-                className="tabular-nums"
-              />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
+          <div className={reported ? "sm:col-span-3" : "sm:col-span-2"}>
             <Field label={t("products.field.shelfLife")} requirement="optional">
               <Input
                 value={d.shelfLifeMonths}

@@ -77,8 +77,7 @@
     "sizeRequired": "The volume is needed for the report's litres",
     "costRequired": "The cost price is needed before the stock can be valued",
     "eanInvalid": "This is not a valid barcode. Check the digits or scan the code",
-    "internalCodeTyped": "Codes starting with 2 are given out by the app. Mark the product as having none instead",
-    "packSizeInvalid": "A pack holds at least two"
+    "internalCodeTyped": "Codes starting with 2 are given out by the app. Mark the product as having none instead"
   },
   "log": {
     "empty": "No movements in this selection.",
@@ -152,8 +151,7 @@
       "shelfLife": "Shelf life",
       "shelfLifePlaceholder": "months",
       "group": "Product type",
-      "costHint": "Per unit, without freight.",
-      "packSize": "Units per pack"
+      "costHint": "Per unit, without freight."
     },
     "col": {
       "name": "Product",

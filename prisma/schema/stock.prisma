@@ -281,10 +281,6 @@ model StockProduct {
   /// alcohol stock (a CHECK in the migration), null in the café.
   category DrinkCategory?
 
-  /// How many units a pack holds: 24 for a flak. Lets a refill or a delivery
-  /// be typed in packs. Null where the product is handled one at a time.
-  packSize Int?
-
   /// The barcode on the tin or the bottle. Unique, so scanning one in the
   /// cellar identifies the product outright; null for anything without one.
   ean String? @unique

@@ -24,8 +24,6 @@ export interface StockProductDto {
   groupName: string;
   /** The drink type. Only in a stock that files the restaurangrapport. */
   category?: DrinkCategory;
-  /** How many units a pack holds, where it is handled in packs. */
-  packSize?: number;
   /** Per cent. Decimal in the column; a number everywhere a person sees it. */
   abv?: number;
   unitMl?: number;
@@ -58,7 +56,6 @@ export async function getStockProducts(stock: StockSlug): Promise<StockProductDt
       kind: true,
       groupId: true,
       group: { select: { name: true } },
-      packSize: true,
       category: true,
       abv: true,
       unitMl: true,
@@ -78,7 +75,6 @@ export async function getStockProducts(stock: StockSlug): Promise<StockProductDt
     groupId: p.groupId,
     groupName: p.group.name,
     category: opt(p.category),
-    packSize: opt(p.packSize),
     abv: p.abv == null ? undefined : Number(p.abv),
     unitMl: opt(p.unitMl),
     nominalMl: opt(p.nominalMl),

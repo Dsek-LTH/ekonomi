@@ -70,7 +70,6 @@ export async function POST(req: Request) {
         kind: body.kind,
         stockId: g.stock,
         groupId: group,
-        packSize: body.packSize ?? null,
         category: traits.filesRestaurangrapport ? (body.category ?? null) : null,
         abv: body.abv ?? null,
         unitMl: body.unitMl ?? null,

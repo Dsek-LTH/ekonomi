@@ -63,8 +63,6 @@ export const CreateStockProduct = z.object({
   stock: StockSlug,
   /** Its type, which its accounts come from. Absent, the route takes the group its drink category names. */
   groupId: Id.optional(),
-  /** Units in a pack (24 for a flak). Nullable so clearing is expressible. */
-  packSize: z.int().min(2).max(1000).nullish(),
   name: NonEmpty,
   // Required unless `noBarcode`, which the route checks (a refine would break `.partial()`).
   ean: Ean.optional(),

@@ -77,8 +77,7 @@
     "sizeRequired": "Volymen behövs till restaurangrapportens liter",
     "costRequired": "Inköpspriset behövs för att lagret ska kunna värderas",
     "eanInvalid": "Det här är ingen giltig streckkod. Kontrollera siffrorna eller skanna koden",
-    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen. Markera att produkten saknar streckkod i stället",
-    "packSizeInvalid": "En förpackning rymmer minst två"
+    "internalCodeTyped": "Koder som börjar på 2 delas ut av appen. Markera att produkten saknar streckkod i stället"
   },
   "log": {
     "empty": "Inga rörelser i det här urvalet.",
@@ -152,8 +151,7 @@
       "shelfLife": "Hållbarhet",
       "shelfLifePlaceholder": "månader",
       "group": "Produkttyp",
-      "costHint": "Per styck, utan frakt.",
-      "packSize": "Antal per förpackning"
+      "costHint": "Per styck, utan frakt."
     },
     "col": {
       "name": "Produkt",

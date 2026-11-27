@@ -195,7 +195,7 @@ anyway.
 ### Changed
 
 - `StockProduct`: add `stockId` (required, immutable after the first entry),
-  `groupId` (required, must belong to the same stock), `packSize Int?` (24 for a flak, so a refill can be typed in packs).
+  `groupId` (required, must belong to the same stock). (`packSize` was dropped on 2026-11-27: nothing is typed in packs.)
   `category` becomes nullable, with a CHECK that it is set when the stock
   files the restaurangrapport.
 - `StockEntryKind`: append `ISSUE` (left storage for sale, not expected back:
