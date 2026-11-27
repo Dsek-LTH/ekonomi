@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
 import { isCompleteDate } from "@/lib/domain/date";
 import { DateInput as DateInputBase } from "./date-input";
-import { IconButton } from "./icon-button";
 import { IconCalendar } from "./icons";
 
 /** What a Field tells its control, by context (cloneElement breaks when the input is wrapped). The id ties the hint and error to the control for screen readers. */
@@ -221,6 +220,39 @@ export function SuffixedInput({
   );
 }
 
+/**
+ * A button fastened inside a field, at its end: the date field's calendar, a barcode field's scanner, a search's
+ * scanner. One size for all of them, a step inside the field's own height (24px in a 32px field, 32px in a phone's
+ * 40px), so its hover never reaches the field's border. A loose IconButton here was as tall as the field's inside,
+ * and a larger icon made it taller, so its hover ran over the border.
+ */
+export function FieldAction({
+  label,
+  className,
+  children,
+  ...props
+}: { label: string; children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      {...props}
+      className={cn(
+        // `-mr-1.5`: the field's 10px padding less 6px, so the gap to the border is the same at the end as above and below.
+        "-mr-1.5 flex size-8 shrink-0 items-center justify-center rounded-mark text-muted transition-colors sm:size-6",
+        "hover:bg-hover hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--color-ring)]",
+        "disabled:pointer-events-none disabled:opacity-40",
+        // The icon is always 16px, whatever is passed: a larger one is what pushed the old buttons over the border.
+        "[&_svg]:size-4",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function Textarea({
   className,
   id,
@@ -264,15 +296,11 @@ export function DateInput({
   };
 
   return (
-    // relative for the hidden native control; pr-1 so the button sits near the edge. The disabled look is spelled out because CONTROL's rules key off the inner input. min-w-fit keeps the box from clipping a whole date.
+    // relative for the hidden native control. The disabled look is spelled out because CONTROL's rules key off the inner input. min-w-fit keeps the box from clipping a whole date.
     <div
       className={suffixBox(
         size,
-        cn(
-          "relative min-w-fit pr-1",
-          disabled && "cursor-not-allowed bg-surface text-muted",
-          className,
-        ),
+        cn("relative min-w-fit", disabled && "cursor-not-allowed bg-surface text-muted", className),
       )}
     >
       <DateInputBase
@@ -302,15 +330,9 @@ export function DateInput({
         }
         className="pointer-events-none absolute bottom-0 left-2 size-0 opacity-0"
       />
-      <IconButton
-        label={t("openDatePicker")}
-        disabled={disabled}
-        onClick={openPicker}
-        // Gives up its vertical margin so it does not set the box's height.
-        className="-my-1.5"
-      >
-        <IconCalendar className="size-4" />
-      </IconButton>
+      <FieldAction label={t("openDatePicker")} disabled={disabled} onClick={openPicker}>
+        <IconCalendar />
+      </FieldAction>
     </div>
   );
 }

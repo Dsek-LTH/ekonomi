@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconMinus, IconPlus, IconScan } from "@/components/ui/icons";
 import { SearchInput } from "@/components/ui/search-input";
+import { FieldAction } from "@/components/ui/field";
 import { cn } from "@/lib/ui/utils";
 
 /** The search field and the scan button, as one row of controls. */
@@ -22,25 +23,18 @@ export function SearchScanRow({
 }) {
   const t = useTranslations("stock.stepper");
   return (
-    <div className="flex items-center gap-2">
-      <div className="min-w-0 flex-1">
-        <SearchInput
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          placeholder={placeholder}
-          aria-label={placeholder}
-        />
-      </div>
-      {/* Outlined and as tall as the search beside it, so the two read as one row of controls. */}
-      <IconButton
-        label={t("scan")}
-        title={t("scan")}
-        onClick={onScan}
-        className="flex size-11 items-center justify-center border border-border-control bg-background sm:size-8"
-      >
-        <IconScan className="size-5 sm:size-4" />
-      </IconButton>
-    </div>
+    // The scanner inside the search, at its end: one control, as the barcode field on a product has it.
+    <SearchInput
+      value={query}
+      onChange={(e) => onQuery(e.target.value)}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      action={
+        <FieldAction label={t("scan")} onClick={onScan}>
+          <IconScan />
+        </FieldAction>
+      }
+    />
   );
 }
 

@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { TagChips } from "@/components/stock/tag-chips";
 import { AmountInput } from "@/components/ui/amount-input";
-import { Field, FieldGroup, Input, SuffixedInput } from "@/components/ui/field";
-import { IconButton } from "@/components/ui/icon-button";
+import { Field, FieldAction, FieldGroup, Input, SuffixedInput } from "@/components/ui/field";
 import { IconScan } from "@/components/ui/icons";
 import { BarcodeScanner } from "@/components/stock/barcode-scanner";
 import { Modal, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -257,17 +256,10 @@ export function ProductDialog({
                   inputClassName="tabular-nums"
                   placeholder="7312040017072"
                   aria-label={t("products.field.ean")}
-                  // The box gives up its right padding for the button, which gives up its vertical margin so the field keeps its neighbours' height.
-                  className="pr-1"
                   suffix={
-                    <IconButton
-                      label={t("scan.action")}
-                      title={t("scan.action")}
-                      onClick={() => setScanning(true)}
-                      className="-my-1.5"
-                    >
-                      <IconScan className="size-5" />
-                    </IconButton>
+                    <FieldAction label={t("scan.action")} onClick={() => setScanning(true)}>
+                      <IconScan />
+                    </FieldAction>
                   }
                 />
               </FieldGroup>
