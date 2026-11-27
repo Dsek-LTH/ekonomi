@@ -83,7 +83,7 @@ export function SkeletonTable({
   return (
     <>
       {(toolbar || tabs) && (
-        <div className="flex flex-col gap-3 border-b border-border px-inset py-3">
+        <div className="flex flex-col gap-3 px-inset py-3">
           {tabs && (
             <div className="flex flex-wrap gap-1">
               {["w-16", "w-24", "w-20"].map((w) => (
@@ -100,7 +100,7 @@ export function SkeletonTable({
         </div>
       )}
 
-      <div className="divide-y divide-divider md:hidden">
+      <div className="divide-y divide-divider border-t border-divider md:hidden">
         {Array.from({ length: rows }, (_, r) => (
           <div key={r} className="flex items-start justify-between gap-3 px-inset py-4">
             <Skeleton className={cn("h-4", ROW_WIDTHS[r % ROW_WIDTHS.length])} />
@@ -137,7 +137,7 @@ export function SkeletonTable({
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-border px-inset py-3">
+      <div className="flex items-center justify-between px-inset py-3">
         <Skeleton className="h-3 w-32" />
         <Skeleton className="h-8 w-28" />
       </div>
