@@ -218,16 +218,25 @@ export default function StockClient({
         </span>
       ),
     },
-    {
-      key: "tags",
-      header: t("products.col.tags"),
-      // Searchable so a whisky is found by the word on it. Not sortable.
-      value: (p) => p.tags.join(" "),
-      searchable: true,
-      mobile: "hide",
-      cell: (p) =>
-        p.tags.length === 0 ? <span className="text-muted">-</span> : <TagChips tags={p.tags} />,
-    },
+    // Only when some product has a tag: a column of dashes says nothing.
+    ...(tags.length > 0
+      ? [
+          {
+            key: "tags",
+            header: t("products.col.tags"),
+            // Searchable so a whisky is found by the word on it. Not sortable.
+            value: (p: StockLevelDto) => p.tags.join(" "),
+            searchable: true,
+            mobile: "hide" as const,
+            cell: (p: StockLevelDto) =>
+              p.tags.length === 0 ? (
+                <span className="text-muted">-</span>
+              ) : (
+                <TagChips tags={p.tags} />
+              ),
+          },
+        ]
+      : []),
     {
       key: "onHand",
       header: t("products.col.onHand"),

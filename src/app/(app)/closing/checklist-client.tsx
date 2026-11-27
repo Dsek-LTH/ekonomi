@@ -115,18 +115,19 @@ function ChecklistRow({
     mutate(url, { method: "PATCH", key, body, error: t("saveFailed") });
 
   return (
-    <li className="flex gap-3 px-inset py-3">
-      <div className="pt-0.5">
+    <li className="flex gap-3 px-inset py-2.5 text-sm">
+      {/* One 20px column for both marks, so the app's ring and the hand-ticked box line up, as do the titles after them. */}
+      <div className="flex h-5 w-5 shrink-0 items-center justify-center">
         {item.check || !canWork ? (
           // A mark, not a control.
           <span
             className={cn(
-              "flex size-5 items-center justify-center rounded-full border",
+              "flex size-4 items-center justify-center rounded-full border",
               isDone ? "border-success bg-success text-on-brand" : "border-border",
             )}
             aria-label={isDone ? t("done") : t("open")}
           >
-            {isDone && <IconCheck className="size-3.5" />}
+            {isDone && <IconCheck className="size-3" />}
           </span>
         ) : (
           <Checkbox
