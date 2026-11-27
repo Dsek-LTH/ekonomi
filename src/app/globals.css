@@ -92,7 +92,7 @@
   /* Budget sheets rule their cells in this rather than in --color-border, a
        hairline heavier, because a spreadsheet is read by its grid. Cool, like
        every other neutral here: it used to be #ddd7df, the one warm grey in the
-       app. See the `.budget-grid` block near the bottom. */
+       app. See the `.grid-lines` block near the bottom. */
   --color-grid-line: #d4d4d8;
 
   /* ── Brand ───────────────────────────────────────────────────
@@ -1055,22 +1055,30 @@ summary {
   animation: receipt-tab-ring 850ms 220ms ease-out both;
 }
 
-/* Budget sheets read like a spreadsheet, not like the rest of the app: light
-   hairline gridlines, roomy rows, a soft hover, neutral fills. Scoped to the
-   table wrappers (class `budget-grid`). */
-/* Both colours are tokens now (`--color-grid-line` and `--color-faint` in
-   @theme), so this scope no longer carries hexes of its own and no longer needs
-   a `.dark` twin to step them: the palette has already done it. What stays here
-   is the one thing that is genuinely local, rebinding --color-border inside the
-   sheet so every `border-border` utility in it rules in the gridline. */
-.budget-grid {
+/* A table read by its grid (the budget sheets, the kontering): light hairline
+   gridlines and a soft hover. Scoped to the table wrappers (class `grid-lines`,
+   GRID_LINES in lib/ui/grid-table.ts). The colour is a token
+   (`--color-grid-line` in @theme), so this scope carries no hexes and needs no
+   `.dark` twin. What it does is rebind --color-border inside the table, so
+   every `border-border` utility in it rules in the gridline. */
+.grid-lines {
   --color-border: var(--color-grid-line); /* outer frame + row-group separators */
 }
 /* One quiet hairline colour on every rule (keeps each utility's border WIDTH but
    defeats the soft /40-/60 opacity tints used elsewhere). */
-.budget-grid :is(th, td, tr, tbody) {
+.grid-lines :is(th, td, tr, tbody) {
   border-color: var(--color-grid-line);
 }
+/* The hover fill is a step under the gridline here, not the app's own: in the
+   dark theme that one is within a shade of the gridline (#38383a on #39393b),
+   so a hovered row lost its column rules. Light is unchanged (#eaeaec). */
+.grid-lines {
+  --color-hover: color-mix(in srgb, var(--color-grid-line) 50%, var(--color-background));
+}
+
+/* Budget sheets read like a spreadsheet, not like the rest of the app: roomy
+   rows, neutral fills, a cell box for the selection. Scoped to the sheet
+   wrappers (class `budget-grid`), which are `grid-lines` as well. */
 /* Rambudget: the table scrolls inside its own card while the header block,
    the column names plus the grand total, stays pinned at the top of it, so a
    fifty-row overview never loses which column is which or what it all adds up
@@ -1117,12 +1125,6 @@ summary {
       inset 1px 0 0 var(--color-border),
       inset 0 -2px 0 var(--color-border);
   }
-}
-/* The hover fill is a step under the gridline here, not the app's own: in the
-   dark theme that one is within a shade of the gridline (#38383a on #39393b),
-   so a hovered row lost its column rules. Light is unchanged (#eaeaec). */
-.budget-grid {
-  --color-hover: color-mix(in srgb, var(--color-grid-line) 50%, var(--color-background));
 }
 /* A single selection box on the focused cell. It sits on the gridline and encloses
    the whole cell (drag grip included). The input's own ring is removed so this is

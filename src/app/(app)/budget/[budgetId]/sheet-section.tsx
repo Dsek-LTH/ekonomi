@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { isHeaderKey } from "./use-range-select";
 import { cn } from "@/lib/ui/utils";
+import { GRID_LINES, GRID_TABLE } from "@/lib/ui/grid-table";
 import type { Account } from "./budget-types";
 
 interface Section {
@@ -108,8 +109,8 @@ function SheetHeadRows() {
  */
 export function SheetHeader() {
   return (
-    <div className="budget-grid">
-      <table className="w-full border-separate border-spacing-0 text-sm table-fixed">
+    <div className={cn(GRID_LINES, "budget-grid")}>
+      <table className={cn("w-full table-fixed text-sm", GRID_TABLE)}>
         <SheetCols />
         <thead>
           <SheetHeadRows />
@@ -130,12 +131,14 @@ export function SheetGrid({ sections }: { sections: Section[] }) {
     // rows inside itself, and a clip still rounds the corners.
     <div
       ref={wrap}
-      className="budget-grid relative overflow-x-auto rounded-panel border border-border bg-background md:overflow-clip md:rounded-t-none md:border-t-0"
+      className={cn(
+        GRID_LINES,
+        "budget-grid relative overflow-x-auto rounded-panel border border-border bg-background md:overflow-clip md:rounded-t-none md:border-t-0",
+      )}
     >
-      {/* Separate borders, not collapsed: each cell owns its rules, so a row carried by the
-          drag (cost-center-sheet.tsx) takes its column rules along. Row rules are therefore on
-          the cells (`*:border-t`), since a <tr> or <tbody> border is not drawn in this model. */}
-      <table className="w-full border-separate border-spacing-0 text-sm table-fixed">
+      {/* Separate borders, so a row carried by the drag takes its column rules along
+          (lib/ui/grid-table.ts). Row rules are therefore on the cells (`*:border-t`). */}
+      <table className={cn("w-full table-fixed text-sm", GRID_TABLE)}>
         <SheetCols />
         <thead className="md:hidden">
           <SheetHeadRows />

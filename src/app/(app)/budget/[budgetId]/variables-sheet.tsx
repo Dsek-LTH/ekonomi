@@ -39,7 +39,7 @@ export function VariablesSheet({
   const t = useTranslations("budget.variables");
   const tRam = useTranslations("budget.rambudget");
   const cellEdit = useCellEdit(
-    "budget-grid overflow-hidden rounded-panel border border-border bg-background",
+    "grid-lines budget-grid overflow-hidden rounded-panel border border-border bg-background",
   );
   const showCompare = comparison.otherLabel !== null;
   const own = new Set(budget.variables.map((v) => v.name));

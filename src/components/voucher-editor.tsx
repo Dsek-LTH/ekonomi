@@ -22,6 +22,8 @@ import type { VoucherBlocker } from "@/lib/domain/voucher";
 import { retagRowText } from "@/lib/domain/cost-center-tag";
 import type { AccountRecord, CostCenter, ProjectRecord } from "@/lib/domain/types";
 import { cn, uid } from "@/lib/ui/utils";
+import { COLUMN_RULES, GRID_LINES, GRID_TABLE, LIFTED_ROW, ROW_RULES } from "@/lib/ui/grid-table";
+import { belowMiddle, placeAmong, useRowDrag } from "@/lib/ui/use-row-drag";
 
 export interface VoucherEditorRow {
   id: string;
@@ -88,22 +90,6 @@ export interface VoucherLockedRow {
   /** Why it is locked, on hover. */
   hint: string;
   label: string;
-}
-
-/** A row being carried by a pointer drag (not HTML5 drag, which cannot follow the pointer and lacks touch). */
-interface Drag {
-  id: string;
-  /** Where the pointer went down, and where the row sat in the list then. */
-  startY: number;
-  startIndex: number;
-  /** Where it sits now, and the rows in that order. The ref leads `rows`. */
-  index: number;
-  rows: VoucherEditorRow[];
-  /** One row's height, in pixels, and the last slot in the table. */
-  height: number;
-  lastIndex: number;
-  /** For Escape: the order the drag found. */
-  before: VoucherEditorRow[];
 }
 
 export function VoucherEditor({
@@ -177,7 +163,7 @@ export function VoucherEditor({
   );
 
   const headerCell = "px-2 py-2.5 text-center font-medium";
-  const amountHeader = "px-2 py-2.5 text-right font-medium";
+  const amountHeader = "px-2 py-2.5 text-right font-medium whitespace-nowrap";
   const cellInput =
     "block h-9 w-full bg-transparent px-2 text-center md:h-8 text-sm placeholder:text-muted focus-inset";
   const amountInput =
@@ -189,9 +175,43 @@ export function VoucherEditor({
   /** On a column a phone leaves out until asked for. */
   const extra = allColumns ? "" : "max-md:hidden";
 
-  const drag = useRef<Drag | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [draggedBy, setDraggedBy] = useState(0);
+  // Rows moved by hand (lib/ui/use-row-drag.ts, shared with the budget sheet). The order changes as the row passes
+  // others, so the spare rows and the sums follow it. Escape puts back the order the drag found.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  const drag = useRowDrag<{ id: string; rows: VoucherEditorRow[]; before: VoucherEditorRow[] }>({
+    begin: (id) => ({ id, rows, before: rows }),
+    over: (d, under, pointer) => {
+      const over = under?.closest<HTMLElement>("tr[data-voucher-row]");
+      const overId = over?.dataset.voucherRow;
+      if (!over || !overId || overId === d.id) return;
+      const ids = placeAmong(
+        d.rows.map((r) => r.id),
+        d.id,
+        overId,
+        belowMiddle(over, pointer.y),
+      );
+      if (ids.join() === d.rows.map((r) => r.id).join()) return;
+      const byId = new Map(d.rows.map((r) => [r.id, r]));
+      d.rows = ids.map((id) => byId.get(id)!);
+      onChangeRef.current(d.rows);
+    },
+    drop: () => {},
+    cancel: (d) => onChangeRef.current(d.before),
+    // Over the rows that move, never up over the locked ones or down into the sums.
+    bounds: () => {
+      const all = bodyRef.current?.querySelectorAll<HTMLElement>("tr[data-voucher-row]");
+      if (!all || all.length === 0) return null;
+      return {
+        top: all[0].getBoundingClientRect().top,
+        bottom: all[all.length - 1].getBoundingClientRect().bottom,
+      };
+    },
+  });
+  const draggingId = drag.draggingId;
 
   // Keep the BLANK_ROWS spare rows stocked (`withBlankRows`), but never during a drag: it works
   // from its own copy of the list.
@@ -209,12 +229,15 @@ export function VoucherEditor({
   const isLocal = (code: string) =>
     costCenters.some((c) => c.code === code && c.source === "LOCAL");
 
-  /** A row's account changed: the cost centre follows the voucher's, and a balance account gives it back. */
+  /**
+   * A row's account changed: an empty cost centre takes the voucher's. A cost centre already on the row stays, also on
+   * a balance account. A stock account carries its stock's cost centre, and whether the row's code was the voucher's
+   * one depended on the order the rows were changed in.
+   */
   function patchAccount(r: VoucherEditorRow, account: string) {
     const shared = sharedCostCenter(rows);
     let costCenterCode = r.costCenterCode;
     if (shared && !isBalanceAccount(account) && !costCenterCode) costCenterCode = shared;
-    else if (shared && isBalanceAccount(account) && costCenterCode === shared) costCenterCode = "";
     patch(r.id, {
       account,
       costCenterCode,
@@ -236,76 +259,6 @@ export function VoucherEditor({
       outstanding > 0 ? { debit: sekToInput(outstanding) } : { credit: sekToInput(-outstanding) },
     );
   }
-
-  function startDrag(e: React.PointerEvent, row: VoucherEditorRow) {
-    if (fixed || e.button !== 0) return;
-    const tr = (e.target as HTMLElement).closest("tr");
-    const index = rows.findIndex((r) => r.id === row.id);
-    if (!tr || index === -1) return;
-    // Stops text selection while dragging.
-    e.preventDefault();
-    drag.current = {
-      id: row.id,
-      startY: e.clientY,
-      startIndex: index,
-      index,
-      rows,
-      height: tr.getBoundingClientRect().height,
-      lastIndex: rows.length - 1,
-      before: rows,
-    };
-    setDraggingId(row.id);
-    setDraggedBy(0);
-  }
-
-  // Tracked on the window: the grip moves out from under the pointer. Ends wherever the button comes up.
-  useEffect(() => {
-    if (!draggingId) return;
-    const stop = () => {
-      drag.current = null;
-      setDraggingId(null);
-      setDraggedBy(0);
-    };
-    const move = (e: PointerEvent) => {
-      const d = drag.current;
-      if (!d) return;
-      const delta = e.clientY - d.startY;
-      // Rounded: a row is passed when the pointer is halfway across it.
-      const wanted = Math.min(
-        Math.max(d.startIndex + Math.round(delta / d.height), 0),
-        d.lastIndex,
-      );
-      if (wanted !== d.index) {
-        const next = d.rows.slice();
-        next.splice(wanted, 0, ...next.splice(d.index, 1));
-        d.rows = next;
-        d.index = wanted;
-        onChange(next);
-      }
-      // Offset left after the snapped rows, clamped to the table.
-      const offset = delta - (d.index - d.startIndex) * d.height;
-      const top = -d.index * d.height;
-      const bottom = (d.lastIndex - d.index) * d.height;
-      setDraggedBy(Math.min(Math.max(offset, top), bottom));
-    };
-    const cancel = () => {
-      if (drag.current) onChange(drag.current.before);
-      stop();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", cancel);
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("keydown", key);
-    };
-  }, [draggingId, onChange]);
 
   /** Keyboard reorder: Alt+Arrow Up/Down on any field in the row, over the same range as a drag. */
   function nudgeRow(id: string, delta: number) {
@@ -433,7 +386,7 @@ export function VoucherEditor({
         </Button>
       </div>
 
-      <div>
+      <div className={GRID_LINES}>
         {/* Full width wherever it fits. On a phone with every column, wide enough to read and scrolled sideways. */}
         <TableScroll
           minWidth={cn(
@@ -441,9 +394,10 @@ export function VoucherEditor({
             allColumns && (showProjects ? "min-w-[720px]" : "min-w-[600px]"),
           )}
         >
-          <table className="w-full table-fixed border-collapse text-sm">
+          {/* Separate borders, so a carried row takes its column rules along (lib/ui/grid-table.ts). */}
+          <table className={cn("w-full table-fixed text-sm", GRID_TABLE)}>
             <thead>
-              <tr className="divide-x divide-border border-b border-border bg-surface text-xs text-muted">
+              <tr className={cn("bg-surface text-xs text-muted *:border-b", COLUMN_RULES)}>
                 <th className={cn(headerCell, "w-[10%]")}>{t("colAccount")}</th>
                 <th className={cn(headerCell, extra, showProjects ? "w-[15%]" : "w-[18%]")}>
                   {t("colAccountName")}
@@ -457,18 +411,15 @@ export function VoucherEditor({
                 <th className={cn(headerCell, extra, showProjects ? "w-[16%]" : "w-[15%]")}>
                   {t("colDescription")}
                 </th>
-                <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
-                  {t("colDebit")}
-                </th>
-                <th className={cn(amountHeader, showProjects ? "w-[12%]" : "w-[15%]")}>
-                  {t("colCredit")}
-                </th>
-                <th className="w-[9%]" />
+                {/* Fixed widths: "10 000,00" fits on one line, and the row's two small controls need no more. */}
+                <th className={cn(amountHeader, "w-28")}>{t("colDebit")}</th>
+                <th className={cn(amountHeader, "w-28")}>{t("colCredit")}</th>
+                <th className="w-16" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody ref={bodyRef}>
               {(locked ? [locked].flat() : []).map((locked) => (
-                <tr key={locked.account} className="divide-x divide-border bg-surface">
+                <tr key={locked.account} className={cn("bg-surface", ROW_RULES, COLUMN_RULES)}>
                   <td className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
                     {locked.account}
                   </td>
@@ -482,10 +433,10 @@ export function VoucherEditor({
                   <td className={cn("px-2 align-middle", extra)}>
                     {cell(locked.description ?? "", false)}
                   </td>
-                  <td className="px-2 text-right align-middle text-sm tabular-nums">
+                  <td className="px-2 text-right align-middle text-sm whitespace-nowrap tabular-nums">
                     {locked.debit ? sekToInput(locked.debit) : ""}
                   </td>
-                  <td className="px-2 text-right align-middle text-sm font-medium tabular-nums">
+                  <td className="px-2 text-right align-middle text-sm font-medium whitespace-nowrap tabular-nums">
                     {locked.credit ? sekToInput(locked.credit) : ""}
                   </td>
                   <td className="text-center align-middle">
@@ -506,16 +457,15 @@ export function VoucherEditor({
                 return (
                   <tr
                     key={r.id}
+                    ref={drag.rowRef(r.id)}
+                    data-voucher-row={r.id}
                     className={cn(
-                      "group divide-x divide-border",
-                      // Outline, not shadow: box-shadow is not painted on rows of a border-collapse table.
-                      draggingId === r.id &&
-                        "relative z-10 bg-background outline outline-1 outline-border",
+                      "group",
+                      ROW_RULES,
+                      COLUMN_RULES,
+                      draggingId === r.id && LIFTED_ROW,
                       draggingId && draggingId !== r.id && "pointer-events-none",
                     )}
-                    style={
-                      draggingId === r.id ? { transform: `translateY(${draggedBy}px)` } : undefined
-                    }
                     onBlur={(e) => {
                       const to = e.relatedTarget as HTMLElement | null;
                       // Dead space or window blur: not a move to another row.
@@ -645,7 +595,7 @@ export function VoucherEditor({
                     <td
                       className={
                         fixed && !accountsOnly
-                          ? "px-2 text-right align-middle tabular-nums"
+                          ? "px-2 text-right align-middle whitespace-nowrap tabular-nums"
                           : "p-0 align-middle"
                       }
                     >
@@ -665,7 +615,7 @@ export function VoucherEditor({
                     <td
                       className={
                         fixed && !accountsOnly
-                          ? "px-2 text-right align-middle tabular-nums"
+                          ? "px-2 text-right align-middle whitespace-nowrap tabular-nums"
                           : "p-0 align-middle"
                       }
                     >
@@ -696,7 +646,7 @@ export function VoucherEditor({
                       )}
                       {movable && (
                         <DragHandle
-                          onPointerDown={(e) => startDrag(e, r)}
+                          onPointerDown={(e) => !fixed && drag.start(e, r.id)}
                           title={t("dragRow")}
                           className={cn(dragHandle, draggingId === r.id && "opacity-100")}
                         />
@@ -707,22 +657,26 @@ export function VoucherEditor({
               })}
             </tbody>
             <tfoot className="text-sm">
-              <tr className="border-t border-border font-medium">
+              <tr className="font-medium *:border-t *:border-border">
                 <SpanLabel full={showProjects ? 5 : 4} compact={!allColumns}>
                   {t("sum")}
                 </SpanLabel>
-                <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalDebit)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{figure(totalCredit)}</td>
+                <td className="px-2 py-1.5 text-right whitespace-nowrap tabular-nums">
+                  {figure(totalDebit)}
+                </td>
+                <td className="px-2 py-1.5 text-right whitespace-nowrap tabular-nums">
+                  {figure(totalCredit)}
+                </td>
                 <td />
               </tr>
-              <tr className="border-t border-border font-medium">
+              <tr className="font-medium *:border-t *:border-border">
                 <SpanLabel full={showProjects ? 5 : 4} compact={!allColumns}>
                   {t("differenceLabel")}
                 </SpanLabel>
                 <td />
                 <td
                   className={cn(
-                    "px-2 py-1.5 text-right tabular-nums",
+                    "px-2 py-1.5 text-right whitespace-nowrap tabular-nums",
                     Math.abs(outstanding) >= 0.005 && "text-danger",
                   )}
                 >

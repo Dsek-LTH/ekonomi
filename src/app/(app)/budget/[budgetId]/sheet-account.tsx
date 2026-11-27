@@ -2,6 +2,7 @@
 
 // One account on a budget sheet: header row, line items, the add row and comments. The
 // sheet arrives as a context (./sheet-context) rather than as props.
+import { LIFTED_ROW } from "@/lib/ui/grid-table";
 import { effectiveKind, type AccountKind } from "@/lib/budget";
 import { lineKeys, type JoinedAccount } from "@/lib/budget/compare";
 import type { ColumnDef } from "@/lib/budget/grid";
@@ -309,11 +310,8 @@ export function AccountBlock({ account }: { account: Account }) {
 
           data-line={li.id}
           data-account={account.id}
-          // Only set, never cleared: a row carried into another account is a new <tr> under a
-          // new <tbody>, mounted around the time React drops the old one.
-          ref={(el) => {
-            if (el && draggingLineId === li.id) liftRef.current = el;
-          }}
+          // A row carried into another account is a new <tr> under a new <tbody>: the drag takes it from here.
+          ref={liftRef(li.id)}
           className={cn(
             "group *:border-t transition-colors",
             // While a block of cells is selected its box is the only tint: a hovered row under
@@ -321,17 +319,13 @@ export function AccountBlock({ account }: { account: Account }) {
             !range.multi && "hover:bg-hover",
             // Cut and waiting to be pasted somewhere: still here until then, but on its way.
             cutIds.has(li.id) && "opacity-50",
-            // Lifted: opaque so rows do not read through it, and outlined. `pointer-events-none`
-            // lets the drag see the sheet underneath. `transition-none`: transition-colors
-            // animates outline-color too, from currentColor (near white in dark), which flashed.
-            draggingLineId === li.id &&
-              "pointer-events-none relative z-10 bg-background outline outline-1 outline-border transition-none",
+            draggingLineId === li.id && LIFTED_ROW,
           )}
         >
           {gut(grid.lineRow.get(`${ccCode}|${li.id}`), {
             label: isAdmin ? t("selectOrMoveRow") : t("selectRow"),
             selected: range.rowSelected(li.id),
-            onPointerDown: (e) => pressRowNumber(e, account, li),
+            onPointerDown: (e) => pressRowNumber(e, li),
           })}
           {columns.map((col) => lineCell(sheet, col, li))}
           {showCompare && (

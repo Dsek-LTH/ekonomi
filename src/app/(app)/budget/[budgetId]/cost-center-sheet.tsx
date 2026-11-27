@@ -3,12 +3,12 @@
 import { Button, SOFT_FILL } from "@/components/ui/button";
 import { SelectionBar } from "@/components/selection-bar";
 import { Kbd } from "@/components/ui/kbd";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { effectiveKind, isResultAccount, type AccountKind } from "@/lib/budget";
 import { sheetTotals, ZERO_TOTALS, type JoinedSheet } from "@/lib/budget/compare";
 import { toStored, type BudgetGrid, type ColumnDef } from "@/lib/budget/grid";
-import { autoScrollStep, verticalScroller } from "@/lib/ui/auto-scroll";
+import { belowMiddle, placeAmong, useRowDrag } from "@/lib/ui/use-row-drag";
 import { useFormat } from "@/lib/ui/use-format";
 import { usePhone } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
@@ -78,9 +78,6 @@ export interface SheetCompare {
   sheet: JoinedSheet;
   vsActuals: boolean;
 }
-
-// How far the pointer moves on the grip before a row lifts. Below it the press is a click.
-const DRAG_THRESHOLD_PX = 4;
 
 export function CostCenterSheet(props: {
   cc: BudgetCC;
@@ -366,11 +363,9 @@ export function CostCenterSheet(props: {
   }
 
   /**
-   * Reordering a line by hand, within its account or onto another one. A pointer drag (not
-   * HTML5, which can only snap) like components/voucher-editor.tsx: the row glides under the
-   * pointer and others snap into its gap. The sheet's table keeps separate borders
-   * (sheet-section.tsx) so a carried row takes its column rules with it.
-   * Reclassifying a whole account by dropping it on the other section is still HTML5.
+   * Reordering a line by hand, within its account or onto another one, with the row drag shared with the kontering
+   * (lib/ui/use-row-drag.ts). The sheet's table keeps separate borders (sheet-section.tsx) so a carried row takes its
+   * column rules with it. Reclassifying a whole account by dropping it on the other section is still HTML5.
    */
   interface LineDrag {
     id: string;
@@ -378,19 +373,10 @@ export function CostCenterSheet(props: {
     accountId: string;
     ids: Record<string, string[]>;
     before: Record<string, string[]>;
-    /** Pointer position; `pointerX` is for re-asking what is under it while the view scrolls. */
-    pointerX: number;
-    pointerY: number;
-    grab: number;
-    /** What scrolls when the row is carried to the edge, resolved at drag start. */
-    scroller: HTMLElement | null;
   }
-  const lineDrag = useRef<LineDrag | null>(null);
-  const [draggingLineId, setDraggingLineId] = useState<string | null>(null);
   // The placement to draw: the drag's while in the air, and until the saved sheet returns
   // (else the sheet would spring back during the save).
   const [placement, setPlacement] = useState<Record<string, string[]> | null>(null);
-  const liftRef = useRef<HTMLTableRowElement | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Every row by id, since a placement can hold a row carried out of its server account.
@@ -402,40 +388,17 @@ export function CostCenterSheet(props: {
     return ids.map((id) => lineById.get(id)).filter((l): l is LineItem => Boolean(l));
   }
 
-  /** Keep the lifted row under the pointer. Written to the node, since a state update per pixel would re-render the sheet. */
-  const lift = useCallback(() => {
-    const el = liftRef.current;
-    const d = lineDrag.current;
-    if (!el || !d) return;
-    el.style.transform = "";
-    const box = el.getBoundingClientRect();
-    let y = d.pointerY - d.grab - box.top;
-    // Held inside the accounts, headings and Summa included. Not inside the line rows: with
-    // every account above it empty, the dragged row is the first line row and could not rise.
-    const zones = sheetRef.current?.querySelectorAll<HTMLElement>("tbody[data-drop-account]");
-    if (zones && zones.length > 0) {
-      const top = zones[0].getBoundingClientRect().top;
-      const bottom = zones[zones.length - 1].getBoundingClientRect().bottom;
-      y = Math.min(Math.max(y, top - box.top), bottom - box.height - box.top);
-    }
-    el.style.transform = `translateY(${y}px)`;
-  }, []);
-
-  const place = useCallback(
-    (d: LineDrag, accountId: string, overId: string | null, after: boolean) => {
-      const ids: Record<string, string[]> = {};
-      for (const [key, list] of Object.entries(d.ids)) ids[key] = list.filter((x) => x !== d.id);
-      const list = ids[accountId];
-      if (!list) return;
-      const at = overId ? list.indexOf(overId) : -1;
-      list.splice(at === -1 ? list.length : at + (after ? 1 : 0), 0, d.id);
-      if (accountId === d.accountId && list.join() === d.ids[accountId].join()) return;
-      d.ids = ids;
-      d.accountId = accountId;
-      setPlacement(ids);
-    },
-    [],
-  );
+  function place(d: LineDrag, accountId: string, overId: string | null, after: boolean) {
+    const list = d.ids[accountId];
+    if (!list) return;
+    const ids: Record<string, string[]> = {};
+    for (const [key, l] of Object.entries(d.ids)) ids[key] = l.filter((x) => x !== d.id);
+    ids[accountId] = placeAmong(list, d.id, overId, after);
+    if (accountId === d.accountId && ids[accountId].join() === d.ids[accountId].join()) return;
+    d.ids = ids;
+    d.accountId = accountId;
+    setPlacement(ids);
+  }
 
   // Drawn order: Intäkter, then Kostnader, each account's rows as they stand (mid-drag too).
   // Each account's own row comes first, then its lines: the block can take the account's row
@@ -1001,7 +964,7 @@ export function CostCenterSheet(props: {
       : [];
 
   /** A press on a line's number: a click selects the row (Shift: the rows to it, ⌘: adds it), a drag moves it. */
-  function pressRowNumber(e: React.PointerEvent, account: Account, li: LineItem) {
+  function pressRowNumber(e: React.PointerEvent, li: LineItem) {
     if (e.button !== 0) return;
     // ⌘-click (Ctrl elsewhere): the row joins the selection, or leaves it, and nothing is dragged.
     if (e.metaKey || e.ctrlKey) {
@@ -1016,7 +979,7 @@ export function CostCenterSheet(props: {
       select();
       return;
     }
-    startLineDrag(e, account, li, select);
+    startLineDrag(e, li, select);
   }
 
   /** A press on an account's own number: picks the account (Shift: the accounts to it), and a drag picks those it passes over. */
@@ -1052,63 +1015,8 @@ export function CostCenterSheet(props: {
     window.addEventListener("pointercancel", up);
   }
 
-  /** `onClick`: what a press that never moved far enough to lift the row does instead. */
-  function startLineDrag(
-    e: React.PointerEvent,
-    account: Account,
-    li: LineItem,
-    onClick?: () => void,
-  ) {
-    if (!isAdmin || e.button !== 0) return;
-    const tr = (e.target as HTMLElement).closest("tr");
-    if (!tr) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const grab = startY - tr.getBoundingClientRect().top;
-    // Lifted only once the pointer has moved, so a click on the number does not flash the
-    // lifted row (outline and fill) on and off; a click selects the row instead.
-    let lifted = false;
-    const move = (ev: PointerEvent) => {
-      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_THRESHOLD_PX) return;
-      lifted = true;
-      done();
-      const ids: Record<string, string[]> = {};
-      for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
-      lineDrag.current = {
-        id: li.id,
-        fromAccountId: account.id,
-        accountId: account.id,
-        ids,
-        before: ids,
-        pointerX: ev.clientX,
-        pointerY: ev.clientY,
-        grab,
-        scroller: verticalScroller(tr),
-      };
-      setPlacement(ids);
-      setDraggingLineId(li.id);
-    };
-    const done = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", done);
-    };
-    const up = () => {
-      done();
-      if (!lifted) onClick?.();
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", done);
-  }
-
-  // Put the row back under the pointer after the rows redraw, before paint.
-  useLayoutEffect(() => {
-    if (draggingLineId) lift();
-  }, [placement, draggingLineId, lift]);
-  // What the drop below calls once a row has moved, kept current here since the drag's listeners
-  // are set up once per drag: ends a copy (or cut) that holds the row.
+  // What the drop below calls once a row has moved, kept current here since the drag's options are read when the
+  // drop comes: ends a copy (or cut) that holds the row.
   const letGoOfCopy = useRef<(lineId: string, order: string[]) => void>(() => {});
   useEffect(() => {
     // `order` is the account's lines as the row now stands among them. A copy ends when one
@@ -1123,26 +1031,20 @@ export function CostCenterSheet(props: {
     };
   });
 
-  // Followed on the window: the pointer leaves the grip quickly.
-  useEffect(() => {
-    if (!draggingLineId) return;
-    const clear = () => {
-      if (liftRef.current) liftRef.current.style.transform = "";
-      liftRef.current = null;
-      lineDrag.current = null;
-      setDraggingLineId(null);
-    };
-    /** Where the row would land. Shared with the frame loop, since scrolling brings new rows under a stationary pointer. */
-    const resolve = (d: LineDrag) => {
-      // Asked of the page: the lifted row is `pointer-events-none`.
-      const under = document.elementFromPoint(d.pointerX, d.pointerY) as HTMLElement | null;
+  const lineDrag = useRowDrag<LineDrag>({
+    begin: (id) => {
+      const ids: Record<string, string[]> = {};
+      for (const a of cc.accounts) ids[a.id] = linesOf(a).map((l) => l.id);
+      const from = cc.accounts.find((a) => ids[a.id].includes(id))?.id ?? "";
+      setPlacement(ids);
+      return { id, fromAccountId: from, accountId: from, ids, before: ids };
+    },
+    over: (d, under, pointer) => {
       const over = under?.closest<HTMLElement>("tr[data-line]");
       const zone = under?.closest<HTMLElement>("tbody[data-drop-account]")?.dataset.dropAccount;
       if (over) {
-        if (over.dataset.line !== d.id && over.dataset.account) {
-          const box = over.getBoundingClientRect();
-          place(d, over.dataset.account, over.dataset.line!, d.pointerY > box.top + box.height / 2);
-        }
+        if (over.dataset.line !== d.id && over.dataset.account)
+          place(d, over.dataset.account, over.dataset.line!, belowMiddle(over, pointer.y));
       } else if (zone) {
         // The rest of an account is split at its rows: the heading takes the row first, and
         // anything under the rows (Summa, the new-row line) takes it last. The boundary
@@ -1151,66 +1053,43 @@ export function CostCenterSheet(props: {
         const first = (d.ids[zone] ?? []).find((x) => x !== d.id) ?? null;
         place(d, zone, head ? first : null, false);
       }
-      lift();
-    };
-
-    const move = (e: PointerEvent) => {
-      const d = lineDrag.current;
-      if (!d) return;
-      d.pointerX = e.clientX;
-      d.pointerY = e.clientY;
-      resolve(d);
-    };
-
-    /**
-     * Carrying a row to the edge scrolls the view, in a frame loop since a stationary pointer
-     * sends no events. Placement is redone only on a frame that actually scrolled.
-     */
-    let frame = 0;
-    const tick = () => {
-      const d = lineDrag.current;
-      if (d && autoScrollStep(d.scroller, d.pointerY)) resolve(d);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
+    },
     // Saved once on drop, in one request even across accounts (see the reorder endpoint).
     // `withLineOrder` is the route's own rule; the placement stands until the save lands.
-    const stop = () => {
-      const d = lineDrag.current;
-      const to = d?.accountId;
-      const moved = d && to && (to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join());
-      if (d && to && moved) {
-        // A copy is of rows where they stood: moving one of them ends it (and its frame), so a
-        // copy never comes to span two accounts. The same for cells on the row moved.
-        letGoOfCopy.current(d.id, d.ids[to]);
-        const ids = d.ids[to];
-        api(`/api/budget-accounts/${to}/line-items/reorder`, "POST", { orderedIds: ids }, (b) =>
-          withLineOrder(b, to, ids),
-        ).then(() => setPlacement(null));
-      } else {
+    drop: (d) => {
+      const to = d.accountId;
+      const moved = to !== d.fromAccountId || d.ids[to].join() !== d.before[to].join();
+      if (!moved) {
         setPlacement(null);
+        return;
       }
-      clear();
-    };
-    const cancel = () => {
-      setPlacement(null);
-      clear();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", cancel);
-    window.addEventListener("keydown", key);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("keydown", key);
-    };
-  }, [draggingLineId, api, lift, place]);
+      // A copy is of rows where they stood: moving one of them ends it (and its frame), so a
+      // copy never comes to span two accounts. The same for cells on the row moved.
+      letGoOfCopy.current(d.id, d.ids[to]);
+      const ids = d.ids[to];
+      api(`/api/budget-accounts/${to}/line-items/reorder`, "POST", { orderedIds: ids }, (b) =>
+        withLineOrder(b, to, ids),
+      ).then(() => setPlacement(null));
+    },
+    cancel: () => setPlacement(null),
+    // Held inside the accounts, headings and Summa included. Not inside the line rows: with
+    // every account above it empty, the dragged row is the first line row and could not rise.
+    bounds: () => {
+      const zones = sheetRef.current?.querySelectorAll<HTMLElement>("tbody[data-drop-account]");
+      if (!zones || zones.length === 0) return null;
+      return {
+        top: zones[0].getBoundingClientRect().top,
+        bottom: zones[zones.length - 1].getBoundingClientRect().bottom,
+      };
+    },
+  });
+  const draggingLineId = lineDrag.draggingId;
+
+  /** `onClick`: what a press that never moved far enough to lift the row does instead. */
+  function startLineDrag(e: React.PointerEvent, li: LineItem, onClick?: () => void) {
+    if (!isAdmin) return;
+    lineDrag.start(e, li.id, onClick);
+  }
 
   // An account only the other side has, shown read-only so the gap is visible.
 
@@ -1352,8 +1231,7 @@ export function CostCenterSheet(props: {
       : null,
     draggingLineId,
     linesOf,
-    startLineDrag,
-    liftRef,
+    liftRef: lineDrag.rowRef,
     draft,
     setDraft,
     createLine,
@@ -1562,7 +1440,7 @@ export function CostCenterSheet(props: {
           data-sheet-head
           className="sticky z-[15] -mt-2 mb-0 hidden bg-canvas pt-2 md:top-(--sticky-top) md:block lg:top-0 lg:mt-0 lg:pt-0"
         >
-          <div className="budget-grid overflow-clip rounded-t-panel border border-b-0 border-border bg-background">
+          <div className="grid-lines budget-grid overflow-clip rounded-t-panel border border-b-0 border-border bg-background">
             <div className="grid grid-cols-3 divide-x divide-border">
               {summary.map((s) => (
                 <div key={s.label} className="min-w-0 px-4 py-2.5">

@@ -79,7 +79,7 @@ export function Rambudget({
   return (
     // From lg the card is its own scrollport, sized to the window (see budget-client.tsx).
     // Below lg it flows with the page: a nested scroller on a phone is more trouble.
-    <div className="rambudget budget-grid overflow-x-auto rounded-panel border border-border bg-background lg:max-h-full lg:overflow-y-auto">
+    <div className="rambudget grid-lines budget-grid overflow-x-auto rounded-panel border border-border bg-background lg:max-h-full lg:overflow-y-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-xs text-muted">

@@ -101,7 +101,7 @@ export interface SheetValue {
 
   // ── The row numbers, each its row's handle ───────────────────────
   /** A press on a line's number: select the row, or drag it (cost-center-sheet.tsx). */
-  pressRowNumber: (e: React.PointerEvent, account: Account, li: LineItem) => void;
+  pressRowNumber: (e: React.PointerEvent, li: LineItem) => void;
   /** A press on an account's own number: pick the account (Shift or a drag: several). */
   pressAccountNumber: (e: React.PointerEvent, account: Account) => void;
   /** Whether an account is picked (its number drawn chosen). */
@@ -112,9 +112,8 @@ export interface SheetValue {
   // ── Dragging a row to a new place ────────────────────────────────
   draggingLineId: string | null;
   linesOf: (account: Account) => LineItem[];
-  startLineDrag: (e: React.PointerEvent, account: Account, li: LineItem) => void;
-  /** The lifted row's node, moved under the pointer without a re-render. */
-  liftRef: React.RefObject<HTMLTableRowElement | null>;
+  /** Each line row's ref, so the drag can carry the row's node (lib/ui/use-row-drag.ts). */
+  liftRef: (lineId: string) => (el: HTMLTableRowElement | null) => void;
 
   // ── The half-typed rows at the bottom of each block ──────────────
   draft: (id: string) => Draft;
