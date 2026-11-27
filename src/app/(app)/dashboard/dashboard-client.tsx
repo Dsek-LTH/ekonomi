@@ -18,6 +18,7 @@ import { formatSEK } from "@/lib/ui/format";
 import { cn } from "@/lib/ui/utils";
 import type { TodoBand, TodoGroup, TodoGroupKind, TodoItem, TodoKind } from "@/lib/domain/todo";
 import type { UpcomingItem, WaitingOwn } from "@/lib/data/dashboard";
+import { PlainButton } from "@/components/ui/button";
 
 type Tone = React.ComponentProps<typeof Tag>["tone"];
 
@@ -184,9 +185,9 @@ function TodoCard({
                 ))}
                 {more > 0 && (
                   <li className="px-2 pt-1">
-                    <button type="button" onClick={() => setAllLater(true)} className={LINK}>
+                    <PlainButton type="button" onClick={() => setAllLater(true)} className={LINK}>
                       {t("showMore", { count: more })}
-                    </button>
+                    </PlainButton>
                   </li>
                 )}
               </Section>
@@ -347,9 +348,9 @@ function CalendarCard({ items }: { items: UpcomingItem[] }) {
         })}
         {more > 0 && (
           <li className="px-2 pt-1">
-            <button type="button" onClick={() => setAll(true)} className={LINK}>
+            <PlainButton type="button" onClick={() => setAll(true)} className={LINK}>
               {t("more", { count: more })}
-            </button>
+            </PlainButton>
           </li>
         )}
       </ul>

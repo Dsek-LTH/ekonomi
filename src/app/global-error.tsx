@@ -1,4 +1,5 @@
 "use client";
+import { PlainButton } from "@/components/ui/button";
 
 export default function GlobalError({
   error,
@@ -35,8 +36,7 @@ export default function GlobalError({
               Referens: {error.digest}
             </p>
           )}
-          <button
-            type="button"
+          <PlainButton
             onClick={reset}
             style={{
               marginTop: "1.5rem",
@@ -51,7 +51,7 @@ export default function GlobalError({
             }}
           >
             Försök igen / Try again
-          </button>
+          </PlainButton>
         </main>
       </body>
     </html>

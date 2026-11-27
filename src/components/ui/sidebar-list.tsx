@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from "react";
 
 import { cn } from "@/lib/ui/utils";
 import { useMediaQuery } from "@/lib/ui/media";
-import { SOFT_FILL } from "./button";
+import { SOFT_FILL, PlainButton } from "./button";
 import { Card } from "./card";
 import { IconChevronDown, IconList } from "./icons";
 import { Modal, ModalHeader } from "./modal";
@@ -48,8 +48,7 @@ export function SidebarPanel({
         bg-canvas on the wrapper: the Card's rounded corners are transparent over a scrolling list. */}
         <div className="sticky top-app-bar z-10 bg-canvas">
           <Card className="flex items-stretch overflow-hidden">
-            <button
-              type="button"
+            <PlainButton
               onClick={() => setOpen(true)}
               aria-haspopup="dialog"
               className="flex min-h-12 min-w-0 flex-1 items-center gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-hover active:bg-surface"
@@ -57,7 +56,7 @@ export function SidebarPanel({
               <IconList aria-hidden className="size-4 shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate">{bar}</span>
               <IconChevronDown aria-hidden className="size-4 shrink-0 text-muted" />
-            </button>
+            </PlainButton>
             {barAside && (
               <div className="flex shrink-0 items-center border-l border-border">{barAside}</div>
             )}
@@ -96,7 +95,7 @@ export function SidebarItem({
   const picked = useContext(PickedCtx);
 
   return (
-    <button
+    <PlainButton
       {...rest}
       type="button"
       onClick={(e) => {
@@ -114,7 +113,7 @@ export function SidebarItem({
       )}
     >
       {children}
-    </button>
+    </PlainButton>
   );
 }
 

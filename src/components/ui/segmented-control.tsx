@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/ui/utils";
-import { SOFT_FILL, TEXT_HOVER } from "./button";
+import { SOFT_FILL, TEXT_HOVER, PlainButton } from "./button";
 
 // The pill register for a value chosen in a form: always inside a labelled Field or FieldGroup.
 // Page scope is CollectionSwitch, slices are FilterTabs, view modes are ViewToggle: a pill row outside a Field is one of those wearing the wrong clothes.
@@ -29,7 +29,7 @@ export function SegmentedControl<T extends string>({
       {options.map((opt) => {
         const active = opt.value === value;
         return (
-          <button
+          <PlainButton
             key={opt.value}
             role="tab"
             aria-selected={active}
@@ -53,7 +53,7 @@ export function SegmentedControl<T extends string>({
                 {opt.badge}
               </span>
             )}
-          </button>
+          </PlainButton>
         );
       })}
     </div>

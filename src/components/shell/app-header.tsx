@@ -21,6 +21,7 @@ import { IconFortnox } from "./fortnox-mark";
 import { useGuides } from "./guide";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "./theme-toggle";
+import { PlainButton } from "@/components/ui/button";
 
 const DSEK_URL = "https://dsek.se";
 
@@ -100,7 +101,7 @@ export function MenuButton({
 }) {
   const t = useTranslations("nav");
   return (
-    <button
+    <PlainButton
       ref={buttonRef}
       type="button"
       onClick={onClick}
@@ -120,7 +121,7 @@ export function MenuButton({
           className="absolute -right-1 -top-1 size-2.5 rounded-full bg-action-to ring-2 ring-background"
         />
       )}
-    </button>
+    </PlainButton>
   );
 }
 

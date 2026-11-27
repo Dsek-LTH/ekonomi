@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 import { ReceiptViewer, type ViewerDocument } from "@/components/receipt/receipt-viewer";
 import { DocumentStrip } from "@/components/receipt/document-strip";
 import { NO_PANEL, arrivalAction, type PanelState } from "@/lib/ui/receipt-arrival";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
   IconChevronDown,
@@ -544,8 +544,7 @@ export function ReceiptPanelColumn() {
     // inset itself below md, where the panel covers the screen.
     <div className="absolute left-2 top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 flex items-center gap-1.5 md:top-2">
       {(!awaitingUpload || narrow) && (
-        <button
-          type="button"
+        <PlainButton
           onClick={foldAway}
           title={narrow ? t("close") : t("collapse")}
           aria-label={narrow ? t("close") : t("collapse")}
@@ -554,11 +553,10 @@ export function ReceiptPanelColumn() {
         >
           <IconChevronRight className="hidden size-4 md:block" />
           <IconX className="size-4 md:hidden" />
-        </button>
+        </PlainButton>
       )}
       {upload && source.docs.length > 0 && (
-        <button
-          type="button"
+        <PlainButton
           onClick={pick}
           disabled={upload.uploading}
           title={upload.copy?.addLabel ?? t("replace")}
@@ -566,7 +564,7 @@ export function ReceiptPanelColumn() {
           className={cn(FLOATING_BTN, "disabled:opacity-40")}
         >
           {upload.uploading ? <Spinner size="sm" /> : <IconUpload className="size-4" />}
-        </button>
+        </PlainButton>
       )}
     </div>
   );
@@ -685,7 +683,7 @@ export function ReceiptPanelColumn() {
   );
 
   const tab = (
-    <button
+    <PlainButton
       ref={tabRef}
       type="button"
       onClick={unfold}
@@ -707,7 +705,7 @@ export function ReceiptPanelColumn() {
         {t("tab")}
       </span>
       <IconChevronDown className="size-4 shrink-0 rotate-180 text-brand md:order-first md:rotate-90" />
-    </button>
+    </PlainButton>
   );
 
   const leavingNow = leaving && !open;

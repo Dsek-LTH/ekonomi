@@ -1,6 +1,6 @@
 // The per-cost-centre sheet: income and costs as two cards of account, line-item and Summa
 // rows. Owns the drag handlers and per-sheet drafts; select/edit comes from useCellEdit.
-import { Button, SOFT_FILL } from "@/components/ui/button";
+import { Button, SOFT_FILL, PlainButton } from "@/components/ui/button";
 import { SelectionBar } from "@/components/selection-bar";
 import { Kbd } from "@/components/ui/kbd";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -198,8 +198,7 @@ export function CostCenterSheet(props: {
         )}
       >
         {handle ? (
-          <button
-            type="button"
+          <PlainButton
             data-row-number
             data-account-number={handle.account || undefined}
             tabIndex={-1}
@@ -212,7 +211,7 @@ export function CostCenterSheet(props: {
             )}
           >
             {n ?? ""}
-          </button>
+          </PlainButton>
         ) : (
           <span className="flex h-7 items-center justify-center text-[11px] tabular-nums text-faint">
             {n ?? ""}
@@ -1274,8 +1273,7 @@ export function CostCenterSheet(props: {
         {/* Sticky layer is square and opaque; the rounded card inside it would show rows through its corner arcs. */}
         <div className="sticky top-app-bar z-10 bg-canvas md:hidden">
           <div className="rounded-panel border border-border bg-background">
-            <button
-              type="button"
+            <PlainButton
               onClick={() => setSummaryOpen((o) => !o)}
               aria-expanded={summaryOpen}
               className="grid w-full grid-cols-3 gap-2 px-3 py-2 text-left"
@@ -1293,7 +1291,7 @@ export function CostCenterSheet(props: {
                   </span>
                 </span>
               ))}
-            </button>
+            </PlainButton>
 
             {summaryOpen && (
               <div className="space-y-2 border-t border-border px-3 py-2 text-xs">
@@ -1339,13 +1337,12 @@ export function CostCenterSheet(props: {
                 )}
 
                 {compare && (
-                  <button
-                    type="button"
+                  <PlainButton
                     onClick={() => setCompareOnPhone((v) => !v)}
                     className="text-xs font-medium link"
                   >
                     {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
-                  </button>
+                  </PlainButton>
                 )}
               </div>
             )}

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 import { Spinner } from "./spinner";
 
 // `label` is both the tooltip and the accessible name.
@@ -35,15 +36,12 @@ export function IconButton({
   children: React.ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
-      type="button"
+    <PlainButton
       // `title ?? label`: a conditional tooltip passing undefined would otherwise override the fallback.
       title={title ?? label}
       aria-label={label}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      // Firefox restores a button's disabled state before hydration, leaving a stale one. Off lets the server's answer stand (as in Button).
-      {...{ autoComplete: "off" }}
       className={cn(
         "inline-flex shrink-0 items-center justify-center text-muted transition disabled:pointer-events-none",
         // Busy is not unavailable: no 40% fade on a spinner.
@@ -64,6 +62,6 @@ export function IconButton({
       ) : (
         children
       )}
-    </button>
+    </PlainButton>
   );
 }

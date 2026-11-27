@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CardFooterBar } from "@/components/action-bar";
 import { PageShell } from "@/components/page-shell";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput, Field, Input } from "@/components/ui/field";
@@ -334,14 +334,13 @@ export default function DeliveryClient({
                           </Link>
                         </span>
                         {/* Always visible on a phone, which has no hover; from md it appears with the row. */}
-                        <button
-                          type="button"
+                        <PlainButton
                           onClick={() => drop(id)}
                           className="shrink-0 rounded-control p-0.5 text-muted transition-opacity hover:text-foreground md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                           aria-label={t("delivery.remove")}
                         >
                           <IconX className="size-4" />
-                        </button>
+                        </PlainButton>
                       </div>
                     </td>
                     {/* Text, not a disabled box: the price is the product's own figure. A product nobody has priced says so in the warning colour. */}

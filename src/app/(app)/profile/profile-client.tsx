@@ -10,7 +10,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink, PlainButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { FortnoxBanner } from "@/components/shell/fortnox-banner";
@@ -243,8 +243,7 @@ function ProfileHero({
   return (
     <Card>
       <div className="flex flex-col items-center gap-5 px-inset py-6 text-center sm:flex-row sm:items-center sm:text-left">
-        <button
-          type="button"
+        <PlainButton
           onClick={pick}
           aria-label={hasAvatar ? tProfile("avatar.change") : tProfile("avatar.upload")}
           className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -256,7 +255,7 @@ function ProfileHero({
           >
             <IconUpload className="size-6" />
           </span>
-        </button>
+        </PlainButton>
         <input
           ref={picker}
           type="file"
@@ -287,14 +286,13 @@ function ProfileHero({
               {hasAvatar ? tProfile("avatar.change") : tProfile("avatar.upload")}
             </Button>
             {hasAvatar && (
-              <button
-                type="button"
+              <PlainButton
                 onClick={remove}
                 disabled={pending === "removeAvatar"}
                 className="font-medium text-muted underline decoration-faint underline-offset-2 hover:text-foreground hover:decoration-current disabled:opacity-40"
               >
                 {tProfile("avatar.remove")}
-              </button>
+              </PlainButton>
             )}
           </div>
         </div>

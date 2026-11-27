@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 
 /**
  * Text cut to two lines, with "Visa mer" under it when there is more, so the whole of it can always be read (a hover
@@ -45,14 +46,13 @@ export function ClampedText({
         {children}
       </p>
       {(overflows || open) && (
-        <button
-          type="button"
+        <PlainButton
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
           className="mt-0.5 text-xs font-medium link"
         >
           {open ? t("less") : t("more")}
-        </button>
+        </PlainButton>
       )}
     </div>
   );

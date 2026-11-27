@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { DevUser } from "./dev-users";
+import { PlainButton } from "@/components/ui/button";
 
 export function LoginClient({
   callbackUrl,
@@ -34,27 +35,27 @@ export function LoginClient({
           </p>
         )}
 
-        <button
+        <PlainButton
           onClick={() => signIn("authentik", { callbackUrl })}
           className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-control border border-border-control bg-background text-sm font-medium transition-colors hover:bg-hover"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/symbol_rosa.svg" alt="" aria-hidden className="h-5 w-auto" />
           {t("loginPrompt")}
-        </button>
+        </PlainButton>
 
         {devUsers.length > 0 && (
           <div className="mt-8 rounded-panel border border-dashed border-border p-4 text-left">
             <p className="mb-3 text-xs font-medium text-muted">{tDev("heading")}</p>
             <div className="space-y-2">
               {devUsers.map((u) => (
-                <button
+                <PlainButton
                   key={u.studentId}
                   onClick={() => signIn("dev", { studentId: u.studentId, callbackUrl })}
                   className="flex h-10 w-full items-center rounded-control border border-border-control bg-background px-3 text-sm transition-colors hover:bg-hover sm:h-8"
                 >
                   {u.name} - {u.roles.map((r) => tRole(r)).join(", ")}
-                </button>
+                </PlainButton>
               ))}
             </div>
           </div>

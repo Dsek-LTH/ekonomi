@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 
 // Measures before paint so the pill is in place on first frame. useLayoutEffect is a warned no-op on the server.
 const useMeasureEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -138,7 +139,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
     <div role="tablist" aria-label={label} className={TRACK}>
       {pill}
       {options.map((o, i) => (
-        <button
+        <PlainButton
           key={o.value}
           ref={collect(i)}
           type="button"
@@ -150,7 +151,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
         >
           {o.label}
           <Count count={o.count} />
-        </button>
+        </PlainButton>
       ))}
     </div>
   );

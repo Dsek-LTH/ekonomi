@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/page-shell";
 import { Card } from "@/components/ui/card";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink, PlainButton } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconChevronDown, IconUpload, IconTrash } from "@/components/ui/icons";
@@ -366,8 +366,7 @@ function CardCell({
   if (row.cardLast4 && !picking) {
     return (
       <Tooltip label={t("changeCard")} align="start" className="w-full md:w-auto">
-        <button
-          type="button"
+        <PlainButton
           onClick={() => setPicking(true)}
           className={cn(
             CARD_BOX,
@@ -379,7 +378,7 @@ function CardCell({
           </span>
           <IconChevronDown aria-hidden className="size-4 shrink-0 text-faint" />
           <span className="sr-only">{t("changeCard")}</span>
-        </button>
+        </PlainButton>
       </Tooltip>
     );
   }

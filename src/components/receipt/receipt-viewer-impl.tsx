@@ -18,7 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { useMediaQuery } from "@/lib/ui/media";
 import { cn } from "@/lib/ui/utils";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 
 // The worker is resolved through the bundler so it always matches the installed pdfjs-dist.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -661,8 +661,7 @@ function ToolBtn({
   wide?: boolean;
 }) {
   return (
-    <button
-      type="button"
+    <PlainButton
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -673,7 +672,7 @@ function ToolBtn({
       )}
     >
       {children}
-    </button>
+    </PlainButton>
   );
 }
 

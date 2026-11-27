@@ -5,6 +5,7 @@ import { cn } from "@/lib/ui/utils";
 import { IconPencil } from "@/components/ui/icons";
 import { DateInput } from "@/components/ui/field";
 import { isCompleteDate } from "@/lib/domain/date";
+import { PlainButton } from "./button";
 
 // An input the whole time, dressed as plain text at rest. Enter commits, Escape reverts, blur commits.
 // Width follows the content via the sizer below.
@@ -166,15 +167,14 @@ export function EditableText({
   );
 
   const pencil = showPencil && (
-    <button
-      type="button"
+    <PlainButton
       tabIndex={-1}
       aria-hidden
       onClick={() => inputRef.current?.focus()}
       className="shrink-0 rounded-control p-0.5 text-muted transition-colors duration-150 hover:bg-hover hover:text-foreground"
     >
       <IconPencil className="size-[0.9em]" />
-    </button>
+    </PlainButton>
   );
 
   return (

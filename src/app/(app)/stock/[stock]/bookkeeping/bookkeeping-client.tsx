@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { PageShell } from "@/components/page-shell";
 import { useMutation } from "@/components/shell/use-mutation";
 import { useNotify } from "@/components/shell/notifications";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/field";
 import { FilterTabs } from "@/components/ui/filter-tabs";
@@ -455,15 +455,14 @@ function DueRow({
   return (
     <li className={cn(muted && "text-muted")}>
       <div className="flex flex-wrap items-center gap-3 px-inset py-2.5">
-        <button
-          type="button"
+        <PlainButton
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           className="min-w-0 flex-1 text-left"
         >
           <span className="text-sm font-medium tabular-nums">{title}</span>
           {hint && <span className="block text-xs text-muted">{hint}</span>}
-        </button>
+        </PlainButton>
         <span className="text-sm tabular-nums">{signed(part.netOre)}</span>
         {action}
       </div>

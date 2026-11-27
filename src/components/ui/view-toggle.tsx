@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 
 // Icons and no words, deliberately: a view switch does not change what you are looking at. See segmented-control.tsx.
 interface ViewOption<T extends string> {
@@ -37,7 +38,7 @@ export function ViewToggle<T extends string>({
         const active = opt.value === value;
         const Icon = opt.icon;
         return (
-          <button
+          <PlainButton
             key={opt.value}
             type="button"
             role="tab"
@@ -57,7 +58,7 @@ export function ViewToggle<T extends string>({
           >
             <Icon className="size-4 shrink-0" />
             {labels && opt.label}
-          </button>
+          </PlainButton>
         );
       })}
     </div>

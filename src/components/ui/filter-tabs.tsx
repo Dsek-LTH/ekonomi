@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { useScrollStrip } from "@/lib/ui/scroll-strip";
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 
 // The underline register: which slice of the collection. Counts belong here, not on the collection pills.
 interface FilterTab<T extends string> {
@@ -78,7 +79,7 @@ export function FilterTabs<T extends string>({
       {options.map((opt) => {
         const active = opt.value === value;
         return (
-          <button
+          <PlainButton
             key={opt.value}
             type="button"
             role="tab"
@@ -109,7 +110,7 @@ export function FilterTabs<T extends string>({
                 {opt.badge}
               </span>
             )}
-          </button>
+          </PlainButton>
         );
       })}
       {/* Last, so it is not one of the tabs `children[index]` counts. */}

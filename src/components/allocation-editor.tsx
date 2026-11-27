@@ -3,7 +3,7 @@
 // Which cost centres an utlägg is charged to, and how much to each. Same look as the voucher table
 // (components/voucher-editor.tsx); each row is a card on a phone. With one row its amount is the utlägg's own
 // and not asked.
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, uid } from "@/lib/ui/utils";
@@ -154,8 +154,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
             </div>
             <span className="contents @xl:flex @xl:items-center @xl:justify-center">
               {!single && (
-                <button
-                  type="button"
+                <PlainButton
                   onClick={() => remove(row.id)}
                   aria-label={t("removeRow")}
                   title={t("removeRow")}
@@ -166,7 +165,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
                   )}
                 >
                   <IconX className="size-3 @xl:size-4" />
-                </button>
+                </PlainButton>
               )}
             </span>
           </div>

@@ -6,6 +6,7 @@ import { useEffect, useTransition } from "react";
 import { cn } from "@/lib/ui/utils";
 import { startRouteProgress } from "@/components/shell/route-progress";
 import { FlagSE, FlagGB } from "@/components/ui/icons";
+import { PlainButton } from "@/components/ui/button";
 
 const LOCALES = [
   { value: "sv", label: "Svenska", Flag: FlagSE },
@@ -35,7 +36,7 @@ export function LanguageSwitcher({ round = false }: { round?: boolean }) {
   return (
     <div className={cn("flex gap-2.5", pending && "opacity-60")}>
       {LOCALES.map(({ value, label, Flag }) => (
-        <button
+        <PlainButton
           key={value}
           type="button"
           onClick={() => select(value)}
@@ -49,7 +50,7 @@ export function LanguageSwitcher({ round = false }: { round?: boolean }) {
           )}
         >
           <Flag className="size-[24px] rounded-full" />
-        </button>
+        </PlainButton>
       ))}
     </div>
   );

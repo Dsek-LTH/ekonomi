@@ -13,7 +13,7 @@ import { PageShell } from "@/components/page-shell";
 import { historyHref, historyPages } from "./views";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { MultiCombobox } from "@/components/ui/combobox";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { PanelField, PanelRow, PeriodRow } from "@/components/report-panel";
 import { periodOptions, type PeriodYear } from "@/lib/ui/period";
 import { StockValueChart } from "@/components/stock/value-chart";
@@ -372,8 +372,7 @@ function PlacesCard({
           const on = selected.includes(p.id);
           return (
             <li key={p.id}>
-              <button
-                type="button"
+              <PlainButton
                 aria-pressed={on}
                 onClick={() => onPick(p.id)}
                 className={cn(
@@ -391,7 +390,7 @@ function PlacesCard({
                 <span className="w-24 text-right font-medium tabular-nums">
                   {formatOreKr(p.taken.valueOre - p.returned.valueOre)}
                 </span>
-              </button>
+              </PlainButton>
             </li>
           );
         })}

@@ -6,7 +6,7 @@
 // lines are re-accounted from the action bar. Values are text until clicked, so no row is taller than the rest.
 import { createContext, useContext, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
@@ -355,8 +355,7 @@ function ValuePicker({
     );
   }
   return (
-    <button
-      type="button"
+    <PlainButton
       disabled={busy}
       onClick={onOpen}
       title={label}
@@ -373,7 +372,7 @@ function ValuePicker({
           !strong && "opacity-0 group-hover/value:opacity-100",
         )}
       />
-    </button>
+    </PlainButton>
   );
 }
 

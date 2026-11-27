@@ -10,6 +10,7 @@ import {
   useReceiptDocuments,
   useReceiptTabShowing,
 } from "@/components/receipt/receipt-panel";
+import { PlainButton } from "@/components/ui/button";
 
 export function ReceiptRow() {
   const t = useTranslations("receipt");
@@ -27,8 +28,7 @@ export function ReceiptRow() {
       : (first.filename ?? first.label ?? t("tab"));
 
   return (
-    <button
-      type="button"
+    <PlainButton
       onClick={open}
       aria-label={t("expand")}
       className="mb-4 flex w-full items-center gap-3 rounded-panel border border-border bg-background p-2 text-left transition-colors hover:bg-hover md:hidden print:hidden"
@@ -49,6 +49,6 @@ export function ReceiptRow() {
         {t("show")}
         <IconChevronRight className="size-4" />
       </span>
-    </button>
+    </PlainButton>
   );
 }

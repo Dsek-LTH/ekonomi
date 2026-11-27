@@ -45,7 +45,7 @@ import { ActionBar } from "@/components/action-bar";
 import { dropKeptFile, dropKeptFiles, keepFile, readKeptFiles } from "@/lib/ui/kept-file";
 import { displayableFile } from "@/lib/ui/heic";
 import { cn, uid } from "@/lib/ui/utils";
-import { SOFT_FILL } from "@/components/ui/button";
+import { SOFT_FILL, PlainButton } from "@/components/ui/button";
 import { underlagCaption } from "@/lib/expense/document-url";
 import { useFormat } from "@/lib/ui/use-format";
 import { useSelectOnce } from "@/lib/ui/use-select-once";
@@ -665,14 +665,14 @@ export default function NewExpenseClient({
                           {content}
                         </div>
                       ) : (
-                        <button
+                        <PlainButton
                           key={c}
                           onClick={() => chooseClaim(c)}
                           className={optionCard(claim === c)}
                           aria-pressed={claim === c}
                         >
                           {content}
-                        </button>
+                        </PlainButton>
                       );
                     })}
                   </div>

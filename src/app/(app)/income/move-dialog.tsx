@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/amount";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Combobox, type ComboOption } from "@/components/ui/combobox";
 import { Field } from "@/components/ui/field";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -124,7 +124,7 @@ export function MoveLinesDialog({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-muted">{t("setAll")}</span>
             {target.accounts.map((a) => (
-              <button
+              <PlainButton
                 key={a.account}
                 type="button"
                 onClick={() =>
@@ -137,7 +137,7 @@ export function MoveLinesDialog({
                 {a.prefixes.length > 0 && (
                   <span className="ml-1.5 font-sans text-muted">{a.prefixes.join(", ")}</span>
                 )}
-              </button>
+              </PlainButton>
             ))}
             {target.accounts.length === 0 && (
               <span className="text-xs text-muted">{t("noAccounts")}</span>

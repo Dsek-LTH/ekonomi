@@ -5,7 +5,7 @@
 // The field also takes a typed code, which is what a handheld reader does (a keyboard that types digits and Enter).
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { IconCameraFlip } from "@/components/ui/icons";
 import { Modal, ModalHeader } from "@/components/ui/modal";
@@ -217,8 +217,7 @@ export function BarcodeScanner({
             </div>
           )}
           {cameras.length > 1 && (
-            <button
-              type="button"
+            <PlainButton
               onClick={flip}
               disabled={!ready}
               aria-label={t("scan.flip")}
@@ -226,7 +225,7 @@ export function BarcodeScanner({
               className="absolute right-2 top-2 rounded-control bg-black/50 p-2 text-white backdrop-blur transition hover:bg-black/70 disabled:opacity-40"
             >
               <IconCameraFlip className="size-5" />
-            </button>
+            </PlainButton>
           )}
           {ready && (
             <div

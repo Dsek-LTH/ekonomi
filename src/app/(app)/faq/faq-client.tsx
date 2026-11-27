@@ -10,7 +10,7 @@ import { Notice } from "@/components/ui/notice";
 import { SearchInput } from "@/components/ui/search-input";
 import { FilterTabs } from "@/components/ui/filter-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, PlainButton } from "@/components/ui/button";
 import { IconChevronDown, IconReceipt } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
 import { searchText, type FaqBlock, type FaqItem, type FaqSection } from "./faq-content";
@@ -148,8 +148,7 @@ function Question({
   return (
     // The id is on the row so an anchor lands on the whole question-and-answer.
     <div id={item.id} className="scroll-mt-6">
-      <button
-        type="button"
+      <PlainButton
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={panelId}
@@ -163,7 +162,7 @@ function Question({
             open && "rotate-180",
           )}
         />
-      </button>
+      </PlainButton>
       {/* Opened by animating the row from 0fr to 1fr (no JS, no ResizeObserver). `inert` rather than unmount takes the closed answer out of tab order and the accessibility tree at once. */}
       <div
         id={panelId}

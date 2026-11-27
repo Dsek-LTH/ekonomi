@@ -5,6 +5,7 @@ import { cn } from "@/lib/ui/utils";
 import { IconSun, IconMoon } from "../ui/icons";
 import { resolvedTheme, themeCookie, type Theme } from "@/lib/ui/theme";
 import { switchTheme } from "@/lib/ui/theme-transition";
+import { PlainButton } from "@/components/ui/button";
 
 function apply(next: Theme) {
   const root = document.documentElement;
@@ -22,7 +23,7 @@ export function ThemeToggle({ round = false }: { round?: boolean }) {
   }
 
   return (
-    <button
+    <PlainButton
       onClick={toggle}
       title={t("toggle")}
       aria-label={t("toggle")}
@@ -41,6 +42,6 @@ export function ThemeToggle({ round = false }: { round?: boolean }) {
         data-theme-icon
         className="theme-icon absolute size-[18px] rotate-90 scale-0 opacity-0 dark:rotate-0 dark:scale-100 dark:opacity-100"
       />
-    </button>
+    </PlainButton>
   );
 }

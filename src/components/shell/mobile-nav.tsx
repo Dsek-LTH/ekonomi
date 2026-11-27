@@ -16,6 +16,7 @@ import { NavCount } from "./nav-count";
 import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "@/components/ui/button";
 
 const CARD =
   "divide-y divide-border overflow-hidden rounded-panel border border-border bg-background";
@@ -93,13 +94,12 @@ export function MobileNav({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/symbol_rosa.svg" alt="" className="h-7" />
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">D-sektionen</p>
-        <button
-          type="button"
+        <PlainButton
           onClick={onClose}
           className="-me-1 rounded-control px-2 py-1.5 text-sm font-semibold text-accent transition-colors active:bg-accent-soft"
         >
           {t("doneMenu")}
-        </button>
+        </PlainButton>
       </header>
 
       <nav
@@ -145,7 +145,7 @@ export function MobileNav({
               ...(pageGuide && pageGuide.id !== "start" ? [pageGuide.id] : []),
               "start" as const,
             ].map((id) => (
-              <button
+              <PlainButton
                 key={id}
                 type="button"
                 onClick={() => {
@@ -158,7 +158,7 @@ export function MobileNav({
                 <span className="min-w-0 flex-1">
                   {id === "start" ? tGuides("tour") : tGuides("thisPage")}
                 </span>
-              </button>
+              </PlainButton>
             ))}
           </div>
         </div>

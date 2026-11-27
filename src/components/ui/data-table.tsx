@@ -10,7 +10,7 @@ import { DateInput, FieldGroup } from "./field";
 import { SearchInput } from "./search-input";
 import { IconChevronLeft, IconChevronRight, IconFilter } from "./icons";
 import { FilterTabs } from "./filter-tabs";
-import { Button, SOFT_FILL } from "./button";
+import { Button, SOFT_FILL, PlainButton } from "./button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
 import {
   PAGE_SIZES,
@@ -301,8 +301,7 @@ export function DataTable<T>({
             ))}
 
             {(filters.length > 0 || hasDate) && (
-              <button
-                type="button"
+              <PlainButton
                 onClick={() => setFiltering(true)}
                 aria-label={t("filters")}
                 title={t("filters")}
@@ -315,7 +314,7 @@ export function DataTable<T>({
               >
                 <IconFilter className="size-4" />
                 {activeFilters > 0 && <span className="tabular-nums">{activeFilters}</span>}
-              </button>
+              </PlainButton>
             )}
 
             {hasText && (
@@ -462,8 +461,7 @@ export function DataTable<T>({
                     onClick={onRowClick && ((e) => onRowClick(row, e))}
                   />
                   {under && (
-                    <button
-                      type="button"
+                    <PlainButton
                       onClick={() => toggle(key)}
                       aria-expanded={open}
                       className="flex w-full items-center gap-1.5 px-inset pb-3 text-xs text-muted"
@@ -472,7 +470,7 @@ export function DataTable<T>({
                         className={cn("size-3.5 transition-transform", open && "rotate-90")}
                       />
                       {t("expand")}
-                    </button>
+                    </PlainButton>
                   )}
                   {open && (
                     <div className="row-expand">
@@ -527,8 +525,7 @@ export function DataTable<T>({
                               </Link>
                             ) : c === slots.title && under ? (
                               <span className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
+                                <PlainButton
                                   onClick={() => toggle(key)}
                                   aria-expanded={open}
                                   className="relative z-10 -ml-1 shrink-0 rounded-control p-0.5 text-muted hover:bg-hover hover:text-foreground"
@@ -540,7 +537,7 @@ export function DataTable<T>({
                                     )}
                                   />
                                   <span className="sr-only">{t("expand")}</span>
-                                </button>
+                                </PlainButton>
                                 {c.cell(row)}
                               </span>
                             ) : (
@@ -692,8 +689,7 @@ function SortableHeader({
       className={cn("select-none whitespace-nowrap", className)}
     >
       {/* A button, not the cell: a <th> with onClick has no tab stop or Enter. */}
-      <button
-        type="button"
+      <PlainButton
         onClick={() => controls.toggleSort(key)}
         className="inline-flex cursor-pointer items-center whitespace-nowrap"
       >
@@ -705,7 +701,7 @@ function SortableHeader({
         >
           {controls.sortDir === "asc" ? "▲" : "▼"}
         </span>
-      </button>
+      </PlainButton>
     </th>
   );
 }
@@ -752,28 +748,22 @@ function Pagination({
           />
           <span className="hidden sm:inline">{t("perPage")}</span>
         </span>
-        <button
-          type="button"
+        <PlainButton
           className={btn}
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
           aria-label={t("prevPage")}
-          // Firefox restores a button's disabled state on reload and Back, before hydration, which left a stale
-          // enabled "next" on a list with one page (see Button). Off lets the server's answer stand.
-          {...{ autoComplete: "off" }}
         >
           <IconChevronLeft className="size-4" />
-        </button>
-        <button
-          type="button"
+        </PlainButton>
+        <PlainButton
           className={btn}
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
           aria-label={t("nextPage")}
-          {...{ autoComplete: "off" }}
         >
           <IconChevronRight className="size-4" />
-        </button>
+        </PlainButton>
       </div>
     </div>
   );

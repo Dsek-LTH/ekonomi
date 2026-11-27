@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { IconPlus, IconReceipt, IconX } from "@/components/ui/icons";
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "@/components/ui/button";
 
 export interface StripItem {
   key: string;
@@ -142,8 +143,7 @@ export function DocumentStrip({
               style={held && moving ? { transform: `translateX(${draggedBy}px)` } : undefined}
               className={cn("group relative shrink-0", held && moving && "z-10")}
             >
-              <button
-                type="button"
+              <PlainButton
                 onPointerDown={(e) => press(e, item.key)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -176,12 +176,11 @@ export function DocumentStrip({
                 )}
               >
                 <Thumb item={item} />
-              </button>
+              </PlainButton>
               <span className="pointer-events-none absolute bottom-1 left-1 rounded-mark bg-background/90 px-1 text-[10px] font-medium tabular-nums">
                 {i + 1}
               </span>
-              <button
-                type="button"
+              <PlainButton
                 onClick={() => onRemove(item.key)}
                 onPointerDown={(e) => e.stopPropagation()}
                 disabled={disabled}
@@ -190,14 +189,13 @@ export function DocumentStrip({
                 className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-background text-muted opacity-0 shadow-sm transition-opacity hover:text-foreground focus:opacity-100 group-hover:opacity-100 disabled:hidden [@media(hover:none)]:opacity-100"
               >
                 <IconX className="size-3" />
-              </button>
+              </PlainButton>
             </li>
           );
         })}
         {onAdd && (
           <li className="shrink-0">
-            <button
-              type="button"
+            <PlainButton
               onClick={onAdd}
               disabled={disabled}
               aria-label={t("addDocument")}
@@ -205,7 +203,7 @@ export function DocumentStrip({
               className="flex h-16 w-12 items-center justify-center rounded-control border border-dashed border-border text-muted hover:bg-hover hover:text-foreground disabled:opacity-40"
             >
               <IconPlus className="size-4" />
-            </button>
+            </PlainButton>
           </li>
         )}
       </ul>

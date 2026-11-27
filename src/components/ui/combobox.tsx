@@ -17,6 +17,7 @@ import {
 } from "./field";
 import { CheckMark } from "./checkbox";
 import { IconCheck, IconChevronDown } from "./icons";
+import { PlainButton } from "./button";
 
 export interface ComboOption {
   value: string;
@@ -285,7 +286,7 @@ function ComboboxBase({
   return (
     // min-w-0: a truncate label floors the flex item at its whole string, so the field would not shrink below its placeholder.
     <div className={cn("relative min-w-0", FIELD_WIDTH[width], className)}>
-      <button
+      <PlainButton
         ref={triggerRef}
         type="button"
         disabled={disabled}
@@ -341,7 +342,7 @@ function ComboboxBase({
             chevronClassName ?? "text-faint",
           )}
         />
-      </button>
+      </PlainButton>
 
       {open && inline && (
         <input
@@ -395,8 +396,7 @@ function ComboboxBase({
                 <p className="min-w-0 flex-1 truncate text-base font-semibold">
                   {ariaLabel ?? placeholder ?? t("placeholder")}
                 </p>
-                <button
-                  type="button"
+                <PlainButton
                   onClick={() => {
                     close();
                     triggerRef.current?.focus();
@@ -404,7 +404,7 @@ function ComboboxBase({
                   className="-mr-2 rounded-control px-2 py-1.5 text-base font-medium text-accent"
                 >
                   {multiple ? t("done") : t("cancel")}
-                </button>
+                </PlainButton>
               </div>
             )}
             {searchable && !inline && (
@@ -448,8 +448,7 @@ function ComboboxBase({
             >
               {onClear && picked.length > 0 && (
                 <li>
-                  <button
-                    type="button"
+                  <PlainButton
                     tabIndex={-1}
                     onClick={() => {
                       onClear();
@@ -464,7 +463,7 @@ function ComboboxBase({
                     )}
                   >
                     {clearLabel ?? t("clear")}
-                  </button>
+                  </PlainButton>
                 </li>
               )}
               {filtered.length === 0 && !offer && (
@@ -476,8 +475,7 @@ function ComboboxBase({
                     <li role="separator" aria-hidden className="mx-2 my-1 h-px bg-border" />
                   )}
                   <li>
-                    <button
-                      type="button"
+                    <PlainButton
                       id={optionId(i)}
                       data-index={i}
                       // Not a tab stop: focus stays in the search box and the arrows move the highlight.
@@ -499,14 +497,13 @@ function ComboboxBase({
                       {!multiple && isPicked(o.value) && (
                         <IconCheck className="size-4 shrink-0 text-accent" />
                       )}
-                    </button>
+                    </PlainButton>
                   </li>
                 </Fragment>
               ))}
               {offer && (
                 <li>
-                  <button
-                    type="button"
+                  <PlainButton
                     id={optionId(createIndex)}
                     data-index={createIndex}
                     tabIndex={-1}
@@ -521,7 +518,7 @@ function ComboboxBase({
                     )}
                   >
                     {createLabel ? createLabel(query.trim()) : t("create", { text: query.trim() })}
-                  </button>
+                  </PlainButton>
                 </li>
               )}
             </ul>

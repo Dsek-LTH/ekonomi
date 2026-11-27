@@ -7,6 +7,7 @@ import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { useEscape } from "@/lib/ui/escape";
 import { cn } from "@/lib/ui/utils";
+import { PlainButton } from "./button";
 
 // A "?" with an explanation too long for a title attribute. Hover, focus and click all open it.
 // Portalled to <body> with position: fixed (lib/ui/anchored-panel.ts): absolute got painted over by sticky rows and cut by scroll boxes.
@@ -42,7 +43,7 @@ export function InfoHint({
       onMouseEnter={show}
       onMouseLeave={() => setOpen(false)}
     >
-      <button
+      <PlainButton
         ref={button}
         type="button"
         aria-label={label}
@@ -55,7 +56,7 @@ export function InfoHint({
         className="flex size-7 items-center justify-center rounded-control text-muted transition-colors hover:bg-hover hover:text-foreground focus-visible:bg-hover focus-visible:text-foreground"
       >
         <IconHelp className="size-4" />
-      </button>
+      </PlainButton>
       {open &&
         rect &&
         createPortal(

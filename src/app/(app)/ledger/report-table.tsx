@@ -20,6 +20,7 @@ import type {
   RowView,
 } from "./report-types";
 import { RESULT_COLUMNS } from "./report-types";
+import { PlainButton } from "@/components/ui/button";
 
 export interface Shape {
   isBalance: boolean;
@@ -437,15 +438,14 @@ function SectionRows({
               )}
             >
               <div role="cell" className="min-w-0 py-2 pl-inset pr-3">
-                <button
-                  type="button"
+                <PlainButton
                   aria-expanded={open}
                   onClick={() => onToggle(group, a)}
                   className="cursor-pointer text-left after:absolute after:inset-0 after:content-['']"
                 >
                   <span className="font-medium tabular-nums">{a.account}</span>{" "}
                   <span className="text-muted">{a.accountName}</span>
-                </button>
+                </PlainButton>
               </div>
               {cols.slice(1).map((c) => {
                 if (c.key === "diff" || c.key === "priorDiff") {

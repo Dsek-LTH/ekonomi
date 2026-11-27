@@ -8,6 +8,7 @@ import { cn } from "@/lib/ui/utils";
 import { useEscape } from "@/lib/ui/escape";
 import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { placeAnchored, useAnchorRect } from "@/lib/ui/anchored-panel";
+import { PlainButton } from "./button";
 
 const CloseCtx = createContext<() => void>(() => {});
 
@@ -95,12 +96,10 @@ export function Menu({
   return (
     <div ref={boxRef} className={cn("relative", className)}>
       {trigger ? (
-        <button
+        <PlainButton
           ref={triggerRef}
           type="button"
           disabled={disabled}
-          // Firefox restores a disabled state before hydration (see Button): off lets the server's answer stand.
-          {...{ autoComplete: "off" }}
           aria-haspopup="menu"
           aria-expanded={shown}
           aria-label={label}
@@ -109,7 +108,7 @@ export function Menu({
           className={triggerClassName}
         >
           {trigger}
-        </button>
+        </PlainButton>
       ) : (
         <Button
           ref={triggerRef}
@@ -178,11 +177,9 @@ export function MenuItem({
 }) {
   const close = useContext(CloseCtx);
   return (
-    <button
-      type="button"
+    <PlainButton
       role="menuitem"
       disabled={disabled}
-      {...{ autoComplete: "off" }}
       onClick={() => {
         close();
         onClick();
@@ -193,7 +190,7 @@ export function MenuItem({
       )}
     >
       {children}
-    </button>
+    </PlainButton>
   );
 }
 

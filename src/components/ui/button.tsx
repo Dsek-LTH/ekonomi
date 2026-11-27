@@ -45,6 +45,19 @@ const SIZES: Record<Size, string> = {
   lg: "h-10 px-4 text-sm sm:h-9",
 };
 
+/**
+ * A <button> with no look of its own, and the one every button in the app is built on (Button, IconButton, the
+ * table's pagers, a picker's trigger). Two things every button needs: `type="button"` unless it submits a form, and
+ * autoComplete="off", since Firefox restores a disabled state on reload and Back before hydration, which left stale
+ * enabled buttons and a hydration warning. Off lets the server's answer stand.
+ */
+export function PlainButton({
+  type = "button",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { ref?: React.Ref<HTMLButtonElement> }) {
+  return <button type={type} {...{ autoComplete: "off" }} {...props} />;
+}
+
 // Dimming is applied per render: a busy button is disabled but must not fade. cn() only concatenates, so never both.
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-control font-medium transition-all duration-150 ease-[var(--ease-out-quint)] disabled:pointer-events-none whitespace-nowrap";
@@ -78,7 +91,7 @@ export function Button({
     ref?: React.Ref<HTMLButtonElement>;
   }) {
   return (
-    <button
+    <PlainButton
       className={cn(
         variant !== "link" &&
           cn(BASE, !loading && (variant === "primary" ? PRIMARY_DISABLED : DIMMED), SIZES[size]),
@@ -87,8 +100,6 @@ export function Button({
       )}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      // Firefox restores a button's disabled state before hydration, leaving a stale enabled button. Off lets the server's answer stand.
-      {...{ autoComplete: "off" }}
       {...props}
     >
       {loading ? (
@@ -101,7 +112,7 @@ export function Button({
       ) : (
         children
       )}
-    </button>
+    </PlainButton>
   );
 }
 

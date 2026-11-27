@@ -7,6 +7,7 @@ import { cn } from "@/lib/ui/utils";
 import { isCompleteDate } from "@/lib/domain/date";
 import { DateInput as DateInputBase } from "./date-input";
 import { IconCalendar } from "./icons";
+import { PlainButton } from "./button";
 
 /** What a Field tells its control, by context (cloneElement breaks when the input is wrapped). The id ties the hint and error to the control for screen readers. */
 interface FieldWiring {
@@ -253,12 +254,9 @@ export function FieldAction({
   ...props
 }: { label: string; children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
-      type="button"
+    <PlainButton
       aria-label={label}
       title={label}
-      // Firefox restores a disabled state before hydration (see Button): off lets the server's answer stand.
-      {...{ autoComplete: "off" }}
       {...props}
       className={cn(
         // `-mr-1.5`: the field's 10px padding less 6px, so the gap to the border is the same at the end as above and below.
@@ -271,7 +269,7 @@ export function FieldAction({
       )}
     >
       {children}
-    </button>
+    </PlainButton>
   );
 }
 

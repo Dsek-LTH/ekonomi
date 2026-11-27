@@ -7,6 +7,7 @@ import { useQuery } from "@/components/shell/use-query";
 import { Combobox } from "@/components/ui/combobox";
 import type { FortnoxCustomer } from "@/lib/fortnox";
 import { useReloadOnRegisterChange } from "@/lib/ui/fortnox-registers";
+import { PlainButton } from "@/components/ui/button";
 
 /** Fortnox's customer register, read when the dialog opens and again on coming back from Fortnox. Customers are added in Fortnox, never here. */
 export function useFortnoxCustomers() {
@@ -71,9 +72,9 @@ export function CustomerPicker({
       {!value && !customers.loading && (
         <p className="mt-1 text-xs text-muted">
           {t("missing")}{" "}
-          <button type="button" className="link" onClick={customers.reload}>
+          <PlainButton type="button" className="link" onClick={customers.reload}>
             {t("reload")}
-          </button>
+          </PlainButton>
         </p>
       )}
     </div>

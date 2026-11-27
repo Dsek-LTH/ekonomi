@@ -5,7 +5,7 @@
 // shows the thread; a click on the corner or the right-click menu pins it open to answer.
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { IconComment, IconTrash, IconX } from "@/components/ui/icons";
 import { UserAvatar } from "@/components/ui/avatar";
@@ -86,8 +86,7 @@ export function CellMark({ target, count }: { target: CommentTarget; count: numb
   const { comments, t } = useSheet();
   if (count === 0) return null;
   return (
-    <button
-      type="button"
+    <PlainButton
       aria-label={t("cellComments", { count })}
       onClick={(e) => comments.open(target, e.currentTarget.closest("td") ?? e.currentTarget)}
       className="absolute right-0 top-0 z-[1] size-3"
@@ -96,7 +95,7 @@ export function CellMark({ target, count }: { target: CommentTarget; count: numb
         aria-hidden
         className="absolute right-0 top-0 size-0 border-l-[7px] border-t-[7px] border-l-transparent border-t-action-from"
       />
-    </button>
+    </PlainButton>
   );
 }
 

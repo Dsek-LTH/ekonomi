@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Amount } from "@/components/ui/amount";
-import { Button } from "@/components/ui/button";
+import { Button, PlainButton } from "@/components/ui/button";
 import { InfoHint } from "@/components/ui/info-hint";
 import { IconCheck } from "@/components/ui/icons";
 import { SearchInput } from "@/components/ui/search-input";
@@ -153,14 +153,13 @@ export function TransactionPicker({
       )}
 
       {rest.length > 0 && !searched && (
-        <button
-          type="button"
+        <PlainButton
           aria-expanded={allOpen}
           onClick={() => setAllOpen((o) => !o)}
           className="text-xs text-muted underline-offset-2 hover:text-foreground hover:underline"
         >
           {allOpen ? t("hideOthers") : t("showAll", { count: rest.length })}
-        </button>
+        </PlainButton>
       )}
       {candidates.length === 0 && <p className="text-sm text-muted">{t("noneAtAll")}</p>}
     </div>
@@ -235,8 +234,7 @@ function CandidateRow({
   }
   return (
     <li>
-      <button
-        type="button"
+      <PlainButton
         disabled={busy}
         aria-pressed={selected}
         onClick={() => onPick(txn.id)}
@@ -247,7 +245,7 @@ function CandidateRow({
         )}
       >
         {content}
-      </button>
+      </PlainButton>
     </li>
   );
 }

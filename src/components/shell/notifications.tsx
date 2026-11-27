@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { IconAlert, IconCheck, IconInfo, IconX } from "@/components/ui/icons";
 import { cn, uid } from "@/lib/ui/utils";
+import { PlainButton } from "@/components/ui/button";
 
 type NotifyTone = "error" | "success" | "info";
 
@@ -149,14 +150,13 @@ export function NotificationBanners() {
                   </Link>
                 )}
               </div>
-              <button
-                type="button"
+              <PlainButton
                 onClick={() => list.dismiss(n.id)}
                 aria-label={tCommon("close")}
                 className="-mr-1 -mt-0.5 rounded-control p-1 opacity-70 transition hover:opacity-100"
               >
                 <IconX className="size-4" />
-              </button>
+              </PlainButton>
             </div>
           );
         })}

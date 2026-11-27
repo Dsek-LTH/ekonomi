@@ -9,6 +9,7 @@ import { useDismissOnOutside } from "@/lib/ui/dismiss";
 import { useQuery } from "@/components/shell/use-query";
 import { cn } from "@/lib/ui/utils";
 import type { User } from "@/lib/domain/types";
+import { PlainButton } from "@/components/ui/button";
 
 export function PersonSearch({
   onSelect,
@@ -82,8 +83,7 @@ export function PersonSearch({
             <ul className="max-h-72 overflow-y-auto p-1">
               {shown.map((u) => (
                 <li key={u.id}>
-                  <button
-                    type="button"
+                  <PlainButton
                     onClick={() => pick(u)}
                     className="flex w-full items-center gap-3 rounded-control px-2.5 py-2 text-left transition-colors hover:bg-hover"
                   >
@@ -92,7 +92,7 @@ export function PersonSearch({
                       <span className="block truncate text-sm font-medium">{u.name}</span>
                       <span className="block truncate text-xs text-muted">{u.email}</span>
                     </span>
-                  </button>
+                  </PlainButton>
                 </li>
               ))}
             </ul>
