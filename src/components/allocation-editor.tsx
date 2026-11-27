@@ -174,7 +174,7 @@ export function AllocationEditor({ costCenters, grossAmount, value, onChange }: 
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-2 pt-1",
-            "@xl:grid @xl:items-center @xl:gap-0 @xl:border-t @xl:border-border @xl:bg-surface @xl:pt-0",
+            "@xl:grid @xl:items-center @xl:gap-0 @xl:border-t @xl:border-border @xl:pt-0",
             COLS,
           )}
         >

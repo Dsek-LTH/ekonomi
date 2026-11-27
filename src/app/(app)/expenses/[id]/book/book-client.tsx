@@ -453,7 +453,7 @@ export default function BookExpenseClient({
               </div>
             </CardBody>
             {correcting && (
-              <CardBody className="border-t border-border">
+              <CardBody className="border-t border-divider">
                 <Field label={t("correction.reason")} requirement="required">
                   <Input
                     size="sm"
@@ -508,7 +508,7 @@ export default function BookExpenseClient({
               </div>
             )}
 
-            <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
+            <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-divider">
               <div className="flex items-center gap-2.5">
                 {/* Why the button is dead, so it does not quietly refuse. */}
                 <VoucherBlockerChip blocker={blocker} />

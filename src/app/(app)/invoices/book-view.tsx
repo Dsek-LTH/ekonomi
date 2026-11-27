@@ -625,7 +625,7 @@ export function BookPanel({
           totalCredit={credit}
         />
 
-        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
+        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-divider">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Only the unit can change its split, which asks every signer again. */}
             {sumMismatch ? (

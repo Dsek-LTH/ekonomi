@@ -294,7 +294,7 @@ export function AllocateForm({
           </div>
         </section>
 
-        <section className="border-t border-border px-inset py-4">
+        <section className="border-t border-divider px-inset py-4">
           <FieldGroup label={tAttest("distribution")} requirement="required">
             <AllocationEditor
               costCenters={options}
@@ -306,7 +306,7 @@ export function AllocateForm({
         </section>
 
         {others.length > 0 && (
-          <section className="border-t border-border px-inset py-4">
+          <section className="border-t border-divider px-inset py-4">
             <h3 className={cn(LABEL, "mb-2")}>{tAttest("signersTitle")}</h3>
             <ul className="space-y-1 text-sm">
               {mineCount > 0 && <li>{tAttest("signerYou")}</li>}

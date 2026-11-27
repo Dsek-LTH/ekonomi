@@ -181,7 +181,7 @@ export function VoucherCard({
           totalDebit={oreToSEK(editDebit)}
           totalCredit={oreToSEK(editCredit)}
         />
-        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
+        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-divider">
           <div className="flex flex-wrap items-center gap-2.5">
             {editBlocker && (
               <span className="text-xs text-warning">{t(`manual.blocker.${editBlocker}`)}</span>
@@ -276,7 +276,7 @@ export function VoucherCard({
         </table>
       </div>
 
-      <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
+      <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-divider">
         <span className="text-xs text-muted">{t("review.konteradAs", { name: reviewerName })}</span>
         <div className="flex flex-wrap items-center gap-2.5">
           {voucher.blocker && (

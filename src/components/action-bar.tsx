@@ -133,7 +133,7 @@ export function CardFooterBar({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-border bg-background px-inset py-3",
+        "sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-b-panel border-t border-divider bg-background px-inset py-3",
         className,
       )}
     >
