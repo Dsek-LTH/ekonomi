@@ -20,6 +20,29 @@ crowding. These rules keep every form and card on one scale.
 - A field that is rarely needed goes under a folded "Ytterligare uppgifter",
   open by default only when the record already uses it.
 
+## Surfaces and lines
+
+- A card is a surface, not a box (`SURFACE` in components/ui/card.tsx): the
+  step from the canvas and `--shadow-card` draw it. Its border is
+  `--color-edge`, transparent on a light page and a hairline in dark, where a
+  shadow does not read. A menu or popover floats instead: a border and
+  `--shadow-pop`.
+- Corners are 2, 6 and 10px (mark, control, panel), so a card rounds clearly
+  more than what is in it.
+- Two line weights. `--color-border` is structural: a table's head, a total,
+  the band under the page's header. `--color-divider` is everything inside a
+  card: rows of a list, parts of a record, rows of a setting. Where spacing
+  already separates two things (a list's tabs, toolbar and pagination, a
+  card's title and body) there is no line.
+- A grid that is typed in (the kontering, the allocation, a budget sheet, a
+  stocktake) keeps its spreadsheet frame and column rules.
+- Nothing is a box inside a box. A status inside a card is a line in it, and a
+  card with nothing to hold is not drawn: an empty list's sentence stands on
+  the page.
+- On a phone (below sm) a page's card runs to the screen's edges, with no side
+  margin, corners or side edge. A card in a card or in a dialog keeps its
+  margins.
+
 ## Columns
 
 - A form beside the document panel decides its columns by its own width, not
