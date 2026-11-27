@@ -28,7 +28,8 @@ const TRACK =
   "relative inline-flex rounded-control border border-border-control bg-surface p-0.5 max-md:flex max-md:w-full";
 
 // Corners are the track's less the 3px it sits inside (border plus padding), so the curves run parallel.
-const PILL = "rounded-mark action-fill";
+// The pink hue, not full pink: which collection is shown is a view, not the next step, which is the only full pink.
+const PILL = "rounded-mark bg-action-from/25";
 
 const Count = ({ count }: { count?: number }) =>
   count ? <span className="ml-1.5 tabular-nums opacity-70">{count}</span> : null;
@@ -78,7 +79,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors max-md:flex-auto max-md:justify-center max-md:whitespace-nowrap",
       active
         ? cn(
-            "text-on-action",
+            "text-foreground",
             // Same shape drawn statically until the pill is measured, so SSR and hydration match.
             !placement && PILL,
           )

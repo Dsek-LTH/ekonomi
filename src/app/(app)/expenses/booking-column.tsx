@@ -84,7 +84,8 @@ export function useBookingColumn(
         {mayBook && e.status === "APPROVED" && (
           // Said, not enforced: the booking screen asks before saving over a colleague.
           <Tooltip label={bookings[e.id] ? bookingHint(bookings[e.id]) : null}>
-            <ButtonLink href={`/expenses/${e.id}/book`} size="xs">
+            {/* White, not pink: one per row of a long list, and the pink is kept for the page's own next step. */}
+            <ButtonLink href={`/expenses/${e.id}/book`} size="xs" variant="secondary">
               {t("book")}
               {bookings[e.id] && <span className="sr-only">{bookingHint(bookings[e.id])}</span>}
             </ButtonLink>

@@ -180,7 +180,7 @@ export default function BankClient({
         linked: t("matched"),
         unmatched: (tx) =>
           tx.cardHolderId === viewerId ? (
-            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="xs">
+            <ButtonLink href={`/expenses/new?txn=${tx.id}`} size="xs" variant="secondary">
               <IconUpload className="size-3.5" />
               {t("account")}
             </ButtonLink>

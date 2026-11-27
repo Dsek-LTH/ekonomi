@@ -107,8 +107,9 @@ export function MenuButton({
       aria-expanded={open}
       aria-controls={controls}
       className={cn(
-        "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-on-action",
-        open && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
+        // White, as a secondary button: the menu is always there, so it is not the next step. Its dot says work waits.
+        "relative flex h-8 shrink-0 items-center gap-2 rounded-control border border-border-control bg-background px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-hover dark:bg-hover",
+        open && "bg-hover",
       )}
     >
       <IconMenu className="size-4" />
