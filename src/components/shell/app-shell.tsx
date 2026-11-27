@@ -423,7 +423,9 @@ export function AppShell({
   const receiptTab = useReceiptTabShowing();
 
   return (
-    <div className="flex min-h-dvh flex-col md:h-screen md:overflow-hidden print:block print:h-auto print:overflow-visible">
+    // Clip, not hidden: a hidden box can still be scrolled from script. Next scrolls a new page into view with
+    // scrollIntoView, which moved this frame too, leaving the page and the receipt panel shifted up with no way back.
+    <div className="flex min-h-dvh flex-col md:h-screen md:overflow-clip print:block print:h-auto print:overflow-visible">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-[var(--shadow-card)] focus:bg-action-from focus:text-white"

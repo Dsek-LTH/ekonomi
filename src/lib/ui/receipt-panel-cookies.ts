@@ -7,8 +7,8 @@ export const RECEIPT_WIDTH_COOKIE = "receipt_width";
 
 export const RECEIPT_MIN_WIDTH = 360;
 export const RECEIPT_MAX_FRACTION = 0.7;
-/** Half the page by default. The width is kept as a share of the frame, so it fits any screen it is opened on. */
-export const RECEIPT_DEFAULT_WIDTH = 0.5;
+/** Two fifths of the page by default. The width is kept as a share of the frame, so it fits any screen it is opened on. */
+export const RECEIPT_DEFAULT_WIDTH = 0.4;
 
 /** The stored share, or the default for none (or an old width in pixels, from before it was a share). */
 export function receiptWidthFrom(cookie: string | undefined): number {
