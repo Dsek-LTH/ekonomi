@@ -11,7 +11,8 @@ export function FortnoxBanner({
   ok: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-panel border border-border px-3 py-2.5">
+    // A status line inside the card it belongs to, not a box of its own.
+    <div className="flex items-center gap-3">
       <FortnoxMark />
       <div className="min-w-0 flex-1 text-sm leading-tight">
         <p className="font-medium">{title}</p>
