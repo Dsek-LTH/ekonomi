@@ -21,7 +21,6 @@ import { REVIEW_PASSES, REVIEW_PICKS, type ReviewPass } from "@/lib/closing/revi
 import { useFormat } from "@/lib/ui/use-format";
 import { EvidenceTag } from "../evidence-cell";
 import { ReviewTag } from "../review-tag";
-import { closingSections } from "../sections";
 
 export default function ClosingVouchersClient({
   year,
@@ -162,18 +161,11 @@ export default function ClosingVouchersClient({
   return (
     <PageShell
       title={t("yearTitle", { year: year.year })}
-      subtitle={
-        year.lastSyncAt ? t("lastSync", { when: dateTime(year.lastSyncAt) }) : t("neverSynced")
+      view={
+        <span className="text-sm text-muted">
+          {year.lastSyncAt ? t("lastSync", { when: dateTime(year.lastSyncAt) }) : t("neverSynced")}
+        </span>
       }
-      pages={closingSections({
-        active: "vouchers",
-        label: t("sections.label"),
-        labels: {
-          checklist: t("sections.checklist"),
-          vouchers: t("sections.vouchers"),
-          accounts: t("sections.accounts"),
-        },
-      })}
     >
       <div className="flex flex-col gap-4">
         {progress.orphaned > 0 && (

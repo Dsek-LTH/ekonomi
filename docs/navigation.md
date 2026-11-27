@@ -4,15 +4,15 @@ Every way of moving around the app answers exactly one question, sits in the
 same place on every page and has its own URL parameter. A reader should be
 able to guess where a control is before they look for it.
 
-| Control | Question | Changes | Where |
-|---|---|---|---|
-| Sidebar entry | Which area? One kind of thing. | path | rail |
-| Section tabs | Which page in this area? | path | band, top |
-| Scope switch | Whose? Mina / Min resultatenhet / Alla | `?scope=` | band, right end |
-| Table tabs | Which stage? Grouped by who acts next, ending in Alla. | `?tab=` | top of the table |
-| Filters | Narrow by attribute: search, date, type, unit. | `?q=`, ... | table toolbar |
-| View toggle | The same data drawn differently (table or chart). | `?view=` | page toolbar, never the band |
-| Page tabs | Parts of one record (a bokslut year), or two pages over the same data that answer different questions (Historik: Rörelser, Statistik). | path or `?view=` | under the page's title |
+| Control       | Question                                                                                                              | Changes          | Where                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------- |
+| Sidebar entry | Which area? One kind of thing.                                                                                        | path             | rail                         |
+| Section tabs  | Which page in this area?                                                                                              | path             | band, top                    |
+| Scope switch  | Whose? Mina / Min resultatenhet / Alla                                                                                | `?scope=`        | band, right end              |
+| Table tabs    | Which stage? Grouped by who acts next, ending in Alla.                                                                | `?tab=`          | top of the table             |
+| Filters       | Narrow by attribute: search, date, type, unit.                                                                        | `?q=`, ...       | table toolbar                |
+| View toggle   | The same data drawn differently (table or chart).                                                                     | `?view=`         | page toolbar, never the band |
+| Page tabs     | Parts of one record, or two pages over the same data that answer different questions (Historik: Rörelser, Statistik). | path or `?view=` | under the page's title       |
 
 Rules:
 
@@ -90,9 +90,12 @@ Intäkter
              Granska och bokför by somebody else (the two-person rule)
 
 Bokföring
-  Bokslut  /closing
-    page tabs: Checklista | Verifikationer | Konton
+  Checklista  /closing
     /closing/template
+  Verifikationer  /closing/vouchers
+  Avstämningar  /closing/accounts
+    The header's year is the bokslut's. Section tabs like every other area,
+    with when the ledger was last synced at the band's end.
 
 Budget & utfall
   Budget  /budget

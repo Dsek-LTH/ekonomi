@@ -18,7 +18,6 @@ import type { ClosingYear } from "@/lib/data/closing";
 import type { ChecklistEntry } from "@/lib/data/closing-checklist";
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
-import { closingSections } from "./sections";
 import { isoDay } from "@/lib/domain/date";
 
 export default function ChecklistClient({
@@ -42,18 +41,11 @@ export default function ChecklistClient({
   return (
     <PageShell
       title={t("yearTitle", { year: year.year })}
-      subtitle={
-        year.lastSyncAt ? t("lastSync", { when: dateTime(year.lastSyncAt) }) : t("neverSynced")
+      view={
+        <span className="text-sm text-muted">
+          {year.lastSyncAt ? t("lastSync", { when: dateTime(year.lastSyncAt) }) : t("neverSynced")}
+        </span>
       }
-      pages={closingSections({
-        active: "checklist",
-        label: t("sections.label"),
-        labels: {
-          checklist: t("sections.checklist"),
-          vouchers: t("sections.vouchers"),
-          accounts: t("sections.accounts"),
-        },
-      })}
     >
       {items === null ? (
         <EmptyState

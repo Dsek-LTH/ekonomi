@@ -64,8 +64,9 @@ export function PageTabs({
                   )
                 : cn(
                     "-mb-px border-b-2 px-3 text-sm",
+                    // The pink line, as under the section band's tabs and the stage tabs: one look for a chosen tab.
                     active
-                      ? "border-foreground text-foreground"
+                      ? "border-brand text-foreground"
                       : "border-transparent text-muted hover:border-border hover:text-foreground",
                   ),
             )}

@@ -16,7 +16,6 @@ import type { AccountNoteBody, ReconcileAccountBody } from "@/lib/api/schemas/cl
 import type { ClosingYear } from "@/lib/data/closing";
 import type { BalanceAccount } from "@/lib/data/closing-checklist";
 import { useFormat } from "@/lib/ui/use-format";
-import { closingSections } from "../sections";
 
 export default function AccountsClient({
   year,
@@ -90,18 +89,7 @@ export default function AccountsClient({
   ];
 
   return (
-    <PageShell
-      title={t("yearTitle", { year: year.year })}
-      pages={closingSections({
-        active: "accounts",
-        label: t("sections.label"),
-        labels: {
-          checklist: t("sections.checklist"),
-          vouchers: t("sections.vouchers"),
-          accounts: t("sections.accounts"),
-        },
-      })}
-    >
+    <PageShell title={t("yearTitle", { year: year.year })}>
       <Card>
         <ClientDataTable
           columns={columns}

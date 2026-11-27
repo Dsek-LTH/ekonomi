@@ -146,7 +146,7 @@ export default function WithdrawClient({
   }
 
   return (
-    <PageShell title={t("log.title")} width="content">
+    <PageShell title={t("log.title")} width="form">
       {/* Room at the bottom for the bar that carries the button, which is docked on a phone. */}
       <div className="space-y-4 pb-28 md:pb-0">
         {members && (

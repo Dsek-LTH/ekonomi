@@ -137,11 +137,24 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "groupBookkeeping",
     icon: IconBook,
+    // The year's closing in its three parts, as section tabs like every other area. The year is the header's.
     items: [
       {
         href: "/closing",
-        label: "closing",
+        label: "closingChecklist",
+        icon: IconList,
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+      {
+        href: "/closing/vouchers",
+        label: "closingVouchers",
         icon: IconLedger,
+        visible: (u) => canViewBookkeeping(u.capabilities),
+      },
+      {
+        href: "/closing/accounts",
+        label: "closingAccounts",
+        icon: IconBook,
         visible: (u) => canViewBookkeeping(u.capabilities),
       },
     ],
