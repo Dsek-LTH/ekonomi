@@ -44,7 +44,6 @@
     "VOLUME": "Counted by level"
   },
   "kindHint": {
-    "UNIT": "Counted in whole units, such as cans or bottles of beer.",
     "VOLUME": "Counted in sealed bottles and how full the opened ones are, such as spirits and wine."
   },
   "field": {
@@ -130,7 +129,6 @@
     "empty": "No products added yet.",
     "saved": "The product was saved.",
     "saveFailed": "Could not save the product",
-    "dialogHint": "A name, a barcode, a strength, a size and a price are needed before the product can be saved. The rest is optional.",
     "field": {
       "name": "Name",
       "kind": "Counted as",
@@ -140,12 +138,10 @@
       "nominalMl": "Container volume (ml)",
       "unitMl": "Volume per unit (ml)",
       "ean": "Barcode (EAN)",
-      "eanHint": "Lets the product be scanned in the cellar.",
-      "cost": "Cost price incl. deposit (kr)",
+      "cost": "Price incl. deposit (kr)",
       "systembolagetId": "Systembolaget article number",
       "systembolagetIdInvalid": "No article number in there. Paste the product's link from systembolaget.se, or type just the digits.",
       "tags": "Tags",
-      "tagsHint": "Free labels to find the product by: whisky, cognac, vodka. Optional.",
       "tagAdd": "Add a tag…",
       "tagSearch": "Search, or type a new one…",
       "tagCreate": "Create the tag “{tag}”",
@@ -154,13 +150,10 @@
       "tagsFull": "At most {max} tags",
       "tagTooLong": "That tag is too long, at most {max} characters",
       "shelfLife": "Shelf life",
-      "shelfLifeHint": "Months from delivery. Beer is usually 9, cider 21. Leave empty for anything that does not go off, such as spirits.",
       "shelfLifePlaceholder": "months",
       "group": "Product type",
-      "groupHint": "Decides which stock account and cost account the product is booked on.",
-      "costHint": "Per unit, with deposit and without freight.",
-      "packSize": "Units per pack",
-      "packSizeHint": "For example 24 for a tray. Lets deliveries and refills be entered in packs."
+      "costHint": "Per unit, without freight.",
+      "packSize": "Units per pack"
     },
     "col": {
       "name": "Product",

@@ -44,7 +44,6 @@
     "VOLUME": "Nivåvara"
   },
   "kindHint": {
-    "UNIT": "Räknas i hela enheter, till exempel burkar eller flaskor öl.",
     "VOLUME": "Räknas i oöppnade flaskor och hur fulla de öppnade är, till exempel sprit och vin."
   },
   "field": {
@@ -130,7 +129,6 @@
     "empty": "Inga produkter upplagda ännu.",
     "saved": "Produkten sparades.",
     "saveFailed": "Kunde inte spara produkten",
-    "dialogHint": "Namn, streckkod, styrka, storlek och pris behövs innan produkten kan sparas. Resten är frivilligt.",
     "field": {
       "name": "Namn",
       "kind": "Räknas som",
@@ -140,12 +138,10 @@
       "nominalMl": "Behållarens volym (ml)",
       "unitMl": "Volym per styck (ml)",
       "ean": "Streckkod (EAN)",
-      "eanHint": "Gör att produkten kan skannas fram i förrådet.",
-      "cost": "Inköpspris inkl. pant (kr)",
+      "cost": "Pris inkl. pant (kr)",
       "systembolagetId": "Systembolagets artikelnummer",
       "systembolagetIdInvalid": "Hittar inget artikelnummer. Klistra in produktens länk från systembolaget.se, eller skriv bara siffrorna.",
       "tags": "Taggar",
-      "tagsHint": "Fria etiketter att hitta produkten på: whisky, cognac, vodka. Frivilligt.",
       "tagAdd": "Lägg till tagg…",
       "tagSearch": "Sök eller skriv en ny…",
       "tagCreate": "Skapa taggen ”{tag}”",
@@ -154,13 +150,10 @@
       "tagsFull": "Högst {max} taggar",
       "tagTooLong": "Taggen är för lång, högst {max} tecken",
       "shelfLife": "Hållbarhet",
-      "shelfLifeHint": "Antal månader från leverans. Öl brukar vara 9, cider 21. Lämna tomt för sådant som inte blir gammalt, till exempel sprit.",
       "shelfLifePlaceholder": "månader",
       "group": "Produkttyp",
-      "groupHint": "Avgör vilket lagerkonto och kostnadskonto produkten bokförs på.",
-      "costHint": "Per styck, med pant och utan frakt.",
-      "packSize": "Antal per förpackning",
-      "packSizeHint": "Till exempel 24 för ett flak. Gör att leveranser och påfyllningar kan anges i förpackningar."
+      "costHint": "Per styck, utan frakt.",
+      "packSize": "Antal per förpackning"
     },
     "col": {
       "name": "Produkt",

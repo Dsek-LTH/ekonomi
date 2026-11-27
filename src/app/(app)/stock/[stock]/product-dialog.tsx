@@ -24,6 +24,7 @@ import { CATEGORIES } from "@/lib/domain/categories";
 import { oreToSEK, sekToInput, sekToOre } from "@/lib/domain/money";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStock, type StockGroupChoice } from "@/components/stock/stock-context";
+import { cn } from "@/lib/ui/utils";
 
 const KIND_OPTIONS: StockKind[] = ["UNIT", "VOLUME"];
 
@@ -230,285 +231,277 @@ export function ProductDialog({
   }
 
   return (
-    <Modal label={t("products.new")} onClose={onClose} className="max-w-lg">
-      <ModalHeader
-        title={product ? product.name : t("products.new")}
-        subtitle={t("products.dialogHint")}
-      />
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-inset py-4">
-        <Field label={t("products.field.name")} requirement="required">
-          <Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus />
-        </Field>
+    <Modal label={t("products.new")} onClose={onClose} className="max-w-2xl">
+      <ModalHeader title={product ? product.name : t("products.new")} />
+      {/* Six columns from sm: the short fields share a row (two halves, or three thirds for the figures), so the whole
+          product fits without scrolling. Required ones carry the star, and what is missing stands by the button. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-inset py-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
+          <div className="sm:col-span-6">
+            <Field label={t("products.field.name")} requirement="required">
+              <Input value={d.name} onChange={(e) => set("name", e.target.value)} autoFocus />
+            </Field>
+          </div>
 
-        {/* FieldGroup, not Field: a <label> forwards a click to the first labelable element, so tapping the scanner would open the keyboard. */}
-        {/* A barcode, or the product said to have none (a keg has none). Choosing "none" asks once more first; the check digit (lib/stock/barcode.ts) stops made-up numbers. */}
-        {d.noBarcode ? (
-          <FieldGroup label={t("products.field.ean")}>
-            <p className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-muted">
-              {ownCode ? t("barcode.ownCode", { code: ownCode }) : t("barcode.willGetOwn")}
-            </p>
-          </FieldGroup>
-        ) : (
-          <FieldGroup
-            label={t("products.field.ean")}
-            hint={t("products.field.eanHint")}
-            requirement="required"
-          >
-            <SuffixedInput
-              inputMode="numeric"
-              // An unnamed numeric box wanting thirteen digits looks like a card number to password managers.
-              // `autoComplete="off"` is often ignored, so 1Password's own opt-out is set too.
-              name="product-ean"
-              autoComplete="off"
-              data-1p-ignore
-              value={d.ean}
-              onChange={(e) => set("ean", e.target.value.replace(/[^0-9]/g, ""))}
-              inputClassName="tabular-nums"
-              placeholder="7312040017072"
-              aria-label={t("products.field.ean")}
-              // The box gives up its right padding for the button, which gives up its vertical margin so the field keeps its neighbours' height.
-              className="pr-1"
-              suffix={
-                <IconButton
-                  label={t("scan.action")}
-                  title={t("scan.action")}
-                  onClick={() => setScanning(true)}
-                  className="-my-1.5"
-                >
-                  <IconScan className="size-5" />
-                </IconButton>
-              }
-            />
-          </FieldGroup>
-        )}
-        <div ref={noBarcodeRef} className="-mt-2 space-y-2">
-          <Checkbox
-            checked={d.noBarcode || askingNoBarcode}
-            onChange={() => {
-              if (!(d.noBarcode || askingNoBarcode)) setAskingNoBarcode(true);
-              else {
-                setAskingNoBarcode(false);
-                // Back to typing one: the section's own code would be refused as typed.
-                setD((p) => ({
-                  ...p,
-                  noBarcode: false,
-                  ean: isInternalCode(p.ean) ? "" : p.ean,
-                }));
-              }
-            }}
-            label={t("barcode.none")}
-          >
-            {t("barcode.none")}
-          </Checkbox>
-          {askingNoBarcode && !d.noBarcode && (
-            // A question about the field above, under it: no box (docs/layout.md).
-            <div>
-              <Issue>{t("barcode.confirm")}</Issue>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => answerNoBarcode(true)}>
-                  {t("barcode.confirmYes")}
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => answerNoBarcode(false)}>
-                  {t("barcode.confirmNo")}
-                </Button>
-              </div>
+          <div className={cn("space-y-2", reported ? "sm:col-span-3" : "sm:col-span-6")}>
+            {d.noBarcode ? (
+              <FieldGroup label={t("products.field.ean")}>
+                <p className="rounded-control border border-border bg-surface px-3 py-2 text-sm text-muted">
+                  {ownCode ? t("barcode.ownCode", { code: ownCode }) : t("barcode.willGetOwn")}
+                </p>
+              </FieldGroup>
+            ) : (
+              <FieldGroup label={t("products.field.ean")} requirement="required">
+                <SuffixedInput
+                  inputMode="numeric"
+                  // An unnamed numeric box wanting thirteen digits looks like a card number to password managers.
+                  // `autoComplete="off"` is often ignored, so 1Password's own opt-out is set too.
+                  name="product-ean"
+                  autoComplete="off"
+                  data-1p-ignore
+                  value={d.ean}
+                  onChange={(e) => set("ean", e.target.value.replace(/[^0-9]/g, ""))}
+                  inputClassName="tabular-nums"
+                  placeholder="7312040017072"
+                  aria-label={t("products.field.ean")}
+                  // The box gives up its right padding for the button, which gives up its vertical margin so the field keeps its neighbours' height.
+                  className="pr-1"
+                  suffix={
+                    <IconButton
+                      label={t("scan.action")}
+                      title={t("scan.action")}
+                      onClick={() => setScanning(true)}
+                      className="-my-1.5"
+                    >
+                      <IconScan className="size-5" />
+                    </IconButton>
+                  }
+                />
+              </FieldGroup>
+            )}
+            <div ref={noBarcodeRef} className="space-y-2">
+              <Checkbox
+                checked={d.noBarcode || askingNoBarcode}
+                onChange={() => {
+                  if (!(d.noBarcode || askingNoBarcode)) setAskingNoBarcode(true);
+                  else {
+                    setAskingNoBarcode(false);
+                    // Back to typing one: the section's own code would be refused as typed.
+                    setD((p) => ({
+                      ...p,
+                      noBarcode: false,
+                      ean: isInternalCode(p.ean) ? "" : p.ean,
+                    }));
+                  }
+                }}
+                label={t("barcode.none")}
+              >
+                {t("barcode.none")}
+              </Checkbox>
+              {askingNoBarcode && !d.noBarcode && (
+                // A question about the field above, under it: no box (docs/layout.md).
+                <div>
+                  <Issue>{t("barcode.confirm")}</Issue>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => answerNoBarcode(true)}>
+                      {t("barcode.confirmYes")}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => answerNoBarcode(false)}>
+                      {t("barcode.confirmNo")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          {reported && (
+            <div className="sm:col-span-3">
+              <Field
+                label={t("products.field.systembolagetId")}
+                error={sbFault ? t("products.field.systembolagetIdInvalid") : undefined}
+                requirement="optional"
+              >
+                <Input
+                  value={d.systembolagetId}
+                  onChange={(e) => set("systembolagetId", e.target.value)}
+                  placeholder="141215"
+                  className="tabular-nums"
+                />
+              </Field>
             </div>
           )}
-        </div>
 
-        {/* Takes a pasted product URL as well as the bare number (the number is only found on the product's page). Reduced to digits on save. */}
-        {reported && (
-          <Field
-            label={t("products.field.systembolagetId")}
-            error={sbFault ? t("products.field.systembolagetIdInvalid") : undefined}
-            requirement="optional"
-          >
-            <Input
-              value={d.systembolagetId}
-              onChange={(e) => set("systembolagetId", e.target.value)}
-              placeholder="141215"
-              className="tabular-nums"
-            />
-          </Field>
-        )}
+          {reported && (
+            <>
+              <div className="sm:col-span-3">
+                <FieldGroup
+                  label={t("products.field.kind")}
+                  // Only the unusual way says how it works: an open bottle is counted by how full it is.
+                  hint={d.kind === "VOLUME" ? t("kindHint.VOLUME") : undefined}
+                  requirement="required"
+                >
+                  <Combobox
+                    value={d.kind}
+                    onChange={(v) => set("kind", v as StockKind)}
+                    options={KIND_OPTIONS.map((k) => ({
+                      value: k,
+                      label: t(`kindName.${k}`),
+                    }))}
+                    aria-label={t("products.field.kind")}
+                  />
+                </FieldGroup>
+              </div>
+              <div className="sm:col-span-3">
+                <FieldGroup label={t("products.field.category")} requirement="required">
+                  {/* A searchable field: long names like "Alkoholdrycksliknande preparat" make a native select a scroll. */}
+                  <Combobox
+                    value={d.category}
+                    // The type follows the drink type: it is where that drink type's accounts are.
+                    onChange={(v) =>
+                      setD((p) => ({
+                        ...p,
+                        category: v as DrinkCategory,
+                        groupId: groupFor(groups, v as DrinkCategory),
+                      }))
+                    }
+                    options={CATEGORIES.map((c) => ({
+                      value: c,
+                      label: t(`category.${c}`),
+                    }))}
+                    searchPlaceholder={t("products.field.categorySearch")}
+                    aria-label={t("products.field.category")}
+                  />
+                </FieldGroup>
+              </div>
+            </>
+          )}
 
-        {/* FieldGroup, not Field: a combobox trigger is a <button>, and a <label> would pop the menu open on a click beside it. */}
-        {reported && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FieldGroup
-              label={t("products.field.kind")}
-              hint={t(`kindHint.${d.kind}`)}
+          {!reported && groups.length > 1 && (
+            <div className="sm:col-span-6">
+              <FieldGroup label={t("products.field.group")} requirement="required">
+                <Combobox
+                  value={d.groupId}
+                  onChange={(v) => set("groupId", v)}
+                  options={groups.map((g) => ({ value: g.id, label: g.name }))}
+                  aria-label={t("products.field.group")}
+                />
+              </FieldGroup>
+            </div>
+          )}
+
+          {reported && (
+            <div className="sm:col-span-3">
+              <Field label={t("products.field.abv")} requirement="required">
+                {/* The unit is inside the box: the wrong reading (0,4 for 40 %) is a plausible number nothing downstream would question. */}
+                <SuffixedInput
+                  value={d.abv}
+                  onChange={(e) => set("abv", e.target.value)}
+                  inputMode="decimal"
+                  placeholder="40"
+                  aria-label={t("products.field.abv")}
+                  inputClassName="tabular-nums"
+                  suffix={
+                    <span aria-hidden className="shrink-0 text-muted">
+                      %
+                    </span>
+                  }
+                />
+              </Field>
+            </div>
+          )}
+          <div className={reported ? "sm:col-span-3" : "sm:col-span-2"}>
+            {isVolume ? (
+              <Field label={t("products.field.nominalMl")} requirement="required">
+                <Input
+                  value={d.nominalMl}
+                  onChange={(e) => set("nominalMl", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+            ) : (
+              <Field
+                label={t("products.field.unitMl")}
+                requirement={reported ? "required" : "optional"}
+              >
+                <Input
+                  value={d.unitMl}
+                  onChange={(e) => set("unitMl", e.target.value)}
+                  inputMode="numeric"
+                />
+              </Field>
+            )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <Field
+              label={t("products.field.cost")}
+              hint={t("products.field.costHint")}
               requirement="required"
             >
-              <Combobox
-                value={d.kind}
-                onChange={(v) => set("kind", v as StockKind)}
-                options={KIND_OPTIONS.map((k) => ({
-                  value: k,
-                  label: t(`kindName.${k}`),
-                }))}
-                aria-label={t("products.field.kind")}
-              />
-            </FieldGroup>
-            <FieldGroup label={t("products.field.category")} requirement="required">
-              {/* A searchable field: long names like "Alkoholdrycksliknande preparat" make a native select a scroll. */}
-              <Combobox
-                value={d.category}
-                // The type follows the drink type: it is where that drink type's accounts are.
-                onChange={(v) =>
-                  setD((p) => ({
-                    ...p,
-                    category: v as DrinkCategory,
-                    groupId: groupFor(groups, v as DrinkCategory),
-                  }))
-                }
-                options={CATEGORIES.map((c) => ({
-                  value: c,
-                  label: t(`category.${c}`),
-                }))}
-                searchPlaceholder={t("products.field.categorySearch")}
-                aria-label={t("products.field.category")}
-              />
-            </FieldGroup>
-          </div>
-        )}
-
-        {/* The type its stock account and cost account come from (Inställningar, Lager). One group needs no asking, and
-            where the drink type is filed it is the drink type's own: the server puts the product there. */}
-        {!reported && groups.length > 1 && (
-          <FieldGroup
-            label={t("products.field.group")}
-            hint={t("products.field.groupHint")}
-            requirement="required"
-          >
-            <Combobox
-              value={d.groupId}
-              onChange={(v) => set("groupId", v)}
-              options={groups.map((g) => ({ value: g.id, label: g.name }))}
-              aria-label={t("products.field.group")}
-            />
-          </FieldGroup>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {reported && (
-            <Field label={t("products.field.abv")} requirement="required">
-              {/* The unit is inside the box: the wrong reading (0,4 for 40 %) is a plausible number nothing downstream would question. */}
-              <SuffixedInput
-                value={d.abv}
-                onChange={(e) => set("abv", e.target.value)}
-                inputMode="decimal"
-                placeholder="40"
-                aria-label={t("products.field.abv")}
-                inputClassName="tabular-nums"
-                suffix={
-                  <span aria-hidden className="shrink-0 text-muted">
-                    %
-                  </span>
-                }
-              />
+              <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
             </Field>
-          )}
-          <Field
-            label={t("products.field.cost")}
-            hint={t("products.field.costHint")}
-            requirement="required"
-          >
-            <AmountInput value={d.costPrice} onChange={(v) => set("costPrice", v)} />
-          </Field>
-          <Field
-            label={t("products.field.packSize")}
-            hint={t("products.field.packSizeHint")}
-            requirement="optional"
-          >
-            <Input
-              value={d.packSize}
-              onChange={(e) => set("packSize", e.target.value)}
-              inputMode="numeric"
-              placeholder="24"
-              className="tabular-nums"
-            />
-          </Field>
-        </div>
-
-        {isVolume ? (
-          <>
-            {/* The whole a level is a fraction of: a bottle is judged by eye at 80, 60, 40 or 20 per cent. */}
-            <Field label={t("products.field.nominalMl")} requirement="required">
+          </div>
+          <div className="sm:col-span-2">
+            <Field label={t("products.field.packSize")} requirement="optional">
               <Input
-                value={d.nominalMl}
-                onChange={(e) => set("nominalMl", e.target.value)}
+                value={d.packSize}
+                onChange={(e) => set("packSize", e.target.value)}
                 inputMode="numeric"
+                placeholder="24"
+                className="tabular-nums"
               />
             </Field>
-          </>
-        ) : (
-          <Field
-            label={t("products.field.unitMl")}
-            requirement={reported ? "required" : "optional"}
-          >
-            <Input
-              value={d.unitMl}
-              onChange={(e) => set("unitMl", e.target.value)}
-              inputMode="numeric"
-            />
-          </Field>
-        )}
-
-        {/* Shelf life in months. Optional: a spirit does not go off, and empty raises no checks. See lib/stock/expiry.ts. */}
-        <Field
-          label={t("products.field.shelfLife")}
-          hint={t("products.field.shelfLifeHint")}
-          requirement="optional"
-        >
-          <Input
-            value={d.shelfLifeMonths}
-            onChange={(e) => set("shelfLifeMonths", e.target.value)}
-            inputMode="numeric"
-            placeholder={t("products.field.shelfLifePlaceholder")}
-          />
-        </Field>
-
-        {/* Last: a tag is how a product is found afterwards. FieldGroup, not Field: it labels a row of chips and a picker. */}
-        <FieldGroup
-          label={t("products.field.tags")}
-          hint={t("products.field.tagsHint")}
-          requirement="optional"
-        >
-          <div className="space-y-2">
-            <TagChips
-              tags={d.tags}
-              onRemove={(tag) =>
-                set(
-                  "tags",
-                  d.tags.filter((x) => x !== tag),
-                )
-              }
-              removeLabel={(tag) => t("products.field.tagRemove", { tag })}
-            />
-            {/* A picker that also invents. Resets to empty after each pick, since it holds the next thing to add. */}
-            <Combobox
-              value=""
-              onChange={addTag}
-              options={tagOptions.map((tag) => ({ value: tag, label: tag }))}
-              onCreate={addTag}
-              createLabel={(text) =>
-                tooLong(text)
-                  ? t("products.field.tagTooLong", { max: MAX_TAG })
-                  : t("products.field.tagCreate", { tag: text })
-              }
-              placeholder={
-                tagsFull
-                  ? t("products.field.tagsFull", { max: MAX_TAGS })
-                  : t("products.field.tagAdd")
-              }
-              searchPlaceholder={t("products.field.tagSearch")}
-              emptyText={t("products.field.tagsNone")}
-              disabled={tagsFull}
-              aria-label={t("products.field.tags")}
-            />
           </div>
-        </FieldGroup>
+          <div className="sm:col-span-2">
+            <Field label={t("products.field.shelfLife")} requirement="optional">
+              <Input
+                value={d.shelfLifeMonths}
+                onChange={(e) => set("shelfLifeMonths", e.target.value)}
+                inputMode="numeric"
+                placeholder={t("products.field.shelfLifePlaceholder")}
+                className="tabular-nums"
+              />
+            </Field>
+          </div>
+
+          <div className="sm:col-span-6">
+            <FieldGroup label={t("products.field.tags")} requirement="optional">
+              <div className="space-y-2">
+                <TagChips
+                  tags={d.tags}
+                  onRemove={(tag) =>
+                    set(
+                      "tags",
+                      d.tags.filter((x) => x !== tag),
+                    )
+                  }
+                  removeLabel={(tag) => t("products.field.tagRemove", { tag })}
+                />
+                {/* A picker that also invents. Resets to empty after each pick, since it holds the next thing to add. */}
+                <Combobox
+                  value=""
+                  onChange={addTag}
+                  options={tagOptions.map((tag) => ({ value: tag, label: tag }))}
+                  onCreate={addTag}
+                  createLabel={(text) =>
+                    tooLong(text)
+                      ? t("products.field.tagTooLong", { max: MAX_TAG })
+                      : t("products.field.tagCreate", { tag: text })
+                  }
+                  placeholder={
+                    tagsFull
+                      ? t("products.field.tagsFull", { max: MAX_TAGS })
+                      : t("products.field.tagAdd")
+                  }
+                  searchPlaceholder={t("products.field.tagSearch")}
+                  emptyText={t("products.field.tagsNone")}
+                  disabled={tagsFull}
+                  aria-label={t("products.field.tags")}
+                />
+              </div>
+            </FieldGroup>
+          </div>
+        </div>
       </div>
 
       {/* The reason travels with the button. See ModalFooter. */}
