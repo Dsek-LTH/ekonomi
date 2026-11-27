@@ -78,8 +78,7 @@ const BUDGET_SHOWN = 5;
 /** Due this soon and the due label turns amber. */
 const DUE_SOON_DAYS = 3;
 
-const LINK =
-  "inline-flex items-center gap-0.5 text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current";
+const LINK = "inline-flex items-center gap-0.5 text-sm font-medium link";
 
 export interface BudgetFlags {
   budgetId: string | null;

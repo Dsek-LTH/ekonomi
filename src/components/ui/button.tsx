@@ -18,8 +18,9 @@ export const TEXT_HOVER = "hover:bg-action-from/10";
 
 // A button is full pink (primary, .action-fill in globals.css), white (secondary) or the pink hue (soft). Ghost and
 // quiet are text, with the faint hue on hover. Danger is red, which is a warning and not a fourth colour.
+// The pink's label is ink (`on-action`): white on the brand pink is 2.5:1, ink is 7.1:1.
 const VARIANTS: Record<Variant, string> = {
-  primary: "action-fill text-white border active:scale-[0.98]",
+  primary: "action-fill text-on-action border active:scale-[0.98]",
   // On a dark ground a white button is a lighter grey block (the hover grey), outline kept, so it holds its own beside a
   // pink one. Hover lifts it one step more. Light stays white.
   secondary:
@@ -30,7 +31,7 @@ const VARIANTS: Record<Variant, string> = {
   danger: "bg-danger text-on-danger hover:bg-danger-hover active:scale-[0.98]",
   dangerOutline:
     "bg-background dark:bg-hover text-danger border border-border-control hover:bg-danger-soft dark:hover:bg-danger-soft hover:border-danger",
-  link: "font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current disabled:opacity-40",
+  link: "font-medium link disabled:opacity-40",
 };
 
 // One height for every control that can sit beside another: 40px on a phone, 32px from sm up, the same as a field
@@ -48,6 +49,10 @@ const SIZES: Record<Size, string> = {
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-control font-medium transition-all duration-150 ease-[var(--ease-out-quint)] disabled:pointer-events-none whitespace-nowrap";
 const DIMMED = "disabled:opacity-40";
+// A disabled pink button is grey, not a paler pink: faded, the brand colour reads as broken rather than unavailable,
+// and the label on it was hard to read. Grey with its label in muted ink says "not yet" and stays legible.
+const PRIMARY_DISABLED =
+  "disabled:bg-none disabled:bg-surface disabled:text-muted disabled:border-border-control";
 
 type CommonProps = {
   variant?: Variant;
@@ -75,7 +80,8 @@ export function Button({
   return (
     <button
       className={cn(
-        variant !== "link" && cn(BASE, !loading && DIMMED, SIZES[size]),
+        variant !== "link" &&
+          cn(BASE, !loading && (variant === "primary" ? PRIMARY_DISABLED : DIMMED), SIZES[size]),
         VARIANTS[variant],
         className,
       )}

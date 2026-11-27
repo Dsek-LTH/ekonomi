@@ -107,7 +107,7 @@ export function MenuButton({
       aria-expanded={open}
       aria-controls={controls}
       className={cn(
-        "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-white",
+        "action-fill relative flex h-8 shrink-0 items-center gap-2 rounded-control border px-2.5 text-sm font-medium text-on-action",
         open && "shadow-[inset_0_0_0_999px_rgb(0_0_0/0.08)]",
       )}
     >

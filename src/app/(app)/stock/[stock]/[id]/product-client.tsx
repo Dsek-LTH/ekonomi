@@ -327,7 +327,7 @@ export default function StockProductClient({
                       href={systembolagetSearchUrl(product.systembolagetId) ?? "#"}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="tabular-nums text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+                      className="tabular-nums link"
                     >
                       {product.systembolagetId}
                     </a>
@@ -372,7 +372,7 @@ export default function StockProductClient({
                         formatOreKr(board.priceOre, { decimals: 2 })
                       )}
                       {board.linked && (
-                        <Link href="/board/prices" className="ml-2 text-xs font-normal text-link">
+                        <Link href="/board/prices" className="ml-2 text-xs font-normal link">
                           {t("product.boardPrices")}
                         </Link>
                       )}
@@ -414,7 +414,7 @@ export default function StockProductClient({
               action={
                 <Link
                   href={href(`/history?product=${product.id}`)}
-                  className="text-sm font-medium text-link"
+                  className="text-sm font-medium link"
                 >
                   {t("product.wholeLog")}
                 </Link>

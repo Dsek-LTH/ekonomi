@@ -49,7 +49,7 @@ export function ClampedText({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="mt-0.5 text-xs font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
+          className="mt-0.5 text-xs font-medium link"
         >
           {open ? t("less") : t("more")}
         </button>

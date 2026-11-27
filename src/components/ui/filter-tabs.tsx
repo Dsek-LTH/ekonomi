@@ -100,7 +100,7 @@ export function FilterTabs<T extends string>({
                 className={cn(
                   "rounded-mark px-1.5 py-0.5 text-xs tabular-nums",
                   opt.waiting
-                    ? "action-fill text-white"
+                    ? "action-fill text-on-action"
                     : active
                       ? "bg-action-from/20 text-foreground"
                       : "bg-surface text-muted",

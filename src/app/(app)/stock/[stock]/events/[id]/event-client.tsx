@@ -665,10 +665,7 @@ export default function EventClient({
         <Card className="overflow-hidden">
           <ChangeFeed changes={changes} scope="event" />
           <div className="border-t border-border px-inset py-3">
-            <Link
-              href={href(`/history?event=${event.id}`)}
-              className="text-sm font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <Link href={href(`/history?event=${event.id}`)} className="text-sm font-medium link">
               {t("event.movements", { count: event.entries })}
             </Link>
           </div>

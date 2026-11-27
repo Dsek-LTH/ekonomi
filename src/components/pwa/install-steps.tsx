@@ -50,7 +50,7 @@ export function StepNumber({ n, size = "sm" }: { n: number; size?: "sm" | "md" }
     <span
       aria-hidden
       className={cn(
-        "action-fill flex shrink-0 items-center justify-center rounded-full font-semibold tabular-nums text-white",
+        "action-fill flex shrink-0 items-center justify-center rounded-full font-semibold tabular-nums text-on-action",
         size === "md" ? "mt-0.5 size-7 text-[13px]" : "size-6 text-xs",
       )}
     >

@@ -539,7 +539,7 @@ export function BookPanel({
                 <Issue tone="danger" className="mt-1">
                   <span>
                     {tBook("duplicateLocal")}{" "}
-                    <Link href={`/invoices/${copy.local.id}`} className="text-link hover:underline">
+                    <Link href={`/invoices/${copy.local.id}`} className="link">
                       {copy.local.reference ?? tBook("duplicateOpen")}
                     </Link>
                   </span>

@@ -238,10 +238,7 @@ function Block({ block }: { block: FaqBlock }) {
       // gets a button rather than a line of text.
       return (
         <p>
-          <a
-            href={block.href}
-            className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-          >
+          <a href={block.href} className="font-medium link">
             {block.v}
           </a>
         </p>

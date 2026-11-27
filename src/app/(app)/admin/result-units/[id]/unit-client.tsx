@@ -33,8 +33,7 @@ import { Menu, MenuItem } from "@/components/ui/menu";
 import type { ResultUnit } from "@/lib/domain/types";
 import { CostCenterList } from "../cost-center-list";
 
-const LINK =
-  "font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current";
+const LINK = "font-medium link";
 
 export function UnitClient(props: { unit: ResultUnit; knownGroups: string[] }) {
   return (

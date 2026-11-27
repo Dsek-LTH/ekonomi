@@ -187,10 +187,7 @@ function CardsTable({ cards, users, resultUnits }: CardsProps) {
       align: "right",
       cell: (c) =>
         c.txCount > 0 ? (
-          <SettingsLink
-            href={`/bank?scope=all&q=${c.last4}`}
-            className="tabular-nums text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-          >
+          <SettingsLink href={`/bank?scope=all&q=${c.last4}`} className="tabular-nums link">
             {c.txCount}
           </SettingsLink>
         ) : (

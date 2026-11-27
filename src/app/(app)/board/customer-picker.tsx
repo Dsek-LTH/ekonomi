@@ -71,7 +71,7 @@ export function CustomerPicker({
       {!value && !customers.loading && (
         <p className="mt-1 text-xs text-muted">
           {t("missing")}{" "}
-          <button type="button" className="text-link hover:underline" onClick={customers.reload}>
+          <button type="button" className="link" onClick={customers.reload}>
             {t("reload")}
           </button>
         </p>

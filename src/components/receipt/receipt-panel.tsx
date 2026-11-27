@@ -696,17 +696,17 @@ export function ReceiptPanelColumn() {
         "bottom-0 left-0 right-0 rounded-t-panel px-4 pt-4",
         "md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:-translate-y-1/2",
         "md:flex-col md:gap-1.5 md:rounded-l-panel md:rounded-tr-none md:px-2.5 md:pb-3.5 md:pt-3.5",
-        // White with a pink edge and icon: a button is pink, white or the pink hue, never ink (components/ui/button.tsx).
-        "border-b-0 border-l-0 border-r-0 border-t border-link md:border-b md:border-l",
-        "bg-background text-link shadow-[var(--shadow-card)] transition-colors hover:bg-action-from/10",
+        // White with a pink edge and icons, the label in ink: the brand pink is too light for text.
+        "border-b-0 border-l-0 border-r-0 border-t border-brand md:border-b md:border-l",
+        "bg-background text-foreground shadow-[var(--shadow-card)] transition-colors hover:bg-action-from/10",
         arriving && "receipt-tab-arriving",
       )}
     >
-      <IconReceipt className="size-5 shrink-0 md:size-4" />
+      <IconReceipt className="size-5 shrink-0 text-brand md:size-4" />
       <span className="text-sm font-medium leading-none tracking-wide md:text-[11px] md:[writing-mode:vertical-rl]">
         {t("tab")}
       </span>
-      <IconChevronDown className="size-4 shrink-0 rotate-180 md:order-first md:rotate-90" />
+      <IconChevronDown className="size-4 shrink-0 rotate-180 text-brand md:order-first md:rotate-90" />
     </button>
   );
 

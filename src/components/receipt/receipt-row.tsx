@@ -45,7 +45,7 @@ export function ReceiptRow() {
         <span className="block text-xs text-muted">{t("tab")}</span>
         <span className="block truncate text-sm font-medium">{name}</span>
       </span>
-      <span className="flex shrink-0 items-center gap-0.5 text-sm font-medium text-link">
+      <span className="flex shrink-0 items-center gap-0.5 text-sm font-medium link">
         {t("show")}
         <IconChevronRight className="size-4" />
       </span>

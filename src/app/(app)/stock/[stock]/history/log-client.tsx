@@ -234,7 +234,7 @@ export default function StockLogClient({
       cell: (r) => (
         <>
           {r.expenseId && (
-            <Link href={`/expenses/${r.expenseId}`} className="text-link">
+            <Link href={`/expenses/${r.expenseId}`} className="link">
               {r.expenseReference ?? t("log.expense")}
             </Link>
           )}

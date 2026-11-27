@@ -1342,7 +1342,7 @@ export function CostCenterSheet(props: {
                   <button
                     type="button"
                     onClick={() => setCompareOnPhone((v) => !v)}
-                    className="text-xs font-medium text-link"
+                    className="text-xs font-medium link"
                   >
                     {compareOnPhone ? t("hideCompareColumns") : t("showCompareColumns")}
                   </button>

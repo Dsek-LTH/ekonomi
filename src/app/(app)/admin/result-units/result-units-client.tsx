@@ -122,10 +122,7 @@ export function ResultUnitsClient({
         <Notice>
           <p>
             {t("unassignedNotice", { count: unassignedActive })}{" "}
-            <a
-              href="#unassigned"
-              className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-            >
+            <a href="#unassigned" className="font-medium link">
               {t("showThem")}
             </a>
           </p>

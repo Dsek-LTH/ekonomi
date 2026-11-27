@@ -737,11 +737,7 @@ export default function NewExpenseClient({
                 <ul className="mt-1 space-y-0.5">
                   {duplicates.map((d) => (
                     <li key={d.id}>
-                      <Link
-                        href={`/expenses/${d.id}`}
-                        target="_blank"
-                        className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-                      >
+                      <Link href={`/expenses/${d.id}`} target="_blank" className="font-medium link">
                         {d.reference ? `${d.reference} - ` : ""}
                         {d.title || t("duplicateUntitled")}
                       </Link>

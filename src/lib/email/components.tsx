@@ -88,6 +88,7 @@ function Inline({ children }: { children: ReactNode }) {
 }
 
 // The app's primary button (.action-fill). Outlook and older Gmail drop the gradient and keep the flat pink. Taller than 32px for phones.
+// The label is ink, as in the app: white on the brand pink is 2.5:1.
 function ActionButton({ link }: { link: Link }) {
   return (
     <Button
@@ -96,7 +97,7 @@ function ActionButton({ link }: { link: Link }) {
         backgroundColor: C.actionFrom,
         backgroundImage: `linear-gradient(135deg, ${C.actionFrom}, ${C.actionTo})`,
         borderRadius: R.control,
-        color: "#ffffff",
+        color: C.ink,
         fontFamily: FONT,
         fontSize: 14,
         fontWeight: 500,

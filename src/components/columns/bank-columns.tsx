@@ -131,10 +131,7 @@ export const bankMatchedColumn = (
   className: "whitespace-nowrap tabular-nums",
   cell: (tx) =>
     tx.matchedExpenseId ? (
-      <Link
-        href={`/expenses/${tx.matchedExpenseId}`}
-        className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-      >
+      <Link href={`/expenses/${tx.matchedExpenseId}`} className="font-medium link">
         {tx.matchedExpenseRef ?? linked}
       </Link>
     ) : (

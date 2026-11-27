@@ -416,10 +416,7 @@ export default function MileageClient({
               <>
                 {" "}
                 {t("otherType")}{" "}
-                <Link
-                  href="/expenses/new"
-                  className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-                >
+                <Link href="/expenses/new" className="font-medium link">
                   {t("otherTypeLink")}
                 </Link>
               </>

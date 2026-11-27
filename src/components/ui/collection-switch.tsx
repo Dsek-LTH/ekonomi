@@ -78,7 +78,7 @@ export function CollectionSwitch({ label, value, options, href, onChange }: Coll
       "relative flex h-[26px] items-center rounded-mark px-3 text-sm font-medium transition-colors max-md:flex-auto max-md:justify-center max-md:whitespace-nowrap",
       active
         ? cn(
-            "text-white",
+            "text-on-action",
             // Same shape drawn statically until the pill is measured, so SSR and hydration match.
             !placement && PILL,
           )

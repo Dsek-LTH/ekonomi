@@ -434,10 +434,7 @@ function MailboxWarning({ health, canConnect }: { health: InboxHealth; canConnec
           : t("notConnected", { address: health.address ?? "" })}
       </p>
       {canConnect ? (
-        <Link
-          href="/admin/email"
-          className="font-medium text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-        >
+        <Link href="/admin/email" className="font-medium link">
           {t("fixInSettings")}
         </Link>
       ) : (

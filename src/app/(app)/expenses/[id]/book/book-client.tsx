@@ -373,10 +373,7 @@ export default function BookExpenseClient({
     <PageShell
       title={t.rich(mode === "edit" ? "editTitle" : "createTitle", {
         id: () => (
-          <Link
-            href={`/expenses/${expense.id}`}
-            className="text-link underline decoration-link/40 underline-offset-2 hover:decoration-current"
-          >
+          <Link href={`/expenses/${expense.id}`} className="link">
             {label}
           </Link>
         ),

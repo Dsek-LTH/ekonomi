@@ -22,6 +22,21 @@
  * the page starts under the clock. In a browser tab the inset is nought. One
  * value for the bar and for everything that sticks under it, so the two cannot
  * drift apart the way a `top-14` beside a taller bar would. */
+/* A link: ink text on a pink underline, the one way a link looks. The brand
+   pink is too light for text (2.5:1 on white), so the line carries it. On
+   hover the line turns to the text's own colour. Use this, never a colour of
+   its own, for anything that goes somewhere or reads as a text button. */
+@utility link {
+  color: var(--color-link);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-brand);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  &:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
 @utility h-app-bar {
   height: calc(3rem + 1px + env(safe-area-inset-top));
 }
@@ -112,20 +127,24 @@
        ink. A button is full pink, white or the pink hue (SOFT_FILL in
        components/ui/button.tsx), never ink. Ink stays on the stepper and the
        accent, so the pink is the one thing on a screen that asks to be pressed.
-       A gentle diagonal blend ending on the chart pink. White reads 4.0:1 at
-       the light end and 4.9:1 at the dark one. */
+       A gentle diagonal blend ending on the chart pink.
+
+       The pink is the section's brand colour and is not darkened for contrast.
+       Its label is ink instead: white on #f280a1 is only 2.5:1, ink is 7.1:1.
+       A disabled button is grey, not a paler pink (components/ui/button.tsx). */
+  --color-brand: #f280a1;
   --color-action-from: #f280a1;
   --color-action-to: #fa7b9f;
+  --color-on-action: #18181b;
 
   /* Accent */
   --color-accent: #18181b;
   --color-accent-soft: #e2e2e6;
 
-  /* Links are the section's pink, so a thing that goes somewhere stands out
-       from the ink around it. It is the button pink itself, chosen over the
-       deeper #d02253 (5.2:1) which read as red. It measures only 2.6:1 on
-       white, so links lean on their underline as well as their colour. */
-  --color-link: #f280a1;
+  /* A link is ink text on a pink underline (the `link` utility below). The
+       pink is the brand colour, which is too light for text (2.5:1 on white),
+       so it is carried by the line and the text keeps the page's own ink. */
+  --color-link: #18181b;
 
   /* ── Tints ───────────────────────────────────────────────────
        Every soft tint below is one step deeper than it was, 1.13 to 1.27:1
@@ -370,15 +389,17 @@
 
   /* Brand */
   --color-on-brand: #18181b;
-  /* The same pink as on paper. It holds on a dark ground. */
+  /* The same pink as on paper. It holds on a dark ground, and its label is ink. */
+  --color-brand: #f280a1;
   --color-action-from: #f280a1;
   --color-action-to: #ea6f95;
+  --color-on-action: #18181b;
 
   /* Accent */
   --color-accent: #fafafa;
   --color-accent-soft: #323235;
-  /* The button pink itself. It holds on a dark ground. */
-  --color-link: #f280a1;
+  /* Ink text on the pink underline, as in the light theme. */
+  --color-link: #fafafa;
 
   /* Purple, secondary meaning only */
   --color-purple: #a98bd8;
@@ -480,14 +501,16 @@
     /* Brand */
     --color-on-brand: #18181b;
     /* The same pink as on paper. It holds on a dark ground. */
+    --color-brand: #f280a1;
     --color-action-from: #f280a1;
     --color-action-to: #ea6f95;
+    --color-on-action: #18181b;
 
     /* Accent */
     --color-accent: #fafafa;
     --color-accent-soft: #323235;
-    /* The button pink itself. It holds on a dark ground. */
-    --color-link: #f280a1;
+    /* Ink text on the pink underline, as in the light theme. */
+    --color-link: #fafafa;
 
     /* Purple, secondary meaning only */
     --color-purple: #a98bd8;
@@ -1256,9 +1279,11 @@ summary {
     --color-on-brand: #ffffff;
     --color-action-from: #000000;
     --color-action-to: #000000;
+    --color-on-action: #ffffff;
+    --color-brand: #d02253;
     --color-accent: #000000;
     --color-accent-soft: #e2e2e6;
-    --color-link: #d02253;
+    --color-link: #000000;
     --chart-1: #d02253;
     --color-purple: #8c4ccb;
     --color-purple-soft: #f6f2fc;

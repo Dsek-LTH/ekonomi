@@ -474,7 +474,7 @@ function DueRow({
             <p className="text-sm text-warning">{t("missingAccount")}</p>
           )}
           {history && (
-            <Link href={history} className="mt-2 inline-block text-xs text-link hover:underline">
+            <Link href={history} className="mt-2 inline-block text-xs link">
               {t("seeMovements")}
             </Link>
           )}
