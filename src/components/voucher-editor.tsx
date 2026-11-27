@@ -705,7 +705,8 @@ export function VoucherEditor({
                 <td
                   className={cn(
                     "px-2 py-1.5 text-right whitespace-nowrap tabular-nums",
-                    Math.abs(outstanding) >= 0.005 && "text-danger",
+                    // Green at nothing, red otherwise: the one place that says whether the voucher adds up.
+                    Math.abs(outstanding) >= 0.005 ? "text-danger" : "text-success",
                   )}
                 >
                   {figure(Math.abs(outstanding) < 0.005 ? 0 : Math.abs(outstanding))}
