@@ -29,9 +29,11 @@ export function ReceiptRow() {
 
   return (
     <PlainButton
+      // Edge to edge on a phone, like the cards under it (globals.css, "Cards on the phone").
+      data-card=""
       onClick={open}
       aria-label={t("expand")}
-      className="mb-4 flex w-full items-center gap-3 rounded-panel border border-edge bg-background p-2 shadow-card text-left transition-colors hover:bg-hover md:hidden print:hidden"
+      className="mb-4 flex w-full items-center gap-3 rounded-panel border border-edge bg-background px-4 py-2 shadow-card text-left transition-colors hover:bg-hover md:hidden print:hidden"
     >
       <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface text-muted">
         {photo ? (

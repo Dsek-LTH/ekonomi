@@ -9,7 +9,8 @@ export const SURFACE = "rounded-panel border border-edge bg-background shadow-ca
 
 export function Card({ className, children, ...rest }: React.ComponentProps<"div">) {
   return (
-    <div {...rest} className={cn(SURFACE, className)}>
+    // `data-card`: a page's card runs to the screen's edges on a phone (globals.css, "Cards on the phone").
+    <div data-card="" {...rest} className={cn(SURFACE, className)}>
       {children}
     </div>
   );

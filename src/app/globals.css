@@ -781,6 +781,30 @@ summary {
   }
 }
 
+/* ── Cards on the phone ──────────────────────────────────────────
+   Below sm a card on a page runs to the screen's edges: no side margin, no
+   rounded corners, no side edge. The 16px and 24px of canvas either side of
+   every card were a frame round a frame, and they took 40px from a 390px
+   screen. Cards stacked this way still part by the canvas between them.
+
+   Only a top-level card in <main> (Card sets data-card). A card inside a
+   card, or in a dialog, which is portalled out of <main>, keeps its
+   margins. The margins are main's own padding (pl-4 and --main-pr in
+   app-shell.tsx). The width is stated rather than left to auto, because a
+   card that is a <button> (the receipt row) shrinks to its content at auto,
+   and a `w-full` card would not grow into the margins. Outside Tailwind's
+   layers so it beats the utilities. */
+@media (max-width: 639.98px) {
+  main [data-card]:not([data-card] [data-card]) {
+    width: calc(100% + 1rem + var(--main-pr));
+    margin-left: -1rem;
+    margin-right: calc(-1 * var(--main-pr));
+    border-radius: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+  }
+}
+
 /* ── Focus ───────────────────────────────────────────────────────
    ONE focus ring for the whole app: 1.5px of the ring colour, sitting just off
    the element rather than on its edge. On a filled control an on-the-edge ring
