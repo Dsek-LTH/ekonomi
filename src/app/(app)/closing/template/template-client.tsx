@@ -57,7 +57,6 @@ export default function TemplateClient({
     <PageShell title={t("title")} back="/closing" width="content">
       <div className="flex flex-col gap-6">
         <Card>
-          <CardHeader subtitle={t("intro")} />
           <ul className="divide-y divide-divider">
             {active.map((item, i) => (
               <TemplateRow

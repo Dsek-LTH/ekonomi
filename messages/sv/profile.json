@@ -1,6 +1,5 @@
 {
   "payoutTitle": "Utbetalningskonto",
-  "payoutDescription": "Används när kassören betalar ut godkända utlägg du lagt ut för egna pengar.",
   "clearing": "Clearingnummer",
   "clearingPlaceholder": "t.ex. 8327-9",
   "account": "Kontonummer",
@@ -8,7 +7,6 @@
   "save": "Spara",
   "saved": "Profil sparad.",
   "saveFailed": "Kunde inte spara profilen",
-  "fortnoxSubtitle": "Din personliga inloggning. Verifikationer du bokför hamnar i Fortnox i ditt namn.",
   "signedInAs": "Inloggad som {name}",
   "signedIn": "Inloggad",
   "notSignedIn": "Inte inloggad",
@@ -22,7 +20,6 @@
   "signOutNote": "Att logga ut avslutar bara den här appens tillgång till ditt Fortnox-konto. Sessionen tar slut av sig själv efter några timmar.",
   "notifications": {
     "title": "E-post",
-    "subtitle": "Vilka mejl du får till {email}. Ändringar sparas direkt.",
     "saveFailed": "Kunde inte spara valet",
     "digestNote": "Varje söndag får du också en sammanfattning av det som väntar på dig: korttransaktioner utan utlägg, egna utlägg nära redovisningsfristen och utlägg att attestera. Den skickas bara när det finns något i den.",
     "kind": {

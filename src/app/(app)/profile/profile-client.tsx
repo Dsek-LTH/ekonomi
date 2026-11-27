@@ -87,7 +87,7 @@ export function ProfileClient({
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
           <Card>
-            <CardHeader title={tProfile("payoutTitle")} subtitle={tProfile("payoutDescription")} />
+            <CardHeader title={tProfile("payoutTitle")} />
             <CardBody className="space-y-3">
               {/* Each as wide as what goes in it, side by side: a clearing number is five digits, an account ten or so. */}
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -124,10 +124,10 @@ export function ProfileClient({
             </CardBody>
           </Card>
 
-          <NotificationSettings email={email} initial={notifications} />
+          <NotificationSettings initial={notifications} />
 
           <Card id="betyg" className="scroll-mt-20">
-            <CardHeader title={tScore("title")} subtitle={tScore("ownSubtitle")} />
+            <CardHeader title={tScore("title")} />
             <CardBody>
               <MemberScorePanel score={score} own />
             </CardBody>
@@ -137,7 +137,7 @@ export function ProfileClient({
         <div className="min-w-0 space-y-4">
           {fortnox && (
             <Card>
-              <CardHeader title="Fortnox" subtitle={tProfile("fortnoxSubtitle")} />
+              <CardHeader title="Fortnox" />
               <CardBody className="space-y-3">
                 <FortnoxBanner
                   ok={!!session}

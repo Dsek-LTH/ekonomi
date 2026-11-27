@@ -170,7 +170,7 @@ export function VoucherCard({
   if (editing) {
     return (
       <Card className="overflow-hidden">
-        <CardHeader title={t("book.voucherTitle")} subtitle={t("manual.editing")} />
+        <CardHeader title={t("book.voucherTitle")} />
         <VoucherEditor
           rows={editing}
           onChange={setEditing}
@@ -214,7 +214,7 @@ export function VoucherCard({
                 name: report.manual.byName ?? "-",
                 date: report.manual.at ? formatDate(report.manual.at) : "-",
               })
-            : t("book.voucherDerived")
+            : undefined
         }
         action={
           <div className="flex items-center gap-2">

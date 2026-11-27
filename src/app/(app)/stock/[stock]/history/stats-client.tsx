@@ -229,10 +229,7 @@ export default function StockStatsClient({
           {/* `minmax(0,1fr)`: an implicit `auto` track is never narrower than its card's min-content. See the product page. */}
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
             <Card>
-              <CardHeader
-                title={placeFlow ? t("stats.placeFlowTitle") : t("stats.flowTitle")}
-                subtitle={placeFlow ? undefined : t("stats.flowHint")}
-              />
+              <CardHeader title={placeFlow ? t("stats.placeFlowTitle") : t("stats.flowTitle")} />
               <CardBody className="grid grid-cols-2 gap-4">
                 {tiles.map((tile) => (
                   // `min-w-0`: a grid track is as wide as its content, so a six-figure `text-xl` sum would push the card off a phone.
@@ -252,7 +249,7 @@ export default function StockStatsClient({
             </Card>
 
             <Card>
-              <CardHeader title={t("stats.mixTitle")} subtitle={t("stats.mixHint")} />
+              <CardHeader title={t("stats.mixTitle")} />
               {/* On a phone the three figures (240px of fixed columns) do not fit a 300px card, so the row wraps with the figures on their own line. */}
               <CardBody className="space-y-2">
                 {stats.holdings.map((h) => {
@@ -298,10 +295,7 @@ export default function StockStatsClient({
           )}
 
           <Card>
-            <CardHeader
-              title={placeFlow ? t("stats.placeMoversTitle") : t("stats.moversTitle")}
-              subtitle={placeFlow ? undefined : t("stats.moversHint")}
-            />
+            <CardHeader title={placeFlow ? t("stats.placeMoversTitle") : t("stats.moversTitle")} />
             <CardBody className="space-y-2">
               {stats.movers.length === 0 ? (
                 <p className="text-sm text-muted">{t("stats.nothing")}</p>

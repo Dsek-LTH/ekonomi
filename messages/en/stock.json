@@ -272,11 +272,9 @@
     "alcoholPerKrona": "Alcohol per krona",
     "totalVolume": "Total volume",
     "events": "Out and in",
-    "eventsHint": "What the product did at each occasion. If somebody changed a night's figures, it is behind the arrow.",
     "searchEvents": "Search occasions…",
     "noEvents": "The product has not been out to an occasion yet.",
     "cellar": "Deliveries, stocktakes and corrections",
-    "cellarHint": "What has been done with the product in the cellar, most recently entered first.",
     "searchCellar": "Search cellar events…",
     "noCellar": "Nothing has been booked in the cellar on this product yet.",
     "correction": "Correction",
@@ -411,7 +409,6 @@
     "chartAlt": "The stock value over time, stacked by drink type.",
     "total": "Total",
     "flowTitle": "In the period",
-    "flowHint": "What was bought in and what was got through, at purchase value. The four divide the period between them: checkouts count net, so what came back unopened is not consumed, and spillage stands on its own. Adjustments is what stocktakes and corrections moved the shelf by, so a negative figure is stock missing that nothing else here accounts for.",
     "flow": {
       "purchased": "Purchased",
       "consumed": "Consumed",
@@ -422,9 +419,7 @@
       "net": "Net"
     },
     "mixTitle": "The mix now",
-    "mixHint": "Litres and value per drink type, at the end of the period.",
     "moversTitle": "Most moved products",
-    "moversHint": "What left the shelf in the period, and what is left of it.",
     "nothing": "Nothing moved in this period.",
     "category": {
       "OL": "Beer",
@@ -449,7 +444,6 @@
     "checkedDone": "Noted that you looked. We will ask again in a while.",
     "checkFailed": "Could not record the check",
     "title": "Best before",
-    "hint": "One row per delivery that could still be down there. The dates are worked out from the product's shelf life, not read off the packaging. Go and look, and tick off one row at a time.",
     "none": "No deliveries to keep an eye on.",
     "deliveredOn": "Delivered {date}",
     "stateOver": "{days} d past",

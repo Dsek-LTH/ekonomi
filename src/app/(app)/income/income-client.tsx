@@ -300,7 +300,6 @@ export default function IncomeClient({
           source={source}
           ready={ready}
           title={t(source === "SWISH" ? "fetch.titleSwish" : "fetch.titleZettle")}
-          subtitle={t("fetch.description")}
         />
       ) : (
         <Card>

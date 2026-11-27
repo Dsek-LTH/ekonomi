@@ -769,19 +769,14 @@ export function ReportCharts({
   return (
     <div className="space-y-5">
       <Card>
-        <CardHeader title={t("monthly.title")} subtitle={t("monthly.hint")} />
+        <CardHeader title={t("monthly.title")} />
         <CardBody>
           <MonthlyResult months={trend.months} monthLabel={monthLabel} />
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader
-          title={t("cumulative.title")}
-          subtitle={
-            trend.budgetTotal == null ? t("cumulative.noBudget") : t("cumulative.withBudget")
-          }
-        />
+        <CardHeader title={t("cumulative.title")} />
         <CardBody>
           <Cumulative
             months={trend.months}
@@ -795,14 +790,7 @@ export function ReportCharts({
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
         <Card>
-          <CardHeader
-            title={t("ranking.title")}
-            subtitle={
-              trend.costCenters.some((c) => c.budget != null)
-                ? `${t("ranking.hint")} ${t("ranking.budgetMark")}`
-                : t("ranking.hint")
-            }
-          />
+          <CardHeader title={t("ranking.title")} />
           <CardBody>
             {hasCostCenters ? (
               <CostCenterRanking
@@ -816,7 +804,7 @@ export function ReportCharts({
         </Card>
 
         <Card>
-          <CardHeader title={t("composition.title")} subtitle={t("composition.hint")} />
+          <CardHeader title={t("composition.title")} />
           <CardBody>
             {trend.sections.length > 0 ? (
               <CostComposition sections={trend.sections} />
@@ -828,7 +816,7 @@ export function ReportCharts({
       </div>
 
       <Card>
-        <CardHeader title={t("stack.title")} subtitle={t("stack.hint")} />
+        <CardHeader title={t("stack.title")} />
         <CardBody>
           {spending ? (
             <CostCenterStack

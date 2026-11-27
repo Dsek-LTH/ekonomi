@@ -243,7 +243,7 @@ export default function StockProductClient({
               A row per delivery, since the work is going down them ticking each off. Deliveries the shelf has been empty since are gone, not dismissed. */}
           {checks.length > 0 && (
             <Card>
-              <CardHeader title={t("expiry.title")} subtitle={t("expiry.hint")} />
+              <CardHeader title={t("expiry.title")} />
               <CheckTable
                 checks={checks}
                 canManage={canManage}
@@ -400,7 +400,7 @@ export default function StockProductClient({
         {traits.usesEvents && (
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader title={t("product.events")} subtitle={t("product.eventsHint")} />
+              <CardHeader title={t("product.events")} />
               <EventTable rows={events} kind={product.kind} />
             </Card>
           </div>
@@ -410,7 +410,7 @@ export default function StockProductClient({
           <Card>
             <CardHeader
               title={t("product.cellar")}
-              subtitle={t("product.cellarHint")}
+
               action={
                 <Link
                   href={href(`/history?product=${product.id}`)}

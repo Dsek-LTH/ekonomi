@@ -164,7 +164,6 @@
   },
   "template": {
     "title": "Mall för checklistan",
-    "intro": "Stegen varje års checklista börjar från. Ett år som redan är påbörjat ändras inte när mallen gör det.",
     "retired": "Borttagna ur mallen",
     "retire": "Ta bort ur mallen",
     "restore": "Lägg tillbaka",

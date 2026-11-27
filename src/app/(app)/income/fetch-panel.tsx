@@ -28,16 +28,14 @@ export function FetchPanel({
   source,
   ready,
   title,
-  subtitle,
 }: {
   source: FetchSource;
   ready: boolean;
   title: string;
-  subtitle: string;
 }) {
   return (
     <Card>
-      <CardHeader title={title} subtitle={subtitle} />
+      <CardHeader title={title} />
       <FetchForm source={source} ready={ready} />
     </Card>
   );

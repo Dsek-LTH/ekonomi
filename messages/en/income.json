@@ -183,7 +183,6 @@
   "book": {
     "unknownClearingAccount": "The clearing account {account} is not in the chart of accounts. Fix it under Settings → Income before booking.",
     "voucherTitle": "Voucher",
-    "voucherDerived": "One row per account and cost centre. Change the lines above to change the voucher.",
     "debit": "Debit",
     "credit": "Credit",
     "sum": "Total",
@@ -231,7 +230,6 @@
   },
   "manual": {
     "edit": "Edit kontering",
-    "editing": "Write the kontering by hand. The clearing row follows the day's total and cannot be changed.",
     "by": "Written by hand by {name}, {date}.",
     "reset": "Reset",
     "stale": "The lines have changed since the kontering was written by hand. Save it again or reset it before booking.",

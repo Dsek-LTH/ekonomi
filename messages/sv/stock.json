@@ -272,11 +272,9 @@
     "alcoholPerKrona": "Alkohol per krona",
     "totalVolume": "Total volym",
     "events": "Ut och in",
-    "eventsHint": "Vad produkten gjort på varje tillfälle. Har någon ändrat en kvälls siffror står det bakom pilen.",
     "searchEvents": "Sök tillfälle…",
     "noEvents": "Produkten har inte varit ute på något tillfälle ännu.",
     "cellar": "Inköp, inventering och rättelser",
-    "cellarHint": "Vad som gjorts med produkten i lagret, senast infört först.",
     "searchCellar": "Sök i lagerhändelserna…",
     "noCellar": "Inget har bokförts i lagret på produkten ännu.",
     "correction": "Rättelse",
@@ -411,7 +409,6 @@
     "chartAlt": "Lagervärdet över tid, staplat per dryckesslag.",
     "total": "Totalt",
     "flowTitle": "Under perioden",
-    "flowHint": "Vad som köpts in och vad som gått åt, till inköpsvärde. De fyra delar upp perioden mellan sig: uttag räknas netto, så det som kom tillbaka oöppnat är inte förbrukat, och spill står för sig. Justeringar är vad inventeringar och rättelser flyttat lagret med, och en negativ siffra är alltså sprit som fattas utan att något annat här förklarar den.",
     "flow": {
       "purchased": "Inköpt",
       "consumed": "Förbrukat",
@@ -422,9 +419,7 @@
       "net": "Netto"
     },
     "mixTitle": "Fördelning nu",
-    "mixHint": "Liter och värde per dryckesslag, i slutet av perioden.",
     "moversTitle": "Mest omsatta produkter",
-    "moversHint": "Vad som lämnat hyllan under perioden, och vad som står kvar av det.",
     "nothing": "Ingenting har rört sig i den här perioden.",
     "category": {
       "OL": "Öl",
@@ -449,7 +444,6 @@
     "checkedDone": "Noterat att du kollat. Vi frågar igen om ett tag.",
     "checkFailed": "Kunde inte notera kontrollen",
     "title": "Bäst före",
-    "hint": "En rad per leverans som fortfarande kan stå kvar. Datumen är räknade på produktens hållbarhet, inte avlästa på förpackningen. Gå ner och kolla, och bocka av en rad i taget.",
     "none": "Inga leveranser att hålla koll på.",
     "deliveredOn": "Levererat {date}",
     "stateOver": "Passerat med {days} d",

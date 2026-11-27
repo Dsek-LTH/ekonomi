@@ -41,7 +41,6 @@
     "empty": "Ingenting bokfört i perioden.",
     "monthly": {
       "title": "Resultat per månad",
-      "hint": "Intäkter över nollan, kostnader under, och resultatet som linje över dem.",
       "alt": "Intäkter, kostnader och resultat per månad.",
       "income": "Intäkter",
       "costs": "Kostnader",
@@ -49,8 +48,6 @@
     },
     "cumulative": {
       "title": "Ackumulerat resultat",
-      "withBudget": "Resultatet räknat från periodens början, mot budgeten fördelad jämnt över året.",
-      "noBudget": "Resultatet räknat från periodens början. Välj en budget att jämföra med, så ritas takten mot den också.",
       "alt": "Ackumulerat resultat över perioden.",
       "actual": "Utfall",
       "pace": "Budgettakt",
@@ -58,21 +55,18 @@
     },
     "ranking": {
       "title": "Kostnadsställen",
-      "hint": "Resultat per kostnadsställe i perioden, störst omsättning först.",
       "budgetMark": "Strecket är budgeten för hela året.",
       "showAll": "Visa alla {count}",
       "showFewer": "Visa färre"
     },
     "stack": {
       "title": "Kostnader per kostnadsställe",
-      "hint": "Vad varje kostnadsställe drog, månad för månad. De sex största var för sig, resten tillsammans.",
       "alt": "Kostnader per månad, staplade per kostnadsställe.",
       "others": "Övriga ({count})",
       "total": "Totalt"
     },
     "composition": {
       "title": "Vad pengarna gick till",
-      "hint": "Periodens kostnader per kontogrupp.",
       "alt": "Periodens kostnader fördelade per kontogrupp.",
       "share": "{share} %"
     }

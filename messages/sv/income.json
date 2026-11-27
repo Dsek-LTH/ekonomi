@@ -183,7 +183,6 @@
   "book": {
     "unknownClearingAccount": "Likvidkontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Intäkter innan du bokför.",
     "voucherTitle": "Verifikation",
-    "voucherDerived": "En rad per konto och kostnadsställe. Ändra raderna ovan för att ändra verifikationen.",
     "debit": "Debet",
     "credit": "Kredit",
     "sum": "Summa",
@@ -231,7 +230,6 @@
   },
   "manual": {
     "edit": "Ändra kontering",
-    "editing": "Kontera för hand. Likvidraden följer dagens summa och kan inte ändras.",
     "by": "Konterad för hand av {name}, {date}.",
     "reset": "Återställ",
     "stale": "Raderna har ändrats sedan konteringen gjordes för hand. Spara den igen eller återställ den innan du bokför.",

@@ -10,10 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { NotificationKind } from "@/lib/domain/types";
 
 export function NotificationSettings({
-  email,
   initial,
 }: {
-  email: string;
   initial: { kind: NotificationKind; enabled: boolean }[];
 }) {
   const t = useTranslations("profile.notifications");
@@ -36,7 +34,7 @@ export function NotificationSettings({
 
   return (
     <Card>
-      <CardHeader title={t("title")} subtitle={t("subtitle", { email })} />
+      <CardHeader title={t("title")} />
       <CardBody className="space-y-3">
         {initial.map(({ kind }) => (
           <Checkbox

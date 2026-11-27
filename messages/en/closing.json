@@ -164,7 +164,6 @@
   },
   "template": {
     "title": "Checklist template",
-    "intro": "The steps every year's checklist starts from. A year already started does not change when the template does.",
     "retired": "Removed from the template",
     "retire": "Remove from the template",
     "restore": "Put back",

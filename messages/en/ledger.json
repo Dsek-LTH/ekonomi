@@ -41,7 +41,6 @@
     "empty": "Nothing was booked in the period.",
     "monthly": {
       "title": "Result per month",
-      "hint": "Income above the line, costs below it, and the result drawn across them.",
       "alt": "Income, costs and result per month.",
       "income": "Income",
       "costs": "Costs",
@@ -49,8 +48,6 @@
     },
     "cumulative": {
       "title": "Result so far",
-      "withBudget": "The result added up from the start of the period, against the budget spread evenly over the year.",
-      "noBudget": "The result added up from the start of the period. Pick a budget to compare with and the pace towards it is drawn too.",
       "alt": "The result added up over the period.",
       "actual": "Actual",
       "pace": "Budget pace",
@@ -58,21 +55,18 @@
     },
     "ranking": {
       "title": "Cost centres",
-      "hint": "The result per cost centre in the period, busiest first.",
       "budgetMark": "The mark is the budget for the whole year.",
       "showAll": "Show all {count}",
       "showFewer": "Show fewer"
     },
     "stack": {
       "title": "Costs per cost centre",
-      "hint": "What each cost centre spent, month by month. The six largest on their own, the rest together.",
       "alt": "Costs per month, stacked by cost centre.",
       "others": "Others ({count})",
       "total": "Total"
     },
     "composition": {
       "title": "Where the money went",
-      "hint": "The period's costs by account group.",
       "alt": "The period's costs split by account group.",
       "share": "{share} %"
     }
