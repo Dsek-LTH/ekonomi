@@ -43,10 +43,10 @@ export function PinnedBar({
         )}
         <div
           className={cn(
-            "pointer-events-auto rounded-panel border border-border px-inset py-3 transition-shadow",
+            "pointer-events-auto rounded-panel border px-inset py-3 transition-shadow",
             stuck
-              ? "bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
-              : "bg-background shadow-[var(--shadow-card)]",
+              ? "border-border bg-background/80 shadow-[0_-8px_32px_-8px_rgb(0_0_0/0.18),0_2px_8px_-2px_rgb(0_0_0/0.08)] backdrop-blur-xl backdrop-saturate-150"
+              : "border-edge bg-background shadow-card",
             dock &&
               "max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:px-4 max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-md:shadow-[var(--shadow-dock)]",
             className,

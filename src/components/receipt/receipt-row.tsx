@@ -31,7 +31,7 @@ export function ReceiptRow() {
     <PlainButton
       onClick={open}
       aria-label={t("expand")}
-      className="mb-4 flex w-full items-center gap-3 rounded-panel border border-border bg-background p-2 text-left transition-colors hover:bg-hover md:hidden print:hidden"
+      className="mb-4 flex w-full items-center gap-3 rounded-panel border border-edge bg-background p-2 shadow-card text-left transition-colors hover:bg-hover md:hidden print:hidden"
     >
       <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface text-muted">
         {photo ? (

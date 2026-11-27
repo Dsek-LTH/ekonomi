@@ -48,10 +48,12 @@
   /* Neutrals */
   /* The page is a visible grey under white cards, 1.10:1, where it used to
        be #fafafa at 1.04:1. At that step the screen read as one white field:
-       nothing for the eye to hold on to, and all of it glare. The border is
-       one step firmer for the same reason. With the cards' shadow gone it is
-       the only thing drawing their edge, and #e5e5ea put that edge at 1.20:1
-       on the page.
+       nothing for the eye to hold on to, and all of it glare.
+
+       A card is drawn by that step and by its shadow, not by a line
+       (`--color-edge` is transparent here). When every card was a 1px box
+       the page read as a stack of rectangles, and every rule inside a card
+       had the same weight as its edge.
 
        One ramp, cool and even, from the card's white down to the ink: page
        #f4f4f5, surface #efeff1, hover #e9e9ec, selected #e2e2e6, border
@@ -71,6 +73,10 @@
        every rule in a card turning into a box. 3:1 was tried for this once and
        is the reason for the step: see the 3:1 tier below. */
   --color-border-control: #d1d1d6;
+  /* A card's own edge. None on a light page, where the shadow does it. The
+       dark theme draws a hairline, because a shadow does not read on near-black.
+       The border stays in the box in both, so nothing moves between themes. */
+  --color-edge: transparent;
 
   --color-foreground: #18181b;
   /* 6.33:1 on a card and 5.76 on a surface fill. It was #6e6e73, which is
@@ -298,24 +304,32 @@
          control  anything you press or type into, and anything set inline
                   inside a panel: buttons, fields, chips, status pills, tags,
                   nav items, tinted info rows, icon tiles.
-         mark     something too small for 4px to read as a corner, or nested
+         mark     something too small for 6px to read as a corner, or nested
                   inside a control's padding: a checkbox, a legend swatch, a
                   count badge, the selected segment of a switch.
 
        `rounded-full` is kept for things that really are circles: avatars,
        status dots, spinners, step numbers, the scrollbar thumb. Never for a
        button or a pill. Fully round controls were most of what made the app
-       read as playful. */
+       read as playful.
+
+       The steps are 2, 6 and 10. At 4 and 6 a control and the card it sat in
+       had nearly the same corner, so the eye saw one kind of box at two
+       sizes. A card now rounds clearly more than what is in it, and that
+       difference is what makes it read as a surface rather than a frame. */
   --radius-*: initial;
   --radius-mark: 2px;
-  --radius-control: 4px;
-  --radius-panel: 6px;
+  --radius-control: 6px;
+  --radius-panel: 10px;
 
   --font-sans:
     var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  --shadow-card: 0 1px 2px rgb(29 29 31 / 0.04), 0 2px 8px rgb(29 29 31 / 0.04);
+  /* What draws a card's edge on a light page (see --color-edge). A tight
+       contact shadow for the edge and a wide soft one for the lift. */
+  --shadow-card:
+    0 0 0 1px rgb(29 29 31 / 0.03), 0 1px 2px rgb(29 29 31 / 0.05), 0 2px 8px rgb(29 29 31 / 0.04);
   --shadow-pop: 0 4px 12px rgb(29 29 31 / 0.08), 0 12px 32px rgb(29 29 31 / 0.12);
   /* A bar docked to the bottom of the window: the shadow is cast upward, over the content it covers. */
   --shadow-dock: 0 -4px 12px rgb(29 29 31 / 0.08), 0 -12px 32px rgb(29 29 31 / 0.1);
@@ -368,13 +382,15 @@
   /* The page ground sits one step BELOW the cards, not at the bottom of the
      scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
      read as a hole the app was floating over rather than the paper it is
-     printed on. Five units under the card background. The light theme's gap
-     is wider (#f4f4f5 under #ffffff), because a light ground needs a larger
-     step to read than a dark one does. */
-  --color-canvas: #17171a;
+     printed on. Eleven units under the card background. It was five, and at
+     five the cards were held apart from the page by their border alone. Now
+     the step carries the card and its edge is a hairline. */
+  --color-canvas: #111113;
   --color-surface: #2c2c2e;
   --color-border: #3a3a3c;
   --color-border-control: #48484a;
+  /* Between the page and the border: enough to find the card's edge, not a frame. */
+  --color-edge: #2a2a2d;
 
   --color-foreground: #f5f5f7;
   --color-muted: #98989d;
@@ -479,13 +495,15 @@
     /* The page ground sits one step BELOW the cards, not at the bottom of the
        scale: pure black is an OLED phone wallpaper, and under #1c1c1e cards it
        read as a hole the app was floating over rather than the paper it is
-       printed on. Five units under the card background. The light theme's gap
-       is wider (#f4f4f5 under #ffffff), because a light ground needs a larger
-       step to read than a dark one does. */
-    --color-canvas: #17171a;
+       printed on. Eleven units under the card background. It was five, and at
+       five the cards were held apart from the page by their border alone. Now
+       the step carries the card and its edge is a hairline. */
+    --color-canvas: #111113;
     --color-surface: #2c2c2e;
     --color-border: #3a3a3c;
     --color-border-control: #48484a;
+    /* Between the page and the border: enough to find the card's edge, not a frame. */
+    --color-edge: #2a2a2d;
 
     --color-foreground: #f5f5f7;
     --color-muted: #98989d;
@@ -1262,6 +1280,8 @@ summary {
     --color-surface: #f2f2f4;
     --color-border: #c8c8ce;
     --color-border-control: #b8b8be;
+    /* Paper has no shadow, so a card keeps an outline. */
+    --color-edge: #c8c8ce;
     --color-foreground: #000000;
     --color-muted: #45454a;
     /* One step firmer than the screen's #8a8a8f. A hairline that is merely at

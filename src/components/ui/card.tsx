@@ -1,8 +1,15 @@
 import { cn } from "@/lib/ui/utils";
 
+/**
+ * A surface that stands on the page: drawn by the step from the canvas and a soft shadow, not by a line. The border
+ * is kept in the box in --color-edge (transparent on a light page, a hairline in dark) so nothing moves between
+ * themes. For something that floats above the page (a menu, a popover) use --shadow-pop and a border instead.
+ */
+export const SURFACE = "rounded-panel border border-edge bg-background shadow-card";
+
 export function Card({ className, children, ...rest }: React.ComponentProps<"div">) {
   return (
-    <div {...rest} className={cn("rounded-panel border border-border bg-background", className)}>
+    <div {...rest} className={cn(SURFACE, className)}>
       {children}
     </div>
   );

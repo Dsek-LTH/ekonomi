@@ -17,9 +17,9 @@ import type { CurrentUser, FortnoxStatus } from "@/lib/domain/types";
 import { useFocusTrap } from "@/lib/ui/focus-trap";
 import { cn } from "@/lib/ui/utils";
 import { PlainButton } from "@/components/ui/button";
+import { SURFACE } from "@/components/ui/card";
 
-const CARD =
-  "divide-y divide-border overflow-hidden rounded-panel border border-border bg-background";
+const CARD = cn("divide-y divide-border overflow-hidden", SURFACE);
 
 const ROW = "flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors";
 
