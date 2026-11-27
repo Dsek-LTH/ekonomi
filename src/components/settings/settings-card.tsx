@@ -2,7 +2,8 @@
 
 // The one anatomy of a settings page (docs/settings.md): a stack of cards, each about one thing. A card has a
 // title, an optional action or status at the right, and then rows of label and control, groups of rows, or a
-// table. No subtitle: what a card is for is its title's job.
+// table. No subtitle: what a card is for is its title's job. A card whose whole content is a state that its
+// status already says has no body at all.
 import { useTranslations } from "next-intl";
 
 import { Card } from "@/components/ui/card";
@@ -56,7 +57,8 @@ export function SettingsCard({
   return (
     <Card id={id} className={cn("scroll-mt-4", className)}>
       {title && (
-        <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-inset pt-3">
+        // `last:pb-3`: a card whose whole content is its status (docs/settings.md) is this line alone.
+        <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-inset pt-3 last:pb-3">
           {/* break-words, not truncate: Swedish compounds have nothing to wrap at. */}
           <h2 className="min-w-0 break-words text-base font-semibold">{title}</h2>
           {action}

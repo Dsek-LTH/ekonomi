@@ -138,10 +138,9 @@ function IncomeSettings({
   return (
     <div className="space-y-5">
       <Section id="service">
+        {/* Connected, the status on the title says it all, so the card is that one line. */}
         <SettingsCard title={t("service.title")} action={<SectionStatus left={left("service")} />}>
-          <p className="px-inset py-3 text-sm">
-            {serviceConfigured ? t("service.connected") : t("service.missing")}
-          </p>
+          {!serviceConfigured && <p className="px-inset py-3 text-sm">{t("service.missing")}</p>}
         </SettingsCard>
       </Section>
 

@@ -64,6 +64,10 @@ A settings page is a stack of cards (`components/settings/settings-card.tsx`).
 - `SettingsSection` is for a page with several subjects (each stock on Lager):
   a heading over that subject's own cards, with its status at the end.
   `SetupStatus` says how much of a section's setup is left.
+- A card whose whole content is a state shows it as the status at the end of
+  its title line and has no body: "1. Zettle ... Klart", not a card holding
+  "Zettle är anslutet." under the same Klart. A body comes back when there is
+  something to say that the status cannot, such as what is missing.
 - Nothing explains a card under its title, and an explanation is not moved
   into an ⓘ hint either. What a card is for is its title's job. The ⓘ hints
   on the capabilities in Roller stay: each names what one tickbox does.

@@ -343,7 +343,6 @@
     "stepsLeft": "{count, plural, one {# steg kvar} other {# steg kvar}}",
     "service": {
       "title": "1. Zettle",
-      "connected": "Zettle är anslutet.",
       "missing": "Zettle är inte anslutet. Den som driftar appen behöver sätta ZETTLE_CLIENT_ID och ZETTLE_API_KEY. Swish kan hämtas ändå."
     },
     "units": {

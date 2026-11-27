@@ -343,7 +343,6 @@
     "stepsLeft": "{count, plural, one {# step left} other {# steps left}}",
     "service": {
       "title": "1. Zettle",
-      "connected": "Zettle is connected.",
       "missing": "Zettle is not connected. Whoever runs the app needs to set ZETTLE_CLIENT_ID and ZETTLE_API_KEY. Swish can be fetched anyway."
     },
     "units": {
