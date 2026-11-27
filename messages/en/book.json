@@ -52,7 +52,7 @@
   "unknownProjects": "These projects do not exist: {list}. Sync projects under Settings → Fortnox or pick others.",
   "revenueAccounts": "An expense cannot be booked against a revenue account in the 3000 range: {list}. Pick a cost account instead.",
   "colProject": "Project",
-  "colProjectShort": "Proj",
+  "colProjectShort": "PR",
   "projectSearch": "Search projects…",
   "bankAccountUnset": "No card account is chosen. Choose it under Settings → Expenses.",
   "memberDebtAccountUnset": "No account is chosen for debts to members. Choose it under Settings → Expenses before booking.",
