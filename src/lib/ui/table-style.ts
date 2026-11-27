@@ -2,9 +2,10 @@
 // (a day's lines, a reconciliation, a comparison). A grid that is typed in (the kontering, a stocktake) is a
 // spreadsheet instead, with a tinted head and column rules (lib/ui/grid-table.ts).
 //
-// The rule, so two tables side by side never disagree: a plain head in small muted type over a single rule, rows of
-// one height, a 12px gutter between columns and the card's inset at the edges, and figures right-aligned in a column
-// of one width that never wraps.
+// The rule, so two tables side by side never disagree: a plain head in small muted type over a single rule (the
+// table's one line in --color-border), rows of one height divided in the lighter --color-divider, a 12px gutter
+// between columns and the card's inset at the edges, and figures right-aligned in a column of one width that never
+// wraps.
 
 /** Outer columns take the card's inset so their edges line up with the toolbar and the card's other content. */
 export const CELL_X = "px-3 first:pl-inset last:pr-inset";

@@ -712,7 +712,7 @@ function CheckTable({
   }
 
   return (
-    <ul className="divide-y divide-border">
+    <ul className="divide-y divide-divider">
       {checks.map((check) => {
         const due = isDue(check);
         return (

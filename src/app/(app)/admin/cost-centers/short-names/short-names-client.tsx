@@ -84,7 +84,7 @@ function ShortNames({ suggestions }: { suggestions: Suggestion[] }) {
         {suggestions.length === 0 ? (
           <p className="px-inset py-6 text-center text-sm text-muted">{t("suggestNone")}</p>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-divider">
             <div className="flex items-center gap-3 bg-surface px-inset py-2">
               <Checkbox
                 checked={allOn}

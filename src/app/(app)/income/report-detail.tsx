@@ -245,7 +245,7 @@ export function VoucherCard({
               <th className={cn(TH, NUM)}>{t("book.credit")}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-divider">
             {voucher.rows.map((r, i) => (
               <tr key={`${i}|${r.account}|${r.costCenterCode ?? ""}`}>
                 <td className={TD}>

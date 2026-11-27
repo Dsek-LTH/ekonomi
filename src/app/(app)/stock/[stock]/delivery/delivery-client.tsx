@@ -319,7 +319,7 @@ export default function DeliveryClient({
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-border/40">
+            <tbody className="divide-y divide-divider">
               {rows.map((id) => {
                 const product = byId.get(id);
                 if (!product) return null;

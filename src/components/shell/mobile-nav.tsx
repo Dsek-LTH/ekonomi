@@ -19,7 +19,7 @@ import { cn } from "@/lib/ui/utils";
 import { PlainButton } from "@/components/ui/button";
 import { SURFACE } from "@/components/ui/card";
 
-const CARD = cn("divide-y divide-border overflow-hidden", SURFACE);
+const CARD = cn("divide-y divide-divider overflow-hidden", SURFACE);
 
 const ROW = "flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors";
 

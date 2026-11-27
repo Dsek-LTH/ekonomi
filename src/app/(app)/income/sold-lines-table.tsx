@@ -459,7 +459,7 @@ function GroupRows({
 
       {group.rows.map((row) => {
         const key = `${groupKey}:${row.key}`;
-        const lineRow = "[&>td]:border-t [&>td]:border-border/50";
+        const lineRow = "[&>td]:border-t [&>td]:border-divider";
 
         if (row.kind === "group") {
           return (

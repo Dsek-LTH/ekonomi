@@ -96,7 +96,7 @@ export function EmailLog({ recipient }: { recipient?: { id: string; name: string
       {data && data.rows.length > 0 && (
         <ul
           className={cn(
-            "divide-y divide-border rounded-panel border border-border",
+            "divide-y divide-divider rounded-panel border border-border",
             loading && "opacity-70",
           )}
         >

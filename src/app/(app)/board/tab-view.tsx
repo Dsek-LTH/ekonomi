@@ -157,7 +157,7 @@ export function OpenTab({
         rowKey={(l) => l.name}
         // Each time it was taken: the day, who wrote it down, and the way to take it back.
         expansion={(l) => (
-          <ul className="divide-y divide-border/60 py-1 text-xs">
+          <ul className="divide-y divide-divider py-1 text-xs">
             {l.rows.map((w) => (
               <li key={w.id} className="flex min-h-8 items-center gap-3 py-1">
                 <span className="w-24 shrink-0 tabular-nums">{date(w.date)}</span>
@@ -285,7 +285,7 @@ export function ClosedTabs({
         controls={controls}
         rowKey={(c) => c.id}
         expansion={(c) => (
-          <ul className="divide-y divide-border/60 py-1 text-xs">
+          <ul className="divide-y divide-divider py-1 text-xs">
             {c.lines.map((l, i) => (
               <li key={i} className="flex items-baseline gap-3 py-1.5">
                 <span className="min-w-0 flex-1 truncate">{l.description}</span>

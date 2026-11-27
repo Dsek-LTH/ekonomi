@@ -178,7 +178,7 @@ export default function WithdrawClient({
               {products.length === 0 ? t("withdraw.noProducts") : t("withdraw.noMatch")}
             </p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-divider">
               {shown.map((p) => (
                 <StepperRow
                   key={p.id}
@@ -197,7 +197,7 @@ export default function WithdrawClient({
           <section className="space-y-2">
             <h2 className="text-sm font-medium text-muted">{t("log.today")}</h2>
             <Card>
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-divider">
                 {loggedToday.map((w) => (
                   <li key={w.id} className="flex items-center gap-3 px-inset py-2.5 text-sm">
                     <div className="min-w-0 flex-1">

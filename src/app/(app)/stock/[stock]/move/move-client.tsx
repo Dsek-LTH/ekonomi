@@ -211,7 +211,7 @@ export default function MoveClient({
                   : t("noMatch")}
             </p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-divider">
               {shown.map((p) => {
                 const max = maxOf(p);
                 return (
@@ -237,7 +237,7 @@ export default function MoveClient({
           <section className="space-y-2">
             <h2 className="text-sm font-medium text-muted">{t("today")}</h2>
             <Card>
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-divider">
                 {batches.map((b) => (
                   <li key={b.batchId} className="flex items-start gap-3 px-inset py-3">
                     <div className="min-w-0 flex-1 text-sm">

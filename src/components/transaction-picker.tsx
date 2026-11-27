@@ -125,7 +125,7 @@ export function TransactionPicker({
       )}
 
       {!searched && (pickable.length > 0 || nearMisses.length > 0) && (
-        <ul className="divide-y divide-border rounded-panel border border-border">
+        <ul className="divide-y divide-divider rounded-panel border border-border">
           {pickable.map(row)}
           {nearMisses.map(row)}
         </ul>
@@ -141,7 +141,7 @@ export function TransactionPicker({
             />
           )}
           {(searched ?? rest).length > 0 ? (
-            <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded-panel border border-border">
+            <ul className="max-h-72 divide-y divide-divider overflow-y-auto rounded-panel border border-border">
               {(searched ?? rest).map(row)}
             </ul>
           ) : (

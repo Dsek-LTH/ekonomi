@@ -154,7 +154,7 @@ export function MoveLinesDialog({
                 <th className={cn(TH, NUM)}>{tLines("total")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-divider">
               {lines.map((line) => (
                 <tr key={line.id}>
                   <td className={TD}>

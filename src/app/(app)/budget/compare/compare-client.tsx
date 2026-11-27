@@ -106,7 +106,7 @@ export function CompareClient({
                   {showDiff && <th className={cn(TH, NUM)}>{t("difference")}</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50">
+              <tbody className="divide-y divide-divider">
                 {joined.vars.length > 0 && (
                   <>
                     <SectionHeader label={t("variables")} cols={cols} />

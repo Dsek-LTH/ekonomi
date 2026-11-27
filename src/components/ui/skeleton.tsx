@@ -100,7 +100,7 @@ export function SkeletonTable({
         </div>
       )}
 
-      <div className="divide-y divide-border md:hidden">
+      <div className="divide-y divide-divider md:hidden">
         {Array.from({ length: rows }, (_, r) => (
           <div key={r} className="flex items-start justify-between gap-3 px-inset py-4">
             <Skeleton className={cn("h-4", ROW_WIDTHS[r % ROW_WIDTHS.length])} />
@@ -121,7 +121,7 @@ export function SkeletonTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-divider">
             {Array.from({ length: rows }, (_, r) => (
               <tr key={r}>
                 {cols.map((c) => (
@@ -182,7 +182,7 @@ export function SkeletonCard({
 
 export function SkeletonDetailList({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-border rounded-panel border border-border" aria-hidden>
+    <div className="divide-y divide-divider rounded-panel border border-border" aria-hidden>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center justify-between gap-4 px-4 py-2.5">
           <Skeleton className="h-4 w-28" />
@@ -201,7 +201,7 @@ export function SkeletonSheet({ rows = 12, columns = 6 }: { rows?: number; colum
         <Skeleton className="h-5 w-48" />
         <Skeleton className="ml-auto h-5 w-28" />
       </div>
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-divider">
         {Array.from({ length: rows }, (_, r) => (
           <div key={r} className="flex items-center gap-3 px-inset py-2.5">
             <Skeleton className={cn("h-3.5 min-w-0 flex-1", ROW_WIDTHS[r % ROW_WIDTHS.length])} />

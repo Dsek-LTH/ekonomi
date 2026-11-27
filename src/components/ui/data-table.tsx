@@ -262,8 +262,8 @@ export function DataTable<T>({
   return (
     <>
       {hasTabs && (
-        // items-end: the active tab's underline is the row's bottom border.
-        <div className="flex flex-wrap items-end justify-between gap-x-4 border-b border-border px-inset">
+        // items-end: the active tab's underline sits on the row's bottom edge. No rule under the row: the head's rule is the list's one line.
+        <div className="flex flex-wrap items-end justify-between gap-x-4 px-inset">
           <div className="min-w-0" data-tour="stage-tabs">
             <FilterTabs
               options={tabs.map((o) => ({
@@ -287,7 +287,7 @@ export function DataTable<T>({
         // From sm: the filters and the search at the start, the dates and the list's action at the end, so the row is
         // weighted at both ends at any width. `order` does it, since the search shares the phone's first row with the
         // filter button.
-        <div className="flex flex-col gap-2 border-b border-border px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-col gap-2 px-inset py-3 sm:flex-row sm:flex-wrap sm:items-center">
           {/* sm:contents: below sm one row with the trigger and search; from sm it dissolves. */}
           <div className="flex min-w-0 items-center gap-2 sm:contents">
             {filters.map((f) => (
@@ -445,7 +445,7 @@ export function DataTable<T>({
         </>
       ) : (
         <>
-          <div className="divide-y divide-border md:hidden">
+          <div className="divide-y divide-divider border-t border-divider md:hidden">
             {pageRows.map((row) => {
               const key = rowKey(row);
               const under = expansion?.(row);
@@ -486,7 +486,7 @@ export function DataTable<T>({
           <div className="hidden overflow-x-auto overscroll-x-contain md:block">
             <table className="w-full text-sm">
               {head}
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-divider">
                 {pageRows.map((row) => {
                   const href = rowHref?.(row);
                   const key = rowKey(row);
@@ -728,7 +728,7 @@ function Pagination({
     "flex size-8 items-center justify-center rounded-control border border-border-control bg-background text-sm transition-colors hover:bg-hover disabled:opacity-40 disabled:pointer-events-none";
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-inset py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-inset py-3">
       <p className="text-xs text-muted">
         {totalItems === 0 ? t("noResults") : t("showing", { from, to, total: totalItems })}
       </p>

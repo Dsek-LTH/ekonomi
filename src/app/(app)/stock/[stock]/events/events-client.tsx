@@ -89,13 +89,13 @@ export default function EventsClient({
         </div>
 
         {months.length > 0 ? (
-          <Card className="divide-y divide-border overflow-hidden">
+          <Card className="divide-y divide-divider overflow-hidden">
             {months.map((m) => (
               <section key={m.key}>
                 <h2 className="border-b border-border bg-surface/60 px-inset py-1.5 text-xs font-medium text-muted">
                   {m.label}
                 </h2>
-                <ul className="divide-y divide-border">
+                <ul className="divide-y divide-divider">
                   {m.events.map((e) => {
                     const latest = !q && e.id === latestId;
                     const day = dayOf(e.date);

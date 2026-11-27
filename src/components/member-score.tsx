@@ -145,7 +145,7 @@ export function MemberScorePanel({ score, own }: { score: MemberScore; own: bool
         <section>
           <h3 className="text-sm font-semibold">{t("returnedTitle")}</h3>
           <p className="mt-0.5 text-sm text-muted">{t("returnedLead")}</p>
-          <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
+          <ul className="mt-2 divide-y divide-divider rounded-panel border border-border">
             {score.returnedAttests.slice(0, 10).map((a) => (
               <li key={`${a.record}-${a.id}-${a.signedOn}`} className="px-3 py-2.5">
                 <Link
@@ -198,7 +198,7 @@ function ItemList({
   const t = useTranslations("score");
   const { date } = useFormat();
   return (
-    <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
+    <ul className="mt-2 divide-y divide-divider rounded-panel border border-border">
       {items.map((i) => {
         const kind = t(`kind.${kindKey(i)}`);
         const done = i.kind === "submitted" || i.kind === "attested";

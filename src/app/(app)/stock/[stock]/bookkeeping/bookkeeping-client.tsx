@@ -217,7 +217,7 @@ export default function BookkeepingClient({
                   <th className={cn(TH, NUM)}>{t("recon.col.diff")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-divider">
                 {reconciliation.rows.map((r) => (
                   <tr key={r.groupId}>
                     <td className={TD}>{r.name}</td>
@@ -347,7 +347,7 @@ export default function BookkeepingClient({
                     ) : null}
                   </section>
                 )}
-                <ul className="divide-y divide-border border-t border-border">
+                <ul className="divide-y divide-divider border-t border-border">
                   {days.map((day) => (
                     <DueRow
                       key={day.date}
@@ -397,7 +397,7 @@ export default function BookkeepingClient({
                     <th className="px-inset py-2" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/60">
+                <tbody className="divide-y divide-divider">
                   {sent.map((v) => (
                     <tr key={v.id}>
                       <td className="px-inset py-2 tabular-nums">{v.date}</td>
@@ -467,7 +467,7 @@ function DueRow({
         {action}
       </div>
       {open && (
-        <div className="border-t border-border/60 bg-surface/50 px-inset py-3">
+        <div className="border-t border-divider bg-surface/50 px-inset py-3">
           {part.lines ? (
             <Lines lines={part.lines} />
           ) : (

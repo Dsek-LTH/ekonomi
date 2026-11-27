@@ -793,7 +793,7 @@ export default function EventClient({
                         return (
                           <tbody
                             key={productId}
-                            className="divide-y divide-border/40 border-b border-border last:border-0"
+                            className="divide-y divide-divider border-b border-border last:border-0"
                           >
                             {/* A spirit's own row carries its name and total, typing happens on the ladder below. A can's one row is both. */}
                             <tr className={cn("divide-x divide-border", isVolume && "bg-surface")}>

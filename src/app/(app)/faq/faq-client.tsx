@@ -117,7 +117,7 @@ export function FaqClient({ sections }: { sections: FaqSection[] }) {
         <section key={section.id} className="space-y-3">
           <h2 className="text-xs font-medium text-muted">{section.label}</h2>
           {/* overflow-hidden so a hovered first or last question doesn't paint square over the card's corners. */}
-          <Card className="divide-y divide-border overflow-hidden">
+          <Card className="divide-y divide-divider overflow-hidden">
             {section.items.map((item) => (
               <Question
                 key={item.id}
@@ -312,7 +312,7 @@ function AnswerTable({ head, rows }: { head: string[]; rows: string[][] }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-divider">
           {rows.map((row, r) => (
             <tr key={r}>
               {row.map((cell, c) => (

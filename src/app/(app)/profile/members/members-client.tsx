@@ -67,7 +67,7 @@ export function MembersClient({
         {shown.length === 0 ? (
           <EmptyNote>{rows.length === 0 ? t("empty") : t("noMatch")}</EmptyNote>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-divider">
             {shown.map((r) => (
               <li key={r.userId}>
                 <Link

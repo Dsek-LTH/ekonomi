@@ -385,7 +385,7 @@ function DateFilter({
 function Parts({ row }: { row: StockLogRowDto }) {
   const t = useTranslations("stock");
   return (
-    <ul className="divide-y divide-border/60 py-1 text-xs">
+    <ul className="divide-y divide-divider py-1 text-xs">
       {row.parts?.map((part) => (
         <li key={`${part.kind}-${part.level}`} className="flex items-baseline gap-3 py-1.5">
           <span className="w-16 shrink-0 font-medium">

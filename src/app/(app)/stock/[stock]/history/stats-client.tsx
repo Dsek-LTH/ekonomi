@@ -367,7 +367,7 @@ function PlacesCard({
   return (
     <Card>
       <CardHeader title={t("stats.placesTitle")} />
-      <ul className="divide-y divide-border border-t border-border">
+      <ul className="divide-y divide-divider border-t border-border">
         {places.map((p) => {
           const on = selected.includes(p.id);
           return (

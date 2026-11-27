@@ -457,7 +457,7 @@ function RejectedMail({ rejected }: { rejected: InboxHealth["rejected"] }) {
         ) : (
           <>
             <p className="text-xs text-muted">{t("rejectedLead")}</p>
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-divider">
               {rejected.map((r) => (
                 <li key={r.id} className="py-1.5 text-xs">
                   <span className="block truncate">

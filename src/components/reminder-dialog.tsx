@@ -70,7 +70,7 @@ export function ReminderDialog({
         {data && data.items.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("goesTo")}</p>
-            <ul className="divide-y divide-border rounded-panel border border-border">
+            <ul className="divide-y divide-divider rounded-panel border border-border">
               {data.items.map((i) => (
                 <li key={i.id} className="px-3 py-2">
                   <p className="truncate text-sm">{i.label}</p>

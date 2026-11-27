@@ -58,7 +58,7 @@ export default function TemplateClient({
       <div className="flex flex-col gap-6">
         <Card>
           <CardHeader subtitle={t("intro")} />
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-divider">
             {active.map((item, i) => (
               <TemplateRow
                 key={item.id}
@@ -76,7 +76,7 @@ export default function TemplateClient({
         {retired.length > 0 && (
           <Card>
             <CardHeader title={t("retired")} />
-            <ul className="divide-y divide-border">
+            <ul className="divide-y divide-divider">
               {retired.map((item) => (
                 <TemplateRow key={item.id} item={item} canEdit={canEdit} first last />
               ))}

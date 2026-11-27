@@ -77,6 +77,11 @@
        dark theme draws a hairline, because a shadow does not read on near-black.
        The border stays in the box in both, so nothing moves between themes. */
   --color-edge: transparent;
+  /* The lighter of the two rules: between rows of a list and between parts
+       of one card. --color-border is the structural one (a table's head), and
+       a field's edge is --color-border-control. Two weights, so the inside of
+       a card is not drawn in the same line as everything else. */
+  --color-divider: #e8e8eb;
 
   --color-foreground: #18181b;
   /* 6.33:1 on a card and 5.76 on a surface fill. It was #6e6e73, which is
@@ -391,6 +396,7 @@
   --color-border-control: #48484a;
   /* Between the page and the border: enough to find the card's edge, not a frame. */
   --color-edge: #2a2a2d;
+  --color-divider: #2e2e31;
 
   --color-foreground: #f5f5f7;
   --color-muted: #98989d;
@@ -504,6 +510,7 @@
     --color-border-control: #48484a;
     /* Between the page and the border: enough to find the card's edge, not a frame. */
     --color-edge: #2a2a2d;
+    --color-divider: #2e2e31;
 
     --color-foreground: #f5f5f7;
     --color-muted: #98989d;
@@ -1282,6 +1289,7 @@ summary {
     --color-border-control: #b8b8be;
     /* Paper has no shadow, so a card keeps an outline. */
     --color-edge: #c8c8ce;
+    --color-divider: #dcdce0;
     --color-foreground: #000000;
     --color-muted: #45454a;
     /* One step firmer than the screen's #8a8a8f. A hairline that is merely at

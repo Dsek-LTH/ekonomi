@@ -79,7 +79,7 @@ export default function ChecklistClient({
               ) : undefined
             }
           />
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-divider">
             {items.map((item) => (
               <ChecklistRow key={item.id} yearId={year.id} item={item} canWork={canWork} />
             ))}
