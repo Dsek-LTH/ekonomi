@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import {
-  BalanceChip,
   filledVoucherRows,
   makeVoucherRow,
   VoucherEditor,
@@ -180,8 +179,7 @@ export function VoucherCard({
           totalDebit={oreToSEK(editDebit)}
           totalCredit={oreToSEK(editCredit)}
         />
-        <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-          <BalanceChip balanced={editDebit === editCredit} />
+        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
           <div className="flex flex-wrap items-center gap-2.5">
             {editBlocker && (
               <span className="text-xs text-warning">{t(`manual.blocker.${editBlocker}`)}</span>

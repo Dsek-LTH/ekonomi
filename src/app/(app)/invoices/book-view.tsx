@@ -10,7 +10,6 @@ import { AmountInput } from "@/components/ui/amount-input";
 import { DateInput, Field, FieldGroup, Input } from "@/components/ui/field";
 import { IconCheck, IconChevronRight } from "@/components/ui/icons";
 import {
-  BalanceChip,
   VoucherCostCenterPicker,
   VoucherEditor,
   WarningChip,
@@ -450,7 +449,6 @@ export function BookPanel({
     lines.reduce((sum, l) => sum + l.credit, 0) + totalOre + Math.max(-roundingOre, 0);
   const debit = debitOre / 100;
   const credit = creditOre / 100;
-  const difference = (creditOre - debitOre) / 100;
 
   // Said once the field has been left, so a number still being typed is not called wrong.
   const badOcr =
@@ -624,9 +622,7 @@ export function BookPanel({
           totalCredit={credit}
         />
 
-        <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-          <BalanceChip balanced={difference === 0} />
-
+        <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Only the unit can change its split, which asks every signer again. */}
             {sumMismatch ? (

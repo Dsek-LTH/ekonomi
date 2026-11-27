@@ -30,7 +30,6 @@
   "lockedRowHint": "The payment row is locked and cannot be removed",
   "dragRow": "Drag to move the row (or Alt + arrow key)",
   "unknownPaymentAccount": "The payment account {account} is not in the chart of accounts. Fix it under Settings → Expenses before booking.",
-  "balanced": "Balanced",
   "sum": "Total",
   "differenceLabel": "Difference",
   "saveChanges": "Save changes",

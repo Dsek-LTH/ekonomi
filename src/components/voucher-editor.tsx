@@ -753,22 +753,7 @@ function SpanLabel({
   );
 }
 
-const chip = "inline-flex items-center gap-1.5 rounded-control px-3 py-1 text-sm font-medium";
-
-/**
- * Green chip when debit meets credit. Nothing when they do not: the table's Differens row already says by how much,
- * in red. The empty span keeps its place, so the buttons beside it (justify-between) do not jump across.
- */
-export function BalanceChip({ balanced }: { balanced: boolean }) {
-  const t = useTranslations("book");
-  return balanced ? (
-    <span className={cn(chip, "bg-success-soft text-success")}>{t("balanced")}</span>
-  ) : (
-    <span aria-hidden />
-  );
-}
-
-/** Why the voucher cannot be written yet. Renders nothing for `unbalanced`, which the balance chip says. */
+/** Why the voucher cannot be written yet. Renders nothing for `unbalanced`: the table's Differens row says by how much, in red. */
 export function VoucherBlockerChip({ blocker }: { blocker: VoucherBlocker | null }) {
   const t = useTranslations("errors.voucher");
   if (!blocker || blocker === "unbalanced") return null;

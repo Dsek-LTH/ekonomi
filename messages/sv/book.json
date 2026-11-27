@@ -30,7 +30,6 @@
   "lockedRowHint": "Betalningsraden är låst och kan inte tas bort",
   "dragRow": "Dra för att flytta raden (eller Alt + piltangent)",
   "unknownPaymentAccount": "Betalningskontot {account} finns inte i kontoplanen. Rätta det under Inställningar → Utlägg innan du konterar.",
-  "balanced": "Balanserar",
   "sum": "Summa",
   "differenceLabel": "Differens",
   "saveChanges": "Spara ändringar",

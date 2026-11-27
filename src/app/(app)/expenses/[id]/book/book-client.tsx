@@ -17,7 +17,6 @@ import { ReceiptPanelSource } from "@/components/receipt/receipt-panel";
 import { expenseDocuments } from "@/lib/expense/document-url";
 import { PageShell } from "@/components/page-shell";
 import {
-  BalanceChip,
   filledVoucherRows,
   VoucherBlockerChip,
   VoucherCostCenterPicker,
@@ -290,10 +289,8 @@ export default function BookExpenseClient({
   const balance = voucherBalance(voucherLines);
   const totalDebit = oreToSEK(balance.debit);
   const totalCredit = oreToSEK(balance.credit);
-  // The chip answers whether the voucher adds up, the blocker whether it may be written (the stricter of the two).
-  // Reading the chip off the blocker showed "differs by 0,00 kr" for an unpicked account.
+  // Whether it may be written. Whether it adds up is the table's Differens row.
   const blocker = voucherBlocker(voucherLines);
-  const balanced = balance.balanced;
   const costCenterExists = (code: string) => costCenters.some((c) => c.code === code.trim());
   const allValidAccounts = typedRows.every((r) => accountExists(r.account));
   const allValidCostCenters = typedRows.every(
@@ -511,11 +508,9 @@ export default function BookExpenseClient({
               </div>
             )}
 
-            <CardBody className="flex flex-wrap items-center justify-between gap-3 border-t border-border">
-              <BalanceChip balanced={balanced} />
-
+            <CardBody className="flex flex-wrap items-center justify-end gap-3 border-t border-border">
               <div className="flex items-center gap-2.5">
-                {/* Why the button is dead, so a green chip is not left over a button that quietly refuses. */}
+                {/* Why the button is dead, so it does not quietly refuse. */}
                 <VoucherBlockerChip blocker={blocker} />
                 <Button onClick={save} loading={submitting} disabled={!canSubmit}>
                   <IconCheck className="size-4" />
