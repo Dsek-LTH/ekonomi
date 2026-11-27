@@ -25,7 +25,7 @@ export function CardHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border px-inset py-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-inset pt-4 pb-1">
       {/* break-words, not truncate: Swedish compounds have nothing to wrap at and overflow the card. Subtitle is clamped; full text is on title. */}
       <div className="min-w-0">
         {title && <h2 className="break-words text-base font-semibold">{title}</h2>}

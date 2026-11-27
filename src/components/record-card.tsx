@@ -30,7 +30,7 @@ export function InspectorSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("border-t border-border pt-4", endsInTable ? "pb-2" : "pb-4")}>
+    <section className={cn("border-t border-divider pt-4", endsInTable ? "pb-2" : "pb-4")}>
       {(title || action) && (
         <div className="mb-2 flex min-h-6 items-center justify-between gap-3 px-inset">
           <h2 className="flex min-w-0 items-baseline gap-3">
@@ -58,7 +58,7 @@ export function StripCell({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("min-w-0 bg-background px-inset py-3", className)}>
+    <div className={cn("min-w-0 px-inset py-3", className)}>
       <p className={LABEL}>{label}</p>
       <div className={cn("mt-1 min-w-0 text-sm", truncate && "truncate")}>{children}</div>
     </div>
@@ -98,7 +98,7 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
   const total = lines.reduce((sum, l) => sum + (l.amount ?? 0), 0);
 
   return (
-    <section className="border-t border-border px-inset pb-2 pt-4">
+    <section className="border-t border-divider px-inset pb-2 pt-4">
       <table className="w-full table-fixed text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -111,7 +111,7 @@ export function AllocationTable({ caption, lines }: { caption: string; lines: Al
         <tbody>
           {lines.map((l) => (
             <Fragment key={l.id}>
-              <tr className="border-t border-border align-top">
+              <tr className="border-t border-divider align-top">
                 <td className="pb-0.5 pr-3 pt-2 sm:pb-2">
                   <div className="truncate">
                     <span className="font-medium tabular-nums">{l.costCenterCode}</span>
@@ -202,7 +202,7 @@ export function VoucherTable({ lines }: { lines: VoucherLine[] }) {
       </thead>
       <tbody>
         {lines.map((l) => (
-          <tr key={l.key} className="border-t border-border align-top">
+          <tr key={l.key} className="border-t border-divider align-top">
             <td className="py-2 pl-inset font-medium tabular-nums">{l.account}</td>
             <td className="py-2 pl-3">
               <span className="block truncate">{l.accountName}</span>
@@ -322,14 +322,13 @@ export function VoucherSection({
     >
       {statusLine}
       {facts.length > 0 && (
-        // Two pairs to a row from sm. The rules are the grid's 1px gaps showing its tint, so each runs
-        // through every row or column, and the list is inset so none reaches the card's edge. An odd
-        // last row is filled so its rules run through too.
-        <dl className="mx-inset mb-3 grid gap-px bg-border/60 text-sm sm:grid-cols-2">
+        // Two pairs to a row from sm, a divider between rows and none between the columns: the gap
+        // holds the columns apart. Inset so no rule reaches the card's edge.
+        <dl className="mx-inset mb-3 grid gap-x-8 text-sm sm:grid-cols-2">
           {facts.map((f) => (
             <div
               key={f.label}
-              className="flex min-w-0 items-baseline gap-4 bg-background py-2 sm:odd:pr-4 sm:even:pl-4"
+              className="flex min-w-0 items-baseline gap-4 border-t border-divider py-2 first:border-t-0 sm:nth-2:border-t-0"
             >
               <dt className={cn(LABEL, "w-28 shrink-0")}>{f.label}</dt>
               <dd className="flex min-w-0 flex-1 items-baseline gap-2">
@@ -340,15 +339,14 @@ export function VoucherSection({
               </dd>
             </div>
           ))}
-          {facts.length % 2 === 1 && <div aria-hidden className="hidden bg-background sm:block" />}
         </dl>
       )}
       {/* With facts above, a rule over the table's header so the lines read as their own block. */}
-      <div className={cn(facts.length > 0 && "border-t border-border pt-3")}>
+      <div className={cn(facts.length > 0 && "border-t border-divider pt-3")}>
         <VoucherTable lines={lines} />
       </div>
       {people.length > 0 && (
-        <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-border px-inset pt-3 text-xs">
+        <dl className="flex flex-wrap gap-x-8 gap-y-1 border-t border-divider px-inset pt-3 text-xs">
           {people.map((p) => (
             <div key={p.label} className="flex items-baseline gap-2">
               <dt className={LABEL}>{p.label}</dt>

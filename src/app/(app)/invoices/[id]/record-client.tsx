@@ -521,7 +521,7 @@ function FactStrip({ invoice }: { invoice: SupplierInvoiceView }) {
   const tRecord = useTranslations("invoices.record");
   return (
     // Where it stands first, as on an utlägg. First in the card, it drops its top rule and takes the card's top corners.
-    <div className="grid grid-cols-2 gap-px overflow-hidden border-t border-border bg-border first:rounded-t-panel first:border-t-0 sm:grid-cols-4">
+    <div className="grid grid-cols-2 border-t border-divider first:border-t-0 sm:grid-cols-4">
       <StripCell label={tRecord("status")}>
         <InvoiceStatusPill status={invoice.status} />
         <WaitingOn invoice={invoice} />

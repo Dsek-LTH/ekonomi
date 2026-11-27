@@ -331,7 +331,7 @@ export default function DayClient({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4">
+          <div className="grid grid-cols-2 border-t border-divider sm:grid-cols-4">
             <StripCell label={t("day.total")} className="col-span-2 sm:col-span-1" truncate>
               <span className="text-base font-semibold tabular-nums">
                 {formatSEK(report.total)}

@@ -56,7 +56,7 @@ export function SettingsCard({
   return (
     <Card id={id} className={cn("scroll-mt-4", className)}>
       {title && (
-        <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-inset py-2.5">
+        <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-inset pt-3">
           {/* break-words, not truncate: Swedish compounds have nothing to wrap at. */}
           <h2 className="min-w-0 break-words text-base font-semibold">{title}</h2>
           {action}
@@ -78,8 +78,8 @@ export function SettingsGroup({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-b border-border last:border-0">
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-surface px-inset py-1.5">
+    <section className="border-b border-divider last:border-0">
+      <div className="flex items-center justify-between gap-2 bg-surface px-inset py-1.5">
         <h3 className="text-xs font-semibold text-muted">{title}</h3>
         {action}
       </div>
@@ -123,7 +123,7 @@ export function SettingRow({
   return (
     <li
       className={cn(
-        "grid gap-2 border-b border-border px-inset py-3 last:border-0",
+        "grid gap-2 border-b border-divider px-inset py-3 last:border-0",
         !wide && "sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center sm:gap-6",
         className,
       )}

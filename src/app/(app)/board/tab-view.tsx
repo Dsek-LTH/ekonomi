@@ -48,7 +48,7 @@ export function TabFacts({ open }: { open: BoardWithdrawalDto[] }) {
   const since = open.at(-1)?.date;
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3">
         <StripCell label={t("owed")} className="col-span-2 sm:col-span-1">
           <Amount value={kronor(open.reduce((sum, w) => sum + w.amountOre, 0))} size="md" />
         </StripCell>

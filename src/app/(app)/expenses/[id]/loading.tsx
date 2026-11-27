@@ -9,11 +9,11 @@ export default function Loading() {
           <Skeleton className="mt-1.5 h-6 w-28 rounded-control" />
           <Skeleton className="h-9 w-32 rounded-control" />
         </div>
-        <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-3">
+        <div className="grid grid-cols-2 border-t border-divider sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className={`space-y-1.5 bg-background px-inset py-3 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`}
+              className={`space-y-1.5 px-inset py-3 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`}
             >
               <Skeleton className="h-3 w-16" />
               <Skeleton className="h-5 w-24" />
