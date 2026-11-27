@@ -131,7 +131,7 @@ export async function deleteObject(key: string): Promise<void> {
   }
 }
 
-// Delete without letting storage trouble block the caller (upload rollback only). A leftover object is
+// Delete without letting storage trouble block the caller (upload rollback, a deleted levfaktura). A leftover object is
 // collected by the sweeper (scripts/gc-receipts.ts).
 export async function deleteObjectBestEffort(key: string): Promise<void> {
   try {

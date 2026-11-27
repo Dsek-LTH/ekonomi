@@ -415,6 +415,8 @@
     "allocationSumMismatch": "The allocation does not add up to the invoice amount less the rounding.",
     "splitNeedsAmounts": "Give how much goes to each cost centre.",
     "noInvoiceNumber": "Fill in the invoice number.",
+    "duplicateLocal": "This invoice is already here with the same supplier and invoice number. Delete this copy instead.",
+    "duplicateFortnox": "This invoice is already in Fortnox with the same supplier and invoice number. Delete this copy instead.",
     "badOcr": "The OCR number does not check out. Make sure it is typed correctly, or leave the field empty.",
     "noInvoiceDate": "Fill in the invoice date.",
     "supplierGone": "The supplier no longer exists in Fortnox. Pick another.",

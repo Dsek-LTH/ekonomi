@@ -263,6 +263,24 @@ function RecordActions({
   );
   const unit = invoice.resultUnitName ?? "-";
   const withTreasury = invoice.status === "APPROVED" || invoice.status === "BOOKED";
+  const remover = useMutation();
+
+  async function remove() {
+    const ok = await confirm({
+      title: t("deleteTitle"),
+      message: t("deleteMessage"),
+      confirmLabel: t("delete"),
+      tone: "danger",
+    });
+    if (!ok) return;
+    const res = await remover.mutate(`/api/supplier-invoices/${invoice.id}`, {
+      method: "DELETE",
+      error: t("deleteFailed"),
+      success: t("deleted"),
+      refresh: false,
+    });
+    if (res) onGone();
+  }
 
   async function explained(action: "request_changes" | "withdraw_attest") {
     const ok = await confirm({
@@ -391,6 +409,13 @@ function RecordActions({
         onClick: () => void back.run(can.canMove ? tAction("return") : tAction("decline")),
         danger: true,
       },
+      can.canDelete &&
+        !sendBlocked && {
+          key: "delete",
+          label: t("delete"),
+          onClick: () => void remove(),
+          danger: true,
+        },
     ] as (Action | false)[]
   ).filter((a): a is Action => a !== false);
 
@@ -398,12 +423,14 @@ function RecordActions({
     ...actions.filter((a) => !a.danger),
     ...actions.filter((a) => a.danger),
   ];
-  const busy = tr.busy || back.busy || sender.busy;
+  const busy = tr.busy || back.busy || sender.busy || remover.busy;
   if (!primary) return null;
 
   // Only the next step leads; quiet actions stay in the menu even alone.
   const quiet = (a: Action) =>
-    ["redistribute", "withdraw", "move", "send_back", "not_ours", "return"].includes(a.key);
+    ["redistribute", "withdraw", "move", "send_back", "not_ours", "return", "delete"].includes(
+      a.key,
+    );
   const lead = quiet(primary) ? null : primary;
   const menu = lead ? rest : [primary, ...rest];
 

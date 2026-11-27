@@ -23,6 +23,7 @@ import { useMutation } from "@/components/shell/use-mutation";
 
 import { useFormat } from "@/lib/ui/use-format";
 import { cn } from "@/lib/ui/utils";
+import { announceRegistersSynced } from "@/lib/ui/fortnox-registers";
 import { sentence } from "@/lib/ui/format";
 import type {
   AccountSyncResult,
@@ -136,6 +137,7 @@ export function FortnoxClient({
       error: t("suppliersSyncFailed"),
     });
     if (!data) return;
+    announceRegistersSynced();
     notify.success(t("suppliersSummary", { count: data.suppliers }), t("suppliersSynced"));
   }
 
@@ -145,6 +147,7 @@ export function FortnoxClient({
       error: t("syncAllFailed"),
     });
     if (!data) return;
+    announceRegistersSynced();
     const failed =
       [data.financialYears, data.costCenters, data.projects, data.accounts, data.suppliers].some(
         (s) => !s.ok,

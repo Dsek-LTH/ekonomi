@@ -25,6 +25,7 @@ import { applied, commit } from "@/lib/api/stale-write";
 import { parseBody } from "@/lib/api/parse";
 import { TransitionSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import { planAllocation } from "@/lib/server/invoice-allocation";
+import { duplicateBlocker, findInvoiceDuplicates } from "@/lib/server/supplier-invoice-duplicates";
 import {
   exportFactsOf,
   loadInvoiceFor,
@@ -308,6 +309,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (!can.canBook) return refuseChange(invoice, isWithTreasury(invoice.status));
     const blocker = exportBlocker(exportFactsOf(invoice));
     if (blocker) return fail(422, blocker);
+    // The same supplier's invoice number already here or in Fortnox: a copy, which is deleted rather than konterad.
+    const copy = duplicateBlocker(
+      await findInvoiceDuplicates(
+        invoice.id,
+        invoice.fortnoxSupplierNumber!,
+        invoice.invoiceNumber!,
+      ),
+    );
+    if (copy) return fail(409, copy);
     if (invoice.status === "BOOKED") return done("BOOKED");
     const result = await commit(() =>
       prisma.$transaction(async (tx) => {

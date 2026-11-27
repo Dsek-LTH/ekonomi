@@ -208,7 +208,11 @@
     "roundingHint": "The rounding is booked on its own account. The cost rows are the invoice's lines as printed.",
     "roundingInvalid": "The rounding can be at most 0.99 kr either way.",
     "save": "Save booking",
-    "giroAtSend": "You will confirm the number again when the invoice is sent to Fortnox."
+    "giroAtSend": "You will confirm the number again when the invoice is sent to Fortnox.",
+    "duplicateLocal": "Already here as",
+    "duplicateOpen": "another invoice",
+    "duplicateFortnox": "Already in Fortnox as supplier invoice {number}.",
+    "duplicateUnchecked": "Could not check in Fortnox whether the invoice is already there."
   },
   "record": {
     "more": "More",
@@ -232,7 +236,12 @@
     "giroNotInRegister": "Does not match the supplier register in Fortnox",
     "bookedBy": "Booked",
     "notAllocated": "{unit} has not allocated the invoice yet.",
-    "status": "Status"
+    "status": "Status",
+    "delete": "Delete",
+    "deleteTitle": "Delete the invoice?",
+    "deleteMessage": "The invoice and its documents are removed for good, with its split, attests, booking and history. This cannot be undone.",
+    "deleted": "The invoice was deleted",
+    "deleteFailed": "Could not delete the invoice"
   },
   "notAllocated": "Not allocated yet",
   "fromForwarder": "From {name}",

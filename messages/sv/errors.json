@@ -415,6 +415,8 @@
     "allocationSumMismatch": "Fördelningen går inte jämnt ut med fakturans belopp minus öresutjämningen.",
     "splitNeedsAmounts": "Ange hur mycket som ska till varje kostnadsställe.",
     "noInvoiceNumber": "Fyll i fakturanummer.",
+    "duplicateLocal": "Fakturan finns redan här med samma leverantör och fakturanummer. Radera den här kopian i stället.",
+    "duplicateFortnox": "Fakturan finns redan i Fortnox med samma leverantör och fakturanummer. Radera den här kopian i stället.",
     "badOcr": "OCR-numret stämmer inte. Kontrollera att det är rätt skrivet, eller lämna fältet tomt.",
     "noInvoiceDate": "Fyll i fakturadatum.",
     "supplierGone": "Leverantören finns inte längre i Fortnox. Välj en annan.",

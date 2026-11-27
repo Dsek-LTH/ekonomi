@@ -1,6 +1,8 @@
 // One levfaktura: the treasurer's kontering, once every row is attested and until it is in Fortnox (canBook).
 // The head fields and the lines are saved together on Spara kontering. Marking it done is ./transition's `book`.
+// DELETE takes it away for good, documents and files with it (canDelete).
 import { prisma } from "@/lib/server/db";
+import { deleteObjectBestEffort } from "@/lib/server/storage";
 import { isoToDate } from "@/lib/domain/date";
 import { fail, gate } from "@/lib/api/guard";
 import { applied, commit } from "@/lib/api/stale-write";
@@ -8,7 +10,7 @@ import { denyOutsideFiscalYear } from "@/lib/api/fiscal-year";
 import { parseBody } from "@/lib/api/parse";
 import { PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import { loadInvoiceFor, refuseChange } from "@/lib/api/supplier-invoice-access";
-import { isWithTreasury } from "@/lib/domain/supplier-invoice";
+import { isInvoiceDeletable, isWithTreasury } from "@/lib/domain/supplier-invoice";
 import { isoDate } from "@/lib/data/shared";
 
 // The free-text columns, which are copied across as they arrive.
@@ -170,4 +172,42 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (result instanceof Response) return result;
   // The new version, for a page that saves again before it reloads (a Bokför whose transition failed).
   return Response.json({ updatedAt: result.updatedAt.toISOString() });
+}
+
+// DELETE /api/supplier-invoices/:id
+// The documents go with it: left behind they would fall back into the Inkorg (onDelete: SetNull). The mail it came in
+// stays, so the Gmail intake does not bring it in again.
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const g = await gate();
+  if (!g.ok) return g.res;
+
+  const access = await loadInvoiceFor(g.actor, id);
+  if (!access.ok) return access.res;
+  const { invoice, can } = access;
+  if (!can.canDelete) return refuseChange(invoice, isInvoiceDeletable(invoice.status));
+  if (invoice.exportClaimState) return fail(409, "supplierInvoice.exportInProgress");
+
+  const result = await commit(() =>
+    prisma.$transaction(async (tx) => {
+      const documents = await tx.supplierInvoiceDocument.findMany({
+        where: { invoiceId: invoice.id },
+        select: { objectKey: true },
+      });
+      await tx.supplierInvoiceDocument.deleteMany({ where: { invoiceId: invoice.id } });
+      // Still as it was judged deletable: sent to Fortnox in another tab a moment ago, it stays (and so do its
+      // documents, as the whole transaction is undone).
+      applied(
+        await tx.supplierInvoice.deleteMany({
+          where: { id: invoice.id, status: invoice.status, exportClaimState: null },
+        }),
+        "supplierInvoice.changedMeanwhile",
+      );
+      return documents;
+    }),
+  );
+  if (result instanceof Response) return result;
+  // After the rows are gone: a file left over costs only space, a row pointing at a missing file breaks a page.
+  await Promise.all(result.map((d) => deleteObjectBestEffort(d.objectKey)));
+  return new Response(null, { status: 204 });
 }

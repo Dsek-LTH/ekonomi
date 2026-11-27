@@ -208,7 +208,11 @@
     "roundingHint": "Öresutjämningen bokas på sitt eget konto. Kostnadsraderna är fakturans rader som de står.",
     "roundingInvalid": "Öresutjämningen får vara högst 0,99 kr åt något håll.",
     "save": "Spara kontering",
-    "giroAtSend": "Du får bekräfta numret igen när fakturan skickas till Fortnox."
+    "giroAtSend": "Du får bekräfta numret igen när fakturan skickas till Fortnox.",
+    "duplicateLocal": "Finns redan som",
+    "duplicateOpen": "en annan faktura",
+    "duplicateFortnox": "Finns redan i Fortnox som leverantörsfaktura {number}.",
+    "duplicateUnchecked": "Kunde inte kontrollera i Fortnox om fakturan redan finns där."
   },
   "record": {
     "more": "Mer",
@@ -232,7 +236,12 @@
     "giroNotInRegister": "Stämmer inte med leverantörsregistret i Fortnox",
     "bookedBy": "Konterad",
     "notAllocated": "{unit} har inte fördelat fakturan än.",
-    "status": "Status"
+    "status": "Status",
+    "delete": "Radera",
+    "deleteTitle": "Radera fakturan?",
+    "deleteMessage": "Fakturan och dess dokument tas bort för gott, med fördelning, attester, kontering och historik. Det går inte att ångra.",
+    "deleted": "Fakturan är raderad",
+    "deleteFailed": "Kunde inte radera fakturan"
   },
   "notAllocated": "Inte fördelad än",
   "fromForwarder": "Från {name}",

@@ -27,6 +27,16 @@ const h = vi.hoisted(() => ({
   notify: vi.fn(),
   attesters: [] as string[],
   reading: { fields: {}, supplier: null } as { fields: Record<string, unknown>; supplier: null },
+  duplicates: { local: null, fortnox: null, fortnoxChecked: true } as {
+    local: { id: string; reference: string | null; status: string } | null;
+    fortnox: string | null;
+    fortnoxChecked: boolean;
+  },
+}));
+
+vi.mock("@/lib/server/supplier-invoice-duplicates", async (actual) => ({
+  ...(await actual<typeof import("@/lib/server/supplier-invoice-duplicates")>()),
+  findInvoiceDuplicates: async () => h.duplicates,
 }));
 
 vi.mock("@/lib/server/invoice-documents", () => ({ readInvoiceScan: async () => h.reading }));
@@ -137,6 +147,7 @@ const asSexmastare = () => {
 };
 
 beforeEach(() => {
+  h.duplicates = { local: null, fortnox: null, fortnoxChecked: true };
   h.capabilities = [];
   h.roles = ["ORDINARIE"];
   h.ownedUnits = [];
@@ -409,6 +420,25 @@ describe("book, the treasury's kontering", () => {
     expect((await (await call({ action: "book" })).json()).error).toBe(
       "supplierInvoice.unbalanced",
     );
+    expect(h.invoiceUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a copy of one already here or in Fortnox", async () => {
+    h.capabilities = ["BOOKKEEPING"];
+    h.invoice = complete;
+    h.allocations = [row({ approvedById: "klara" })];
+    h.lines = [{ account: "5615", debit: 125000, credit: 0 }];
+    h.duplicates = {
+      local: { id: "inv0", reference: "LEV-1", status: "BOOKED" },
+      fortnox: null,
+      fortnoxChecked: true,
+    };
+    let res = await call({ action: "book" });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("supplierInvoice.duplicateLocal");
+    h.duplicates = { local: null, fortnox: "88", fortnoxChecked: true };
+    res = await call({ action: "book" });
+    expect((await res.json()).error).toBe("supplierInvoice.duplicateFortnox");
     expect(h.invoiceUpdate).not.toHaveBeenCalled();
   });
 

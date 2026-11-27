@@ -6,10 +6,12 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@/components/shell/use-query";
 import { Combobox } from "@/components/ui/combobox";
 import type { FortnoxCustomer } from "@/lib/fortnox";
+import { useReloadOnRegisterChange } from "@/lib/ui/fortnox-registers";
 
-/** Fortnox's customer register, read once per dialog. Customers are added in Fortnox, never here. */
+/** Fortnox's customer register, read when the dialog opens and again on coming back from Fortnox. Customers are added in Fortnox, never here. */
 export function useFortnoxCustomers() {
   const q = useQuery<FortnoxCustomer[]>("/api/fortnox/customers");
+  useReloadOnRegisterChange(q.reload);
   const list = useMemo(() => q.data ?? [], [q.data]);
   return { list, loading: q.loading, error: q.error, reload: q.reload };
 }

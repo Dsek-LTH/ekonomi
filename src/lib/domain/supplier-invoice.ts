@@ -45,6 +45,9 @@ export const awaitsAllocation = (s: SupplierInvoiceStatus): boolean => ATTESTABL
 /** Whether it can still be moved to another unit or sent back to the Inkorg: only while nothing on it is signed. Back to the Inkorg deletes the invoice and returns its documents. */
 export const isInvoiceReturnable = awaitsAllocation;
 
+/** A levfaktura can be deleted in every state but the last. Once in Fortnox it is there, and is cancelled there. */
+export const isInvoiceDeletable = (s: SupplierInvoiceStatus): boolean => s !== "EXPORTED";
+
 export interface AttestRow {
   amount: number | null; // öre
 }
@@ -165,6 +168,8 @@ export interface InvoiceCapabilities {
   canBook: boolean;
   canSend: boolean;
   canEditDocuments: boolean;
+  /** Delete it for good, with its documents: triage and the admins, until it is in Fortnox. */
+  canDelete: boolean;
 }
 
 export function invoiceCapabilities(
@@ -193,6 +198,7 @@ export function invoiceCapabilities(
     canSend: bookkeeper && s === "BOOKED",
     // The PDF is what is attested, so it is fixed once anybody has signed.
     canEditDocuments: allocate,
+    canDelete: (triage || isAdmin(viewer.capabilities)) && isInvoiceDeletable(s),
   };
 }
 
@@ -239,4 +245,21 @@ export function daysUntilDue(dueDate: string | null, today: string): number | nu
   if (!dueDate) return null;
   const ms = Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);
   return Math.round(ms / 86_400_000);
+}
+
+/** Another invoice with the same supplier and invoice number, here or in Fortnox (lib/server/supplier-invoice-duplicates). */
+export interface InvoiceDuplicates {
+  /** Another invoice in ekonomi from the same supplier with the same number. */
+  local: { id: string; reference: string | null; status: SupplierInvoiceStatus } | null;
+  /** The GivenNumber of the supplier's invoice with this number in Fortnox. */
+  fortnox: string | null;
+  /** False when Fortnox could not be asked. Then `fortnox` says nothing. */
+  fortnoxChecked: boolean;
+}
+
+/** The refusal for a kontering of an invoice that is already here or in Fortnox, or null. A copy is deleted instead. */
+export function duplicateBlocker(d: InvoiceDuplicates): string | null {
+  if (d.local) return "supplierInvoice.duplicateLocal";
+  if (d.fortnox) return "supplierInvoice.duplicateFortnox";
+  return null;
 }

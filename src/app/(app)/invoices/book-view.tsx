@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -34,13 +35,16 @@ import {
   PAYABLE_ACCOUNT,
   ROUNDING_ACCOUNT,
   costTotal,
+  duplicateBlocker,
   exportBlocker,
   isValidOcr,
+  type InvoiceDuplicates,
 } from "@/lib/domain/supplier-invoice";
 import { giroMismatch, matchSupplier } from "@/lib/domain/payment-ref";
 import type { FortnoxSupplier } from "@/lib/fortnox";
 import { buildInvoiceCoverData, liveCoverFacts, type CoverFacts } from "@/lib/ui/invoice-cover";
 import { cn } from "@/lib/ui/utils";
+import { useReloadOnRegisterChange } from "@/lib/ui/fortnox-registers";
 import { withCostCenterTag } from "@/lib/domain/cost-center-tag";
 import type { InvoiceLine, PatchSupplierInvoice } from "@/lib/api/schemas/supplier-invoice";
 import type { SupplierInvoiceView } from "@/lib/data/supplier-invoices";
@@ -227,6 +231,8 @@ export function BookPanel({
   const notify = useNotify();
   const save = useMutation();
   const suppliers = useQuery<FortnoxSupplier[]>("/api/fortnox/suppliers");
+  // A supplier missing from the register is added in Fortnox: read it again on the way back, or after a sync.
+  useReloadOnRegisterChange(suppliers.reload);
   const tr = useTransition(invoice.id, onDone);
   const confirm = useConfirm();
 
@@ -317,18 +323,31 @@ export function BookPanel({
   const roundingOre =
     (typedRounding === undefined ? parseRounding(saved.rounding) : typedRounding) ?? 0;
   const totalOre = amountOre ?? 0;
-  const blocker = exportBlocker({
-    fortnoxSupplierNumber: supplierNo || null,
-    invoiceNumber: draft.invoiceNumber,
-    invoiceDate: liveDate("invoiceDate") || null,
-    dueDate: liveDate("dueDate") || null,
-    amount: amountOre,
-    ocr: draft.ocr.trim() || null,
-    rounding: roundingOre,
-    shares:
-      invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
-    lines,
-  });
+  // A copy of an invoice already here or in Fortnox is deleted, not konterad. Asked of what is typed, once both are there.
+  const typedNumber = draft.invoiceNumber.trim();
+  const duplicates = useQuery<InvoiceDuplicates>(
+    supplierNo && typedNumber
+      ? `/api/supplier-invoices/${invoice.id}/duplicates?${new URLSearchParams({
+          supplier: supplierNo,
+          number: typedNumber,
+        })}`
+      : null,
+    { debounceMs: 400, keepPrevious: false },
+  );
+  const copy = supplierNo && typedNumber ? duplicates.data : null;
+  const blocker =
+    exportBlocker({
+      fortnoxSupplierNumber: supplierNo || null,
+      invoiceNumber: draft.invoiceNumber,
+      invoiceDate: liveDate("invoiceDate") || null,
+      dueDate: liveDate("dueDate") || null,
+      amount: amountOre,
+      ocr: draft.ocr.trim() || null,
+      rounding: roundingOre,
+      shares:
+        invoice.allocations.length === 1 ? [null] : invoice.allocations.map((a) => toOre(a.amount)),
+      lines,
+    }) ?? (copy ? duplicateBlocker(copy) : null);
 
   // The attest page, drawn here from what is typed, as it will be sent.
   const coverData = cover
@@ -516,6 +535,25 @@ export function BookPanel({
             </Field>
             <Field label={tFields("invoiceNumber")} requirement="required">
               {text("invoiceNumber")}
+              {copy?.local ? (
+                <Issue tone="danger" className="mt-1">
+                  <span>
+                    {tBook("duplicateLocal")}{" "}
+                    <Link href={`/invoices/${copy.local.id}`} className="text-link hover:underline">
+                      {copy.local.reference ?? tBook("duplicateOpen")}
+                    </Link>
+                  </span>
+                </Issue>
+              ) : copy?.fortnox ? (
+                <Issue tone="danger" className="mt-1">
+                  {tBook("duplicateFortnox", { number: copy.fortnox })}
+                </Issue>
+              ) : (
+                copy &&
+                !copy.fortnoxChecked && (
+                  <Issue className="mt-1">{tBook("duplicateUnchecked")}</Issue>
+                )
+              )}
             </Field>
             <Field
               label={tFields("ocr")}
