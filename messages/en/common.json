@@ -10,9 +10,9 @@
   },
   "status": {
     "DRAFT": "Draft",
-    "PENDING_APPROVAL": "Awaiting approval",
+    "PENDING_APPROVAL": "Awaiting attest",
     "CHANGES_REQUESTED": "Changes requested",
-    "APPROVED": "Approved",
+    "APPROVED": "Attested",
     "BOOKED": "Booked",
     "EXPORTED": "Exported"
   },

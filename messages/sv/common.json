@@ -143,7 +143,7 @@
   "invoiceStatus": {
     "ASSIGNED": "Att fördela",
     "PENDING_APPROVAL": "Väntar på attest",
-    "CHANGES_REQUESTED": "Ändring begärd",
+    "CHANGES_REQUESTED": "Behöver ändras",
     "APPROVED": "Attesterad",
     "BOOKED": "Konterad",
     "EXPORTED": "I Fortnox"

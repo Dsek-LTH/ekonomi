@@ -13,7 +13,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { DragHandle } from "@/components/ui/drag";
 import { IconButton } from "@/components/ui/icon-button";
 import { Issues } from "@/components/ui/notice";
-import { IconLock, IconX } from "@/components/ui/icons";
+import { IconAlert, IconLock, IconX } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { TableScroll } from "@/components/ui/table-scroll";
 import { withBlankRows } from "@/lib/ui/blank-rows";
@@ -747,9 +747,17 @@ export function VoucherBlockerChip({ blocker }: { blocker: VoucherBlocker | null
   return <WarningChip>{t(blocker)}</WarningChip>;
 }
 
-/** The blocker chip's shape, for a booking screen whose reasons are its own. */
+/**
+ * Why the main button beside it cannot be pressed yet. A line of warning text with its mark, not a filled chip: a
+ * warning is never a filled box (docs/layout.md, "Warnings"), and filled it read as a second button.
+ */
 export function WarningChip({ children }: { children: React.ReactNode }) {
-  return <span className={cn(chip, "bg-warning-soft text-warning")}>{children}</span>;
+  return (
+    <span role="status" className="inline-flex items-center gap-1.5 text-sm text-warning">
+      <IconAlert className="size-4 shrink-0" />
+      {children}
+    </span>
+  );
 }
 
 /** The voucher-wide cost centre: one pick sets every row except spare and balance-account rows. A row's own cell overrides it. */
