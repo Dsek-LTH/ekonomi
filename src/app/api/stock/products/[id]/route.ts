@@ -11,6 +11,7 @@ import {
   nameTaken,
   nextInternalCode,
   typedInternalCode,
+  categoryGroup,
   resolveGroup,
 } from "@/lib/server/stock-product-guard";
 import { isInternalCode } from "@/lib/stock/barcode";
@@ -56,8 +57,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return fail(422, "stock.categoryRequired");
   }
   if (!traits.usesOpenLevels && after.kind === "VOLUME") return fail(422, "stock.unitOnly");
-  // Another group moves the product's value between two stock accounts, so it has to be this stock's.
-  if (body.groupId && !(await resolveGroup(g.stock, body.groupId, null))) {
+  // Another group moves the product's value between two stock accounts, so it has to be this stock's. Where the
+  // drink type is filed it alone decides the group, so a new drink type moves the product to that type's accounts.
+  let groupId = body.groupId;
+  if (traits.filesRestaurangrapport) {
+    groupId = after.category ? await categoryGroup(g.stock, after.category) : undefined;
+  } else if (groupId && !(await resolveGroup(g.stock, groupId, null))) {
     return fail(422, "stock.groupRequired");
   }
 
@@ -81,7 +86,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const data = {
     name: body.name,
     kind: body.kind,
-    groupId: body.groupId,
+    groupId,
     packSize: body.packSize,
     category: traits.filesRestaurangrapport ? body.category : undefined,
     abv: body.abv,

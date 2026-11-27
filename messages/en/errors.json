@@ -351,6 +351,7 @@
     "categoryRequired": "A drink type and a strength are needed for the restaurangrapport.",
     "unitOnly": "This stock counts everything in units.",
     "groupRequired": "Choose a product type that belongs to the stock.",
+    "groupsByCategory": "The alcohol stock is divided by drink type. Each drink type already has its accounts.",
     "kindNotHere": "That kind of movement does not exist in this stock.",
     "onTheBoardTab": "A board withdrawal is changed on the board tab.",
     "accountUnknown": "Account {account} is not in the chart of accounts.",

@@ -351,6 +351,7 @@
     "categoryRequired": "Dryckesslag och alkoholhalt behövs till restaurangrapporten.",
     "unitOnly": "Det här lagret räknar allt i styck.",
     "groupRequired": "Välj en produkttyp som hör till lagret.",
+    "groupsByCategory": "Alkohollagret delas in efter dryckesslag. Varje dryckesslag har redan sina konton.",
     "kindNotHere": "Den sortens rörelse finns inte i det här lagret.",
     "onTheBoardTab": "Ett styrelseuttag ändras på styrelsekontot.",
     "accountUnknown": "Konto {account} finns inte i kontoplanen.",

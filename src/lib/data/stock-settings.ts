@@ -6,7 +6,9 @@ import { getKnownGroups } from "@/lib/data/authority";
 import { isoDay } from "@/lib/domain/date";
 import type { DrinkCategory } from "@/lib/domain/types";
 import { postingGaps, type StockBookingSettings, type StockSetupGap } from "@/lib/stock/setup";
-import { STOCK_SLUGS, type StockSlug } from "@/lib/stock/stocks";
+import { STOCKS, STOCK_SLUGS, type StockSlug } from "@/lib/stock/stocks";
+import { CATEGORIES } from "@/lib/domain/categories";
+import { categoryGroup } from "@/lib/server/stock-product-guard";
 
 export interface StockGroupSettings {
   id: string;
@@ -34,6 +36,10 @@ export interface StockSettingsView extends StockBookingSettings {
 }
 
 export async function getStockSettings(stock: StockSlug): Promise<StockSettingsView> {
+  // Where the drink type is filed, every drink type has its accounts, so each one is there to fill in.
+  if (STOCKS[stock].filesRestaurangrapport) {
+    for (const c of CATEGORIES) await categoryGroup(stock, c);
+  }
   const row = await prisma.stock.findUniqueOrThrow({
     where: { id: stock },
     include: {

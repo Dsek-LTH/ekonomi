@@ -12,6 +12,7 @@ import {
   nameTaken,
   nextInternalCode,
   typedInternalCode,
+  categoryGroup,
   resolveGroup,
 } from "@/lib/server/stock-product-guard";
 import { STOCKS } from "@/lib/stock/stocks";
@@ -38,7 +39,10 @@ export async function POST(req: Request) {
   // The ladder is the bar's: elsewhere everything is counted whole.
   if (!traits.usesOpenLevels && body.kind === "VOLUME") return fail(422, "stock.unitOnly");
 
-  const group = await resolveGroup(g.stock, body.groupId, body.category);
+  // Where the drink type is filed, it alone decides the group (its accounts). Elsewhere the group is picked.
+  const group = traits.filesRestaurangrapport
+    ? await categoryGroup(g.stock, body.category!)
+    : await resolveGroup(g.stock, body.groupId, body.category);
   if (!group) return fail(422, "stock.groupRequired");
 
   // The needed size follows from the kind, which the schema cannot say: a spirit without bottle size

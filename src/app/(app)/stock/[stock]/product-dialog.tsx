@@ -354,7 +354,7 @@ export function ProductDialog({
               {/* A searchable field: long names like "Alkoholdrycksliknande preparat" make a native select a scroll. */}
               <Combobox
                 value={d.category}
-                // The type follows the drink type until somebody picks another below.
+                // The type follows the drink type: it is where that drink type's accounts are.
                 onChange={(v) =>
                   setD((p) => ({
                     ...p,
@@ -373,8 +373,9 @@ export function ProductDialog({
           </div>
         )}
 
-        {/* The type its stock account and cost account come from (Inställningar, Lager). One group needs no asking. */}
-        {groups.length > 1 && (
+        {/* The type its stock account and cost account come from (Inställningar, Lager). One group needs no asking, and
+            where the drink type is filed it is the drink type's own: the server puts the product there. */}
+        {!reported && groups.length > 1 && (
           <FieldGroup
             label={t("products.field.group")}
             hint={t("products.field.groupHint")}

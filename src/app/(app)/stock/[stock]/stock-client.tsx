@@ -31,6 +31,7 @@ import { validGtin } from "@/lib/stock/barcode";
 const badBarcode = (p: { ean?: string | null }) => Boolean(p.ean) && !validGtin(p.ean!);
 import { TagChips } from "@/components/stock/tag-chips";
 import { CategoryMark } from "@/components/stock/category-mark";
+import { CATEGORIES } from "@/lib/domain/categories";
 import { BottleLevels } from "@/components/stock/bottle-levels";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { ProductDialog } from "./product-dialog";
@@ -109,14 +110,25 @@ export default function StockClient({
    * Two dimensions narrowed at once: product type and cellar label. Within one is an "or", across them an "and".
    * Values are prefixed since both share one list of picks and a tag could collide with a type.
    */
+  /** What kind of product it is: its drink type where that is filed, else its product type. */
+  const typeName = (p: StockLevelDto) => (p.category ? t(`category.${p.category}`) : p.groupName);
+
   const filters: ClientSelectFilter<StockLevelDto>[] = [
     {
       label: t("filterCategory"),
-      options: groups.map((g) => ({
-        value: `grp:${g.id}`,
-        label: g.name,
-        predicate: (p: StockLevelDto) => p.groupId === g.id,
-      })),
+      // Where the drink type is filed it is the one classification (Folkhälsomyndigheten's): filtered by it, in its
+      // own order. Elsewhere by the stock's own product types.
+      options: traits.filesRestaurangrapport
+        ? CATEGORIES.filter((c) => levels.some((p) => p.category === c)).map((c) => ({
+            value: `cat:${c}`,
+            label: t(`category.${c}`),
+            predicate: (p: StockLevelDto) => p.category === c,
+          }))
+        : groups.map((g) => ({
+            value: `grp:${g.id}`,
+            label: g.name,
+            predicate: (p: StockLevelDto) => p.groupId === g.id,
+          })),
     },
     // Only where something is due: a filter that can only return nothing reads as broken.
     ...(Object.keys(checks).length > 0
@@ -205,7 +217,7 @@ export default function StockClient({
     {
       key: "category",
       header: t("products.col.category"),
-      value: (p) => p.groupName,
+      value: (p) => typeName(p),
       sortable: true,
       searchable: true,
       // Off a phone's row, where the mark goes before the name instead.
@@ -214,7 +226,7 @@ export default function StockClient({
       cell: (p) => (
         <span className="flex items-center gap-2">
           <CategoryMark category={p.category} />
-          {p.groupName}
+          {typeName(p)}
         </span>
       ),
     },

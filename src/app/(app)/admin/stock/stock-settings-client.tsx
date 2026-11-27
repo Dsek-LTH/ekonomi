@@ -33,6 +33,7 @@ import type {
 } from "@/lib/data/stock-settings";
 import type { AccountRecord, CostCenter } from "@/lib/domain/types";
 import { STOCKS } from "@/lib/stock/stocks";
+import { CATEGORIES } from "@/lib/domain/categories";
 import { PlaceTable } from "./place-table";
 
 type Shared = {
@@ -192,8 +193,15 @@ function StockSection({
         />
       }
     >
-      <SettingsCard title={t("groups.title")}>
-        <GroupTable stock={stock} groups={settings.groups} accountOptions={accountOptions} />
+      <SettingsCard
+        title={traits.filesRestaurangrapport ? t("groups.titleByCategory") : t("groups.title")}
+      >
+        <GroupTable
+          stock={stock}
+          groups={settings.groups}
+          accountOptions={accountOptions}
+          byCategory={traits.filesRestaurangrapport}
+        />
       </SettingsCard>
 
       {traits.usesPlaces && (
@@ -328,12 +336,20 @@ function GroupTable({
   stock,
   groups,
   accountOptions,
+  byCategory,
 }: {
   stock: StockSettingsView["stock"];
   groups: StockGroupSettings[];
   accountOptions: ComboOption[];
+  /**
+   * Where the drink type is filed it is the only classification: one row per drink type (Folkhälsomyndigheten's),
+   * named by it, none added or renamed here. A type left over from before, with no drink type, can still be removed
+   * once empty.
+   */
+  byCategory: boolean;
 }) {
   const t = useTranslations("admin.stock");
+  const tStock = useTranslations("stock");
   const tBook = useTranslations("book");
   const confirm = useConfirm();
   const { pending, mutate } = useMutation();
@@ -341,7 +357,13 @@ function GroupTable({
 
   // The accounts wait for the page's Spara. Adding and removing a type happen at once.
   const edits = useDraftRows(groups);
-  const rows = groups.map(edits.get);
+  const order = (g: StockGroupSettings) =>
+    g.category ? CATEGORIES.indexOf(g.category) : CATEGORIES.length;
+  const rows = (byCategory ? [...groups].sort((a, b) => order(a) - order(b)) : groups).map(
+    edits.get,
+  );
+  const title = (g: StockGroupSettings) =>
+    byCategory && g.category ? tStock(`category.${g.category}`) : g.name;
 
   useDraftPart({
     dirty: edits.dirty,
@@ -392,12 +414,12 @@ function GroupTable({
           <li key={group.id} className="border-b border-border px-inset py-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium">
-                {group.name}{" "}
+                {title(group)}{" "}
                 <span className="font-normal text-muted">
                   {t("groups.products", { count: group.products })}
                 </span>
               </p>
-              {group.products === 0 && (
+              {group.products === 0 && !(byCategory && group.category) && (
                 <IconButton
                   label={t("groups.remove")}
                   title={t("groups.remove")}
@@ -433,7 +455,7 @@ function GroupTable({
                       }
                       searchPlaceholder={tBook("accountSearch")}
                       allowClear
-                      aria-label={`${group.name}: ${t(`groups.${key}`)}`}
+                      aria-label={`${title(group)}: ${t(`groups.${key}`)}`}
                     />
                   </Field>
                 );
@@ -442,26 +464,28 @@ function GroupTable({
           </li>
         ))}
       </ul>
-      <div className="flex gap-2 px-inset py-3">
-        <Input
-          size="sm"
-          className="min-w-0 max-w-xs"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("groups.newPlaceholder")}
-          aria-label={t("groups.newPlaceholder")}
-        />
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={name.trim() === ""}
-          loading={pending === `${stock}.addGroup`}
-          onClick={add}
-        >
-          <IconPlus className="size-4" />
-          {t("groups.add")}
-        </Button>
-      </div>
+      {!byCategory && (
+        <div className="flex gap-2 px-inset py-3">
+          <Input
+            size="sm"
+            className="min-w-0 max-w-xs"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("groups.newPlaceholder")}
+            aria-label={t("groups.newPlaceholder")}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={name.trim() === ""}
+            loading={pending === `${stock}.addGroup`}
+            onClick={add}
+          >
+            <IconPlus className="size-4" />
+            {t("groups.add")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

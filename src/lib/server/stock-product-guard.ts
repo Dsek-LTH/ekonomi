@@ -8,6 +8,7 @@ import { fail } from "@/lib/api/guard";
 import type { NextResponse } from "next/server";
 import type { DrinkCategory } from "@/lib/domain/types";
 import type { StockSlug } from "@/lib/stock/stocks";
+import { CATEGORIES } from "@/lib/domain/categories";
 
 /** Whether a Prisma failure is a unique-index collision. */
 export const isCollision = (e: unknown): boolean =>
@@ -71,3 +72,46 @@ export async function resolveGroup(
   if (byCategory) return byCategory.id;
   return groups.length === 1 ? groups[0].id : null;
 }
+
+/**
+ * The group a drink type's products are booked under, in a stock that files the restaurangrapport. There the drink
+ * type is the only classification anybody picks (Folkhälsomyndigheten's), and the group is only where its accounts
+ * live: one per drink type, made on first use. A group of the right name that is not linked yet is linked.
+ */
+export async function categoryGroup(stock: StockSlug, category: DrinkCategory): Promise<string> {
+  const linked = await prisma.stockGroup.findUnique({ where: { category }, select: { id: true } });
+  if (linked) return linked.id;
+  const name = CATEGORY_GROUP_NAME[category];
+  const named = await prisma.stockGroup.findFirst({
+    where: { stockId: stock, name, category: null },
+    select: { id: true },
+  });
+  if (named) {
+    await prisma.stockGroup.update({ where: { id: named.id }, data: { category } });
+    return named.id;
+  }
+  try {
+    const made = await prisma.stockGroup.create({
+      data: { stockId: stock, name, category, sortOrder: CATEGORIES.indexOf(category) },
+      select: { id: true },
+    });
+    return made.id;
+  } catch (e) {
+    // Made by a save a moment ago.
+    if (!isCollision(e)) throw e;
+    const again = await prisma.stockGroup.findUniqueOrThrow({
+      where: { category },
+      select: { id: true },
+    });
+    return again.id;
+  }
+}
+
+/** What a drink type's group is called where it is made, Folkhälsomyndigheten's own word for it. */
+const CATEGORY_GROUP_NAME: Record<DrinkCategory, string> = {
+  OL: "Öl",
+  OVRIG_JASTDRYCK: "Övrig jästdryck",
+  VIN: "Vin",
+  SPRITDRYCK: "Spritdryck",
+  ALKOHOLDRYCKSLIKNANDE: "Alkoholdrycksliknande preparat",
+};

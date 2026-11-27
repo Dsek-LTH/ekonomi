@@ -1,5 +1,6 @@
 // A stock's product types, which its accounts hang on. See StockGroup in stock.prisma.
 
+import { STOCKS } from "@/lib/stock/stocks";
 import { NextResponse } from "next/server";
 import { gate, fail } from "@/lib/api/guard";
 import { parseBody } from "@/lib/api/parse";
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, CreateStockGroup);
   if (!parsed.ok) return parsed.res;
   const { stock, ...fields } = parsed.data;
+  // There the drink type is the only classification, and each has its one group (stock-product-guard, categoryGroup).
+  if (STOCKS[stock].filesRestaurangrapport) return fail(409, "stock.groupsByCategory");
 
   const made = await prisma
     .$transaction(async (tx) => {

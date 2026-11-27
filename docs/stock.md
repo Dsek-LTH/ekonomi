@@ -173,12 +173,17 @@ The product type, and the thing a stock account hangs on. A stock has several.
 | `countDiffAccount` | Optional. Where this type's stocktake difference is charged. Null means `consumptionAccount` |
 | `sortOrder` | |
 
-It is a table and not a column on `DrinkCategory` for two reasons. The café
-needs types too and has no drink category. And the two lists answer different
-questions: `DrinkCategory` is Folkhälsomyndigheten's classification with five
-values, and the groups are the section's own chart. Today they line up one to
-one in the alcohol stock, and nothing forces them to stay that way. A group is
-picked on the product, pre-filled from the category where there is one.
+It is a table and not a column on `DrinkCategory` because the café needs types
+too and has no drink category.
+
+In the alcohol stock the only classification is Folkhälsomyndigheten's
+(`DrinkCategory`, decided 2026-11-27). Its groups are one per drink type and only
+hold the accounts: the product form asks for the drink type alone, the routes
+put the product in that drink type's group (`categoryGroup` in
+lib/server/stock-product-guard.ts, which makes the group on first use), the
+settings show one row per drink type with no way to add another, and the list
+filters by drink type. A group left over from before, with no drink type, can be
+removed once it is empty. In the café the group is picked on the product.
 
 Spoilage follows the type: wine that spoils is charged on the wine account,
 beer on the beer account. Stocktake differences are treated the same way,
