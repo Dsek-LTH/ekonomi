@@ -172,12 +172,13 @@ export default function WithdrawClient({
           onScan={() => setScanning(true)}
         />
 
-        <Card>
-          {shown.length === 0 ? (
-            <p className="px-inset py-6 text-center text-sm text-muted">
-              {products.length === 0 ? t("withdraw.noProducts") : t("withdraw.noMatch")}
-            </p>
-          ) : (
+        {/* With nothing to list there is no card: the sentence stands on the page. */}
+        {shown.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">
+            {products.length === 0 ? t("withdraw.noProducts") : t("withdraw.noMatch")}
+          </p>
+        ) : (
+          <Card>
             <ul className="divide-y divide-divider">
               {shown.map((p) => (
                 <StepperRow
@@ -190,8 +191,8 @@ export default function WithdrawClient({
                 />
               ))}
             </ul>
-          )}
-        </Card>
+          </Card>
+        )}
 
         {loggedToday.length > 0 && (
           <section className="space-y-2">
