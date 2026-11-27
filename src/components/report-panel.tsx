@@ -33,7 +33,7 @@ export const PANEL_PILLS = "[&>button]:h-10 sm:[&>button]:h-8";
 /** One row of the panel, hairline above except the first. From lg the panel is a narrow column, so fields stack. */
 export function PanelRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:[&>*]:w-full">
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-divider px-inset py-3.5 first:border-t-0 lg:flex-col lg:flex-nowrap lg:items-stretch lg:[&>*]:w-full">
       {children}
     </div>
   );

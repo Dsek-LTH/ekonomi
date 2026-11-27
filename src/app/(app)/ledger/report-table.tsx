@@ -268,7 +268,7 @@ export function ReportSkeleton({ shape }: { shape: Shape }) {
               <Skeleton className="h-3 w-28" />
             </div>
             {Array.from({ length: count }, (_, i) => (
-              <div key={i} className={cn(ROW, "border-t border-border")}>
+              <div key={i} className={cn(ROW, "border-t border-divider")}>
                 {cols.map((c) =>
                   c.key === "account" ? (
                     <div key={c.key} className="py-3 pl-inset pr-3">
@@ -433,7 +433,7 @@ function SectionRows({
               role="row"
               className={cn(
                 ROW,
-                "group relative cursor-pointer border-t border-border hover:bg-hover focus-within:bg-surface",
+                "group relative cursor-pointer border-t border-divider hover:bg-hover focus-within:bg-surface",
                 open && "bg-surface",
               )}
             >
@@ -475,7 +475,7 @@ function SectionRows({
             </div>
 
             {open && (
-              <div role="row" className="col-span-full border-t border-border bg-surface">
+              <div role="row" className="col-span-full border-t border-divider bg-surface">
                 <div role="cell" aria-colspan={cols.length} className="px-inset py-3">
                   <VoucherRows rows={rows[key]} showCostCenter={groupMode === "SUMMED"} />
                 </div>

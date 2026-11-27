@@ -113,7 +113,7 @@ function BudgetPicker({
 /** How fresh the figures are, at the foot of the parameters (a fact about the year being reported on). */
 function SyncedNote({ synced }: { synced?: string | null }) {
   if (!synced) return null;
-  return <p className="border-t border-border px-inset py-2.5 text-xs text-muted">{synced}</p>;
+  return <p className="border-t border-divider px-inset py-2.5 text-xs text-muted">{synced}</p>;
 }
 
 export function ReportParameters({

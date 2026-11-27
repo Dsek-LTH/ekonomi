@@ -8,7 +8,7 @@ export default function Loading() {
         {[3, 4, 2].map((fields, row) => (
           <div
             key={row}
-            className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border px-inset py-3.5 first:border-t-0"
+            className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-divider px-inset py-3.5 first:border-t-0"
           >
             {Array.from({ length: fields }, (_, i) => (
               <div key={i}>
