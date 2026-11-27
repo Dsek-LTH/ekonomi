@@ -196,7 +196,7 @@ export default function StockProductClient({
             />
             {/* Across rather than down, auto-fitting so a can's two cells and a spirit's six lay out alike. */}
             {/* The shelf as a picture first, as the list shows it. */}
-            <div className="border-b border-border px-inset py-4">
+            <div className="px-inset pt-3">
               <BottleLevels
                 kind={product.kind}
                 sealed={onHand.units}
