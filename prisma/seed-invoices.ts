@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { PrismaClient, SupplierInvoiceEventType } from "../src/lib/generated/prisma/client";
 import { formatReference } from "../src/lib/domain/reference";
+import { matchSupplier } from "../src/lib/domain/payment-ref";
 import { putObject } from "../scripts/storage-admin";
 
 // ── The PDFs ─────────────────────────────────────────────────────
@@ -231,6 +232,8 @@ export async function seedSupplierInvoices(ctx: SeedInvoicesCtx) {
       update: row,
     });
   }
+  // Read back as the scan's match reads it (lib/server/supplier-register.ts, supplierMatcher).
+  const register = await prisma.supplier.findMany();
 
   let pdfs = 0;
   async function storeDocument(opts: {
@@ -592,6 +595,9 @@ export async function seedSupplierInvoices(ctx: SeedInvoicesCtx) {
     const amountOre = Math.round(total(pdf) * 100);
     const fordelad = opts.rows !== undefined;
     const booked = opts.status === "BOOKED" || opts.status === "EXPORTED";
+    // The supplier as the fördelning's scan finds it (lib/server/invoice-prefill.ts): the PDF gives the org nr and the
+    // bankgiro, and the name and number come from the register they match. Never a name off the PDF itself.
+    const known = matchSupplier({ supplierOrgNo: s.orgNo, bankgiro: s.bankgiro }, register);
 
     const mailId = opts.mailed
       ? await mail({
@@ -630,13 +636,21 @@ export async function seedSupplierInvoices(ctx: SeedInvoicesCtx) {
           ocr: pdf.ocr,
           bankgiro: s.bankgiro,
           supplierOrgNo: s.orgNo,
-          supplierName: s.name,
           yourReference: pdf.reference ?? null,
+          ...(known && { supplierName: known.name, fortnoxSupplierNumber: known.number }),
           prefilled: booked
             ? []
-            : ["invoiceDate", "invoiceNumber", "ocr", "bankgiro", "supplierOrgNo", "supplierName"],
+            : [
+                "invoiceDate",
+                "invoiceNumber",
+                "ocr",
+                "bankgiro",
+                "supplierOrgNo",
+                ...(known ? ["supplierName"] : []),
+              ],
         }),
-        ...(booked && { fortnoxSupplierNumber: s.number }),
+        // Picked at kontering when the scan found none.
+        ...(booked && { supplierName: s.name, fortnoxSupplierNumber: s.number }),
         ...(opts.status === "EXPORTED" && {
           fortnoxGivenNumber: String(400 + counter),
           exportedAt: at(-(opts.exportedAt ?? 0), "15:10"),
